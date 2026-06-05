@@ -1,0 +1,119 @@
+"""
+Container de dependencias — singleton que mantiene los clientes vivos
+mientras la app esté corriendo. Reemplaza el "main agent" de OpenClaw.
+"""
+from __future__ import annotations
+
+import asyncio
+import uuid
+from typing import Any, Dict, Optional
+
+from .clients.minimax import MiniMaxClient, MiniMaxError
+from .clients.discord import DiscordWebhook, DiscordError
+from .config import Settings, get_settings
+from .log import get_logger
+from .agents.base import AgentContext
+from .agents.registry import get_agent
+
+log = get_logger("container")
+
+
+class Container:
+    """Mantiene los clientes compartidos y expone run_agent() y run_scheduled()."""
+
+    def __init__(self, settings: Optional[Settings] = None):
+        self.settings = settings or get_settings()
+        self._minimax: Optional[MiniMaxClient] = None
+        self._discord: Optional[DiscordWebhook] = None
+        self._lock = asyncio.Lock()
+
+    # ── lazy init (evita fallar al startup si faltan credenciales) ──
+
+    @property
+    def minimax(self) -> MiniMaxClient:
+        if self._minimax is None:
+            self._minimax = MiniMaxClient(self.settings)
+        return self._minimax
+
+    @property
+    def discord(self) -> Optional[DiscordWebhook]:
+        if self._discord is None:
+            if not self.settings.discord_webhook_url:
+                return None
+            self._discord = DiscordWebhook(self.settings)
+        return self._discord
+
+    def close(self) -> None:
+        if self._minimax:
+            self._minimax.close()
+            self._minimax = None
+        if self._discord:
+            self._discord.close()
+            self._discord = None
+
+    def health(self) -> Dict[str, Any]:
+        return {
+            "minimax_configured": bool(self.settings.minimax_api_key),
+            "discord_configured": bool(self.settings.discord_webhook_url),
+            "global_pause": self.settings.global_pause,
+            "is_production": self.settings.is_production,
+        }
+
+    # ── run helpers ──
+
+    async def run_agent(
+        self,
+        agent_name: str,
+        *,
+        triggered_by: str = "manual",
+        args: Optional[Dict[str, Any]] = None,
+        run_id: Optional[str] = None,
+    ) -> str:
+        args = args or {}
+        run_id = run_id or str(uuid.uuid4())
+        if self.settings.global_pause:
+            log.info("agent_skipped_global_pause", agent=agent_name, run_id=run_id)
+            return "⏸️ Global pause activo"
+
+        agent = get_agent(agent_name)
+        ctx = AgentContext(
+            settings=self.settings,
+            minimax=self.minimax,
+            discord=self.discord,
+            run_id=run_id,
+            triggered_by=triggered_by,
+            args=args,
+        )
+        # run() es sync porque MiniMaxClient es sync; lo corremos en threadpool
+        return await asyncio.to_thread(agent.run, ctx)
+
+    async def run_scheduled(self, agent_name: str) -> None:
+        await self.run_agent(agent_name, triggered_by="cron")
+
+
+# ── Singleton global usado por el scheduler y los endpoints ──
+_container: Optional[Container] = None
+
+
+def get_container() -> Container:
+    global _container
+    if _container is None:
+        _container = Container()
+    return _container
+
+
+def reset_container() -> None:
+    global _container
+    if _container:
+        _container.close()
+    _container = None
+
+
+# ── entry point del scheduler ──
+async def run_scheduled_agent(agent_name: str) -> None:
+    try:
+        await get_container().run_scheduled(agent_name)
+    except (MiniMaxError, DiscordError) as e:
+        log.error("scheduled_run_error", agent=agent_name, error=str(e))
+    except Exception as e:
+        log.exception("scheduled_run_unexpected_error", agent=agent_name, error=str(e))

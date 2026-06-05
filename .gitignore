@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.local
+.env.production
+
+# Logs
+logs/*.log
+logs/*.jsonl
+*.log
+
+# Data runtime (los leads se persisten en disco de Render, no en git)
+data/leadhunter-*.md
+data/agent-output-*.json
+data/runs/
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Render
+.render/
+
+# OS
+Thumbs.db

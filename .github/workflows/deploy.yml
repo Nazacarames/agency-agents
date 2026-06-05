@@ -1,0 +1,49 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint Python
+        uses: astral-sh/ruff-action@v1
+        with:
+          args: "check app/"
+
+      - name: Validate render.yaml
+        uses: chuhlomin/render-yaml-validator@v1
+        with:
+          file: render.yaml
+
+      - name: Trigger Render Deploy Hook
+        if: env.RENDER_DEPLOY_HOOK != ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RENDER_DEPLOY_HOOK" ]; then
+            echo "🚀 Triggering Render deploy hook..."
+            curl -fsS -X POST "$RENDER_DEPLOY_HOOK" \
+              -H "Accept: application/json" \
+              -w "\nHTTP %{http_code}\n" || echo "Deploy hook failed (non-fatal)"
+          else
+            echo "ℹ️ RENDER_DEPLOY_HOOK secret not configured. Render will pick up the push via autoDeploy."
+          fi
+
+      - name: Wait and smoke test
+        if: env.RENDER_SERVICE_URL != ''
+        env:
+          RENDER_SERVICE_URL: ${{ vars.RENDER_SERVICE_URL }}
+        run: |
+          if [ -n "$RENDER_SERVICE_URL" ]; then
+            echo "⏳ Waiting 30s for Render to rebuild..."
+            sleep 30
+            echo "🔍 Smoke test: GET $RENDER_SERVICE_URL/healthz"
+            curl -fsS "$RENDER_SERVICE_URL/healthz" | head -200 || echo "Smoke test failed (non-fatal, deploy may still be in progress)"
+          fi

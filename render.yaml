@@ -1,0 +1,38 @@
+# ────────────────────────────────────────────────────────────
+# Render Blueprint — Automiq Agency Agents
+# Deploy: conectar este repo en render.com → New Blueprint
+# ────────────────────────────────────────────────────────────
+services:
+  - type: web
+    name: automiq-agents
+    runtime: docker
+    plan: starter                       # $7/mes, mantiene el scheduler vivo 24/7
+    region: oregon
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: MINIMAX_BASE_URL
+        value: https://api.minimax.io/anthropic
+      - key: MINIMAX_API_KEY
+        sync: false                      # configurar manualmente en dashboard
+      - key: MINIMAX_MODEL_PRIMARY
+        value: MiniMax-M3     # M3 (decisión 2026-06-04, NO M2.7 de OpenClaw)
+      - key: MINIMAX_MODEL_FALLBACKS
+        value: MiniMax-M2.5,MiniMax-M2.5-highspeed
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
+      - key: SCHEDULER_TIMEZONE
+        value: America/Buenos_Aires
+      - key: SCHEDULER_ENABLED
+        value: "true"
+      - key: GLOBAL_PAUSE
+        value: "false"
+      - key: WEBHOOK_SECRET
+        generateValue: true              # Render genera un valor aleatorio
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PYTHONUNBUFFERED
+        value: "1"

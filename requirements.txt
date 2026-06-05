@@ -1,0 +1,28 @@
+# Automiq Agency Agents — Render service
+# Stack: FastAPI + APScheduler + httpx + discord-webhook (no bot)
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# HTTP client para MiniMax-M3 y Discord
+httpx==0.28.1
+tenacity==9.0.0          # reintentos con backoff exponencial
+
+# Scheduler (reemplazo del cron de OpenClaw)
+apscheduler==3.10.4
+pytz==2024.2
+
+# Discord delivery (webhook, no bot)
+discord-webhook==1.3.0
+
+# Utilidades
+python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
+pyyaml==6.0.2
+orjson==3.10.12          # JSON rápido para logs
+
+# Render/Railway healthcheck
+structlog==24.4.0
