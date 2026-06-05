@@ -2,7 +2,7 @@
 Social Media Strategist — calendario semanal de contenido.
 Schedule: Domingos 18:00 ART (para la semana que viene).
 """
-from .base import BaseAgent
+from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 
 

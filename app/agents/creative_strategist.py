@@ -2,7 +2,7 @@
 Creative Strategist — copy para ads de Meta + headlines landing.
 Schedule: Martes y Jueves 14:00 ART.
 """
-from .base import BaseAgent
+from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 
 

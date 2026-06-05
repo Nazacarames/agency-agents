@@ -2,7 +2,7 @@
 Content Creator — ideas de contenido para redes de Automiq.
 Schedule: Lunes, Miércoles, Viernes 13:00 ART.
 """
-from .base import BaseAgent
+from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 
 

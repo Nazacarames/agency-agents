@@ -2,7 +2,7 @@
 Outbound Strategist — secuencias B2B multistep.
 Schedule: Lunes 10:00 ART.
 """
-from .base import BaseAgent
+from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 
 

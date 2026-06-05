@@ -2,7 +2,7 @@
 SEO Specialist — plan de acción SEO orgánico.
 Schedule: día 15 de cada mes a las 11:00 ART.
 """
-from .base import BaseAgent
+from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 
 

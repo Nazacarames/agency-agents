@@ -2,7 +2,7 @@
 Media Auditor — audit de cuentas de ads (Meta + Google).
 Schedule: día 1 de cada mes a las 11:00 ART.
 """
-from .base import BaseAgent
+from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 
 
