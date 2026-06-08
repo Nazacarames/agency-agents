@@ -58,9 +58,9 @@ Generar EXACTAMENTE 10 leads por día que sean ofertables: cada lead debe permit
 15. next_action — accion recomendada (e.g. enviar WhatsApp, agendar demo)
 
 ## Formato de salida
-- Guardar dos artefactos:
+- Guardar un artefacto principal:
   - data/leadhunter-report-YYYY-MM-DD.md (Markdown legible: tabla resumen + detalle por lead)
-  - data/leadhunter-report-YYYY-MM-DD.json (estructura con los campos arriba)
+- Nota: la generación de JSON es opcional y puede añadirse en una iteración futura. Actualmente el agente debe producir sólo el .md legible para el equipo.
 
 ## Reglas operativas
 - Exigir contacto_verified=true para contar el lead; si no, buscar reemplazo automáticamente.
