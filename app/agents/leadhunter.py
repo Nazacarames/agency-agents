@@ -2,7 +2,7 @@
 LeadHunter — genera 10 leads/día con contacto verificado.
 Agente #1 de Automiq. El más crítico para revenue.
 
-Schedule: todos los días a las 09:00 ART.
+Schedule: todos los días a las 14:00 ART.
 Output: lista de 10 empresas con FIT score 4-6, contacto real (WhatsApp/teléfono), decisor.
 """
 from __future__ import annotations
@@ -58,7 +58,7 @@ para contacto — si no hay WhatsApp real, descartá el lead y reemplazalo por o
 class LeadHunterAgent(BaseAgent):
     name = "leadhunter"
     description = "Genera 10 leads/día con contacto verificado (FIT 4-6)"
-    schedule = "0 9 * * *"   # 09:00 ART diario
+    schedule = "0 14 * * *"  # 14:00 ART diario
     timezone = "America/Buenos_Aires"
     max_tokens = 8000
 
