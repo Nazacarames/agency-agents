@@ -13,10 +13,28 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Dependencias del sistema (tzdata para America/Buenos_Aires, curl para healthcheck)
+# Añadimos libs necesarias para que Playwright funcione en Debian slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         tzdata \
         curl \
         ca-certificates \
+        wget \
+        gnupg \
+        libnss3 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libxss1 \
+        libasound2 \
+        libx11-xcb1 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxrandr2 \
+        libpangocairo-1.0-0 \
+        libgtk-3-0 \
+        libgbm1 \
+        libdrm2 \
+        fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Zona horaria de Argentina
@@ -26,6 +44,9 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 # Instalar deps primero (mejor cacheo de layers)
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+
+# Instalar navegadores Playwright (con deps) — debe ejecutarse como root
+RUN python -m playwright install --with-deps
 
 # Copiar el código
 COPY app/ ./app/
