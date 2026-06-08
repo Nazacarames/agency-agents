@@ -1,8 +1,7 @@
 name: Keep Render Service Alive
 
 # Ping /healthz cada 5 min para que Render Free no hiberne.
-# Solo actua si el secret RENDER_SERVICE_URL esta configurado en GitHub
-# (Settings -> Secrets and variables -> Actions -> Variables).
+# Usa RENDER_SERVICE_URL si existe como variable de GitHub; si no, usa la URL pública fija.
 
 on:
   schedule:
@@ -14,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping healthz
-        if: env.RENDER_SERVICE_URL != ''
         env:
           RENDER_SERVICE_URL: ${{ vars.RENDER_SERVICE_URL }}
         run: |
+          RENDER_SERVICE_URL="${RENDER_SERVICE_URL:-https://automiq-agents.onrender.com}"
           URL="${RENDER_SERVICE_URL%/}/healthz"
           echo "Pinging $URL ..."
           HTTP_CODE=$(curl -s -o /tmp/health.json -w "%{http_code}" "$URL" || echo "000")
