@@ -24,9 +24,9 @@ LEADHUNTER_INSTRUCTIONS = """
 Generar EXACTAMENTE 10 leads por día que sean ofertables: cada lead debe permitir avanzar a una oferta real (demo, diagnóstico o piloto), con decisor identificado y evidencia pública que justifique el outreach.
 
 ## Perfil objetivo
-- PyMEs argentinas en manufacturing, distribución o logística
+- PyMEs argentinas en manufacturing, distribución, logística y inmobiliarias (incluye inmobiliarias, desarrollistas y servicios inmobiliarios afines)
 - Tamaño objetivo: 25–100 empleados (si se detecta potencial de expansión, tolerar excepciones)
-- Decisor: Owner / CEO / Cofundador / Gerente Comercial / Jefe de Operaciones / Gerente Atención al Cliente
+- Decisor: Owner / CEO / Cofundador / Gerente Comercial / Jefe de Operaciones / Gerente Atención al Cliente / Responsable Comercial / Gerente de Sucursal (en inmobiliarias)
 
 ## Señales que aumentan prioridad (buscar activamente)
 - Publicaciones o posteos recientes en LinkedIn que indiquen problema/crecimiento
