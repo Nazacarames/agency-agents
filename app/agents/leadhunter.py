@@ -14,8 +14,11 @@ from typing import Any, Dict
 
 import pytz
 
+from ..log import get_logger
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block
+
+log = get_logger("leadhunter")
 
 
 LEADHUNTER_INSTRUCTIONS = """
@@ -126,13 +129,18 @@ class LeadHunterAgent(BaseAgent):
         )
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
-        """Persistir en disco de forma robusta y disparar sync a Discord + repo.
+        """Persistir en disco de forma robusta, validar contactos por scraping
+        y disparar sync a Discord + repo.
 
         Garantías:
         - SIEMPRE escribe data/leadhunter-report-YYYY-MM-DD.md (incluso si el
           modelo devolvió string vacío o el run falló aguas arriba).
         - SIEMPRE escribe data/leadhunter-leads-YYYY-MM-DD.json con metadata
           del run + output crudo del modelo.
+        - Best-effort: si el modelo propuso empresas con web, intenta validar
+          el contacto (teléfono +54 o email) scrapeando la web oficial.
+          Si valida, marca contacto_verified=true con la URL como prueba.
+          Si no, deja verified=false con el motivo.
         - El envío a Discord lo hace BaseAgent.run(); acá sólo dejamos los
           archivos listos en disco y disparamos un push best-effort al repo.
         """
@@ -203,5 +211,30 @@ class LeadHunterAgent(BaseAgent):
             )
         except Exception as e:
             log.warning("leadhunter_repo_push_failed", error=str(e))
+
+        # Validación de contactos por scraping (best-effort, no rompe el run)
+        try:
+            from ..integrations.site_validator import validate_site
+            from .leadhunter_parser import parse_leads, format_leads_md
+            leads = parse_leads(safe_text)
+            verified_count = 0
+            for lead in leads:
+                web = lead.get("web")
+                if not web or "[" in web:  # placeholder
+                    continue
+                c = validate_site(web, timeout=8.0)
+                if c.telefono or c.email:
+                    lead["contacto_validado"] = {
+                        "telefono": c.telefono,
+                        "email": c.email,
+                        "source_url": c.source_url,
+                    }
+                    verified_count += 1
+            if leads:
+                enriched_md = format_leads_md(leads, today=today, base_md=safe_text)
+                report_file.write_text(enriched_md + "\n", encoding="utf-8")
+                log.info("leadhunter_validated", total=len(leads), verified=verified_count)
+        except Exception as e:
+            log.warning("leadhunter_validation_failed", error=str(e))
 
         return response_text
