@@ -2,6 +2,8 @@ import subprocess, json, os, shlex
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 VENDOR = os.path.join(ROOT, 'vendor', 'web-scraper')
+# Normalize path for node on Windows: remove duplicated quotes/backslashes
+VENDOR = os.path.normpath(VENDOR)
 
 def run_example_api_scraper(ids=[123]):
     js = os.path.join(VENDOR, 'examples', 'api-scraper.js')
