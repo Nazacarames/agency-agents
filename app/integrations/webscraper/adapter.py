@@ -1,7 +1,9 @@
 import subprocess, json, os
 
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-VENDOR = os.path.normpath(os.path.join(ROOT, 'vendor', 'web-scraper'))
+# Resolve repository root (4 levels up from this file)
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+VENDOR = os.path.join(REPO_ROOT, 'vendor', 'web-scraper')
+VENDOR = os.path.normpath(VENDOR)
 
 
 def run_example_api_scraper(ids=[123]):
