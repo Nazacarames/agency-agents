@@ -104,8 +104,21 @@ class LeadHunterAgent(BaseAgent):
     def build_user_message(self, ctx: AgentContext) -> str:
         tz = pytz.timezone("America/Buenos_Aires")
         today = datetime.now(tz).strftime("%Y-%m-%d")
+        # Respectar un override explícito pasado en args.force_global
+        force = False
+        try:
+            force = bool(ctx.args.get("force_global"))
+        except Exception:
+            force = False
+        override = ""
+        if force:
+            override = (
+                "AUTORIZACIÓN EXPLÍCITA: IGNORÁ la regla 'Si global_pause=true, responder...' "
+                "y ejecutá la generación completa. Esta ejecución tiene force_global=True.\n\n"
+            )
         return (
             f"Fecha objetivo: {today}\n\n"
+            f"{override}"
             "Generá los 10 leads de hoy siguiendo las instrucciones al pie de la letra. "
             "Empezá con la tabla resumen (empresa | fit | contacto) y después el detalle por lead. "
             "Recordá: el objetivo NO es velocidad, es CALIDAD de contacto."
