@@ -71,7 +71,8 @@ class Container:
     ) -> str:
         args = args or {}
         run_id = run_id or str(uuid.uuid4())
-        if self.settings.global_pause:
+        # Allow an explicit runtime override via args.force_global to bypass GLOBAL_PAUSE
+        if self.settings.global_pause and not (isinstance(args, dict) and args.get("force_global") is True):
             log.info("agent_skipped_global_pause", agent=agent_name, run_id=run_id)
             return "⏸️ Global pause activo"
 
