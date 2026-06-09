@@ -52,12 +52,31 @@ async def lifespan(app: FastAPI):
         reset_container()
 
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
 app = FastAPI(
     title="Automiq Agency Agents",
     version=__version__,
     description="Wrapper Hermes-style con MiniMax-M3 para los agentes de Automiq",
     lifespan=lifespan,
 )
+
+# Middleware: bloquear redirecciones externas inesperadas y registrar headers
+class BlockExternalRedirectsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Registrar cabeceras básicas para diagnóstico
+        log.info("incoming_request", path=request.url.path, method=request.method, headers=dict(request.headers))
+        response = await call_next(request)
+        # Si la app intenta devolver una redirección externa, la convertimos a JSON error
+        if response.status_code in (301, 302, 307, 308):
+            loc = response.headers.get("location")
+            if loc and not (loc.startswith("https://automiq-agents.onrender.co") or loc.startswith("https://automiq-agents.onrender.com") or loc.startswith("/")):
+                log.warning("blocked_external_redirect", location=loc, path=request.url.path)
+                return JSONResponse({"error": "blocked external redirect", "location": loc}, status_code=502)
+        return response
+
+app.add_middleware(BlockExternalRedirectsMiddleware)
 
 
 # ── Schemas ──
