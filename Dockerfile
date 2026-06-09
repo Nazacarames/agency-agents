@@ -1,29 +1,29 @@
-# ────────────────────────────────────────────────────────────
-# Automiq Agency Agents — Dockerfile
-# Multi-stage para imagen final pequeña
-# ────────────────────────────────────────────────────────────
 FROM mcr.microsoft.com/playwright/python:latest AS base
 
 # Evita bytecode .pyc y fuerza stdout sin buffer (logs de Render)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
+# Zona horaria de Argentina (seteada antes de instalar tzdata para evitar prompts)
+ENV TZ=America/Buenos_Aires
+
 # Dependencias ligeras: tzdata y curl (Playwright base incluye navegadores y libs)
+# Usamos DEBIAN_FRONTEND=noninteractive para evitar prompts interactivos en CI
 RUN apt-get update && apt-get install -y --no-install-recommends \
         tzdata \
         curl \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Zona horaria de Argentina
-ENV TZ=America/Buenos_Aires
+# Asegurar timezone configurado
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Instalar deps primero (mejor cacheo de layers)
+# Instalar deps de Python primero (mejor cacheo de layers)
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
@@ -35,8 +35,7 @@ COPY scripts/ ./scripts/
 # Crear directorios de runtime con permisos
 RUN mkdir -p logs && chmod -R 755 /app
 
-# Usuario no-root (Render-compatible) — Playwright image typically has 'pwuser', switch if needed
-# Create automiq user and chown to be consistent with previous image
+# Usuario no-root (Playwright base suele incluir 'pwuser'; mantenemos compatibilidad creando automiq si falta)
 RUN useradd --create-home --shell /bin/bash automiq || true
 RUN chown -R automiq:automiq /app || true
 USER automiq
