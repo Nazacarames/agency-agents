@@ -1,0 +1,10 @@
+{
+  "date": "2026-06-09",
+  "run_id": "smoke-empty",
+  "triggered_by": "cron",
+  "timestamp": "2026-06-09T18:55:20.721899-03:00",
+  "agent": "leadhunter",
+  "args": {},
+  "output": "# LeadHunter — Reporte 2026-06-09\n\n⚠️ El modelo no devolvió output en este run (run_id=smoke-empty).\n\n- triggered_by: `cron`\n- run_id: `smoke-empty`\n- timestamp: `2026-06-09T18:55:20.721899-03:00`\n\nRevisá `data/leadhunter-leads-2026-06-09.json` y los logs del servicio.\n",
+  "output_chars": 270
+}

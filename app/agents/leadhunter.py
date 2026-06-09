@@ -7,6 +7,7 @@ Output: lista de 10 empresas con FIT score 4-6, contacto real (WhatsApp/teléfon
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
@@ -125,20 +126,82 @@ class LeadHunterAgent(BaseAgent):
         )
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
-        # Persistir en disco
+        """Persistir en disco de forma robusta y disparar sync a Discord + repo.
+
+        Garantías:
+        - SIEMPRE escribe data/leadhunter-report-YYYY-MM-DD.md (incluso si el
+          modelo devolvió string vacío o el run falló aguas arriba).
+        - SIEMPRE escribe data/leadhunter-leads-YYYY-MM-DD.json con metadata
+          del run + output crudo del modelo.
+        - El envío a Discord lo hace BaseAgent.run(); acá sólo dejamos los
+          archivos listos en disco y disparamos un push best-effort al repo.
+        """
         tz = pytz.timezone("America/Buenos_Aires")
         today = datetime.now(tz).strftime("%Y-%m-%d")
+        now_iso = datetime.now(tz).isoformat()
         data_dir = Path(__file__).resolve().parent.parent.parent / "data"
         data_dir.mkdir(exist_ok=True)
 
+        # Si por alguna razón post_process es invocado con string vacío, dejamos
+        # un MD mínimo pero válido en lugar de fallar.
+        safe_text = (response_text or "").strip()
+        if not safe_text:
+            safe_text = (
+                f"# LeadHunter — Reporte {today}\n\n"
+                f"⚠️ El modelo no devolvió output en este run (run_id={ctx.run_id}).\n\n"
+                f"- triggered_by: `{ctx.triggered_by}`\n"
+                f"- run_id: `{ctx.run_id}`\n"
+                f"- timestamp: `{now_iso}`\n\n"
+                f"Revisá `data/leadhunter-leads-{today}.json` y los logs del servicio.\n"
+            )
+
+        # Tabla simple para vista rápida
+        lines = safe_text.splitlines()
+        simple_lines = [ln for ln in lines if ln.strip().startswith("|") and "---" not in ln]
+        simple = "\n".join(simple_lines[:15]) if simple_lines else safe_text[:1500]
+
         leads_file = data_dir / f"leadhunter-leads-{today}.md"
         report_file = data_dir / f"leadhunter-report-{today}.md"
+        json_file = data_dir / f"leadhunter-leads-{today}.json"
 
-        # Extraer tabla simple (primeras líneas con |) si existe
-        lines = response_text.splitlines()
-        simple_lines = [ln for ln in lines if ln.strip().startswith("|") and "---" not in ln]
-        simple = "\n".join(simple_lines[:15]) if simple_lines else response_text[:1500]
+        # Escritura robusta: si una falla, las demás siguen intentando
+        try:
+            leads_file.write_text(simple + "\n", encoding="utf-8")
+        except Exception as e:
+            log.error("leadhunter_persist_leads_failed", error=str(e))
+        try:
+            report_file.write_text(safe_text + "\n", encoding="utf-8")
+        except Exception as e:
+            log.error("leadhunter_persist_report_failed", error=str(e))
 
-        leads_file.write_text(simple + "\n", encoding="utf-8")
-        report_file.write_text(response_text, encoding="utf-8")
+        # JSON con metadata + output crudo
+        try:
+            json_payload = {
+                "date": today,
+                "run_id": ctx.run_id,
+                "triggered_by": ctx.triggered_by,
+                "timestamp": now_iso,
+                "agent": "leadhunter",
+                "args": dict(ctx.args or {}),
+                "output": safe_text,
+                "output_chars": len(safe_text),
+            }
+            json_file.write_text(
+                json.dumps(json_payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except Exception as e:
+            log.error("leadhunter_persist_json_failed", error=str(e))
+
+        # Push best-effort al repo. Si falla, NO rompe el run: el archivo
+        # queda en disco y se loguea el motivo.
+        try:
+            from ..integrations.repo_sync import push_data_files
+            push_data_files(
+                files=[leads_file, report_file, json_file],
+                commit_message=f"chore(leadhunter): daily report {today} (run_id={ctx.run_id[:8]})",
+            )
+        except Exception as e:
+            log.warning("leadhunter_repo_push_failed", error=str(e))
+
         return response_text
