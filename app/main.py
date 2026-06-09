@@ -12,8 +12,11 @@ from __future__ import annotations
 import hmac
 import hashlib
 from contextlib import asynccontextmanager
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import pytz
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -276,4 +279,57 @@ async def root():
         "docs": "/docs",
         "health": "/healthz",
         "agents": "/agents",
+        "last": "/last/{agent}",
+    }
+
+
+# ── Last output (manual pull del MD+JSON a PC) ──
+
+_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+
+
+@app.get("/last/{name}")
+async def last_agent_output(name: str, request: Request):
+    """Devuelve el último MD+JSON persistido en data/ para un agente.
+
+    Autenticación: header X-Webhook-Secret (mismo que /run).
+    Útil para bajar el reporte diario a la PC del operador sin pasar por el repo.
+    """
+    _verify_webhook_secret(request)
+    if name != "leadhunter":
+        raise HTTPException(status_code=404, detail=f"agent {name} not supported")
+    today = datetime.now(pytz.timezone("America/Buenos_Aires")).strftime("%Y-%m-%d")
+    md_path = _DATA_DIR / f"leadhunter-report-{today}.md"
+    leads_path = _DATA_DIR / f"leadhunter-leads-{today}.md"
+    json_path = _DATA_DIR / f"leadhunter-leads-{today}.json"
+
+    # Si el de hoy no existe, devolver el más reciente disponible
+    if not md_path.exists():
+        candidates = sorted(_DATA_DIR.glob("leadhunter-report-*.md"), reverse=True)
+        if not candidates:
+            return JSONResponse(
+                {"status": "not_found", "message": "no reports yet", "date": today},
+                status_code=404,
+            )
+        latest = candidates[0]
+        latest_date = latest.stem.replace("leadhunter-report-", "")
+        md_path = latest
+        leads_path = _DATA_DIR / f"leadhunter-leads-{latest_date}.md"
+        json_path = _DATA_DIR / f"leadhunter-leads-{latest_date}.json"
+        today = latest_date
+
+    return {
+        "status": "ok",
+        "agent": name,
+        "date": today,
+        "files": {
+            "report_md": md_path.read_text(encoding="utf-8") if md_path.exists() else None,
+            "leads_md": leads_path.read_text(encoding="utf-8") if leads_path.exists() else None,
+            "leads_json": json_path.read_text(encoding="utf-8") if json_path.exists() else None,
+        },
+        "sizes": {
+            "report_md": md_path.stat().st_size if md_path.exists() else 0,
+            "leads_md": leads_path.stat().st_size if leads_path.exists() else 0,
+            "leads_json": json_path.stat().st_size if json_path.exists() else 0,
+        },
     }

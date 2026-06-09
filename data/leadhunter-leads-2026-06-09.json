@@ -1,10 +1,10 @@
 {
   "date": "2026-06-09",
-  "run_id": "final-smoke",
+  "run_id": "final-demo",
   "triggered_by": "manual",
-  "timestamp": "2026-06-09T19:33:28.506283-03:00",
+  "timestamp": "2026-06-09T19:41:38.385054-03:00",
   "agent": "leadhunter",
   "args": {},
-  "output": "# LeadHunter Reporte 2026-06-09\n\n## Resumen\n- 10 leads del día.\n\n## 🟢 Lead #1 — Coto (validable)\n| Campo | Valor |\n|---|---|\n| **empresa** | Coto Digital SA |\n| **industria** | Retail |\n| **ubicación** | CABA |\n| **web** | https://www.coto.com.ar |\n| **fit_score** | 5/6 |\n| **contacto_verified** | false |\n\n## 🟢 Lead #2 — MercadoLibre (validable)\n| Campo | Valor |\n|---|---|\n| **empresa** | MercadoLibre |\n| **web** | https://mercadolibre.com.ar |\n| **fit_score** | 4/6 |\n| **contacto_verified** | false |\n\n## 🟢 Lead #3 — Placeholder\n| Campo | Valor |\n|---|---|\n| **empresa** | [PENDIENTE] |\n| **web** | [PENDIENTE] |\n| **fit_score** | – |",
-  "output_chars": 640
+  "output": "# LeadHunter Reporte 2026-06-09 (test local)\n\n## Resumen\n- 3 leads de prueba para verificar el flujo de validación de contactos.\n\n## 🟢 Lead #1 — Coto (validable)\n| Campo | Valor |\n|---|---|\n| **empresa** | Coto Digital SA |\n| **industria** | Retail / distribución |\n| **ubicación** | CABA, Buenos Aires |\n| **web** | https://www.coto.com.ar |\n| **fit_score** | 5/6 |\n| **contacto (raw)** | [PENDIENTE] |\n| **contacto_tipo** | email |\n| **contacto_verified** | false |\n| **decisor** | [PENDIENTE] |\n\n## 🟢 Lead #2 — MercadoLibre (validable)\n| Campo | Valor |\n|---|---|\n| **empresa** | MercadoLibre Argentina |\n| **industria** | Marketplace |\n| **ubicación** | CABA, Buenos Aires |\n| **web** | https://mercadolibre.com.ar |\n| **fit_score** | 4/6 |\n| **contacto_verified** | false |\n\n## 🟢 Lead #3 — Placeholder\n| Campo | Valor |\n|---|---|\n| **empresa** | [PENDIENTE] |\n| **web** | [PENDIENTE] |\n| **fit_score** | – |\n| **contacto_verified** | false |",
+  "output_chars": 946
 }
