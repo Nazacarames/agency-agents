@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright/python:latest AS base
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -10,7 +10,7 @@ WORKDIR /app
 
 ENV TZ=America/Buenos_Aires
 
-# Dependencias base + Node 18 para web-scraper
+# Dependencias base + Playwright (sin la imagen oficial porque usa Python viejo)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         tzdata \
         curl \
@@ -18,6 +18,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         tesseract-ocr \
         tesseract-ocr-spa \
         libtesseract-dev \
+        libnss3 \
+        libnspr4 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libdrm2 \
+        libdbus-1-3 \
+        libxkbcommon0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libgbm1 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libasound2t64 \
+        fonts-liberation \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
@@ -26,7 +43,9 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # ── Hermes + deps del proyecto ────────────────────────────────────────
 COPY requirements.txt .
-RUN pip install -r requirements.txt && pip install hermes-agent
+RUN pip install -r requirements.txt
+# Playwright browser deps (los binarios se bajan con playwright install)
+RUN playwright install --with-deps chromium || true
 
 # ── Código ────────────────────────────────────────────────────────────
 COPY app/ ./app/
