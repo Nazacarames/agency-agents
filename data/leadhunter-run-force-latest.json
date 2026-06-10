@@ -1,9 +1,0 @@
-{
-  "status": 200,
-  "body": {
-    "run_id": "sync",
-    "agent": "leadhunter",
-    "status": "ok",
-    "output": "⏸️ **LeadHunter en pausa global**\n\nNo puedo ejecutar el barrido de 10 leads en este momento.\n\n**Para reactivar, necesito una de estas confirmaciones:**\n\n1. ✅ \"Reanudá LeadHunter\" / \"global_pause = false\"\n2. 🎯 Especificar vertical/filtro (ej. \"solo logística en Córdoba\", \"inmobiliarias CABA\")\n3. 🌎 Especificar geografía acotada (ej. \"AMBA\", \"solo Buenos Aires\")\n4. 🔑 Indicar si hay claves de enriquecimiento disponibles (APOLLO_API_KEY, ZOOMINFO_API_KEY, TRUELIST_API_KEY, CLAY_API_KEY)\n\n**Mientras tanto, si querés avanzar en otra cosa puedo:**\n- Refinar el ICP / los criterios de fit_score\n- Preparar plantillas de outreach adicionales\n- Auditar un lead puntual que tengas cargado\n- Configurar la skill `prospecting` o `sales-agency-outbound`\n\n¿Por dónde seguimos?"
-  }
-}

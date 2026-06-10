@@ -1,9 +1,0 @@
-{
-  "status": 200,
-  "body": {
-    "run_id": "sync",
-    "agent": "leadhunter",
-    "status": "ok",
-    "output": "⏸️ **LeadHunter en pausa global**\n\nNo puedo ejecutar la generación de leads del 2026-06-09. La directiva `global_pause` está activa, así que el flujo se detiene antes del discovery y el enriquecimiento.\n\nDecime cuando levantes la pausa y arranco con el primer bloque de discovery (ICP manufacturing/distribución/logística + inmobiliarias en Argentina, 25–100 empleados) para devolverte el `leadhunter-report-2026-06-09.md` con los 10 leads verificados."
-  }
-}

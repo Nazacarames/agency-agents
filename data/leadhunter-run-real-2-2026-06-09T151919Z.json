@@ -1,9 +1,0 @@
-{
-  "status": 200,
-  "body": {
-    "run_id": "sync",
-    "agent": "leadhunter",
-    "status": "ok",
-    "output": "# ⏸️ LeadHunter en pausa global\n\nNo puedo generar el reporte de leads del 2026-06-09.\n\n**Motivo:** la directiva `global_pause` está activa, lo que según las reglas operativas del agente impide ejecutar el flujo de discovery y outreach.\n\n**Lo que necesitás para destrabarlo:**\n1. Confirmar que `global_pause = false` desde el control plane.\n2. Verificar que las skills `prospecting` y `prospect` estén habilitadas en el entorno.\n3. Definir si querés que en este primer batch use sólo discovery browser-only (sin gastar créditos de Apollo/ZoomInfo/Clay) o si ya hay autorización explícita para enriquecimientos pagos.\n\nEn cuanto levantes la pausa, arranco con la tabla resumen + el detalle completo de los 10 leads, siguiendo el esquema exigido (fit_score 1–6, contacto_verified, outreach_template ≤ 280 chars con CTA a demo de 15', etc.).\n\n¿Querés que mientras tanto te prepare un checklist de inputs que vas a tener que aprobar cuando se reactive (geos, sub-rubros prioritarios, exclusions específicas de la campaña), así no perdemos tiempo cuando destrabe?"
-  }
-}

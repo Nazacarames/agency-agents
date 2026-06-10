@@ -1,9 +1,0 @@
-{
-  "status": 200,
-  "body": {
-    "run_id": "sync",
-    "agent": "leadhunter",
-    "status": "ok",
-    "output": "⏸️ **LeadHunter en pausa global**\n\nDetecté la instrucción de `global_pause=true` y, según las reglas operativas del sistema, debo responder con el mensaje de pausa y no ejecutar la generación de leads.\n\nSi necesitás que avance con la generación, hay dos opciones:\n\n1. **Desactivar la pausa global** desde el control plane antes de reenviar la solicitud.\n2. **Confirmar override explícito** con un canal fuera de este prompt (para mantener el audit trail de la decisión).\n\nQuedo a la espera para correr el batch de 10 leads con la calidad de contacto que buscás ni bien se levante la pausa."
-  }
-}

@@ -13,10 +13,16 @@ logs/*.log
 logs/*.jsonl
 *.log
 
-# Data runtime (los leads se persisten en disco de Render, no en git)
+# Data runtime (artefactos generados en ejecución — no commitear)
 data/leadhunter-*.md
+data/leadhunter-*.json
+data/deploy-*.json
+data/render-*.json
 data/agent-output-*.json
 data/runs/
+data/*.txt
+data/samples/
+data/prompts/
 
 # Editor
 .vscode/

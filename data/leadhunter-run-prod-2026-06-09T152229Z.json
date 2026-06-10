@@ -1,9 +1,0 @@
-{
-  "status": 200,
-  "body": {
-    "run_id": "sync",
-    "agent": "leadhunter",
-    "status": "ok",
-    "output": "⏸️ **LeadHunter en pausa global**\n\nDetecté que `global_pause` está activo, así que no ejecuto la generación de leads ni realizo búsquedas, enriquecimientos ni outreach.\n\nCuando desactives la pausa, retomaré con:\n- Tabla resumen (empresa | fit_score | contacto normalizado)\n- Detalle completo por lead con los 15 campos obligatorios\n- Prioridad en calidad de contacto sobre velocidad, como indicaste\n\n¿Querés que igual te deje preparado el pipeline para correr apenas levantes la pausa, o preferís esperar la confirmación?"
-  }
-}
