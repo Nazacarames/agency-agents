@@ -1,0 +1,13 @@
+{
+  "id": "dep-d8jo5nvavr4c739tm2qg",
+  "commit": {
+    "id": "ac83b6d8f2d4fc075f32f1299609dd4f42ac9228",
+    "message": "ci: trigger deploy for playwright base image",
+    "createdAt": "2026-06-09T03:04:41Z"
+  },
+  "status": "build_in_progress",
+  "trigger": "new_commit",
+  "createdAt": "2026-06-09T03:05:03.211918Z",
+  "updatedAt": "2026-06-09T03:05:03.211918Z",
+  "startedAt": "2026-06-09T03:05:03.17852Z"
+}

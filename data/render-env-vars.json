@@ -1,0 +1,110 @@
+{
+  "status": 200,
+  "body": [
+    {
+      "envVar": {
+        "key": "WEBHOOK_SECRET",
+        "value": "automiq-rQbr28IOQOTojWozIlr_jl5xFCRm6zDE11iI"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODUw"
+    },
+    {
+      "envVar": {
+        "key": "SCHEDULER_TIMEZONE",
+        "value": "America/Buenos_Aires"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODRn"
+    },
+    {
+      "envVar": {
+        "key": "GLOBAL_PAUSE",
+        "value": "false"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODQw"
+    },
+    {
+      "envVar": {
+        "key": "SCHEDULER_ENABLED",
+        "value": "true"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODNn"
+    },
+    {
+      "envVar": {
+        "key": "DISCORD_DEFAULT_USERNAME",
+        "value": "Automiq Agents"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODMw"
+    },
+    {
+      "envVar": {
+        "key": "DISCORD_WEBHOOK_URL",
+        "value": "https://discord.com/api/webhooks/1513603129973932053/ljmXgLLNtppfUzW1bgqCqCpI7MBkbllOdn9hCwOP7InxTUVBAxfEot5C4hTOouCKgcEU"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODJn"
+    },
+    {
+      "envVar": {
+        "key": "MINIMAX_TIMEOUT_SECONDS",
+        "value": "120"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODIw"
+    },
+    {
+      "envVar": {
+        "key": "MINIMAX_MAX_TOKENS",
+        "value": "8192"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODFn"
+    },
+    {
+      "envVar": {
+        "key": "MINIMAX_MODEL_FALLBACKS",
+        "value": "MiniMax-M2.5,MiniMax-M2.5-highspeed"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODEw"
+    },
+    {
+      "envVar": {
+        "key": "MINIMAX_MODEL_PRIMARY",
+        "value": "MiniMax-M3"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODBn"
+    },
+    {
+      "envVar": {
+        "key": "MINIMAX_API_KEY",
+        "value": "sk-cp-3jLvDp0insn7glK8mMZ5Oy0yVXO2pZrAW6RSdqPKdc8bx79vDACGgd6MobXKwTUNcIuIuJfj_HDomo5L2xWqpbOlz4t9mCsrkPuU5FLf3p__HJU2B_ADb4g"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4ODAw"
+    },
+    {
+      "envVar": {
+        "key": "MINIMAX_BASE_URL",
+        "value": "https://api.minimax.io/anthropic"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4N3Zn"
+    },
+    {
+      "envVar": {
+        "key": "LOG_LEVEL",
+        "value": "INFO"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4N3Yw"
+    },
+    {
+      "envVar": {
+        "key": "HOST",
+        "value": "0.0.0.0"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4N3Vn"
+    },
+    {
+      "envVar": {
+        "key": "PORT",
+        "value": "8000"
+      },
+      "cursor": "pCnA3OUNwz01a2N2aWtrYzczYmo4N3Uw"
+    }
+  ]
+}

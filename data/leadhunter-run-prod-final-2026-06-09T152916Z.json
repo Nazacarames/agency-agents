@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "body": {
+    "run_id": "sync",
+    "agent": "leadhunter",
+    "status": "ok",
+    "output": "⏸️ **LeadHunter en pausa global**\n\n`global_pause` está activo, así que no ejecuto el pipeline ni genero el `data/leadhunter-report-2026-06-09.md`.\n\nDecime cómo querés seguir:\n1. **Reanudar** — confirmame y arranco con discovery + enriquecimiento.\n2. **Reporte retroactivo** — si querés que igual arme el `.md` con leads ya trabajados, decímelo y lo construyo con lo que tengamos.\n3. **Override manual** — si necesitás 1-2 leads puntuales para una campaña específica, pasame el vertical y los filtro aunque esté en pausa."
+  }
+}

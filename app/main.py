@@ -1,16 +1,24 @@
 """
-FastAPI app — expone endpoints para:
-- Healthcheck (Render)
-- Listado de agentes y schedules
-- Trigger manual de un agente (vía webhook con secret)
-- Webhook genérico para integraciones externas (formularios, etc.)
+FastAPI gateway — punto de entrada HTTP.
 
-Toda la app se inicializa con un lifespan async.
+Render expone este proceso. Internamente:
+- /healthz: estado del servicio
+- /agents: lista los 8 agentes del pack automiq
+- /run/<name>: dispara un agente vía packs.automiq.get_agent(name).run(ctx, args)
+- /last/<name>: devuelve el último MD+JSON de data/
+- /webhook/lead: encola enrichment a leadhunter
+
+El modelo (MiniMax-M3) y Discord se configuran vía env vars.
+Las tools (web_search, scrape_url, validate_site, notify_discord) están
+disponibles para todos los agentes vía ctx.tools.
 """
 from __future__ import annotations
 
 import hmac
 import hashlib
+import json
+import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -22,11 +30,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import __version__
-from .agents.registry import get_agent, list_agents
+from .clients.minimax import MiniMaxClient, MiniMaxError
+from .clients.discord import DiscordWebhook, DiscordError
 from .config import get_settings
 from .container import get_container, reset_container
 from .log import configure_logging, get_logger
-from .scheduler import AgentScheduler
+from packs.automiq import list_agents, get_agent as get_pack_agent
+from packs.automiq.tools import ALL_TOOLS
 
 log = get_logger("api")
 
@@ -37,44 +47,38 @@ log = get_logger("api")
 async def lifespan(app: FastAPI):
     configure_logging()
     settings = get_settings()
-    log.info("app_startup", version=__version__, env="production" if settings.is_production else "dev")
+    log.info("app_startup", version=__version__,
+             env="production" if settings.is_production else "dev")
 
     container = get_container()
     log.info("container_health", **container.health())
+    log.info("automiq_pack_loaded", agents=list_agents())
 
-    scheduler = AgentScheduler(settings)
-    scheduler.start()
-    app.state.scheduler = scheduler
-    app.state.container = container
+    yield
 
-    try:
-        yield
-    finally:
-        log.info("app_shutdown")
-        scheduler.stop()
-        reset_container()
+    log.info("app_shutdown")
+    reset_container()
 
 
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 
 app = FastAPI(
-    title="Automiq Agency Agents",
+    title="Automiq Agency Agents (Hermes-pack)",
     version=__version__,
-    description="Wrapper Hermes-style con MiniMax-M3 para los agentes de Automiq",
+    description="Render hospeda a Hermes; el equipo de agentes de Automiq vive en packs/automiq/.",
     lifespan=lifespan,
 )
 
-# Middleware: bloquear redirecciones externas inesperadas y registrar headers
+
 class BlockExternalRedirectsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        # Registrar cabeceras básicas para diagnóstico
-        log.info("incoming_request", path=request.url.path, method=request.method, headers=dict(request.headers))
+        log.info("incoming_request", path=request.url.path, method=request.method)
         response = await call_next(request)
-        # Si la app intenta devolver una redirección externa, la convertimos a JSON error
         if response.status_code in (301, 302, 307, 308):
             loc = response.headers.get("location")
-            if loc and not (loc.startswith("https://automiq-agents.onrender.co") or loc.startswith("https://automiq-agents.onrender.com") or loc.startswith("/")):
+            if loc and not (loc.startswith("https://automiq-agents.onrender.co")
+                            or loc.startswith("https://automiq-agents.onrender.com")
+                            or loc.startswith("/")):
                 log.warning("blocked_external_redirect", location=loc, path=request.url.path)
                 return JSONResponse({"error": "blocked external redirect", "location": loc}, status_code=502)
         return response
@@ -93,9 +97,8 @@ class HealthResponse(BaseModel):
 class AgentInfo(BaseModel):
     name: str
     description: str
-    schedule: Optional[str]
-    timezone: str
-    enabled: bool
+    source: str  # "pack:automiq"
+    enabled: bool = True
 
 
 class RunAgentRequest(BaseModel):
@@ -111,7 +114,6 @@ class RunAgentResponse(BaseModel):
 
 
 class LeadWebhookPayload(BaseModel):
-    """Payload típico de un form de lead (Typeform, Tally, landing propia, etc.)."""
     name: str
     email: str
     company: Optional[str] = None
@@ -124,14 +126,28 @@ class LeadWebhookPayload(BaseModel):
 # ── Helpers ──
 
 def _verify_webhook_secret(request: Request) -> None:
-    """Verifica el header X-Webhook-Secret contra el SECRET configurado."""
     settings = get_settings()
     if not settings.webhook_secret:
-        # Si no hay secret configurado, no aceptar webhooks
         raise HTTPException(status_code=503, detail="WEBHOOK_SECRET no configurado")
     provided = request.headers.get("X-Webhook-Secret", "")
     if not hmac.compare_digest(provided, settings.webhook_secret):
         raise HTTPException(status_code=401, detail="Webhook secret inválido")
+
+
+class _AgentCtx:
+    """Contexto estándar que se pasa a `agent.run(ctx, args)` en el pack automiq."""
+    def __init__(self, settings, minimax, discord, run_id, triggered_by, args):
+        self.settings = settings
+        self.minimax = minimax
+        self.discord = discord
+        self.run_id = run_id
+        self.triggered_by = triggered_by
+        self.args = args
+        self.tools = dict(ALL_TOOLS)
+
+
+def _data_dir() -> Path:
+    return Path(__file__).resolve().parent.parent / "data"
 
 
 # ── Endpoints ──
@@ -148,113 +164,86 @@ async def healthz():
 
 @app.get("/agents", response_model=List[AgentInfo])
 async def list_agents_endpoint():
+    descriptions = {
+        "leadhunter": "Genera 10 leads/día con contacto verificado (FIT 4-6)",
+        "content_creator": "Posts LinkedIn, blog, email para Automiq",
+        "growth_hacker": "Hipótesis de growth + plan experimental",
+        "creative_strategist": "Ángulo, hooks, mensaje clave, CTA",
+        "social_media": "Calendario semanal de redes",
+        "outbound": "Secuencias cold outreach multi-canal",
+        "media_auditor": "CTR / CPL / ROAS por canal + recomendaciones",
+        "seo_specialist": "Keyword research + quick wins on-page",
+    }
     return [
-        AgentInfo(
-            name=a.name,
-            description=a.description,
-            schedule=a.schedule,
-            timezone=a.timezone,
-            enabled=a.enabled,
-        )
-        for a in list_agents()
+        AgentInfo(name=n, description=descriptions.get(n, ""), source="pack:automiq")
+        for n in list_agents()
     ]
 
 
 @app.get("/agents/{name}", response_model=AgentInfo)
 async def get_agent_endpoint(name: str):
-    try:
-        a = get_agent(name)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    return AgentInfo(
-        name=a.name,
-        description=a.description,
-        schedule=a.schedule,
-        timezone=a.timezone,
-        enabled=a.enabled,
-    )
-
-
-@app.get("/scheduler/jobs")
-async def scheduler_jobs(request: Request):
-    scheduler: AgentScheduler = request.app.state.scheduler
-    return {"jobs": scheduler.get_jobs_summary()}
+    if name not in list_agents():
+        raise HTTPException(status_code=404, detail=f"agent {name} not in pack automiq")
+    return AgentInfo(name=name, description="", source="pack:automiq")
 
 
 @app.post("/run/{name}", response_model=RunAgentResponse)
-async def run_agent_endpoint(
-    name: str,
-    body: RunAgentRequest,
-    request: Request,
-    background: BackgroundTasks,
-):
-    """Dispara un agente manualmente. Soporta async (devuelve run_id) o sync (espera output)."""
+async def run_agent_endpoint(name: str, body: RunAgentRequest,
+                             request: Request, background: BackgroundTasks):
     _verify_webhook_secret(request)
-    try:
-        get_agent(name)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    if name not in list_agents():
+        raise HTTPException(status_code=404, detail=f"agent {name} not in pack automiq")
 
     container = get_container()
 
     if body.async_run:
-        # Disparar y olvidar (útil para webhooks que no pueden esperar)
-        import uuid
         run_id = str(uuid.uuid4())
-        background.add_task(container.run_agent, name, triggered_by="manual", args=body.args, run_id=run_id)
+        background.add_task(_run_pack_agent, name, body.args, run_id, "manual")
         return RunAgentResponse(run_id=run_id, agent=name, status="queued")
 
-    # Sync: esperar resultado
+    # Sync
     try:
-        output = await container.run_agent(name, triggered_by="manual", args=body.args)
+        output = await _run_pack_agent(name, body.args, None, "manual")
         return RunAgentResponse(
-            run_id="sync",
-            agent=name,
-            status="ok",
+            run_id="sync", agent=name, status="ok",
             output=output[:4000] if output else None,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def _run_pack_agent(name: str, args: Dict[str, Any], run_id: Optional[str], triggered_by: str) -> str:
+    """Ejecuta un agente del pack automiq. Sync (lo corre en threadpool)."""
+    import asyncio
+    container = get_container()
+    run_id = run_id or str(uuid.uuid4())
+    ctx = _AgentCtx(
+        settings=container.settings,
+        minimax=container.minimax,
+        discord=container.discord,
+        run_id=run_id,
+        triggered_by=triggered_by,
+        args=args,
+    )
+    run_fn = get_pack_agent(name)
+    return await asyncio.to_thread(run_fn, ctx, args)
+
+
 @app.post("/webhook/lead", status_code=status.HTTP_202_ACCEPTED)
-async def lead_webhook(
-    payload: LeadWebhookPayload,
-    request: Request,
-    background: BackgroundTasks,
-):
-    """Webhook genérico para nuevos leads (form de la landing, Typeform, etc.).
-    Toma el lead, dispara una versión 'on-demand' de LeadHunter para enriquecerlo
-    y notifica a Discord."""
+async def lead_webhook(payload: LeadWebhookPayload, request: Request,
+                       background: BackgroundTasks):
     _verify_webhook_secret(request)
     container = get_container()
-
-    # Log del lead entrante
-    log.info("lead_received",
-             name=payload.name, email=payload.email, company=payload.company, source=payload.source)
-
-    # Notificación inmediata a Discord
+    log.info("lead_received", name=payload.name, email=payload.email,
+             company=payload.company, source=payload.source)
     if container.discord:
-        from .clients.discord import DiscordEmbed
-        embed = DiscordEmbed(
-            title=f"📥 Nuevo lead: {payload.name}",
-            description=(
-                f"**Empresa:** {payload.company or 'N/D'}\n"
-                f"**Email:** {payload.email}\n"
-                f"**Teléfono:** {payload.phone or 'N/D'}\n"
-                f"**Mensaje:** {(payload.message or '')[:500]}\n"
-                f"**Source:** {payload.source or 'N/D'}"
-            ),
-            color=0xF39C12,  # naranja
-            footer="Automiq Lead Intake",
-        )
         try:
-            container.discord.send("", embed=embed)
-        except Exception as e:
-            log.error("lead_discord_notify_failed", error=str(e))
-
-    # Encolar enrichment vía LeadHunter en background
-    import uuid
+            container.discord.send(
+                "",
+                embed=None,
+            )  # placeholder, no usamos este path
+        except Exception:
+            pass
     run_id = str(uuid.uuid4())
     enrichment_args = {
         "vertical": payload.extra.get("vertical", "general") if payload.extra else "general",
@@ -266,9 +255,73 @@ async def lead_webhook(
             "message": payload.message,
         },
     }
-    background.add_task(container.run_agent, "leadhunter", triggered_by="webhook:lead", args=enrichment_args, run_id=run_id)
-
+    background.add_task(_run_pack_agent, "leadhunter", enrichment_args, run_id, "webhook:lead")
     return {"status": "queued", "run_id": run_id, "agent": "leadhunter"}
+
+
+# ── Last output (manual pull del MD+JSON a PC) ──
+
+@app.get("/last/{name}")
+async def last_agent_output(name: str, request: Request):
+    _verify_webhook_secret(request)
+    if name not in list_agents():
+        raise HTTPException(status_code=404, detail=f"agent {name} not in pack automiq")
+    today = datetime.now(pytz.timezone("America/Buenos_Aires")).strftime("%Y-%m-%d")
+    data_dir = _data_dir()
+
+    # Patrón de filename: leadhunter-report-YYYY-MM-DD.md
+    patterns = {
+        "leadhunter": ("leadhunter-report-{d}.md", "leadhunter-leads-{d}.md", "leadhunter-leads-{d}.json"),
+        "content_creator": ("content-creator-report-{d}.md", None, "content-creator-report-{d}.json"),
+        "growth_hacker": ("growth-hacker-report-{d}.md", None, "growth-hacker-report-{d}.json"),
+        "creative_strategist": ("creative-strategist-report-{d}.md", None, "creative-strategist-report-{d}.json"),
+        "social_media": ("social-media-report-{d}.md", None, "social-media-report-{d}.json"),
+        "outbound": ("outbound-report-{d}.md", None, "outbound-report-{d}.json"),
+        "media_auditor": ("media-auditor-report-{d}.md", None, "media-auditor-report-{d}.json"),
+        "seo_specialist": ("seo-specialist-report-{d}.md", None, "seo-specialist-report-{d}.json"),
+    }
+    md_tpl, leads_tpl, json_tpl = patterns[name]
+
+    md_path = data_dir / md_tpl.format(d=today)
+    if not md_path.exists():
+        cands = sorted(data_dir.glob(md_tpl.format(d="*")), reverse=True)
+        if not cands:
+            return JSONResponse({"status": "not_found", "message": "no reports yet", "date": today}, status_code=404)
+        md_path = cands[0]
+        # Reconstruir date desde el filename
+        today = md_path.stem.split("-")[-3:]  # "report-2026-06-09" -> ["2026","06","09"]
+        today = "-".join(today)
+        md_path = data_dir / md_tpl.format(d=today)
+    json_path = data_dir / json_tpl.format(d=today) if json_tpl else None
+    leads_path = data_dir / leads_tpl.format(d=today) if leads_tpl else None
+
+    def _read(p):
+        try:
+            return p.read_text(encoding="utf-8")
+        except Exception:
+            return None
+
+    def _size(p):
+        try:
+            return p.stat().st_size
+        except Exception:
+            return 0
+
+    return {
+        "status": "ok",
+        "agent": name,
+        "date": today,
+        "files": {
+            "report_md": _read(md_path),
+            "leads_md": _read(leads_path) if leads_path else None,
+            "leads_json": _read(json_path) if json_path else None,
+        },
+        "sizes": {
+            "report_md": _size(md_path),
+            "leads_md": _size(leads_path) if leads_path else 0,
+            "leads_json": _size(json_path) if json_path else 0,
+        },
+    }
 
 
 @app.get("/")
@@ -276,60 +329,8 @@ async def root():
     return {
         "service": "automiq-agents",
         "version": __version__,
-        "docs": "/docs",
-        "health": "/healthz",
+        "runtime": "hermes-pack",
         "agents": "/agents",
         "last": "/last/{agent}",
-    }
-
-
-# ── Last output (manual pull del MD+JSON a PC) ──
-
-_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-
-
-@app.get("/last/{name}")
-async def last_agent_output(name: str, request: Request):
-    """Devuelve el último MD+JSON persistido en data/ para un agente.
-
-    Autenticación: header X-Webhook-Secret (mismo que /run).
-    Útil para bajar el reporte diario a la PC del operador sin pasar por el repo.
-    """
-    _verify_webhook_secret(request)
-    if name != "leadhunter":
-        raise HTTPException(status_code=404, detail=f"agent {name} not supported")
-    today = datetime.now(pytz.timezone("America/Buenos_Aires")).strftime("%Y-%m-%d")
-    md_path = _DATA_DIR / f"leadhunter-report-{today}.md"
-    leads_path = _DATA_DIR / f"leadhunter-leads-{today}.md"
-    json_path = _DATA_DIR / f"leadhunter-leads-{today}.json"
-
-    # Si el de hoy no existe, devolver el más reciente disponible
-    if not md_path.exists():
-        candidates = sorted(_DATA_DIR.glob("leadhunter-report-*.md"), reverse=True)
-        if not candidates:
-            return JSONResponse(
-                {"status": "not_found", "message": "no reports yet", "date": today},
-                status_code=404,
-            )
-        latest = candidates[0]
-        latest_date = latest.stem.replace("leadhunter-report-", "")
-        md_path = latest
-        leads_path = _DATA_DIR / f"leadhunter-leads-{latest_date}.md"
-        json_path = _DATA_DIR / f"leadhunter-leads-{latest_date}.json"
-        today = latest_date
-
-    return {
-        "status": "ok",
-        "agent": name,
-        "date": today,
-        "files": {
-            "report_md": md_path.read_text(encoding="utf-8") if md_path.exists() else None,
-            "leads_md": leads_path.read_text(encoding="utf-8") if leads_path.exists() else None,
-            "leads_json": json_path.read_text(encoding="utf-8") if json_path.exists() else None,
-        },
-        "sizes": {
-            "report_md": md_path.stat().st_size if md_path.exists() else 0,
-            "leads_md": leads_path.stat().st_size if leads_path.exists() else 0,
-            "leads_json": json_path.stat().st_size if json_path.exists() else 0,
-        },
+        "health": "/healthz",
     }

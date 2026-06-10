@@ -23,9 +23,13 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pyyaml==6.0.2
 orjson==3.10.12          # JSON rápido para logs
+beautifulsoup4==4.12.3   # parsing HTML para web_search/scrape/validate
 
 # Render/Railway healthcheck
 structlog==24.4.0
 
 # Browser tooling for prospecting (Playwright)
 playwright==1.60.0
+
+# Hermes Agent runtime (paquete que provee ACP adapter, gateway, CLI)
+hermes-agent==0.15.2

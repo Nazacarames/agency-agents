@@ -89,6 +89,10 @@ class Container:
         return await asyncio.to_thread(agent.run, ctx)
 
     async def run_scheduled(self, agent_name: str) -> None:
+        """Schedule del pack automiq. Se ejecuta vía main._run_pack_agent."""
+        # El run real se hace desde la tarea programada con su propio ctx.
+        # Mantenemos este método por compatibilidad; en el nuevo main.py
+        # se llama directo a _run_pack_agent.
         await self.run_agent(agent_name, triggered_by="cron")
 
 

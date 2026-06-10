@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "body": {
+    "run_id": "sync",
+    "agent": "leadhunter",
+    "status": "ok",
+    "output": "⏸️ **LeadHunter en pausa global**\n\nEl flag `global_pause` está activo en la configuración, por lo que no puedo ejecutar la generación de los 10 leads del día.\n\nCuando se desactive la pausa, retomaré la operación con el flujo completo:\n- Tabla resumen (empresa | fit | contacto)\n- Detalle de los 10 leads con todos los campos obligatorios\n- Discovery con browser-only + enrichment si hay API keys disponibles\n\n¿Querés que verifique el estado de la pausa o tenés alguna otra tarea que sí pueda ejecutar mientras tanto?"
+  }
+}

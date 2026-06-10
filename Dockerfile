@@ -1,6 +1,5 @@
 FROM mcr.microsoft.com/playwright/python:latest AS base
 
-# Evita bytecode .pyc y fuerza stdout sin buffer (logs de Render)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -9,11 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Zona horaria de Argentina (seteada antes de instalar tzdata para evitar prompts)
 ENV TZ=America/Buenos_Aires
 
-# Dependencias ligeras: tzdata y curl (Playwright base incluye navegadores y libs)
-# Usamos DEBIAN_FRONTEND=noninteractive para evitar prompts interactivos en CI
+# Dependencias base + Node 18 para web-scraper
 RUN apt-get update && apt-get install -y --no-install-recommends \
         tzdata \
         curl \
@@ -21,40 +18,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         tesseract-ocr \
         tesseract-ocr-spa \
         libtesseract-dev \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Asegurar timezone configurado
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Instalar deps de Python primero (mejor cacheo de layers)
+# ── Hermes + deps del proyecto ────────────────────────────────────────
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt && pip install hermes-agent
 
-# Copiar el código
+# ── Código ────────────────────────────────────────────────────────────
 COPY app/ ./app/
 COPY data/ ./data/
 COPY scripts/ ./scripts/
+COPY packs/ ./packs/
 
-# Crear directorios de runtime con permisos
-RUN mkdir -p logs && chmod -R 755 /app
+# Vendor web-scraper (lo usa el módulo adapter)
+COPY vendor/ ./vendor/
+RUN cd /app/vendor/web-scraper && npm install || true
 
-# Usuario no-root (Playwright base suele incluir 'pwuser'; mantenemos compatibilidad creando automiq si falta)
-RUN useradd --create-home --shell /bin/bash automiq || true
-RUN chown -R automiq:automiq /app || true
+# ── Hermes home (skills, agents, memory) ─────────────────────────────
+ENV HERMES_HOME=/home/automiq/.hermes
+RUN mkdir -p $HERMES_HOME/skills $HERMES_HOME/agents $HERMES_HOME/memory \
+             logs /app/data && chmod -R 755 $HERMES_HOME
+
+# Usuario no-root
+RUN useradd --create-home --shell /bin/bash automiq 2>/dev/null || true \
+    && chown -R automiq:automiq /app $HERMES_HOME || true
 USER automiq
+ENV HOME=/home/automiq
 
-# Exponer puerto (Render lo lee de $PORT, pero declaramos el default)
 EXPOSE 8000
 
-# Healthcheck nativo de Docker
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -fsS http://localhost:${PORT:-8000}/healthz || exit 1
 
-# Comando de inicio
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
-
-# Node for web-scraper examples
-RUN apt-get update && apt-get install -y curl gnupg && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs && \
-    cd /app/vendor/web-scraper && npm install || true
+# CMD corre el launcher que arranca Hermes (ACP server) + FastAPI gateway
+CMD ["sh", "-c", "python scripts/launcher.py"]

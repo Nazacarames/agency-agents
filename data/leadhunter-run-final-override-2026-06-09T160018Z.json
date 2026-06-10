@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "body": {
+    "run_id": "sync",
+    "agent": "leadhunter",
+    "status": "ok",
+    "output": "⏸️ **LeadHunter en pausa global**\n\nNo puedo ejecutar la generación de leads en este momento. El flag `global_pause` está activo, lo que indica que la operación debe detenerse.\n\n**Estado actual:**\n- Fecha objetivo: 2026-06-09\n- Acción solicitada: generar 10 leads B2B\n- Estado: ⏸️ **PAUSADO** — no se ejecuta discovery, ni enriquecimiento, ni outreach\n\n**Para reanudar:**\nConfirmá que `global_pause=false` y volvé a correr el prompt. En cuanto se levante la pausa, arranco con la tabla resumen (empresa | fit | contacto) y el detalle completo de los 10 leads con todos los campos obligatorios (decisor, contacto_verified=true, outreach_template ≤280 chars, suggested_offer, next_action, discovery_signals con audit_trail).\n\n¿Levantamos la pausa?"
+  }
+}

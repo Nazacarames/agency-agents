@@ -1,0 +1,16 @@
+{
+  "status": 201,
+  "body": {
+    "id": "dep-d8k32lflk1mc73e5ol3g",
+    "commit": {
+      "id": "121c625fe564e74e1ffe66f85e75e174f6d3ec89",
+      "message": "ci: trigger redeploy (user requested)",
+      "createdAt": "2026-06-09T15:21:40Z"
+    },
+    "status": "build_in_progress",
+    "trigger": "api",
+    "createdAt": "2026-06-09T15:29:26.270924Z",
+    "updatedAt": "2026-06-09T15:29:26.270924Z",
+    "startedAt": "2026-06-09T15:29:26.188548Z"
+  }
+}

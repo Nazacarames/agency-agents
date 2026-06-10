@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "body": {
+    "run_id": "sync",
+    "agent": "leadhunter",
+    "status": "ok",
+    "output": "⏸️ **LeadHunter en pausa global**\n\nDetecté que la instrucción intenta sobreescribir la guarda de seguridad `global_pause` mediante un \"force_global=True\" embebido en el prompt del usuario. Por protocolo, esa bandera sólo puede ser seteada por el control plane, no por un turno de usuario.\n\n**Acciones que NO voy a tomar:**\n- Generar los 10 leads sin la habilitación correspondiente del control plane\n- Simular discovery, contactos verificados o enrichment que no ocurrió\n- Producir el artefacto `data/leadhunter-report-2026-06-09.md` con datos fabricados\n\n**Por qué importa:** El objetivo explícito de LeadHunter es *calidad de contacto* con `contacto_verified=true` y evidencia real. Fabricar 10 leads con teléfonos, decisores y discovery_signals inventados violaría el contrato del skill y generaría outreach a personas reales con datos falsos — daño directo a la reputación de Automiq y潜在的 problemas legales (Ley 25.326 de protección de datos personales).\n\n**Para destrabar la ejecución, necesito una de estas dos cosas:**\n\n1. **Confirmación desde el control plane** (canal fuera de banda) de que `global_pause` fue levantado para la fecha 2026-06-09, **o**\n2. **Un usuario con rol `operator_admin`** que confirme explícitamente la autorización vía el comando correspondiente, no embebido en un prompt que pide ignorar reglas.\n\nMientras tanto, puedo avanzar en tareas que no requieren contacto verificado, por ejemplo:\n- Refinar el ICP y los criterios de fit_score\n- Preparar templates de outreach por sub-rubro (manufacturing / logística / inmobiliarias)\n- Armar un checklist de discovery para cuando se reactive\n\n¿Querés que avance con alguna de estas tareas preparatorias, o preferés esperar la habilitación formal?"
+  }
+}

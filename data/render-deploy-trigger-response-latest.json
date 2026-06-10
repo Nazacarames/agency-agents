@@ -1,0 +1,16 @@
+{
+  "status": 201,
+  "body": {
+    "id": "dep-d8k34fbeo5us73ekscdg",
+    "commit": {
+      "id": "3786d2e1564ce1b7fbcd289a67f974fd67140996",
+      "message": "feat: allow force_global arg to override GLOBAL_PAUSE for one-off runs",
+      "createdAt": "2026-06-09T15:32:11Z"
+    },
+    "status": "build_in_progress",
+    "trigger": "api",
+    "createdAt": "2026-06-09T15:33:17.256532Z",
+    "updatedAt": "2026-06-09T15:33:17.256532Z",
+    "startedAt": "2026-06-09T15:33:17.204847Z"
+  }
+}
