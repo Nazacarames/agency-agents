@@ -73,6 +73,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -fsS http://localhost:${PORT:-8000}/healthz || exit 1
 
-# CMD: arranca Hermes en background (no bloquea) y uvicorn en foreground.
-# Si el launcher falla, uvicorn sigue exponiendo el gateway + scheduler.
-CMD ["sh", "-c", "python scripts/launcher_hermes.py >/app/logs/launcher.log 2>&1 || true; exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --log-level info"]
+# CMD: arranca uvicorn en foreground. El launcher Hermes se removió
+# (lo corremos como job de Render en lugar de background process).
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --log-level info --timeout-keep-alive 30"]
