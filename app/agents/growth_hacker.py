@@ -41,6 +41,12 @@ concretas y ejecutables esta semana.
 - Ser ESPECÍFICO: "mejorar la landing" ❌ → "cambiar el headline H1 de X a Y porque Z" ✅
 - Si no hay datos, decirlo explícitamente y proponer cómo recolectarlos
 - Priorizar impacto > esfuerzo
+- Si no tenés acceso a analytics reales (Meta, Google, GA), NO devuelvas "no puedo".
+  En cambio, armá el reporte asumiendo un PyME argentina típica de 25-100 empleados
+  con presupuesto marketing mensual de USD 1k-3k, métricas de benchmark del rubro
+  (CTR 1-2%, CPL USD 5-15, conversion rate landing 2-5%) y marcalas como [BENCHMARK].
+  Los quick wins y experimentos SIEMPRE van: son accionables aunque las métricas
+  exactas sean estimadas.
 """.strip()
 
 

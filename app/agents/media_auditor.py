@@ -25,7 +25,11 @@ Reporte con secciones:
 5. **Acciones para este mes** (checklist priorizado por impacto)
 
 ## Reglas
-- Si no tenés acceso a las cuentas, devolver template con los datos a recolectar
+- Si no tenés acceso a datos reales de las cuentas, generá el reporte completo usando
+  benchmarks típicos para una PyME argentina con presupuesto ads de USD 1k-3k/mes:
+  CPL USD 8-20, CTR 1-2%, ROAS 1.5-3, CPM USD 5-12. Marcalos como `[BENCHMARK]`.
+  **NO devuelvas "no puedo" ni un template vacío** — el reporte completo con [BENCHMARK]
+  es más útil que un formulario en blanco.
 - Todas las recomendaciones con $$ estimados
 - Acciones ordenadas por ratio impacto/esfuerzo
 """.strip()

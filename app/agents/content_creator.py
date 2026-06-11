@@ -51,7 +51,9 @@ class ContentCreatorAgent(BaseAgent):
     def build_user_message(self, ctx: AgentContext) -> str:
         return (
             "Generá las 3 ideas de contenido de hoy. "
-            "Elegí 3 formatos DIFERENTES (no repitas). "
+            "Elegí 3 formatos DIFERENTES entre sí (no repitas tipo de formato). "
             "Cada idea tiene que estar lista para que el equipo de diseño la ejecute sin preguntas. "
-            "Recordá chequear data/ por contenido previo para no repetir temas."
+            "Variá los temas: rotá entre industrias (manufacturing, logística, distribución) "
+            "y no repitas el mismo ángulo (caso de uso, mito, tip, detrás de escena, encuesta) "
+            "en el mismo lote. Entregá el copy completo de cada idea."
         )

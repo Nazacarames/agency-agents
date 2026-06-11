@@ -49,8 +49,9 @@ class SeoSpecialistAgent(BaseAgent):
 
     def build_user_message(self, ctx: AgentContext) -> str:
         return (
-            "Generá el plan SEO de este mes. "
-            "Revisá data/ por contenido previo para no repetir keywords ni temas. "
-            "Asumí que el sitio es automiq.com.ar y que apunta a PyMEs manufactureras "
-            "argentinas. Devolvé todo listo para que el equipo ejecute."
+            "Generá el plan SEO de este mes para automiq.com.ar. "
+            "El sitio apunta a PyMEs manufactureras, distribuidoras y logísticas argentinas. "
+            "Incluí keywords long-tail en español argentino con intención comercial o informativa alta. "
+            "No repitas keywords ni ideas de artículos que ya figuren en el system prompt. "
+            "Devolvé el plan completo (los 5 puntos del output esperado) listo para que el equipo ejecute."
         )

@@ -246,7 +246,7 @@ async def run_agent_endpoint(name: str, body: RunAgentRequest,
         output = await _run_pack_agent(name, body.args, None, "manual")
         return RunAgentResponse(
             run_id="sync", agent=name, status="ok",
-            output=output[:4000] if output else None,
+            output=output if output else None,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
