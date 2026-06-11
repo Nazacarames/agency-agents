@@ -67,6 +67,10 @@ def run_claude_code(
     env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
     env["DISABLE_TELEMETRY"] = "1"
     env["DISABLE_AUTOUPDATER"] = "1"
+    # Render corre el container como root; Claude Code bloquea
+    # --dangerously-skip-permissions con root salvo que se marque entorno sandbox.
+    # El container es efímero/aislado → seguro habilitarlo.
+    env["IS_SANDBOX"] = "1"
     env.setdefault("HOME", "/root")  # para que ~/.claude/skills se resuelva en el container
 
     cmd = [
