@@ -35,9 +35,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libcairo2 \
         libasound2t64 \
         fonts-liberation \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+# ── Claude Code CLI (harness de los agentes, backend MiniMax vía ANTHROPIC_BASE_URL) ──
+RUN npm install -g @anthropic-ai/claude-code && claude --version
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
@@ -56,6 +59,9 @@ COPY packs/ ./packs/
 # Vendor web-scraper (lo usa el módulo adapter)
 COPY vendor/ ./vendor/
 RUN cd /app/vendor/web-scraper && npm install || true
+
+# ── Skills de Claude Code (las cargan los agentes vía la tool Skill) ──
+COPY .claude/ /root/.claude/
 
 # ── Hermes home (skills, agents, memory) ─────────────────────────────
 ENV HERMES_HOME=/home/automiq/.hermes

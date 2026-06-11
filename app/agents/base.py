@@ -23,6 +23,7 @@ import pytz
 from apscheduler.triggers.cron import CronTrigger
 
 from ..clients.minimax import MiniMaxClient, MiniMaxResponse, MiniMaxError
+from ..clients.claude_code import run_claude_code, ClaudeCodeError
 from ..clients.discord import DiscordWebhook
 from ..log import get_logger, write_run_log
 from ..config import Settings
@@ -49,7 +50,15 @@ class BaseAgent(ABC):
     deliver_to_discord: bool = True
     max_tokens: int = 6000
     temperature: float = 0.7
-    # ── Tool use (online mode) ──
+    # ── Claude Code runner (harness real con MiniMax de backend) ──
+    # Si use_claude_code=True, el agente corre vía `claude -p` headless (tools
+    # reales + skills) en vez de una completion directa. Fallback automático a
+    # MiniMax si el CLI no está disponible o falla.
+    use_claude_code: bool = False
+    claude_code_tools: Optional[List[str]] = None  # None → DEFAULT_ALLOWED_TOOLS
+    claude_code_timeout: int = 600
+
+    # ── Tool use (online mode, path MiniMax directo) ──
     # Subclases que quieran correr "online" definen `tools` (schemas Anthropic
     # {name, description, input_schema}) y `tool_executors` (name -> callable).
     # Si `tools` está vacío, el agente corre en modo texto puro (como antes).
@@ -108,28 +117,54 @@ class BaseAgent(ABC):
             except Exception:
                 pass
 
-            if self.tools:
+            response: Optional[MiniMaxResponse] = None
+
+            # 1) Camino preferente: Claude Code headless con backend MiniMax.
+            if self.use_claude_code:
                 try:
-                    response = self._run_agentic_loop(ctx, local_system, user_msg)
-                except MiniMaxError as e:
-                    # Red de seguridad: si el proveedor rechaza el campo `tools`
-                    # (o el loop falla), no dejamos al equipo sin entregable:
-                    # caemos a una completion de texto plano (modo offline).
-                    log.warning("agentic_loop_failed_fallback_text",
+                    cc_text = run_claude_code(
+                        prompt=user_msg,
+                        settings=ctx.settings,
+                        system_append=local_system,
+                        allowed_tools=self.claude_code_tools,
+                        timeout=self.claude_code_timeout,
+                    )
+                    response = MiniMaxResponse(
+                        text=cc_text,
+                        model=f"claude-code:{ctx.settings.minimax_model_primary}",
+                        input_tokens=0, output_tokens=0,
+                        stop_reason="end_turn", raw={}, elapsed_ms=0,
+                    )
+                    log.info("agent_via_claude_code", agent=self.name, run_id=ctx.run_id)
+                except ClaudeCodeError as e:
+                    log.warning("claude_code_unavailable_fallback",
                                 agent=self.name, run_id=ctx.run_id, error=str(e))
+                    response = None  # cae al path MiniMax directo
+
+            # 2) Path MiniMax directo (con o sin tool-use), o fallback del anterior.
+            if response is None:
+                if self.tools:
+                    try:
+                        response = self._run_agentic_loop(ctx, local_system, user_msg)
+                    except MiniMaxError as e:
+                        # Red de seguridad: si el proveedor rechaza el campo `tools`
+                        # (o el loop falla), no dejamos al equipo sin entregable:
+                        # caemos a una completion de texto plano (modo offline).
+                        log.warning("agentic_loop_failed_fallback_text",
+                                    agent=self.name, run_id=ctx.run_id, error=str(e))
+                        response = ctx.minimax.complete(
+                            system=local_system,
+                            messages=[{"role": "user", "content": user_msg}],
+                            max_tokens=self.max_tokens,
+                            temperature=self.temperature,
+                        )
+                else:
                     response = ctx.minimax.complete(
                         system=local_system,
                         messages=[{"role": "user", "content": user_msg}],
                         max_tokens=self.max_tokens,
                         temperature=self.temperature,
                     )
-            else:
-                response = ctx.minimax.complete(
-                    system=local_system,
-                    messages=[{"role": "user", "content": user_msg}],
-                    max_tokens=self.max_tokens,
-                    temperature=self.temperature,
-                )
             output = self.post_process(response.text, ctx)
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
 

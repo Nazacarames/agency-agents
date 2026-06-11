@@ -154,6 +154,14 @@ class LeadHunterAgent(BaseAgent):
     max_tokens = 8000
     max_tool_iterations = 14  # 10 leads × descubrir+verificar necesita varias vueltas
 
+    # ── Claude Code (harness real con MiniMax) ──
+    # Corre vía `claude -p` headless: usa la skill `prospecting` + WebFetch/Bash
+    # para descubrir empresas en directorios y verificar contacto en cada sitio.
+    # WebSearch NO se incluye: no funciona con backend MiniMax (400 server-side).
+    use_claude_code = True
+    claude_code_tools = ["WebFetch", "Bash", "Read", "Write", "Glob", "Grep", "Skill"]
+    claude_code_timeout = 1500  # prospecting real (fetch+scrape, ~70s/lead) tarda
+
     @property
     def tools(self):
         return LEADHUNTER_TOOLS
@@ -189,23 +197,26 @@ class LeadHunterAgent(BaseAgent):
         return (
             f"Fecha objetivo: {today}\n\n"
             f"{override}"
-            "TENÉS TOOLS DISPONIBLES (web_search, scrape_url, validate_site). "
-            "Estás ONLINE: NO uses el modo offline ni datos de training como primera opción.\n"
-            "Flujo obligatorio:\n"
-            "1. Usá `web_search` para descubrir empresas reales que matcheen el perfil "
-            "(buscá por rubro + provincia + señales: 'distribuidora Mendoza', "
-            "'metalúrgica PyME Córdoba contacto', vacantes, etc.).\n"
-            "2. Usá `scrape_url` sobre el sitio de cada candidata para confirmar rubro, "
-            "tamaño y decisor.\n"
-            "3. Usá `validate_site` sobre el dominio para extraer teléfono +54 y email REALES. "
-            "Solo contá el lead como verificado si validate_site devolvió contacto.\n"
-            "Iterá hasta tener 10 leads con contacto verificado por tool. Si una empresa no "
-            "valida, descartala y buscá otra.\n"
-            "Solo si las tools fallan repetidamente (errores de red), recién ahí usá el "
-            "fallback offline y marcalo claramente.\n\n"
-            "Cuando termines la investigación, devolvé el reporte: tabla resumen "
-            "(empresa | fit | contacto) y después el detalle por lead con la URL fuente "
-            "de cada contacto verificado. El objetivo NO es velocidad, es CALIDAD de contacto."
+            "Sos un agente de prospecting B2B corriendo en Claude Code. Cargá y seguí la "
+            "skill `prospecting` (usá la tool Skill si está disponible).\n\n"
+            "⚠️ NO tenés WebSearch (no funciona en este entorno). Descubrí empresas así:\n"
+            "1. DESCUBRIMIENTO por directorios: usá WebFetch sobre directorios y guías "
+            "sectoriales argentinas para listar empresas reales del rubro objetivo "
+            "(manufactura, distribución, logística, inmobiliarias). Ejemplos de fuentes a "
+            "fetchear: cámaras industriales por provincia, guías de parques industriales, "
+            "Páginas Amarillas/Doradas AR por rubro+ciudad, asociaciones sectoriales, "
+            "listados de proveedores. Extraé nombres de empresa + su web oficial.\n"
+            "2. CALIFICACIÓN: con WebFetch abrí el sitio de cada candidata y confirmá rubro, "
+            "tamaño aproximado (25–100 empleados) y decisor.\n"
+            "3. VERIFICACIÓN de contacto: buscá en el sitio (home, /contacto, /quienes-somos) "
+            "el teléfono argentino (+54) y/o email REAL. Si no encontrás contacto verificable, "
+            "descartá la empresa y buscá otra. Podés usar Bash (curl) si WebFetch falla en un sitio.\n"
+            "4. Iterá hasta juntar 10 leads con contacto verificado en una fuente pública. "
+            "Aplicá la rúbrica de fit de la skill (fit_score 4-6).\n\n"
+            "Entregable final (imprimilo como respuesta, NO escribas archivos): "
+            "tabla resumen (empresa | industria | fit | contacto +54) y luego el detalle por "
+            "lead con TODOS los campos obligatorios del system prompt, incluyendo la URL fuente "
+            "de cada dato de contacto. El objetivo es CALIDAD de contacto verificable, no velocidad."
         )
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
