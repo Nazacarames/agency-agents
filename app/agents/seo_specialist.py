@@ -49,7 +49,8 @@ class SeoSpecialistAgent(BaseAgent):
 
     def build_user_message(self, ctx: AgentContext) -> str:
         return (
-            "Generá el plan SEO de este mes para automiq.com.ar. "
+            "Generá el plan SEO de este mes para automiq-landing-astro.vercel.app "
+            "(landing oficial de Automiq, hospedada en Vercel). "
             "El sitio apunta a PyMEs manufactureras, distribuidoras y logísticas argentinas. "
             "Incluí keywords long-tail en español argentino con intención comercial o informativa alta. "
             "No repitas keywords ni ideas de artículos que ya figuren en el system prompt. "
