@@ -93,12 +93,79 @@ Generar EXACTAMENTE 10 leads por día que sean ofertables: cada lead debe permit
 """.strip()
 
 
+# Tools (formato Anthropic) que el agente puede invocar para correr ONLINE.
+# Los ejecutores reales viven en packs/automiq/tools/.
+LEADHUNTER_TOOLS = [
+    {
+        "name": "web_search",
+        "description": (
+            "Busca en la web (Google vía Serper, o DuckDuckGo como fallback). "
+            "Usalo para DESCUBRIR PyMEs argentinas (manufacturing, distribución, "
+            "logística, inmobiliarias), encontrar decisores, noticias, vacantes, "
+            "y páginas de contacto. Devuelve [{title, url, snippet}]."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Consulta en español argentino"},
+                "n": {"type": "integer", "description": "Cantidad de resultados (default 5)"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "scrape_url",
+        "description": (
+            "Descarga una URL y devuelve {title, text, links}. Usalo para LEER el "
+            "sitio de una empresa, su página de contacto, o resultados de búsqueda, "
+            "y confirmar rubro, tamaño, decisor y datos de contacto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "URL completa con http(s)://"},
+            },
+            "required": ["url"],
+        },
+    },
+    {
+        "name": "validate_site",
+        "description": (
+            "Recorre home + páginas de contacto de un dominio y extrae email y "
+            "teléfono argentino real (+54). Usalo para VERIFICAR el contacto de cada "
+            "lead. Devuelve {telefono, email, source_url} o {error}."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "domain_or_url": {"type": "string", "description": "Dominio o URL de la empresa"},
+            },
+            "required": ["domain_or_url"],
+        },
+    },
+]
+
+
 class LeadHunterAgent(BaseAgent):
     name = "leadhunter"
     description = "Genera 10 leads/día con contacto verificado (FIT 4-6)"
     schedule = "0 14 * * *"  # 14:00 ART diario
     timezone = "America/Buenos_Aires"
     max_tokens = 8000
+    max_tool_iterations = 14  # 10 leads × descubrir+verificar necesita varias vueltas
+
+    @property
+    def tools(self):
+        return LEADHUNTER_TOOLS
+
+    @property
+    def tool_executors(self):
+        from packs.automiq.tools import web_search, scrape_url, validate_site
+        return {
+            "web_search": web_search,
+            "scrape_url": scrape_url,
+            "validate_site": validate_site,
+        }
 
     @property
     def system_prompt(self) -> str:
@@ -122,9 +189,23 @@ class LeadHunterAgent(BaseAgent):
         return (
             f"Fecha objetivo: {today}\n\n"
             f"{override}"
-            "Generá los 10 leads de hoy siguiendo las instrucciones al pie de la letra. "
-            "Empezá con la tabla resumen (empresa | fit | contacto) y después el detalle por lead. "
-            "Recordá: el objetivo NO es velocidad, es CALIDAD de contacto."
+            "TENÉS TOOLS DISPONIBLES (web_search, scrape_url, validate_site). "
+            "Estás ONLINE: NO uses el modo offline ni datos de training como primera opción.\n"
+            "Flujo obligatorio:\n"
+            "1. Usá `web_search` para descubrir empresas reales que matcheen el perfil "
+            "(buscá por rubro + provincia + señales: 'distribuidora Mendoza', "
+            "'metalúrgica PyME Córdoba contacto', vacantes, etc.).\n"
+            "2. Usá `scrape_url` sobre el sitio de cada candidata para confirmar rubro, "
+            "tamaño y decisor.\n"
+            "3. Usá `validate_site` sobre el dominio para extraer teléfono +54 y email REALES. "
+            "Solo contá el lead como verificado si validate_site devolvió contacto.\n"
+            "Iterá hasta tener 10 leads con contacto verificado por tool. Si una empresa no "
+            "valida, descartala y buscá otra.\n"
+            "Solo si las tools fallan repetidamente (errores de red), recién ahí usá el "
+            "fallback offline y marcalo claramente.\n\n"
+            "Cuando termines la investigación, devolvé el reporte: tabla resumen "
+            "(empresa | fit | contacto) y después el detalle por lead con la URL fuente "
+            "de cada contacto verificado. El objetivo NO es velocidad, es CALIDAD de contacto."
         )
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:

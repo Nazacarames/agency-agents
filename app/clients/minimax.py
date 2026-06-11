@@ -55,6 +55,14 @@ class MiniMaxResponse:
     stop_reason: Optional[str]
     raw: Dict[str, Any]
     elapsed_ms: int
+    content_blocks: List[Dict[str, Any]] = None  # bloques crudos {type,...} de la respuesta
+    tool_uses: List[Dict[str, Any]] = None        # solo los bloques type=="tool_use"
+
+    def __post_init__(self):
+        if self.content_blocks is None:
+            self.content_blocks = []
+        if self.tool_uses is None:
+            self.tool_uses = []
 
 
 class MiniMaxClient:
@@ -87,13 +95,22 @@ class MiniMaxClient:
     def complete(
         self,
         system: str,
-        messages: List[Dict[str, str]],
+        messages: List[Dict[str, Any]],
         *,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
+        tools: Optional[List[Dict[str, Any]]] = None,
         extra: Optional[Dict[str, Any]] = None,
     ) -> MiniMaxResponse:
-        """Llama al modelo con fallback automático."""
+        """Llama al modelo con fallback automático.
+
+        Si `tools` está presente se pasa en el body (Anthropic Messages API,
+        formato {name, description, input_schema}) y la respuesta puede traer
+        bloques `tool_use` en `response.tool_uses`.
+        """
+        body_extra = dict(extra or {})
+        if tools:
+            body_extra["tools"] = tools
         last_error: Optional[Exception] = None
         for model in self._models:
             try:
@@ -103,7 +120,7 @@ class MiniMaxClient:
                     messages=messages,
                     max_tokens=max_tokens or self.s.minimax_max_tokens,
                     temperature=temperature,
-                    extra=extra or {},
+                    extra=body_extra,
                 )
             except (MiniMaxRateLimit, MiniMaxServerError) as e:
                 log.warning("model_fallback", model=model, error=str(e))
@@ -157,11 +174,20 @@ class MiniMaxClient:
 
         data = resp.json()
 
-        # Anthropic Messages API: content es una lista de bloques {type, text}
+        # Anthropic Messages API: content es una lista de bloques {type, ...}
+        content_blocks = data.get("content", []) or []
         text_parts = []
-        for block in data.get("content", []):
-            if block.get("type") == "text":
+        tool_uses = []
+        for block in content_blocks:
+            btype = block.get("type")
+            if btype == "text":
                 text_parts.append(block.get("text", ""))
+            elif btype == "tool_use":
+                tool_uses.append({
+                    "id": block.get("id"),
+                    "name": block.get("name"),
+                    "input": block.get("input", {}) or {},
+                })
 
         return MiniMaxResponse(
             text="\n".join(text_parts).strip(),
@@ -171,4 +197,6 @@ class MiniMaxClient:
             stop_reason=data.get("stop_reason"),
             raw=data,
             elapsed_ms=elapsed_ms,
+            content_blocks=content_blocks,
+            tool_uses=tool_uses,
         )
