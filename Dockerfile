@@ -62,12 +62,8 @@ ENV HERMES_HOME=/home/automiq/.hermes
 RUN mkdir -p $HERMES_HOME/skills $HERMES_HOME/agents $HERMES_HOME/memory \
              logs /app/data && chmod -R 755 $HERMES_HOME
 
-# Usuario no-root
-RUN useradd --create-home --shell /bin/bash automiq 2>/dev/null || true \
-    && chown -R automiq:automiq /app $HERMES_HOME || true
-USER automiq
-ENV HOME=/home/automiq
-
+# Sin USER no-root: Render corre como root, los permisos no-root pueden romper
+# el install de playwright. El container es efímero.
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
@@ -75,4 +71,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 
 # CMD: arranca uvicorn en foreground. El launcher Hermes se removió
 # (lo corremos como job de Render en lugar de background process).
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --log-level info --timeout-keep-alive 30"]
+# --timeout-keep-alive 30 acepta health checks lentos.
+# stdout/stderr van a tty, que Render captura en /logs.
+CMD ["sh", "-c", "echo \"[startup] $(date) - launching uvicorn\"; exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --log-level info --timeout-keep-alive 30"]
