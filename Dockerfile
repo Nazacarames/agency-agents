@@ -73,4 +73,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # (lo corremos como job de Render en lugar de background process).
 # --timeout-keep-alive 30 acepta health checks lentos.
 # stdout/stderr van a tty, que Render captura en /logs.
-CMD ["sh", "-c", "echo \"[startup] $(date) - launching uvicorn\"; exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --log-level info --timeout-keep-alive 30"]
+# 1) Verificar que app.main importa OK
+# 2) Si pasa, arrancar uvicorn
+CMD ["sh", "-c", "echo \"[startup] $(date) - verifying imports...\"; python -c 'from app.main import app; print(\"[startup] app.main imported OK\")' && echo \"[startup] $(date) - launching uvicorn\" && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --log-level info --timeout-keep-alive 30"]

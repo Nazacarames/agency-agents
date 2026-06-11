@@ -183,6 +183,15 @@ async def healthz():
     )
 
 
+# Endpoint ultra-liviano para health checks de Render.
+# Devuelve 200 sin tocar DB, scheduler ni Hermes. Lo configuramos como
+# healthCheckPath en Render para que el container NO sea matado mientras
+# la app está arrancando (playwright load + hermes-agent tardan 30-60s).
+@app.get("/_ready")
+async def ready():
+    return {"status": "ok", "version": __version__}
+
+
 @app.get("/agents", response_model=List[AgentInfo])
 async def list_agents_endpoint():
     descriptions = {
