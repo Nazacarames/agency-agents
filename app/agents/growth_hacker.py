@@ -56,6 +56,9 @@ class GrowthHackerAgent(BaseAgent):
     schedule = "0 14 * * *"
     timezone = "America/Buenos_Aires"
     max_tokens = 5000
+    use_claude_code = True
+    claude_code_skill = "marketing-funnel"
+    claude_code_timeout = 700
 
     @property
     def system_prompt(self) -> str:

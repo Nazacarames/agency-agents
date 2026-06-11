@@ -43,6 +43,9 @@ class ContentCreatorAgent(BaseAgent):
     schedule = "0 13 * * 1,3,5"   # Lun/Mie/Vie 13:00 ART
     timezone = "America/Buenos_Aires"
     max_tokens = 5000
+    use_claude_code = True
+    claude_code_skill = "marketing-redes"
+    claude_code_timeout = 700
 
     @property
     def system_prompt(self) -> str:

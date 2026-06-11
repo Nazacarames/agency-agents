@@ -42,6 +42,9 @@ class SeoSpecialistAgent(BaseAgent):
     schedule = "0 11 15 * *"  # Día 15 de cada mes, 11:00 ART
     timezone = "America/Buenos_Aires"
     max_tokens = 6000
+    use_claude_code = True
+    claude_code_skill = "marketing-seo-contenido"
+    claude_code_timeout = 900  # puede WebFetchear la landing para on-page real
 
     @property
     def system_prompt(self) -> str:

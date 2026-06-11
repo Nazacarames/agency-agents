@@ -43,16 +43,27 @@ class OutboundAgent(BaseAgent):
     schedule = "0 10 * * 1"   # Lunes 10:00 ART
     timezone = "America/Buenos_Aires"
     max_tokens = 6000
+    use_claude_code = True
+    claude_code_skill = "cold-email"   # email marketing a los leads de leadhunter
+    claude_code_timeout = 900
 
     @property
     def system_prompt(self) -> str:
         return f"{get_context_block()}\n\n{OUTBOUND_INSTRUCTIONS}"
 
     def build_user_message(self, ctx: AgentContext) -> str:
-        # Si vienen args (de un webhook), usar el vertical específico
-        vertical = ctx.args.get("vertical", "manufacturing")
+        vertical = ctx.args.get("vertical", "manufacturing") if isinstance(ctx.args, dict) else "manufacturing"
         return (
-            f"Diseñá una secuencia de outbound nueva para prospectos del vertical **{vertical}**. "
-            "Revisá data/outbound-sequences/ por secuencias existentes para no duplicar. "
-            "Devolvé la secuencia completa, paso por paso, lista para que el SDR la cargue."
+            "Tu trabajo es hacer EMAIL MARKETING (cold email) a los leads que generó el "
+            "agente leadhunter.\n\n"
+            "1. Buscá con Glob/Read el reporte de leads más reciente en `data/` "
+            "(`data/leadhunter-report-*.md` o `data/leadhunter-leads-*.json`). Si existe, "
+            "tomá los leads reales (empresa, decisor, contacto, rubro, señales) de ahí.\n"
+            "2. Si NO hay archivo de leads disponible (disco efímero), generá la secuencia "
+            f"para el perfil del vertical **{vertical}** de forma representativa.\n"
+            "3. Por cada lead, escribí una secuencia de cold-email personalizada siguiendo la "
+            "skill `cold-email`: subject line, opening personalizado (basado en una señal real "
+            "del lead), cuerpo breve orientado a valor, CTA claro, y 2-3 follow-ups con timing. "
+            "Español argentino, tono humano (no plantilla). Personalizá con datos reales del lead.\n\n"
+            "Devolvé, por lead: empresa + la secuencia completa lista para enviar."
         )

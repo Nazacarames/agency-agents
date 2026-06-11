@@ -24,6 +24,7 @@ AGENT_NAMES: List[str] = [
     "outbound",
     "media_auditor",
     "seo_specialist",
+    "web_auditor",
 ]
 
 _AGENTS_DIR = Path(__file__).resolve().parent / "agents"

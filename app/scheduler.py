@@ -28,6 +28,7 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
     "growth_hacker": "0 16 * * 5",       # viernes 16:00 ART
     "creative_strategist": "0 11 * * 1", # lunes 11:00 ART
     "seo_specialist": "0 8 * * 1",       # lunes 08:00 ART
+    "web_auditor": "0 12 * * 1",         # lunes 12:00 ART (auditoría de páginas)
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 

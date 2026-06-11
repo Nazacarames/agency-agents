@@ -57,6 +57,7 @@ class BaseAgent(ABC):
     use_claude_code: bool = False
     claude_code_tools: Optional[List[str]] = None  # None → DEFAULT_ALLOWED_TOOLS
     claude_code_timeout: int = 600
+    claude_code_skill: Optional[str] = None  # nombre de skill a cargar (tool Skill)
 
     # ── Tool use (online mode, path MiniMax directo) ──
     # Subclases que quieran correr "online" definen `tools` (schemas Anthropic
@@ -91,7 +92,20 @@ class BaseAgent(ABC):
         ...
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
-        """Hook opcional: persistir output en data/ o enviar a otra API."""
+        """Persistencia genérica best-effort: deja el output en
+        data/<name>-report-YYYY-MM-DD.md para que /last lo sirva. Las subclases
+        con lógica especial (p.ej. leadhunter) lo sobreescriben."""
+        try:
+            from pathlib import Path
+            from datetime import datetime
+            import pytz as _pytz
+            today = datetime.now(_pytz.timezone(self.timezone)).strftime("%Y-%m-%d")
+            data_dir = Path(__file__).resolve().parent.parent.parent / "data"
+            data_dir.mkdir(exist_ok=True)
+            fname = f"{self.name.replace('_', '-')}-report-{today}.md"
+            (data_dir / fname).write_text((response_text or "").strip() + "\n", encoding="utf-8")
+        except Exception as e:
+            log.warning("post_process_persist_failed", agent=self.name, error=str(e))
         return response_text
 
     def run(self, ctx: AgentContext) -> str:
@@ -122,8 +136,16 @@ class BaseAgent(ABC):
             # 1) Camino preferente: Claude Code headless con backend MiniMax.
             if self.use_claude_code:
                 try:
+                    cc_prompt = user_msg
+                    if self.claude_code_skill:
+                        cc_prompt = (
+                            f"IMPORTANTE: cargá y seguí la skill `{self.claude_code_skill}` "
+                            f"(usá la tool Skill) para resolver esta tarea.\n\n{user_msg}\n\n"
+                            "Al terminar, IMPRIMÍ el entregable COMPLETO como tu respuesta final "
+                            "(no lo dejes solo en archivos de disco)."
+                        )
                     cc_text = run_claude_code(
-                        prompt=user_msg,
+                        prompt=cc_prompt,
                         settings=ctx.settings,
                         system_append=local_system,
                         allowed_tools=self.claude_code_tools,

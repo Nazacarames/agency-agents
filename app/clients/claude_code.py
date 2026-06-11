@@ -25,7 +25,8 @@ from ..log import get_logger
 log = get_logger("claude_code")
 
 # Tools seguras por defecto para agentes (sin WebSearch: no anda con MiniMax).
-DEFAULT_ALLOWED_TOOLS = ["WebFetch", "Bash", "Read", "Write", "Edit", "Glob", "Grep"]
+# Skill = cargar skills; Task = subagentes (los usa la auditoría de páginas).
+DEFAULT_ALLOWED_TOOLS = ["WebFetch", "Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "Task"]
 
 # Modelo chico para tareas internas del harness (títulos, etc.).
 SMALL_FAST_MODEL = "MiniMax-M2.5"

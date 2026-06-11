@@ -203,6 +203,7 @@ async def list_agents_endpoint():
         "outbound": "Secuencias cold outreach multi-canal",
         "media_auditor": "CTR / CPL / ROAS por canal + recomendaciones",
         "seo_specialist": "Keyword research + quick wins on-page",
+        "web_auditor": "Auditoría de páginas web (contenido/CRO/SEO) puntuada",
     }
     return [
         AgentInfo(
@@ -320,6 +321,7 @@ async def last_agent_output(name: str, request: Request):
         "outbound": ("outbound-report-{d}.md", None, "outbound-report-{d}.json"),
         "media_auditor": ("media-auditor-report-{d}.md", None, "media-auditor-report-{d}.json"),
         "seo_specialist": ("seo-specialist-report-{d}.md", None, "seo-specialist-report-{d}.json"),
+        "web_auditor": ("web-auditor-report-{d}.md", None, "web-auditor-report-{d}.json"),
     }
     md_tpl, leads_tpl, json_tpl = patterns[name]
 

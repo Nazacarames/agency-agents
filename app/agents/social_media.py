@@ -41,6 +41,9 @@ class SocialMediaAgent(BaseAgent):
     schedule = "0 18 * * 0"   # Domingo 18:00 ART
     timezone = "America/Buenos_Aires"
     max_tokens = 6000
+    use_claude_code = True
+    claude_code_skill = "marketing-redes"
+    claude_code_timeout = 700
 
     @property
     def system_prompt(self) -> str:
