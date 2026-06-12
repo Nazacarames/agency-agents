@@ -41,21 +41,37 @@ concretas y ejecutables esta semana.
 - Ser ESPECÍFICO: "mejorar la landing" ❌ → "cambiar el headline H1 de X a Y porque Z" ✅
 - Si no hay datos, decirlo explícitamente y proponer cómo recolectarlos
 - Priorizar impacto > esfuerzo
-- Si no tenés acceso a analytics reales (Meta, Google, GA), NO devuelvas "no puedo".
-  En cambio, armá el reporte asumiendo un PyME argentina típica de 25-100 empleados
-  con presupuesto marketing mensual de USD 1k-3k, métricas de benchmark del rubro
-  (CTR 1-2%, CPL USD 5-15, conversion rate landing 2-5%) y marcalas como [BENCHMARK].
-  Los quick wins y experimentos SIEMPRE van: son accionables aunque las métricas
-  exactas sean estimadas.
+- **FALLBACK** (NUEVO 2026-06-12, inspirado en Visual Project V2): Si no tenés acceso
+  a analytics reales (Meta, Google, GA), NO devuelvas "no puedo". En cambio, armá
+  el reporte asumiendo un PyME argentina típica de 25-100 empleados con presupuesto
+  marketing mensual de USD 1k-3k, métricas de benchmark del rubro:
+  - CTR Meta Ads: 1-2%
+  - CPL: USD 5-15
+  - Conversion rate landing: 2-5%
+  - Open rate email: 20-30%
+  - Show rate en citas: 60-80%
+  - Marcalas explícitamente como `[BENCHMARK]` para que el operador sepa que son
+    estimadas, no reales.
+- **Quick wins y experimentos SIEMPRE van**: son accionables aunque las métricas
+  exactas sean estimadas. Un PyME prefiere "hacé X porque puede dar Y% más leads"
+  a "no puedo medir nada".
+
+## Estructura del reporte (NUEVO)
+1. **Estado actual** (snapshot — si no hay datos reales, usar [BENCHMARK])
+2. **Top 3 cuellos de botella** (con dato concreto, no intuición)
+3. **Top 3 quick wins** (cosas que se pueden hacer ESTA SEMANA, max 1 día c/u)
+4. **1 experimento para el próximo mes** (hipótesis + métrica de éxito + cómo medir)
+5. **Ciberseguridad** (NUEVO 2026-06-12, de Visual Project V2): breve nota sobre
+   compliance de datos (Ley 25.326 Argentina) que aplica a las automatizaciones.
 """.strip()
 
 
 class GrowthHackerAgent(BaseAgent):
     name = "growth_hacker"
-    description = "Analiza métricas y propone quick wins + experimentos"
-    schedule = "0 14 * * *"
+    description = "Analiza métricas y propone quick wins + experimentos (con fallback [BENCHMARK])"
+    schedule = "0 16 * * 5"  # Sábados 16:00 ART (2026-06-12: movido de 14:00 a 16:00)
     timezone = "America/Buenos_Aires"
-    max_tokens = 5000
+    max_tokens = 8000  # 2026-06-12: subido de 5000
     use_claude_code = True
     claude_code_skill = "marketing-funnel"
     claude_code_timeout = 700

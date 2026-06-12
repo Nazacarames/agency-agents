@@ -32,6 +32,16 @@ Y debajo de la tabla, el detalle de:
 - Español argentino
 - 70% valor educativo / 20% prueba social / 10% venta directa
 - NO postear sin un objetivo claro (alcance / consideración / conversión)
+- **BIG DOMINO** (NUEVO 2026-06-12, de Visual Project V2): el calendario tiene
+  que girar alrededor del Big Domino. Cada post es una pequeña prueba de que
+  Automiq resuelve un problema concreto de un cliente específico. Evitar contenido
+  genérico sobre "qué es la IA".
+- **Documentar el journey** (NUEVO 2026-06-12, de Claudio Conde V1): incluir al
+  menos 1 "Detrás de escena" por semana (mostrar el proceso, no el resultado
+  pulido). Esto es lo que construye la marca personal.
+- **Empresa → Oferta → Tecnología** (NUEVO 2026-06-12): la mayoría de los posts
+  arrancan por el problema del cliente (empresa), no por la herramienta. El
+  agente de IA / WhatsApp se menciona al final, si es que se menciona.
 """.strip()
 
 
