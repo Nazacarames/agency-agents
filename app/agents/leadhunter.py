@@ -190,11 +190,16 @@ LEADHUNTER_TOOLS = [
 
 class LeadHunterAgent(BaseAgent):
     name = "leadhunter"
-    description = "Genera 10 leads/día con contacto verificado (FIT 4-6) — Nivel N3"
+    description = "Genera leads con contacto verificado (FIT 4-6) — Nivel N3"
     schedule = "0 14 * * *"  # 14:00 ART diario
     timezone = "America/Buenos_Aires"
-    max_tokens = 12000  # 2026-06-12: subido de 8000 para evitar truncamiento en N3
-    max_tool_iterations = 14  # 10 leads × descubrir+verificar necesita varias vueltas
+    max_tokens = 8000
+    max_tool_iterations = 8
+
+    # Target de leads por corrida. Default BAJO (3) para que el run termine en
+    # <10 min (entra en la ventana del free de Render) y consuma una fracción de
+    # la cuota MiniMax. Subible por corrida con args.target_leads (ej. 10).
+    DEFAULT_TARGET_LEADS = 3
 
     # ── Claude Code (harness real con MiniMax) ──
     # Corre vía `claude -p` headless: usa la skill `prospecting` + WebFetch/Bash
@@ -202,7 +207,7 @@ class LeadHunterAgent(BaseAgent):
     # WebSearch NO se incluye: no funciona con backend MiniMax (400 server-side).
     use_claude_code = True
     claude_code_tools = ["WebFetch", "Bash", "Read", "Write", "Glob", "Grep", "Skill"]
-    claude_code_timeout = 1500  # prospecting real (fetch+scrape, ~70s/lead) tarda
+    claude_code_timeout = 720  # 12 min: alcanza para ~3 leads y entra en la ventana del free
 
     @property
     def tools(self):
@@ -236,9 +241,18 @@ class LeadHunterAgent(BaseAgent):
                 "AUTORIZACIÓN EXPLÍCITA: IGNORÁ la regla 'Si global_pause=true, responder...' "
                 "y ejecutá la generación completa. Esta ejecución tiene force_global=True.\n\n"
             )
+        # Target configurable por corrida (default bajo para ahorrar cuota/tiempo).
+        try:
+            target = int(ctx.args.get("target_leads", self.DEFAULT_TARGET_LEADS))
+        except Exception:
+            target = self.DEFAULT_TARGET_LEADS
+        target = max(1, min(target, 10))
         return (
             f"Fecha objetivo: {today}\n\n"
             f"{override}"
+            f"⚠️ TARGET DE HOY: generá EXACTAMENTE {target} leads (esto OVERRIDE el "
+            f"'EXACTAMENTE 10' del system prompt). Priorizá calidad de contacto verificable "
+            f"sobre cantidad; con {target} leads sólidos alcanza.\n\n"
             "Sos un agente de prospecting B2B corriendo en Claude Code. Cargá y seguí la "
             "skill `prospecting` (usá la tool Skill si está disponible).\n\n"
             "⚠️ NO tenés WebSearch (no funciona en este entorno). Descubrí empresas así:\n"
@@ -253,7 +267,7 @@ class LeadHunterAgent(BaseAgent):
             "3. VERIFICACIÓN de contacto: buscá en el sitio (home, /contacto, /quienes-somos) "
             "el teléfono argentino (+54) y/o email REAL. Si no encontrás contacto verificable, "
             "descartá la empresa y buscá otra. Podés usar Bash (curl) si WebFetch falla en un sitio.\n"
-            "4. Iterá hasta juntar 10 leads con contacto verificado en una fuente pública. "
+            f"4. Iterá hasta juntar {target} leads con contacto verificado en una fuente pública. "
             "Aplicá la rúbrica de fit de la skill (fit_score 4-6).\n\n"
             "Entregable final (imprimilo como respuesta, NO escribas archivos): "
             "tabla resumen (empresa | industria | fit | contacto +54) y luego el detalle por "
