@@ -207,7 +207,8 @@ class LeadHunterAgent(BaseAgent):
     # WebSearch NO se incluye: no funciona con backend MiniMax (400 server-side).
     use_claude_code = True
     claude_code_tools = ["WebFetch", "Bash", "Read", "Write", "Glob", "Grep", "Skill"]
-    claude_code_timeout = 720  # 12 min: alcanza para ~3 leads y entra en la ventana del free
+    claude_code_timeout = 1800  # 30 min: Railway no hiberna, dejamos correr la prospección real
+    # (vía Claude Code + WebFetch). El 720 viejo era para la ventana del free de Render.
 
     @property
     def tools(self):
