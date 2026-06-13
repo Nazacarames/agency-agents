@@ -46,10 +46,14 @@ def main() -> int:
         return 1
 
     flow = InstalledAppFlow.from_client_secrets_file(str(secret_path), SCOPES)
-    # access_type=offline + prompt=consent → garantiza que devuelva refresh_token
+    # access_type=offline + prompt=consent → garantiza que devuelva refresh_token.
+    # El mensaje incluye {url} para imprimir el link (por si el navegador no se abre solo).
     creds = flow.run_local_server(
-        port=0, access_type="offline", prompt="consent",
-        authorization_prompt_message="Abriendo el navegador para autorizar Gmail (leer + borradores)…",
+        port=0, access_type="offline", prompt="consent", open_browser=True,
+        authorization_prompt_message=(
+            "Autorizá Gmail (leer + borradores). Si no se abrió el navegador, "
+            "abrí esta URL y logueate como automiqaiagency@gmail.com:\n\n{url}\n"
+        ),
     )
 
     if not creds.refresh_token:
@@ -58,13 +62,26 @@ def main() -> int:
         return 1
 
     info = flow.client_config["installed"] if "installed" in flow.client_config else flow.client_config.get("web", {})
+    out = {
+        "GMAIL_CLIENT_ID": info.get("client_id", ""),
+        "GMAIL_CLIENT_SECRET": info.get("client_secret", ""),
+        "GMAIL_REFRESH_TOKEN": creds.refresh_token,
+    }
+    # Fuente confiable: escribir a archivo (la consola de Windows puede romper en emojis/encoding)
+    import json as _json
+    token_path = Path(__file__).parent / "gmail_token.json"
+    token_path.write_text(_json.dumps(out, indent=2), encoding="utf-8")
+
+    # Print defensivo (sin emojis, por si la consola es cp1252)
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     print("\n" + "=" * 70)
-    print("✅ OAuth OK. Cargá estas 3 env vars en Railway (Service → Variables):\n")
-    print(f"GMAIL_CLIENT_ID={info.get('client_id','')}")
-    print(f"GMAIL_CLIENT_SECRET={info.get('client_secret','')}")
-    print(f"GMAIL_REFRESH_TOKEN={creds.refresh_token}")
+    print("OAuth OK. Las 3 env vars quedaron en: " + str(token_path))
+    for k, v in out.items():
+        print(f"{k}={v}")
     print("=" * 70)
-    print("\nDespués redeployá y probá:  POST /run/inbox_assistant  (args opcional dry_run=true)")
     return 0
 
 

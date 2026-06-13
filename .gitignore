@@ -24,6 +24,12 @@ data/*.txt
 data/samples/
 data/prompts/
 
+# Secretos OAuth de Gmail (Inbox Assistant) — NUNCA commitear
+scripts/client_secret.json
+scripts/gmail_token.json
+**/client_secret*.json
+**/gmail_token*.json
+
 # Editor
 .vscode/
 .idea/
