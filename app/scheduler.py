@@ -26,22 +26,25 @@ log = get_logger("scheduler")
 # franja, separados ≥4h, y respetando el orden de SINERGIA del pipeline:
 #   leadhunter → web_auditor → (outbound + creative_strategist).
 # El inbox_assistant NO usa Claude Code (texto puro, liviano) → puede ser diario.
+# ⚠️ DÍA DE LA SEMANA POR NOMBRE (mon..sat), NO por número: `CronTrigger.from_crontab`
+# interpreta el campo numérico como 0=lunes (no 0=domingo del cron estándar), lo que
+# desfasaba todo +1 día. Con nombres (mon/tue/…) es inequívoco. (Verificado 2026-06-13.)
 DEFAULT_SCHEDULES: Dict[str, str] = {
     # — Diarios livianos (no Claude Code) —
-    "inbox_assistant": "0 9 * * *",      # diario 09:00 ART — lee bandeja, redacta borradores
+    "inbox_assistant": "0 9 * * *",        # diario 09:00 ART — lee bandeja, redacta borradores
     # — Ancla de prospección (Claude Code, default 3 leads = liviano) —
-    "leadhunter": "0 8 * * 1",           # lunes 08:00 ART — provee prospectos al pipeline
+    "leadhunter": "0 8 * * mon",           # lunes 08:00 ART — provee prospectos al pipeline
     # — Pipeline de sinergia (lun→mié), 1 por día, ~mediodía —
-    "web_auditor": "0 13 * * 1",         # lunes 13:00 ART — audita prospecto → dolores
-    "outbound": "0 13 * * 2",            # martes 13:00 ART — cold-email usando dolores
-    "creative_strategist": "0 13 * * 3", # miércoles 13:00 ART — ads usando dolores
+    "web_auditor": "0 13 * * mon",         # lunes 13:00 ART — audita prospecto → dolores
+    "outbound": "0 13 * * tue",            # martes 13:00 ART — cold-email usando dolores
+    "creative_strategist": "0 13 * * wed", # miércoles 13:00 ART — ads usando dolores
     # — Contenido / canales (jue–vie), 2 por día separados 4h —
-    "content_creator": "0 11 * * 4",     # jueves 11:00 ART
-    "social_media": "0 15 * * 4",        # jueves 15:00 ART
-    "seo_specialist": "0 11 * * 5",      # viernes 11:00 ART
-    "media_auditor": "0 15 * * 5",       # viernes 15:00 ART
+    "content_creator": "0 11 * * thu",     # jueves 11:00 ART
+    "social_media": "0 15 * * thu",        # jueves 15:00 ART
+    "seo_specialist": "0 11 * * fri",      # viernes 11:00 ART
+    "media_auditor": "0 15 * * fri",       # viernes 15:00 ART
     # — Growth —
-    "growth_hacker": "0 12 * * 6",       # sábado 12:00 ART
+    "growth_hacker": "0 12 * * sat",       # sábado 12:00 ART
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 
