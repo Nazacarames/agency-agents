@@ -30,6 +30,9 @@ scripts/gmail_token.json
 **/client_secret*.json
 **/gmail_token*.json
 
+# Webhooks de Discord (URLs = secreto del canal) — NUNCA commitear
+scripts/_discord_*.json
+
 # Editor
 .vscode/
 .idea/

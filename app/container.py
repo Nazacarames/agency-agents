@@ -38,7 +38,7 @@ class Container:
     @property
     def discord(self) -> Optional[DiscordWebhook]:
         if self._discord is None:
-            if not self.settings.discord_webhook_url:
+            if not self.settings.discord_configured:
                 return None
             self._discord = DiscordWebhook(self.settings)
         return self._discord
@@ -54,7 +54,7 @@ class Container:
     def health(self) -> Dict[str, Any]:
         return {
             "minimax_configured": bool(self.settings.minimax_api_key),
-            "discord_configured": bool(self.settings.discord_webhook_url),
+            "discord_configured": self.settings.discord_configured,
             "global_pause": self.settings.global_pause,
             "is_production": self.settings.is_production,
         }

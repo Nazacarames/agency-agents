@@ -28,9 +28,13 @@ class Settings(BaseSettings):
     minimax_timeout_seconds: int = 120
 
     # ── Discord ──
-    discord_webhook_url: str = ""
+    discord_webhook_url: str = ""              # fallback general (canal por defecto)
     discord_default_username: str = "Automiq Agents"
     discord_avatar_url: str = ""
+    # Ruteo por agente: JSON {"leadhunter": "https://discord.com/api/webhooks/...", ...}
+    # (claves = nombre interno del agente). Si un agente no está, cae al webhook general.
+    discord_agent_webhooks: str = ""
+    discord_webhook_errors: str = ""           # canal de errores (fallos de agentes)
 
     # ── Scheduler ──
     scheduler_timezone: str = "America/Buenos_Aires"
@@ -78,6 +82,26 @@ class Settings(BaseSettings):
     @property
     def gmail_configured(self) -> bool:
         return bool(self.gmail_client_id and self.gmail_client_secret and self.gmail_refresh_token)
+
+    @property
+    def discord_agent_webhooks_map(self) -> dict:
+        """Parsea DISCORD_AGENT_WEBHOOKS (JSON) a dict. Tolerante a errores."""
+        import json
+        if not self.discord_agent_webhooks:
+            return {}
+        try:
+            data = json.loads(self.discord_agent_webhooks)
+            return {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+        except (ValueError, TypeError):
+            return {}
+
+    def discord_webhook_for(self, agent_name: str) -> str:
+        """URL del webhook del agente (su canal) o el general como fallback."""
+        return self.discord_agent_webhooks_map.get(agent_name) or self.discord_webhook_url
+
+    @property
+    def discord_configured(self) -> bool:
+        return bool(self.discord_webhook_url or self.discord_agent_webhooks_map or self.discord_webhook_errors)
 
 
 @lru_cache

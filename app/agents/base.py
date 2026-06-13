@@ -214,6 +214,7 @@ class BaseAgent(ABC):
                         text=output,
                         run_id=ctx.run_id,
                         elapsed_ms=elapsed_ms,
+                        url=ctx.settings.discord_webhook_for(self.name),
                     )
                 except Exception as e:
                     log.error("discord_delivery_error", agent=self.name, error=str(e))
@@ -249,6 +250,8 @@ class BaseAgent(ABC):
                         text=f"Error: {e}",
                         run_id=ctx.run_id,
                         elapsed_ms=elapsed_ms,
+                        url=ctx.settings.discord_webhook_errors or ctx.settings.discord_webhook_for(self.name),
+                        color=0xE74C3C,  # rojo
                     )
                 except Exception:
                     pass

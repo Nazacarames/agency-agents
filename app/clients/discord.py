@@ -39,9 +39,11 @@ class DiscordEmbed:
 class DiscordWebhook:
     def __init__(self, settings: Settings):
         self.s = settings
-        if not self.s.discord_webhook_url:
-            raise DiscordError("DISCORD_WEBHOOK_URL no configurada")
-        self._url = self.s.discord_webhook_url
+        # Se permite construir si hay AL MENOS un webhook (general, por-agente o errores);
+        # el destino concreto se resuelve por llamada (send(url=...)).
+        if not settings.discord_configured:
+            raise DiscordError("No hay ningún webhook de Discord configurado")
+        self._url = self.s.discord_webhook_url  # default/fallback (puede ser "")
         self._client = httpx.Client(timeout=30)
 
     def close(self) -> None:
@@ -60,8 +62,13 @@ class DiscordWebhook:
         embed: Optional[DiscordEmbed] = None,
         username: Optional[str] = None,
         avatar_url: Optional[str] = None,
+        url: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Envía un mensaje (texto plano) o un embed. Si content > 2000 chars, va como embed.description."""
+        """Envía un mensaje (texto plano) o un embed. Si content > 2000 chars, va como embed.description.
+        `url` permite apuntar a un webhook específico (canal del agente); si no, usa el general."""
+        target_url = url or self._url
+        if not target_url:
+            raise DiscordError("No hay webhook destino (ni específico ni general)")
         username = username or self.s.discord_default_username
         avatar_url = avatar_url or self.s.discord_avatar_url or None
 
@@ -86,7 +93,7 @@ class DiscordWebhook:
             payload["content"] = content[:2000]
 
         resp = self._client.post(
-            f"{self._url}?wait=true",
+            f"{target_url}?wait=true",
             json=payload,
         )
         if resp.status_code == 429:
@@ -102,8 +109,11 @@ class DiscordWebhook:
         *,
         run_id: Optional[str] = None,
         elapsed_ms: Optional[int] = None,
+        url: Optional[str] = None,
+        color: int = 0x2ECC71,     # verde "ok"
     ) -> None:
-        """Helper: entrega el output de un agente como embed formateado."""
+        """Helper: entrega el output de un agente como embed formateado.
+        `url` = webhook del canal del agente (si None, usa el general)."""
         title = f"🤖 {agent_name}"
         if run_id:
             title += f" · `{run_id[:8]}`"
@@ -115,11 +125,11 @@ class DiscordWebhook:
         embed = DiscordEmbed(
             title=title,
             description=text[:3900],  # margen para evitar truncado
-            color=0x2ECC71,            # verde "ok"
+            color=color,
             footer=" · ".join(footer_parts),
         )
         try:
-            self.send("", embed=embed)
+            self.send("", embed=embed, url=url)
         except DiscordError as e:
             log.error("discord_delivery_failed", agent=agent_name, error=str(e))
             raise
