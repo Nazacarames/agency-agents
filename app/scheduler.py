@@ -18,17 +18,30 @@ from .log import get_logger
 
 log = get_logger("scheduler")
 
-# Schedules por defecto para el pack automiq (cron expressions)
+# Schedules por defecto para el pack automiq (cron expressions).
+#
+# ESPACIADO (2026-06-12): cada run de Claude Code es PESADO en cuota MiniMax
+# (un run grande deja a TODOS los agentes en 429 hasta el reset de la ventana).
+# Por eso NO se corren varios el mismo día/hora. Regla: máx 1 agente CC por
+# franja, separados ≥4h, y respetando el orden de SINERGIA del pipeline:
+#   leadhunter → web_auditor → (outbound + creative_strategist).
+# El inbox_assistant NO usa Claude Code (texto puro, liviano) → puede ser diario.
 DEFAULT_SCHEDULES: Dict[str, str] = {
-    "leadhunter": "0 14 * * *",          # diario 14:00 ART
-    "content_creator": "0 9 * * 1",      # lunes 09:00 ART
-    "social_media": "0 10 * * 1",        # lunes 10:00 ART
-    "outbound": "30 14 * * 1",           # lunes 14:30 ART
-    "media_auditor": "0 9 * * 1",        # lunes 09:00 ART
-    "growth_hacker": "0 16 * * 5",       # viernes 16:00 ART
-    "creative_strategist": "0 11 * * 1", # lunes 11:00 ART
-    "seo_specialist": "0 8 * * 1",       # lunes 08:00 ART
-    "web_auditor": "0 12 * * 1",         # lunes 12:00 ART (auditoría de páginas)
+    # — Diarios livianos (no Claude Code) —
+    "inbox_assistant": "0 9 * * *",      # diario 09:00 ART — lee bandeja, redacta borradores
+    # — Ancla de prospección (Claude Code, default 3 leads = liviano) —
+    "leadhunter": "0 8 * * 1",           # lunes 08:00 ART — provee prospectos al pipeline
+    # — Pipeline de sinergia (lun→mié), 1 por día, ~mediodía —
+    "web_auditor": "0 13 * * 1",         # lunes 13:00 ART — audita prospecto → dolores
+    "outbound": "0 13 * * 2",            # martes 13:00 ART — cold-email usando dolores
+    "creative_strategist": "0 13 * * 3", # miércoles 13:00 ART — ads usando dolores
+    # — Contenido / canales (jue–vie), 2 por día separados 4h —
+    "content_creator": "0 11 * * 4",     # jueves 11:00 ART
+    "social_media": "0 15 * * 4",        # jueves 15:00 ART
+    "seo_specialist": "0 11 * * 5",      # viernes 11:00 ART
+    "media_auditor": "0 15 * * 5",       # viernes 15:00 ART
+    # — Growth —
+    "growth_hacker": "0 12 * * 6",       # sábado 12:00 ART
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 

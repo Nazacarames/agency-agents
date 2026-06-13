@@ -47,6 +47,18 @@ class Settings(BaseSettings):
     render_service_id: str = ""
     render_external_url: str = ""
 
+    # ── Gmail (Inbox Assistant) ──
+    # Cuenta dedicada (automiqaiagency@gmail.com). OAuth2 con refresh token.
+    # Scopes: gmail.readonly + gmail.compose (LEER + BORRADORES). El agente
+    # NUNCA envía: sólo crea borradores para revisión humana.
+    gmail_client_id: str = ""
+    gmail_client_secret: str = ""
+    gmail_refresh_token: str = ""
+    gmail_user_id: str = "me"            # "me" = la cuenta dueña del token
+    gmail_enabled: bool = True
+    inbox_max_threads: int = 8           # cuántos hilos no-leídos procesar por run
+    inbox_lookback_days: int = 7         # ventana de antigüedad para considerar un hilo
+
     @field_validator("minimax_api_key", "discord_webhook_url", "webhook_secret", mode="before")
     @classmethod
     def _empty_string_to_default(cls, v):
@@ -62,6 +74,10 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return bool(self.render_service_id)
+
+    @property
+    def gmail_configured(self) -> bool:
+        return bool(self.gmail_client_id and self.gmail_client_secret and self.gmail_refresh_token)
 
 
 @lru_cache

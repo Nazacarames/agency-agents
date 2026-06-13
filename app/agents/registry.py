@@ -35,3 +35,4 @@ from . import outbound         # noqa: F401, E402
 from . import media_auditor    # noqa: F401, E402
 from . import seo_specialist   # noqa: F401, E402
 from . import web_auditor      # noqa: F401, E402
+from . import inbox_assistant  # noqa: F401, E402
