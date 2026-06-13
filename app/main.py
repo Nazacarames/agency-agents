@@ -322,6 +322,7 @@ async def last_agent_output(name: str, request: Request):
         "media_auditor": ("media-auditor-report-{d}.md", None, "media-auditor-report-{d}.json"),
         "seo_specialist": ("seo-specialist-report-{d}.md", None, "seo-specialist-report-{d}.json"),
         "web_auditor": ("web-auditor-report-{d}.md", None, "web-auditor-report-{d}.json"),
+        "inbox_assistant": ("inbox-assistant-report-{d}.md", None, None),
     }
     md_tpl, leads_tpl, json_tpl = patterns[name]
 
