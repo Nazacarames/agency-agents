@@ -33,6 +33,9 @@ scripts/gmail_token.json
 # Webhooks de Discord (URLs = secreto del canal) — NUNCA commitear
 scripts/_discord_*.json
 
+# Sent-log de outbound (emails de leads contactados) — runtime del volume
+data/outbound-sent.json
+
 # Editor
 .vscode/
 .idea/

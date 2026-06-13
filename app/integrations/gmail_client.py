@@ -232,6 +232,27 @@ class GmailClient:
         )
 
     # ── escritura (SOLO borradores) ──
+    def send_message(self, to: str, subject: str, body: str, from_name: Optional[str] = None) -> str:
+        """Envía un email nuevo (outbound). Devuelve el message id.
+        Usado por el agente outbound para cold-email automático (10/día, dedup)."""
+        svc = self._build_service()
+        mime = MIMEText(body, "plain", "utf-8")
+        mime["To"] = to
+        mime["Subject"] = subject
+        if from_name:
+            # El address lo fija Gmail (la cuenta del token); sólo personalizamos el display name.
+            try:
+                addr = svc.users().getProfile(userId=self.user_id).execute().get("emailAddress", "")
+                if addr:
+                    mime["From"] = f"{from_name} <{addr}>"
+            except Exception:
+                pass
+        raw = base64.urlsafe_b64encode(mime.as_bytes()).decode("utf-8")
+        sent = svc.users().messages().send(userId=self.user_id, body={"raw": raw}).execute()
+        msg_id = sent.get("id", "")
+        log.info("gmail_message_sent", to=to, msg_id=msg_id, subject=subject[:60])
+        return msg_id
+
     def create_draft(
         self, thread_id: str, to: str, subject: str, body: str, in_reply_to_msg_id: Optional[str] = None
     ) -> str:

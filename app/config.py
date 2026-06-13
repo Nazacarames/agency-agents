@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     inbox_max_threads: int = 8           # cuántos hilos no-leídos procesar por run
     inbox_lookback_days: int = 7         # ventana de antigüedad para considerar un hilo
 
+    # ── Outbound (cold-email automático a los leads) ──
+    # ⚠️ Si auto_send=True, el agente outbound ENVÍA cold-emails reales (no borradores).
+    # Dedup por email (sent-log en el volume) + tope diario. Default OFF por seguridad.
+    outbound_auto_send: bool = False
+    outbound_daily_cap: int = 10         # máximo de emails nuevos por corrida
+    outbound_from_name: str = "Equipo Automiq"
+
     @field_validator("minimax_api_key", "discord_webhook_url", "webhook_secret", mode="before")
     @classmethod
     def _empty_string_to_default(cls, v):
