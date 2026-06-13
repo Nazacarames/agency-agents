@@ -196,10 +196,10 @@ class LeadHunterAgent(BaseAgent):
     max_tokens = 8000
     max_tool_iterations = 8
 
-    # Target de leads por corrida. Default BAJO (3) para que el run termine en
-    # <10 min (entra en la ventana del free de Render) y consuma una fracción de
-    # la cuota MiniMax. Subible por corrida con args.target_leads (ej. 10).
-    DEFAULT_TARGET_LEADS = 3
+    # Target de leads por corrida. Default 10 (pedido del usuario 2026-06-13:
+    # reportes de 10 leads DIARIOS). Cada run de 10 vía Claude Code ≈ 20 min /
+    # USD ~17 / quota-pesado. Bajable por corrida con args.target_leads.
+    DEFAULT_TARGET_LEADS = 10
 
     # ── Claude Code (harness real con MiniMax) ──
     # Corre vía `claude -p` headless: usa la skill `prospecting` + WebFetch/Bash

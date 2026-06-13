@@ -26,25 +26,25 @@ log = get_logger("scheduler")
 # franja, separados ≥4h, y respetando el orden de SINERGIA del pipeline:
 #   leadhunter → web_auditor → (outbound + creative_strategist).
 # El inbox_assistant NO usa Claude Code (texto puro, liviano) → puede ser diario.
-# ⚠️ DÍA DE LA SEMANA POR NOMBRE (mon..sat), NO por número: `CronTrigger.from_crontab`
-# interpreta el campo numérico como 0=lunes (no 0=domingo del cron estándar), lo que
-# desfasaba todo +1 día. Con nombres (mon/tue/…) es inequívoco. (Verificado 2026-06-13.)
+# TODOS LOS AGENTES, TODOS LOS DÍAS (pedido del usuario 2026-06-13).
+# Espaciados POR HORA dentro del día para no dispararse todos juntos (y darle aire
+# a la ventana de cuota MiniMax), respetando el ORDEN de la sinergia:
+#   leadhunter (08) → web_auditor (10) → outbound (12) + creative_strategist (13).
+# ⚠️ Cada run CC consume cuota: 9 agentes CC/día es quota-pesado (leadhunter 10 leads
+#    solo ≈ USD 17/run). Si la ventana se agota, los últimos del día pueden dar 429.
+# ⚠️ Día de semana SIEMPRE por nombre (mon..sat), nunca por número: from_crontab
+#    interpreta el número como 0=lunes y desfasa +1 día. Acá usamos '* * *' (diario).
 DEFAULT_SCHEDULES: Dict[str, str] = {
-    # — Diarios livianos (no Claude Code) —
-    "inbox_assistant": "0 9 * * *",        # diario 09:00 ART — lee bandeja, redacta borradores
-    # — Ancla de prospección (Claude Code, default 3 leads = liviano) —
-    "leadhunter": "0 8 * * mon",           # lunes 08:00 ART — provee prospectos al pipeline
-    # — Pipeline de sinergia (lun→mié), 1 por día, ~mediodía —
-    "web_auditor": "0 13 * * mon",         # lunes 13:00 ART — audita prospecto → dolores
-    "outbound": "0 13 * * tue",            # martes 13:00 ART — cold-email usando dolores
-    "creative_strategist": "0 13 * * wed", # miércoles 13:00 ART — ads usando dolores
-    # — Contenido / canales (jue–vie), 2 por día separados 4h —
-    "content_creator": "0 11 * * thu",     # jueves 11:00 ART
-    "social_media": "0 15 * * thu",        # jueves 15:00 ART
-    "seo_specialist": "0 11 * * fri",      # viernes 11:00 ART
-    "media_auditor": "0 15 * * fri",       # viernes 15:00 ART
-    # — Growth —
-    "growth_hacker": "0 12 * * sat",       # sábado 12:00 ART
+    "leadhunter": "0 8 * * *",            # 08:00 — prospección (10 leads), ancla del pipeline
+    "inbox_assistant": "0 9 * * *",       # 09:00 — lee bandeja, redacta borradores (liviano)
+    "web_auditor": "0 10 * * *",          # 10:00 — audita prospecto → dolores
+    "outbound": "0 12 * * *",             # 12:00 — cold-email usando los dolores
+    "creative_strategist": "0 13 * * *",  # 13:00 — ads usando los dolores
+    "content_creator": "0 14 * * *",      # 14:00 — contenido
+    "social_media": "0 15 * * *",         # 15:00 — calendario orgánico
+    "seo_specialist": "0 16 * * *",       # 16:00 — auditoría SEO
+    "media_auditor": "0 17 * * *",        # 17:00 — auditoría de ads
+    "growth_hacker": "0 18 * * *",        # 18:00 — growth / funnel
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 
