@@ -36,6 +36,44 @@ class ClaudeCodeError(Exception):
     """El CLI de claude no está disponible o falló."""
 
 
+def _extract_result_json(out: str) -> Optional[dict]:
+    """Extrae el objeto JSON del result envelope de `claude -p --output-format json`.
+
+    Robusto ante ruido alrededor del JSON (logs/warnings que el CLI imprime antes o
+    DESPUÉS del objeto). `json.loads(out)` falla con 'Extra data' si hay algo después
+    del `}`; acá escaneamos cada `{` con raw_decode (que corta en el primer objeto
+    válido) y nos quedamos con el dict que tenga `result`/`type=="result"`.
+    """
+    if not out:
+        return None
+    # Camino feliz: todo el stdout es el objeto JSON.
+    try:
+        data = json.loads(out)
+        if isinstance(data, dict):
+            return data
+    except json.JSONDecodeError:
+        pass
+    # Ruido alrededor: escanear objetos JSON con raw_decode.
+    decoder = json.JSONDecoder()
+    best: Optional[dict] = None
+    idx = 0
+    n = len(out)
+    while idx < n:
+        start = out.find("{", idx)
+        if start == -1:
+            break
+        try:
+            obj, end = decoder.raw_decode(out, start)
+        except json.JSONDecodeError:
+            idx = start + 1
+            continue
+        if isinstance(obj, dict):
+            if obj.get("type") == "result" or "result" in obj:
+                best = obj  # el último result gana (stream-json deja el final al cierre)
+        idx = end
+    return best
+
+
 def claude_available() -> bool:
     return shutil.which("claude") is not None
 
@@ -109,20 +147,19 @@ def run_claude_code(
 
     out = (proc.stdout or "").strip()
     # --output-format json: objeto con campo `result` (texto final) + metadata.
-    try:
-        data = json.loads(out)
-        if isinstance(data, dict):
-            text = data.get("result") or data.get("text") or ""
-            if data.get("is_error"):
-                log.warning("claude_code_result_is_error", subtype=data.get("subtype"))
+    # Robusto ante ruido antes/después del objeto (evita postear el envelope crudo).
+    data = _extract_result_json(out)
+    if data is not None:
+        text = data.get("result") or data.get("text") or ""
+        if data.get("is_error"):
+            log.warning("claude_code_result_is_error", subtype=data.get("subtype"))
+        if text:
             log.info("claude_code_ok",
                      model=mm_model,
                      turns=data.get("num_turns"),
                      cost_usd=data.get("total_cost_usd"),
                      out_chars=len(text))
             return text.strip()
-    except json.JSONDecodeError:
-        pass
-    # Fallback: devolver el stdout crudo si no era JSON.
-    log.info("claude_code_ok_raw", model=mm_model, out_chars=len(out))
+    # Fallback: no se pudo extraer texto del JSON → devolver stdout crudo.
+    log.warning("claude_code_ok_raw", model=mm_model, out_chars=len(out))
     return out
