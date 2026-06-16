@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -36,25 +37,33 @@ class ClaudeCodeError(Exception):
     """El CLI de claude no está disponible o falló."""
 
 
+# strict=False permite caracteres de control crudos (saltos de línea sin escapar,
+# etc.) DENTRO de los strings JSON. El CLI con backend MiniMax a veces emite el
+# reporte con un \n real en vez de \\n → el json estricto lo rechaza ("Invalid
+# control character") y caíamos al fallback que posteaba el envelope crudo.
+_LENIENT_DECODER = json.JSONDecoder(strict=False)
+# Último recurso: rescatar el valor del campo "result" aunque el objeto entero esté
+# roto. [^"\\] matchea cualquier char (incluido \n crudo) salvo comilla y backslash.
+_RESULT_FIELD_RE = re.compile(r'"result"\s*:\s*"((?:\\.|[^"\\])*)"', re.DOTALL)
+
+
 def _extract_result_json(out: str) -> Optional[dict]:
     """Extrae el objeto JSON del result envelope de `claude -p --output-format json`.
 
-    Robusto ante ruido alrededor del JSON (logs/warnings que el CLI imprime antes o
-    DESPUÉS del objeto). `json.loads(out)` falla con 'Extra data' si hay algo después
-    del `}`; acá escaneamos cada `{` con raw_decode (que corta en el primer objeto
-    válido) y nos quedamos con el dict que tenga `result`/`type=="result"`.
+    Robusto ante (1) ruido alrededor del JSON (logs antes/después del objeto),
+    (2) caracteres de control crudos dentro de los strings (strict=False), y
+    (3) JSON irreparable (regex de último recurso sobre el campo "result").
     """
     if not out:
         return None
-    # Camino feliz: todo el stdout es el objeto JSON.
+    # Camino feliz / tolerante: todo el stdout es el objeto JSON.
     try:
-        data = json.loads(out)
+        data = _LENIENT_DECODER.decode(out)
         if isinstance(data, dict):
             return data
     except json.JSONDecodeError:
         pass
-    # Ruido alrededor: escanear objetos JSON con raw_decode.
-    decoder = json.JSONDecoder()
+    # Ruido alrededor: escanear objetos JSON con raw_decode (también lenient).
     best: Optional[dict] = None
     idx = 0
     n = len(out)
@@ -63,15 +72,27 @@ def _extract_result_json(out: str) -> Optional[dict]:
         if start == -1:
             break
         try:
-            obj, end = decoder.raw_decode(out, start)
+            obj, end = _LENIENT_DECODER.raw_decode(out, start)
         except json.JSONDecodeError:
             idx = start + 1
             continue
-        if isinstance(obj, dict):
-            if obj.get("type") == "result" or "result" in obj:
-                best = obj  # el último result gana (stream-json deja el final al cierre)
-        idx = end
-    return best
+        if isinstance(obj, dict) and (obj.get("type") == "result" or "result" in obj):
+            best = obj  # el último result gana (stream-json deja el final al cierre)
+            idx = end
+        else:
+            idx = end if end > start else start + 1
+    if best is not None:
+        return best
+    # Último recurso: el JSON es irreparable pero el campo "result" sigue ahí.
+    m = _RESULT_FIELD_RE.search(out)
+    if m:
+        try:
+            text = _LENIENT_DECODER.decode(f'"{m.group(1)}"')
+            if isinstance(text, str) and text.strip():
+                return {"result": text, "_recovered": "regex"}
+        except json.JSONDecodeError:
+            pass
+    return None
 
 
 def claude_available() -> bool:
