@@ -43,8 +43,11 @@ class ClaudeCodeError(Exception):
 # control character") y caíamos al fallback que posteaba el envelope crudo.
 _LENIENT_DECODER = json.JSONDecoder(strict=False)
 # Último recurso: rescatar el valor del campo "result" aunque el objeto entero esté
-# roto. [^"\\] matchea cualquier char (incluido \n crudo) salvo comilla y backslash.
-_RESULT_FIELD_RE = re.compile(r'"result"\s*:\s*"((?:\\.|[^"\\])*)"', re.DOTALL)
+# roto O TRUNCADO. [^"\\] matchea cualquier char (incluido \n crudo) salvo comilla y
+# backslash. La comilla de cierre es OPCIONAL a propósito: si el stdout viene cortado
+# a mitad del result (envelope sin cerrar), igual rescatamos lo que llegó. Cuando el
+# result sí cierra, el grupo para en la comilla → mismo resultado que antes.
+_RESULT_FIELD_RE = re.compile(r'"result"\s*:\s*"((?:\\.|[^"\\])*)', re.DOTALL)
 
 
 def _extract_result_json(out: str) -> Optional[dict]:
@@ -83,13 +86,23 @@ def _extract_result_json(out: str) -> Optional[dict]:
             idx = end if end > start else start + 1
     if best is not None:
         return best
-    # Último recurso: el JSON es irreparable pero el campo "result" sigue ahí.
+    # Último recurso: el JSON es irreparable o vino TRUNCADO, pero el campo "result"
+    # sigue ahí (entero o cortado). Rescatamos el texto crudo del entregable.
     m = _RESULT_FIELD_RE.search(out)
     if m:
+        frag = m.group(1)
+        # Si el corte cayó en medio de un escape, el último backslash queda colgando
+        # y rompe el re-decode ("unterminated escape"). Lo soltamos si es impar.
+        trailing_bs = len(frag) - len(frag.rstrip("\\"))
+        if trailing_bs % 2 == 1:
+            frag = frag[:-1]
         try:
-            text = _LENIENT_DECODER.decode(f'"{m.group(1)}"')
+            text = _LENIENT_DECODER.decode(f'"{frag}"')
             if isinstance(text, str) and text.strip():
-                return {"result": text, "_recovered": "regex"}
+                # ¿El envelope cerró bien? Si no termina en "}" lo más probable es
+                # que stdout viniera truncado en transporte.
+                truncated = not out.rstrip().endswith("}")
+                return {"result": text, "_recovered": "truncated" if truncated else "regex"}
         except json.JSONDecodeError:
             pass
     return None
@@ -151,7 +164,7 @@ def run_claude_code(
     try:
         proc = subprocess.run(
             cmd, cwd=workdir, env=env,
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True, timeout=timeout,  # bytes: decodificamos a mano
         )
     except subprocess.TimeoutExpired as e:
         log.error("claude_code_timeout", timeout=timeout)
@@ -159,14 +172,21 @@ def run_claude_code(
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
+    # Decodificamos nosotros con errors="replace": un byte UTF-8 inválido del backend
+    # MiniMax NO debe abortar ni TRUNCAR la captura. Con text=True, Python decodifica
+    # en modo strict y un byte malo cortaba el stdout a mitad del envelope JSON → el
+    # reporte llegaba truncado y caíamos al fallback crudo en Discord.
+    stdout_s = (proc.stdout or b"").decode("utf-8", errors="replace")
+    stderr_s = (proc.stderr or b"").decode("utf-8", errors="replace")
+
     if proc.returncode != 0:
         log.error("claude_code_failed", returncode=proc.returncode,
-                  stderr=(proc.stderr or "")[:500])
+                  stderr=stderr_s[:500])
         raise ClaudeCodeError(
-            f"claude -p exit {proc.returncode}: {(proc.stderr or '')[:300]}"
+            f"claude -p exit {proc.returncode}: {stderr_s[:300]}"
         )
 
-    out = (proc.stdout or "").strip()
+    out = stdout_s.strip()
     # --output-format json: objeto con campo `result` (texto final) + metadata.
     # Robusto ante ruido antes/después del objeto (evita postear el envelope crudo).
     data = _extract_result_json(out)
@@ -179,6 +199,7 @@ def run_claude_code(
                      model=mm_model,
                      turns=data.get("num_turns"),
                      cost_usd=data.get("total_cost_usd"),
+                     recovered=data.get("_recovered"),  # None | "regex" | "truncated"
                      out_chars=len(text))
             return text.strip()
     # Fallback: no se pudo extraer texto del JSON → devolver stdout crudo.
