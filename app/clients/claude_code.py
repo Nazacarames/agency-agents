@@ -161,23 +161,34 @@ def run_claude_code(
 
     # cwd temporal y aislado por run (Claude Code escribe estado de sesión ahí).
     workdir = tempfile.mkdtemp(prefix="cc_run_")
+    # Redirigimos stdout/stderr a ARCHIVOS, no a pipes. CAUSA RAÍZ de la truncación:
+    # `claude` (CLI de Node) escribe el JSON final de una sola vez y hace process.exit;
+    # sobre un PIPE la escritura es asíncrona y el proceso sale antes de que libuv
+    # drene el buffer → stdout truncado a mitad del `result` (envelope sin cerrar, con
+    # un multibyte partido → '�'). Sobre un fd de archivo REGULAR las escrituras de
+    # Node son SÍNCRONAS → el envelope se escribe entero. Leemos el archivo después.
+    stdout_path = os.path.join(workdir, "_cc_stdout.bin")
+    stderr_path = os.path.join(workdir, "_cc_stderr.bin")
     try:
-        proc = subprocess.run(
-            cmd, cwd=workdir, env=env,
-            capture_output=True, timeout=timeout,  # bytes: decodificamos a mano
-        )
+        with open(stdout_path, "wb") as fout, open(stderr_path, "wb") as ferr:
+            proc = subprocess.run(
+                cmd, cwd=workdir, env=env,
+                stdout=fout, stderr=ferr, timeout=timeout,
+            )
+        with open(stdout_path, "rb") as f:
+            stdout_b = f.read()
+        with open(stderr_path, "rb") as f:
+            stderr_b = f.read()
     except subprocess.TimeoutExpired as e:
         log.error("claude_code_timeout", timeout=timeout)
         raise ClaudeCodeError(f"claude -p timeout tras {timeout}s") from e
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
-    # Decodificamos nosotros con errors="replace": un byte UTF-8 inválido del backend
-    # MiniMax NO debe abortar ni TRUNCAR la captura. Con text=True, Python decodifica
-    # en modo strict y un byte malo cortaba el stdout a mitad del envelope JSON → el
-    # reporte llegaba truncado y caíamos al fallback crudo en Discord.
-    stdout_s = (proc.stdout or b"").decode("utf-8", errors="replace")
-    stderr_s = (proc.stderr or b"").decode("utf-8", errors="replace")
+    # Decodificamos con errors="replace" igual, por si el backend emite algún byte
+    # UTF-8 inválido suelto (no debe abortar la lectura).
+    stdout_s = stdout_b.decode("utf-8", errors="replace")
+    stderr_s = stderr_b.decode("utf-8", errors="replace")
 
     if proc.returncode != 0:
         log.error("claude_code_failed", returncode=proc.returncode,
