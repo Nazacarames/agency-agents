@@ -270,10 +270,16 @@ class LeadHunterAgent(BaseAgent):
             "descartá la empresa y buscá otra. Podés usar Bash (curl) si WebFetch falla en un sitio.\n"
             f"4. Iterá hasta juntar {target} leads con contacto verificado en una fuente pública. "
             "Aplicá la rúbrica de fit de la skill (fit_score 4-6).\n\n"
-            "Entregable final (imprimilo como respuesta, NO escribas archivos): "
-            "tabla resumen (empresa | industria | fit | contacto +54) y luego el detalle por "
-            "lead con TODOS los campos obligatorios del system prompt, incluyendo la URL fuente "
-            "de cada dato de contacto. El objetivo es CALIDAD de contacto verificable, no velocidad."
+            "⚠️ ENTREGABLE FINAL — REGLA DURA: tu respuesta final (lo que IMPRIMÍS) DEBE ser el "
+            "reporte COMPLETO en Markdown. Prohibido responder sólo con un resumen de pocas líneas "
+            "tipo 'Resumen final: 10 leads...': eso NO sirve y se considera run fallido. NO dejes el "
+            "reporte únicamente en archivos de disco — IMPRIMILO entero como respuesta.\n"
+            "El reporte impreso debe incluir, en este orden:\n"
+            "1) tabla resumen (empresa | industria | fit | contacto +54)\n"
+            f"2) el detalle de los {target} leads, cada uno con TODOS los campos obligatorios del "
+            "system prompt (estructura '### Lead N'), incluyendo la URL fuente de cada dato de "
+            "contacto.\n"
+            "El objetivo es CALIDAD de contacto verificable, no velocidad."
         )
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:

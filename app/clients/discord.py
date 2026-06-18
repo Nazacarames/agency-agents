@@ -136,9 +136,20 @@ class DiscordWebhook:
             footer_parts.append(run_id)
 
         text = text or ""
-        # Si el reporte es largo, el embed sólo entra ~3900 chars → mandamos un PREVIEW
-        # y adjuntamos el reporte COMPLETO como archivo .md para no perder nada.
+        # Adjuntamos SIEMPRE el reporte como .md cuando hay un entregable real (no para
+        # pings triviales tipo "en pausa" / "Error: ..."). Si además es largo, el embed
+        # sólo entra ~3900 chars → mandamos un PREVIEW y el COMPLETO va en el adjunto.
         LIMIT = 3900
+        safe = agent_name.replace("❌", "").strip().replace(" ", "-")
+        fname = f"{safe}-report{('-'+run_id[:8]) if run_id else ''}.md"
+        stripped = text.strip()
+        # "report-like": reporte real (largo, con encabezado markdown, o no-trivial).
+        is_report = (
+            len(stripped) >= 400
+            or stripped.startswith("#")
+            or "\n#" in text
+            or "\n|" in text  # tabla markdown
+        )
         file = None
         if len(text) > LIMIT:
             desc = (
@@ -146,11 +157,11 @@ class DiscordWebhook:
                 + "\n\n— ✂️ —\n\n*(Reporte largo: preview arriba; el COMPLETO va adjunto como "
                 ".md más abajo.)*"
             )
-            safe = agent_name.replace("❌", "").strip().replace(" ", "-")
-            fname = f"{safe}-report{('-'+run_id[:8]) if run_id else ''}.md"
             file = (fname, text)
         else:
             desc = text
+            if is_report:
+                file = (fname, text)
 
         embed = DiscordEmbed(
             title=title,

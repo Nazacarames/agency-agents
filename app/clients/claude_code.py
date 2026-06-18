@@ -108,6 +108,35 @@ def _extract_result_json(out: str) -> Optional[dict]:
     return None
 
 
+def _largest_text_artifact(workdir: str, exclude: set) -> Optional[str]:
+    """Devuelve el contenido del .md/.txt más grande que el modelo dejó en el workdir.
+
+    Algunos agentes (p.ej. leadhunter) a veces ESCRIBEN el entregable a un archivo y
+    sólo imprimen un resumen corto como respuesta final → perderíamos el reporte
+    completo (el workdir es efímero). Rescatamos el artefacto más grande para no
+    quedarnos con el resumen.
+    """
+    best_size = 0
+    best_text: Optional[str] = None
+    for root, _dirs, files in os.walk(workdir):
+        for fn in files:
+            if not fn.lower().endswith((".md", ".markdown", ".txt")):
+                continue
+            p = os.path.join(root, fn)
+            if p in exclude:
+                continue
+            try:
+                sz = os.path.getsize(p)
+                if sz <= best_size:
+                    continue
+                with open(p, "rb") as f:
+                    best_text = f.read().decode("utf-8", errors="replace")
+                best_size = sz
+            except OSError:
+                continue
+    return best_text
+
+
 def claude_available() -> bool:
     return shutil.which("claude") is not None
 
@@ -179,6 +208,9 @@ def run_claude_code(
             stdout_b = f.read()
         with open(stderr_path, "rb") as f:
             stderr_b = f.read()
+        # Antes de borrar el workdir, rescatamos el .md/.txt más grande que el modelo
+        # haya escrito (por si imprimió sólo un resumen y dejó el reporte en disco).
+        artifact = _largest_text_artifact(workdir, exclude={stdout_path, stderr_path})
     except subprocess.TimeoutExpired as e:
         log.error("claude_code_timeout", timeout=timeout)
         raise ClaudeCodeError(f"claude -p timeout tras {timeout}s") from e
@@ -201,18 +233,32 @@ def run_claude_code(
     # --output-format json: objeto con campo `result` (texto final) + metadata.
     # Robusto ante ruido antes/después del objeto (evita postear el envelope crudo).
     data = _extract_result_json(out)
+    text = ""
+    recovered = None
     if data is not None:
-        text = data.get("result") or data.get("text") or ""
+        text = (data.get("result") or data.get("text") or "").strip()
+        recovered = data.get("_recovered")  # None | "regex" | "truncated"
         if data.get("is_error"):
             log.warning("claude_code_result_is_error", subtype=data.get("subtype"))
-        if text:
-            log.info("claude_code_ok",
-                     model=mm_model,
-                     turns=data.get("num_turns"),
-                     cost_usd=data.get("total_cost_usd"),
-                     recovered=data.get("_recovered"),  # None | "regex" | "truncated"
-                     out_chars=len(text))
-            return text.strip()
+
+    # Si el modelo dejó un entregable MÁS COMPLETO en un archivo del workdir que lo que
+    # imprimió (resumen corto), preferimos el archivo. Umbral holgado para no pisar un
+    # output ya completo con algún scratch chico.
+    art = (artifact or "").strip()
+    if art and len(art) > max(int(len(text) * 1.2), 1000):
+        log.info("claude_code_artifact_recovered",
+                 model=mm_model, printed_chars=len(text), artifact_chars=len(art))
+        text = art
+        recovered = "artifact"
+
+    if text:
+        log.info("claude_code_ok",
+                 model=mm_model,
+                 turns=data.get("num_turns") if data else None,
+                 cost_usd=data.get("total_cost_usd") if data else None,
+                 recovered=recovered,  # None | "regex" | "truncated" | "artifact"
+                 out_chars=len(text))
+        return text.strip()
     # Fallback: no se pudo extraer texto del JSON → devolver stdout crudo.
     log.warning("claude_code_ok_raw", model=mm_model, out_chars=len(out))
     return out
