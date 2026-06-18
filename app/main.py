@@ -168,6 +168,29 @@ def _data_dir() -> Path:
 
 # ── Endpoints ──
 
+# TEMP DEBUG (remover): listar/recuperar archivos del volumen /app/data.
+@app.get("/debug/data")
+async def debug_data(request: Request, file: str = "", contains: str = ""):
+    _verify_webhook_secret(request)
+    d = _data_dir()
+    if file:
+        p = (d / file).resolve()
+        if d.resolve() not in p.parents or not p.exists():
+            raise HTTPException(status_code=404, detail="no such file")
+        return JSONResponse({"file": file, "size": p.stat().st_size,
+                             "content": p.read_text(encoding="utf-8", errors="replace")})
+    items = []
+    for p in sorted(d.rglob("*")):
+        if p.is_file():
+            if contains and contains.lower() not in p.name.lower():
+                continue
+            st = p.stat()
+            items.append({"name": p.relative_to(d).as_posix(),
+                          "size": st.st_size,
+                          "mtime": datetime.fromtimestamp(st.st_mtime).isoformat()})
+    items.sort(key=lambda x: x["mtime"], reverse=True)
+    return JSONResponse({"dir": str(d), "count": len(items), "files": items[:200]})
+
 @app.get("/healthz", response_model=HealthResponse)
 async def healthz():
     container = get_container()
