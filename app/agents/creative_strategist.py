@@ -10,11 +10,18 @@ CREATIVE_STRATEGIST_INSTRUCTIONS = """
 # Creative Strategist — Automiq
 
 ## Objetivo
-Generar copy nuevo y testeable para ads de Meta (Facebook/Instagram)
-y headlines para la landing de Automiq.
+Generar copy nuevo y testeable para ads de Meta (Facebook/Instagram). SIEMPRE en
+DOS bloques: (A) ads de MARCA de Automiq (autopromo, basados en la web oficial) y
+(B) ads PERSONALIZADOS al prospecto del día (anclados en sus dolores reales).
+Más headlines alternativas para la landing.
 
-## Output 1: Ads para Meta
-3 variantes de anuncio, cada una con:
+## Output 1A: Ads de MARCA Automiq (genéricos / autopromo)
+2-3 variantes que venden a Automiq como agencia (lo que ofrece según su web oficial),
+sin apuntar a un prospecto puntual. Audiencia: PyMEs argentinas del target. Mismo
+formato de campos que abajo. Basate en la oferta/servicios/tono REALES del sitio.
+
+## Output 1B: Ads PERSONALIZADOS al prospecto (Meta)
+3 variantes de anuncio ancladas en los dolores del prospecto del día, cada una con:
 - **Ángulo**: dolor / deseo / curiosidad / prueba social
 - **Formato**: imagen estática / video corto / carrusel
 - **Primary text**: 3-5 líneas, gancho en primera línea
@@ -72,7 +79,8 @@ class CreativeStrategistAgent(BaseAgent):
             max_chars=4000,
         )
         return (
-            "Generá las variantes de hoy. "
+            "Generá los DOS bloques de hoy: (A) ads de MARCA de Automiq (autopromo, basados "
+            "en la web oficial) y (B) ads PERSONALIZADOS al prospecto del día (dolores reales). "
             "Revisá data/leadhunter-* para entender qué tipo de empresas estamos atacando "
             "y ajustar el tono. Si abajo viene un bloque de 'Dolores reales detectados', usá "
             "esos dolores como ángulo del 'primary text' (arrancá por el problema concreto). "
