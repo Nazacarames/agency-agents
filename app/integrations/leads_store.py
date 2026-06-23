@@ -357,6 +357,41 @@ def _split_lead_blocks(report_md: str) -> List[Tuple[str, str]]:
     return [(t, "\n".join(ls)) for t, ls in blocks]
 
 
+def _parse_contact_rows(report_md: str) -> List[Tuple[str, str, str]]:
+    """Lee filas de tabla markdown y devuelve [(empresa, telefono, industria)].
+
+    Robusto para reportes de leadhunter que ponen el contacto SOLO en la tabla
+    resumen de arriba (y dejan los bloques de detalle vacíos/truncados).
+    """
+    out: List[Tuple[str, str, str]] = []
+    for line in (report_md or "").splitlines():
+        ln = line.strip()
+        if not ln.startswith("|") or set(ln) <= set("|-: "):  # separador o no-fila
+            continue
+        phone = normalize_phone(ln)
+        if not phone:
+            continue  # sólo filas con un +54 real (descarta header)
+        cells = [c.strip() for c in ln.strip("|").split("|")]
+        company = ""
+        industria = ""
+        for c in cells:
+            cc = re.sub(r"\*", "", c).strip()
+            if not cc or normalize_phone(cc):  # vacío o la celda del teléfono
+                continue
+            if re.fullmatch(r"#?\s*\d+", cc) or re.fullmatch(r"\d+\s*/\s*\d+", cc):
+                continue  # número de fila o fit "5/6"
+            if not re.search(r"[A-Za-zÁÉÍÓÚáéíóúÑñ]", cc):
+                continue
+            if not company:
+                company = cc
+            elif not industria:
+                industria = cc
+                break
+        if company:
+            out.append((company, phone, industria))
+    return out
+
+
 def _extract_field(block: str, *labels: str) -> str:
     """Primera línea del bloque que arranca con alguna de las labels → su valor."""
     for line in block.splitlines():
@@ -383,15 +418,50 @@ def ingest_report(
     """
     today = _today_str(today)
     sent_log_emails = sent_log_emails or {}
-    new = existing_n = skipped = 0
+
+    # Mergeamos por slug de empresa para no duplicar (tabla resumen + bloque detalle
+    # de la misma empresa = UN registro). Cada lead tiene siempre una empresa.
+    merged: Dict[str, Dict[str, str]] = {}
+
+    def _slot(company: str) -> Optional[Dict[str, str]]:
+        s = _slug(company)
+        if not s:
+            return None
+        return merged.setdefault(
+            s, {"company": company, "email": "", "phone": "",
+                "decisor": "", "industria": "", "web": ""}
+        )
+
+    # 1) Filas de la tabla resumen (empresa + teléfono + industria).
+    for company, phone, industria in _parse_contact_rows(report_md):
+        d = _slot(company)
+        if d is None:
+            continue
+        if phone and not d["phone"]:
+            d["phone"] = phone
+        if industria and not d["industria"]:
+            d["industria"] = industria
+
+    # 2) Bloques de detalle por lead (email, decisor, web, y refuerzo de teléfono).
     for title, block in _split_lead_blocks(report_md):
-        full = f"{title}\n{block}"
-        email = normalize_email(full)
-        phone = normalize_phone(full)
         company = title or _extract_field(block, "empresa")
-        decisor = _extract_field(block, "decisor")
-        industria = _extract_field(block, "industria")
-        web = _extract_field(block, "web")
+        d = _slot(company)
+        if d is None:
+            continue
+        full = f"{title}\n{block}"
+        for fld, val in (
+            ("email", normalize_email(full)),
+            ("phone", normalize_phone(full)),
+            ("decisor", _extract_field(block, "decisor")),
+            ("web", _extract_field(block, "web")),
+            ("industria", _extract_field(block, "industria")),
+        ):
+            if val and not d[fld]:
+                d[fld] = val
+
+    new = existing_n = skipped = 0
+    for d in merged.values():
+        email, phone, company = d["email"], d["phone"], d["company"]
         if not (email or phone or company):
             skipped += 1
             continue
@@ -400,11 +470,10 @@ def ingest_report(
         seed = None
         if email and email in sent_log_emails and not existed:
             sl = sent_log_emails.get(email) or {}
-            seed = sl.get("date") if isinstance(sl, dict) else None
-            seed = seed or today
+            seed = (sl.get("date") if isinstance(sl, dict) else None) or today
         upsert_lead(
-            store, company=company, email=email, phone=phone, decisor=decisor,
-            industria=industria, web=web, today=today, seed_touched_on=seed,
+            store, company=company, email=email, phone=phone, decisor=d["decisor"],
+            industria=d["industria"], web=d["web"], today=today, seed_touched_on=seed,
         )
         if existed:
             existing_n += 1

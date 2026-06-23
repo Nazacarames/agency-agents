@@ -34,6 +34,42 @@ def test_ingest_extracts_email_and_phone():
     assert len(wq) == 1 and wq[0]["channel"] == "whatsapp"
 
 
+def test_ingest_from_summary_table_only():
+    """Reporte real de leadhunter: contacto SOLO en la tabla resumen, bloques de
+    detalle vacíos. El teléfono debe capturarse igual (cola WhatsApp)."""
+    report = """# LeadHunter Report
+
+## 1) Tabla resumen
+
+| # | Empresa | Industria | Fit | Contacto verificado +54 |
+|---|---------|-----------|-----|--------------------------|
+| 1 | Eidico S.A. | Desarrollista inmobiliaria | 5/6 | +54 9 11 3586-6629 (WA) |
+| 2 | Loginter S.A. | Logística | 5/6 | +54 11 5263-3200 |
+
+## 2) Detalle por lead
+
+## 🟢 Lead #1 — Eidico S.A.
+
+| Campo | Valor |
+|---|---|
+
+## 🟢 Lead #2 — Loginter S.A.
+
+| Campo | Valor |
+|---|---|
+"""
+    store = ls._empty_store()
+    res = ls.ingest_report(store, report, today="2026-06-22")
+    # 2 empresas, NO 4 (tabla + detalle de la misma empresa = 1 registro)
+    assert res["nuevos"] == 2
+    assert len(store["leads"]) == 2
+    wq = ls.whatsapp_queue(store)
+    assert len(wq) == 2
+    eidico = next(l for l in store["leads"].values() if "Eidico" in l["company"])
+    assert eidico["phone"] == "+5491135866629"
+    assert eidico["industria"] == "Desarrollista inmobiliaria"
+
+
 def test_ingest_is_idempotent():
     report = """### Lead 1: Acme SA
 - Email: hola@acme.com.ar"""
