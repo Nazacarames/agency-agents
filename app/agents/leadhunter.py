@@ -55,6 +55,10 @@ Generar EXACTAMENTE 10 leads por día que sean ofertables: cada lead debe permit
 8. contacto_normalizado — formato +54 9 ...
 9. contacto_tipo — whatsapp|telefono
 10. contacto_verified — true|false + prueba (URL o método)
+10b. email — email REAL de la empresa/decisor sacado del sitio oficial (página /contacto,
+     pie de página, /quienes-somos). Es CLAVE: habilita el outbound automático por email.
+     Si tras buscar en el sitio no hay ninguno, poné "(sin email público)" — pero buscalo
+     siempre primero (la mayoría de las PyMEs publican un info@/ventas@/contacto@).
 11. decisor (nombre + cargo)
 12. discovery_signals — lista de URLs/ejemplos (LinkedIn post, job posting, help page, tech stack evidence)
 13. outreach_template — mensaje WhatsApp personalizado (máx 280 chars, español argentino). Terminar con CTA que ofrezca demo de 15’ o piloto corto.
@@ -265,9 +269,11 @@ class LeadHunterAgent(BaseAgent):
             "listados de proveedores. Extraé nombres de empresa + su web oficial.\n"
             "2. CALIFICACIÓN: con WebFetch abrí el sitio de cada candidata y confirmá rubro, "
             "tamaño aproximado (25–100 empleados) y decisor.\n"
-            "3. VERIFICACIÓN de contacto: buscá en el sitio (home, /contacto, /quienes-somos) "
-            "el teléfono argentino (+54) y/o email REAL. Si no encontrás contacto verificable, "
-            "descartá la empresa y buscá otra. Podés usar Bash (curl) si WebFetch falla en un sitio.\n"
+            "3. VERIFICACIÓN de contacto: buscá en el sitio (home, /contacto, /quienes-somos, "
+            "pie de página) DOS cosas: el teléfono argentino (+54) Y el email REAL de la empresa "
+            "(info@/ventas@/contacto@…). El EMAIL es clave: habilita el envío automático del "
+            "outbound — buscalo siempre. Si no encontrás NINGÚN contacto verificable, descartá la "
+            "empresa y buscá otra. Podés usar Bash (curl) si WebFetch falla en un sitio.\n"
             f"4. Iterá hasta juntar {target} leads con contacto verificado en una fuente pública. "
             "Aplicá la rúbrica de fit de la skill (fit_score 4-6).\n\n"
             "⚠️ ENTREGABLE FINAL — REGLA DURA: tu respuesta final (lo que IMPRIMÍS) DEBE ser el "
@@ -275,7 +281,9 @@ class LeadHunterAgent(BaseAgent):
             "tipo 'Resumen final: 10 leads...': eso NO sirve y se considera run fallido. NO dejes el "
             "reporte únicamente en archivos de disco — IMPRIMILO entero como respuesta.\n"
             "El reporte impreso debe incluir, en este orden:\n"
-            "1) tabla resumen (empresa | industria | fit | contacto +54)\n"
+            "1) tabla resumen con estas columnas EXACTAS: "
+            "empresa | industria | fit | contacto +54 | email\n"
+            "   (la columna email es OBLIGATORIA: poné el email real o '(sin email público)')\n"
             f"2) el detalle de los {target} leads, cada uno con TODOS los campos obligatorios del "
             "system prompt (estructura '### Lead N'), incluyendo la URL fuente de cada dato de "
             "contacto.\n"

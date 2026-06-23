@@ -357,26 +357,28 @@ def _split_lead_blocks(report_md: str) -> List[Tuple[str, str]]:
     return [(t, "\n".join(ls)) for t, ls in blocks]
 
 
-def _parse_contact_rows(report_md: str) -> List[Tuple[str, str, str]]:
-    """Lee filas de tabla markdown y devuelve [(empresa, telefono, industria)].
+def _parse_contact_rows(report_md: str) -> List[Tuple[str, str, str, str]]:
+    """Lee filas de tabla markdown y devuelve [(empresa, telefono, email, industria)].
 
     Robusto para reportes de leadhunter que ponen el contacto SOLO en la tabla
     resumen de arriba (y dejan los bloques de detalle vacíos/truncados).
     """
-    out: List[Tuple[str, str, str]] = []
+    out: List[Tuple[str, str, str, str]] = []
     for line in (report_md or "").splitlines():
         ln = line.strip()
         if not ln.startswith("|") or set(ln) <= set("|-: "):  # separador o no-fila
             continue
         phone = normalize_phone(ln)
-        if not phone:
-            continue  # sólo filas con un +54 real (descarta header)
+        email = normalize_email(ln)
+        if not (phone or email):
+            continue  # sólo filas con contacto real (descarta header)
         cells = [c.strip() for c in ln.strip("|").split("|")]
         company = ""
         industria = ""
         for c in cells:
             cc = re.sub(r"\*", "", c).strip()
-            if not cc or normalize_phone(cc):  # vacío o la celda del teléfono
+            # saltear celdas de contacto (teléfono/email) y placeholders numéricos
+            if not cc or normalize_phone(cc) or normalize_email(cc):
                 continue
             if re.fullmatch(r"#?\s*\d+", cc) or re.fullmatch(r"\d+\s*/\s*\d+", cc):
                 continue  # número de fila o fit "5/6"
@@ -388,7 +390,7 @@ def _parse_contact_rows(report_md: str) -> List[Tuple[str, str, str]]:
                 industria = cc
                 break
         if company:
-            out.append((company, phone, industria))
+            out.append((company, phone, email, industria))
     return out
 
 
@@ -432,13 +434,15 @@ def ingest_report(
                 "decisor": "", "industria": "", "web": ""}
         )
 
-    # 1) Filas de la tabla resumen (empresa + teléfono + industria).
-    for company, phone, industria in _parse_contact_rows(report_md):
+    # 1) Filas de la tabla resumen (empresa + teléfono + email + industria).
+    for company, phone, email, industria in _parse_contact_rows(report_md):
         d = _slot(company)
         if d is None:
             continue
         if phone and not d["phone"]:
             d["phone"] = phone
+        if email and not d["email"]:
+            d["email"] = email
         if industria and not d["industria"]:
             d["industria"] = industria
 

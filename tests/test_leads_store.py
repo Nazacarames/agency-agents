@@ -41,10 +41,10 @@ def test_ingest_from_summary_table_only():
 
 ## 1) Tabla resumen
 
-| # | Empresa | Industria | Fit | Contacto verificado +54 |
-|---|---------|-----------|-----|--------------------------|
-| 1 | Eidico S.A. | Desarrollista inmobiliaria | 5/6 | +54 9 11 3586-6629 (WA) |
-| 2 | Loginter S.A. | Logística | 5/6 | +54 11 5263-3200 |
+| # | Empresa | Industria | Fit | Contacto +54 | Email |
+|---|---------|-----------|-----|--------------|-------|
+| 1 | Eidico S.A. | Desarrollista inmobiliaria | 5/6 | +54 9 11 3586-6629 (WA) | (sin email público) |
+| 2 | Loginter S.A. | Logística | 5/6 | +54 11 5263-3200 | ventas@loginter.com.ar |
 
 ## 2) Detalle por lead
 
@@ -63,11 +63,16 @@ def test_ingest_from_summary_table_only():
     # 2 empresas, NO 4 (tabla + detalle de la misma empresa = 1 registro)
     assert res["nuevos"] == 2
     assert len(store["leads"]) == 2
-    wq = ls.whatsapp_queue(store)
-    assert len(wq) == 2
+    # Eidico sin email → cola WhatsApp. Loginter con email → due para outbound auto.
     eidico = next(l for l in store["leads"].values() if "Eidico" in l["company"])
     assert eidico["phone"] == "+5491135866629"
     assert eidico["industria"] == "Desarrollista inmobiliaria"
+    assert eidico["email"] == ""
+    loginter = store["leads"]["ventas@loginter.com.ar"]
+    assert loginter["company"].startswith("Loginter")
+    assert loginter["phone"] == "+541152633200"
+    assert ls.whatsapp_queue(store) == [eidico]
+    assert [l["key"] for l in ls.due_for_touch(store, today="2026-06-22")] == ["ventas@loginter.com.ar"]
 
 
 def test_ingest_is_idempotent():
