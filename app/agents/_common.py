@@ -24,6 +24,10 @@ Automiq es una agencia de automatización con IA enfocada en:
 - PyMEs familiares (25-100 empleados) que necesitan digitalizar procesos
 - Servicios: agentes de IA (WhatsApp/voice), automatizaciones n8n, landing pages, Meta Ads, CRM
 
+## Web oficial
+Sitio: https://automiq-landing-astro.vercel.app — es la referencia de marca, mensajes y
+servicios. Usala como fuente y enlazala cuando un output necesite un link a Automiq.
+
 ## Big Domino (nuestra frase de oferta)
 > *"Ayudo a [VERTICAL: distribuidoras/manufactureras/logísticas/inmobiliarias]
 > argentinas de 25-100 empleados a [BENEFICIO MEDIBLE: recuperar cobranza /
