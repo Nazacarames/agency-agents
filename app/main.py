@@ -15,6 +15,7 @@ from __future__ import annotations
 import hmac
 import hashlib
 import json
+import re
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -332,14 +333,14 @@ async def last_agent_output(name: str, request: Request):
         if not cands:
             return JSONResponse({"status": "not_found", "message": "no reports yet", "date": today}, status_code=404)
         md_path = cands[0]
-        # Extraer date del filename
-        parts = md_path.stem.split("-")
-        # leadhunter-report-2026-06-09 → ["leadhunter","report","2026","06","09"]
-        date_cands = [p for p in parts if "-".join(parts[parts.index(p):]).count("-") >= 2]
-        if date_cands:
-            idx = parts.index(date_cands[0])
-            today = "-".join(parts[idx:idx+3])
-        md_path = data_dir / md_tpl.format(d=today)
+        # Derivar la fecha YYYY-MM-DD del filename con regex (robusto; no asume el
+        # orden de los campos). El bug viejo tomaba siempre parts[0] → armaba rutas
+        # como "leadhunter-report-leadhunter-report-2026.md" y devolvía vacío cuando
+        # no existía el archivo de HOY (p.ej. tras el cambio de día a medianoche).
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", md_path.stem)
+        if m:
+            today = m.group(1)
+        # md_path ya apunta al archivo real (cands[0]); NO re-derivar desde `today`.
     json_path = data_dir / json_tpl.format(d=today) if json_tpl else None
     leads_path = data_dir / leads_tpl.format(d=today) if leads_tpl else None
 
