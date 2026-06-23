@@ -124,6 +124,22 @@ def get_context_block() -> str:
     return f"{AGENCY_CONTEXT}\n\n---\nFecha actual: {now}\n---\n"
 
 
+# Web oficial de Automiq — los agentes que producen copy/estrategia DEBEN basarse
+# en el sitio real, no en supuestos. (web_auditor y seo_specialist ya la fetchean
+# de forma explícita; este directive es para los demás de marketing.)
+OFFICIAL_SITE_URL = "https://automiq-landing-astro.vercel.app"
+
+
+def official_site_directive() -> str:
+    """Instrucción para que el agente lea la web oficial antes de producir."""
+    return (
+        f"\n\nIMPORTANTE: ANTES de generar, hacé WebFetch de la web oficial de Automiq "
+        f"({OFFICIAL_SITE_URL}) y basá tu output en la oferta, los servicios, los mensajes "
+        f"y el tono REALES del sitio. No inventes el posicionamiento ni uses uno genérico. "
+        f"Si la web no carga, decilo y seguí con el contexto de la agencia."
+    )
+
+
 # ── Sanitización de output del modelo ────────────────────────────────────────
 # MiniMax (backend de los agentes) a veces "code-switchea" e inyecta caracteres
 # CJK (chino/japonés/coreano) en medio del texto español, p.ej. "Logística de回收".

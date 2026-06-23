@@ -7,7 +7,7 @@ v2 (2026-06-12) — Actualizado con:
 - max_tokens subido de 5000 a 12000 para evitar truncamiento
 """
 from .base import BaseAgent, AgentContext
-from ._common import get_context_block
+from ._common import get_context_block, official_site_directive
 
 
 CONTENT_CREATOR_INSTRUCTIONS = """
@@ -77,4 +77,5 @@ class ContentCreatorAgent(BaseAgent):
             "logísticas a recuperar cobranza / ahorrar horas / aumentar citas. "
             "NO recortes las ideas. El copy tiene que estar completo en cada una, "
             "aunque sean largas. El equipo de diseño las va a tomar tal cual salen."
+            + official_site_directive()
         )

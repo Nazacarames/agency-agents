@@ -3,7 +3,7 @@ Creative Strategist — copy para ads de Meta + headlines landing.
 Schedule: Martes y Jueves 14:00 ART.
 """
 from .base import BaseAgent, AgentContext
-from ._common import get_context_block, upstream_handoff_block
+from ._common import get_context_block, upstream_handoff_block, official_site_directive
 
 
 CREATIVE_STRATEGIST_INSTRUCTIONS = """
@@ -78,4 +78,5 @@ class CreativeStrategistAgent(BaseAgent):
             "esos dolores como ángulo del 'primary text' (arrancá por el problema concreto). "
             "Que sean testeables — el equipo las va a poner en Meta Ads Manager directamente."
             f"{pains}"
+            + official_site_directive()
         )

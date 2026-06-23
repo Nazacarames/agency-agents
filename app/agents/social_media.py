@@ -3,7 +3,7 @@ Social Media Strategist — calendario semanal de contenido.
 Schedule: Domingos 18:00 ART (para la semana que viene).
 """
 from .base import BaseAgent, AgentContext
-from ._common import get_context_block
+from ._common import get_context_block, official_site_directive
 
 
 SOCIAL_MEDIA_INSTRUCTIONS = """
@@ -74,4 +74,5 @@ class SocialMediaAgent(BaseAgent):
             f"Generá el calendario para la semana que arranca el {week_start}. "
             "Revisá el contenido de la semana actual en data/ para no repetir formatos ni temas. "
             "Balanceá: si la semana pasada fue mucha venta, esta que sea más educativa."
+            + official_site_directive()
         )

@@ -3,7 +3,7 @@ Growth Hacker — métricas y oportunidades de optimización.
 Schedule: diario 14:00 ART.
 """
 from .base import BaseAgent, AgentContext
-from ._common import get_context_block
+from ._common import get_context_block, official_site_directive
 
 
 GROWTH_HACKER_INSTRUCTIONS = """
@@ -86,4 +86,5 @@ class GrowthHackerAgent(BaseAgent):
             "Revisá data/ por reportes previos, content-output anteriores y secuencias outbound "
             "para tener contexto histórico. "
             "Devolvé el reporte completo siguiendo la estructura indicada."
+            + official_site_directive()
         )
