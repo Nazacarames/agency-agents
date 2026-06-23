@@ -55,14 +55,22 @@ Tu trabajo: por cada lead, redactar el email que corresponde a SU step.
 - NUNCA inventes precios, plazos ni datos del lead que no estén en el material.
 
 ## Cómo cambia el mensaje según el step
-- **step 0 (primer toque)** ≤ 110 palabras: 1 línea de apertura personalizada (referí algo
-  real del lead: su rubro/un dolor), 1-2 líneas de valor concreto (beneficio medible, no
-  "te ayudo"), 1 CTA simple ("¿te viene bien una llamada de 15 min el martes o el jueves?").
-- **step 1 (follow-up 1)** ≤ 60 palabras: breve, sube un dato/beneficio nuevo, re-ofrece la
-  llamada. Asunto puede ser "Re: <asunto anterior>" o uno nuevo corto.
-- **step 2 (follow-up 2)** ≤ 45 palabras: aporta prueba/caso o un ángulo distinto, CTA suave.
-- **step 3 (follow-up 3, ÚLTIMO)** ≤ 35 palabras: cierre cordial tipo "¿lo dejo por acá o
-  te sirve que te muestre 15 min?". Sin presión.
+- **step 0 (primer toque)** ≤ 90 palabras, que se sienta escrito a mano 1-a-1 (NO masivo):
+  1. **Apertura ESPECÍFICA** de SU negocio (su rubro + un dolor concreto y creíble: "vi que
+     atienden consultas por WhatsApp en [empresa] — cuando entran 30 mensajes a la vez es
+     imposible contestar todos a tiempo"). Nada genérico tipo "espero que estés bien".
+  2. **1 beneficio medible** (Big Domino, con número si es creíble): "un agente de IA contesta
+     al toque 24/7, califica al cliente y te lo carga al CRM — recuperás las ventas que hoy se
+     pierden por no contestar a tiempo".
+  3. **CTA de baja fricción y ON-BRAND**: ofrecé MOSTRARLO, no "una reunión". Ej: "¿te mando
+     un ejemplo del agente funcionando por WhatsApp, armado para [empresa]? Son 2 minutos." o
+     "¿15 min el miércoles o el jueves y te lo muestro en vivo?". Dar 1 acción clarísima.
+- **step 1 (follow-up 1)** ≤ 55 palabras: breve, subí un dato/beneficio NUEVO (no repitas),
+  re-ofrecé el ejemplo por WhatsApp. Asunto "Re: <asunto anterior>".
+- **step 2 (follow-up 2)** ≤ 40 palabras: un ángulo distinto o mini-prueba ("a [rubro similar]
+  le subió un 30% las respuestas"), CTA suave.
+- **step 3 (follow-up 3, ÚLTIMO)** ≤ 30 palabras: cierre cordial sin presión ("¿lo dejo por
+  acá o te sirve que te muestre 15 min?").
 
 ## Formato de salida (OBLIGATORIO)
 Devolvé EXCLUSIVAMENTE un array JSON válido (sin texto antes/después, sin ```), un
@@ -103,6 +111,20 @@ def _save_sent_log(data: Dict[str, Any]) -> None:
         _SENT_LOG.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
         log.error("outbound_sentlog_save_failed", error=str(e))
+
+
+def _wa_link(phone: str) -> str:
+    """Convierte +5491135866629 → https://wa.me/5491135866629 (clic directo a WhatsApp)."""
+    digits = re.sub(r"[^\d]", "", phone or "")
+    return f"https://wa.me/{digits}" if digits else ""
+
+
+def _wa_line(w: dict) -> str:
+    """Línea de la cola WhatsApp con link clickeable + decisor."""
+    link = _wa_link(w.get("phone", ""))
+    who = f" · {w['decisor']}" if w.get("decisor") else ""
+    tail = f" → {link}" if link else ""
+    return f"• **{w['company']}** — `{w.get('phone','')}`{tail}{who}"
 
 
 def _latest_leadhunter_report() -> str:
@@ -289,9 +311,8 @@ class OutboundAgent(BaseAgent):
             "_La secuencia no tiene emails vencidos para hoy (día 0/+2/+5/+9)._",
         ]
         if wa:
-            parts += ["", "## 📱 Cola WhatsApp (sin email — contactalos a mano)"]
-            parts += [f"• **{w['company']}** — {w['phone']} {('· ' + w['decisor']) if w['decisor'] else ''}"
-                      for w in wa]
+            parts += ["", "## 📱 Cola WhatsApp (sin email — clic y escribí)"]
+            parts += [_wa_line(w) for w in wa]
         return "\n".join(parts)
 
     def _render_report(self, ctx, live, auto, sent, preview, errors, missing) -> str:
@@ -317,9 +338,8 @@ class OutboundAgent(BaseAgent):
         if errors:
             parts += ["## ⚠️ Errores", *errors, ""]
         if wa:
-            parts += ["## 📱 Cola WhatsApp (sin email — contactalos a mano)"]
-            parts += [f"• **{w['company']}** — {w['phone']} {('· ' + w['decisor']) if w['decisor'] else ''}"
-                      for w in wa]
+            parts += ["## 📱 Cola WhatsApp (sin email — clic y escribí)"]
+            parts += [_wa_line(w) for w in wa]
             parts += [""]
         if not sent and not preview and not errors and not missing:
             parts += ["_Sin toques para procesar hoy._"]

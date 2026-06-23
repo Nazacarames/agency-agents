@@ -85,7 +85,7 @@ def test_ingest_is_idempotent():
     assert len(store["leads"]) == 1
 
 
-def test_sequence_cadence_advances_0_2_5_9():
+def test_sequence_cadence_advances_0_2_4_7():
     store = ls._empty_store()
     key = ls.upsert_lead(store, company="Acme", email="a@acme.com", today="2026-06-22")
     # Día 0: due para step 0
@@ -99,11 +99,11 @@ def test_sequence_cadence_advances_0_2_5_9():
     # Due el 24 → step 1
     assert len(ls.due_for_touch(store, today="2026-06-24")) == 1
     ls.record_touch(store, key, step=1, today="2026-06-24")
-    assert store["leads"][key]["next_touch_at"] == "2026-06-27"  # +3
-    ls.record_touch(store, key, step=2, today="2026-06-27")
-    assert store["leads"][key]["next_touch_at"] == "2026-07-01"  # +4
+    assert store["leads"][key]["next_touch_at"] == "2026-06-26"  # +2
+    ls.record_touch(store, key, step=2, today="2026-06-26")
+    assert store["leads"][key]["next_touch_at"] == "2026-06-29"  # +3
     # Último toque → secuencia agotada
-    ls.record_touch(store, key, step=3, today="2026-07-01")
+    ls.record_touch(store, key, step=3, today="2026-06-29")
     assert store["leads"][key]["next_touch_at"] is None
     assert store["leads"][key]["state"] == "sin_respuesta"
     assert ls.due_for_touch(store, today="2026-08-01") == []

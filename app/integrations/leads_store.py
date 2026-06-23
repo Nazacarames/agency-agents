@@ -36,8 +36,10 @@ _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 _STORE_FILE = _DATA_DIR / "leads-store.json"
 
 # Cadencia de la secuencia: toque 0 (día 0), luego esperar estos días entre toques.
-# [2, 3, 4] → toques en día 0, 2, 5, 9. 4 toques en total (step 0..3).
-FOLLOWUP_OFFSETS_DAYS = [2, 3, 4]
+# [2, 2, 3] → toques en día 0, 2, 4, 7. 4 toques en total (step 0..3). Cadencia
+# comprimida (2026-06-23) para que la mayoría de los toques caigan DENTRO de la
+# semana → más respuestas rápido (el 80% de las respuestas vienen de los follow-ups).
+FOLLOWUP_OFFSETS_DAYS = [2, 2, 3]
 MAX_STEP = len(FOLLOWUP_OFFSETS_DAYS)  # 3 → steps 0,1,2,3
 
 # Etiqueta humana por step (para los mensajes y el reporte).
