@@ -130,6 +130,16 @@ class RunAgentResponse(BaseModel):
     output: Optional[str] = None
 
 
+class PurgeRequest(BaseModel):
+    dry_run: bool = True            # SEGURO por defecto: sólo previsualiza
+    reset: bool = False             # vacía todo el store
+    keys: List[str] = Field(default_factory=list)
+    states: List[str] = Field(default_factory=list)
+    channels: List[str] = Field(default_factory=list)
+    email_contains: List[str] = Field(default_factory=list)
+    untouched_only: bool = False
+
+
 class LeadWebhookPayload(BaseModel):
     name: str
     email: str
@@ -371,6 +381,67 @@ async def last_agent_output(name: str, request: Request):
             "leads_json": _size(json_path) if json_path else 0,
         },
     }
+
+
+@app.get("/admin/leads")
+async def admin_leads_list(request: Request):
+    """Vista del leads-store: conteo por estado + lista compacta de cada lead.
+    Para inspeccionar el pipeline y decidir qué purgar."""
+    _verify_webhook_secret(request)
+    from .integrations import leads_store as ls
+    store = ls.load_store()
+    leads = [ls.lead_view(l) for l in store.get("leads", {}).values()]
+    # ordenar por estado y luego empresa, para lectura
+    leads.sort(key=lambda l: (str(l.get("state")), str(l.get("company"))))
+    return {
+        "status": "ok",
+        "counts": ls.summary_counts(store),
+        "updated_at": store.get("updated_at"),
+        "leads": leads,
+    }
+
+
+@app.post("/admin/leads/purge")
+async def admin_leads_purge(body: PurgeRequest, request: Request):
+    """Purga leads del store. SEGURO POR DEFECTO: con dry_run=true (default) sólo
+    PREVISUALIZA qué borraría, sin tocar nada. Pasá dry_run=false para ejecutar.
+
+    Opciones (se combinan con AND, salvo `keys` que se incluyen siempre):
+      - reset: true            → vacía TODO el store (ignora el resto).
+      - keys: [...]            → keys exactas a borrar.
+      - states: [...]          → p.ej. ["nuevo"]
+      - channels: [...]        → p.ej. ["email"]
+      - email_contains: [...]  → substrings de email, p.ej. ["fate.com","coto.com"]
+      - untouched_only: true   → sólo leads sin ningún toque enviado.
+    """
+    _verify_webhook_secret(request)
+    from .integrations import leads_store as ls
+
+    if body.reset:
+        if body.dry_run:
+            store = ls.load_store()
+            return {"status": "dry_run", "would_reset": True,
+                    "current_count": ls.summary_counts(store).get("total", 0)}
+        ls.reset_store()
+        return {"status": "ok", "reset": True, "remaining": 0}
+
+    store = ls.load_store()
+    matched = ls.match_keys(
+        store,
+        keys=body.keys or None,
+        states=body.states or None,
+        channels=body.channels or None,
+        email_contains=body.email_contains or None,
+        untouched_only=body.untouched_only,
+    )
+    preview = [ls.lead_view(store["leads"][k]) for k in matched]
+    if body.dry_run:
+        return {"status": "dry_run", "would_remove": len(matched), "leads": preview}
+    removed = ls.remove_keys(store, matched)
+    ls.save_store(store)
+    log.info("admin_leads_purged", removed=removed)
+    return {"status": "ok", "removed": removed,
+            "remaining": ls.summary_counts(store).get("total", 0), "leads": preview}
 
 
 @app.get("/")

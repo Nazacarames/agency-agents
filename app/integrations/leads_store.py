@@ -296,6 +296,77 @@ def set_state(store: Dict[str, Any], key: str, state: str) -> bool:
     return True
 
 
+# ───────────────────────── mantenimiento / purga ─────────────────────────
+
+def match_keys(
+    store: Dict[str, Any],
+    *,
+    keys: Optional[List[str]] = None,
+    states: Optional[List[str]] = None,
+    channels: Optional[List[str]] = None,
+    email_contains: Optional[List[str]] = None,
+    untouched_only: bool = False,
+) -> List[str]:
+    """Devuelve las keys de leads que matchean TODOS los filtros provistos (AND).
+
+    Filtros omitidos (None) no restringen. `keys` explícitas se incluyen siempre
+    (si existen). Pensado para previsualizar una purga antes de ejecutarla.
+    """
+    leads = store.get("leads", {})
+    explicit = {k for k in (keys or []) if k in leads}
+    matched: List[str] = []
+    for k, l in leads.items():
+        if states is not None and l.get("state") not in states:
+            continue
+        if channels is not None and l.get("channel") not in channels:
+            continue
+        if email_contains and not any(
+            s.lower() in (l.get("email", "") or "").lower() for s in email_contains
+        ):
+            continue
+        if untouched_only and l.get("touches"):
+            continue
+        matched.append(k)
+    # unir con las explícitas, preservando orden y sin duplicar
+    for k in explicit:
+        if k not in matched:
+            matched.append(k)
+    return matched
+
+
+def remove_keys(store: Dict[str, Any], keys: List[str]) -> int:
+    """Borra los leads de esas keys. Devuelve cuántos borró."""
+    leads = store.get("leads", {})
+    removed = 0
+    for k in keys:
+        if leads.pop(k, None) is not None:
+            removed += 1
+    return removed
+
+
+def reset_store() -> Dict[str, Any]:
+    """Vacía el store por completo (escribe un store nuevo). Devuelve el store vacío."""
+    fresh = _empty_store()
+    save_store(fresh)
+    return fresh
+
+
+def lead_view(lead: Dict[str, Any]) -> Dict[str, Any]:
+    """Vista compacta de un lead para listar (sin volcar todo el historial)."""
+    return {
+        "key": lead.get("key"),
+        "company": lead.get("company"),
+        "email": lead.get("email"),
+        "phone": lead.get("phone"),
+        "channel": lead.get("channel"),
+        "state": lead.get("state"),
+        "next_step": lead.get("next_step"),
+        "next_touch_at": lead.get("next_touch_at"),
+        "touches": len(lead.get("touches", [])),
+        "first_seen": lead.get("first_seen"),
+    }
+
+
 # ───────────────────────── consultas ─────────────────────────
 
 def due_for_touch(

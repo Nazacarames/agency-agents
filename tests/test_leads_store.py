@@ -127,6 +127,44 @@ def test_reply_from_unknown_sender_is_ignored():
     assert ls.mark_replied(store, email="random@stranger.com") is None
 
 
+def test_match_and_remove_keys():
+    store = ls._empty_store()
+    ls.upsert_lead(store, company="Buena PyME", email="ventas@buenapyme.com.ar", today="2026-06-23")
+    ls.upsert_lead(store, company="Fate", email="sac@fate.com.ar", today="2026-06-23")
+    ls.upsert_lead(store, company="Coto", email="contactoweb@coto.com.ar", today="2026-06-23")
+    # match por dominio de las grandes
+    bad = ls.match_keys(store, email_contains=["fate.com", "coto.com"])
+    assert set(bad) == {"sac@fate.com.ar", "contactoweb@coto.com.ar"}
+    removed = ls.remove_keys(store, bad)
+    assert removed == 2
+    assert list(store["leads"].keys()) == ["ventas@buenapyme.com.ar"]
+
+
+def test_match_untouched_only_and_state():
+    store = ls._empty_store()
+    k1 = ls.upsert_lead(store, company="A", email="a@a.com", today="2026-06-23")
+    ls.upsert_lead(store, company="B", email="b@b.com", today="2026-06-23")
+    ls.record_touch(store, k1, step=0, today="2026-06-23")  # a@a.com ya tocado
+    untouched = ls.match_keys(store, states=["nuevo"], untouched_only=True)
+    assert untouched == ["b@b.com"]
+
+
+def test_reset_store_empties():
+    import tempfile
+    from pathlib import Path
+    orig = ls._STORE_FILE
+    ls._STORE_FILE = Path(tempfile.mkdtemp()) / "s.json"
+    try:
+        store = ls._empty_store()
+        ls.upsert_lead(store, company="A", email="a@a.com", today="2026-06-23")
+        ls.save_store(store)
+        fresh = ls.reset_store()
+        assert fresh["leads"] == {}
+        assert ls.load_store()["leads"] == {}
+    finally:
+        ls._STORE_FILE = orig
+
+
 def test_seed_from_sent_log_avoids_remailing():
     report = """### Lead 1: Acme SA
 - Email: hola@acme.com.ar"""
