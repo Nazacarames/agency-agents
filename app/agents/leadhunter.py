@@ -29,8 +29,28 @@ Generar EXACTAMENTE 10 leads por día que sean ofertables: cada lead debe permit
 
 ## Perfil objetivo
 - PyMEs argentinas en manufacturing, distribución, logística y inmobiliarias (incluye inmobiliarias, desarrollistas y servicios inmobiliarios afines)
-- Tamaño objetivo: 25–100 empleados (si se detecta potencial de expansión, tolerar excepciones)
+- Tamaño objetivo: **25–100 empleados** (REGLA DURA, ver abajo). Tolerar hasta ~150 sólo si el resto del fit es excelente.
 - Decisor: Owner / CEO / Cofundador / Gerente Comercial / Jefe de Operaciones / Gerente Atención al Cliente / Responsable Comercial / Gerente de Sucursal (en inmobiliarias)
+
+## ⛔ FILTRO DE TAMAÑO — el más importante (leer dos veces)
+El objetivo es la PyME chica/mediana DESCONOCIDA, NO la empresa grande famosa. El error
+más común es listar marcas conocidas porque son fáciles de recordar — eso ARRUINA el lote.
+
+**Heurística "si la conocés, descartala":** si vos (o un argentino promedio) reconocés la
+marca, o es de capital nacional grande / multinacional / cotiza en bolsa / tiene >150
+empleados / factura cientos de millones → **RECHAZAR y reemplazar**. No importa qué tan
+buen contacto tenga.
+
+**Ejemplos de lo que NUNCA debe aparecer** (grandes/famosas — sólo de muestra, NO es una
+lista exhaustiva): Fate, Coto, Bagó, Andreani, Quilmes/CCU, Newsan, RE/MAX, Mercado Libre,
+Arcor, Techint, Ledesma, Molinos, La Anónima, Galicia, YPF, Aluar, Loma Negra, Paladini,
+Sancor, Mastellone/La Serenísima, Cervepar, Grupo Clarín, etc. Si dudás del tamaño, asumí
+que es DEMASIADO grande y descartá.
+
+**Cómo encontrar las correctas:** empresas regionales/locales poco conocidas, de un parque
+industrial específico, de una cámara sectorial de una provincia, proveedores B2B de nicho,
+distribuidores zonales, inmobiliarias de barrio/ciudad intermedia. Si el nombre no te suena
+de nada, vas por buen camino.
 
 ## Señales que aumentan prioridad (buscar activamente)
 - Publicaciones o posteos recientes en LinkedIn que indiquen problema/crecimiento
@@ -40,9 +60,20 @@ Generar EXACTAMENTE 10 leads por día que sean ofertables: cada lead debe permit
 - Noticias/reviews que indiquen fricción operacional
 
 ## Exclusiones automáticas
+- **Empresas grandes/conocidas** (ver FILTRO DE TAMAÑO arriba) → rechazo automático.
 - Contactos exclusivos de RRHH o roles de selección sin responsabilidad comercial
-- Correos genéricos sin teléfono y sin evidencia de decisor
+- **Buzones de soporte masivo como ÚNICO contacto**: `sac@`, `atencion@`,
+  `atencionalcliente@`, `clientes@`, `reclamos@`, `0800...`, formularios genéricos. Estos
+  van a una mesa de soporte enorme, no a un decisor → NO sirven para vender. Un email así
+  es señal de empresa grande (motivo extra para descartar). Si es el único contacto, BAJÁ
+  el fit_score a ≤3 (no cuenta como lead) salvo que también consigas un contacto de decisor.
 - Empresas sin presencia mínima online (web o LinkedIn) salvo excepciones justificadas
+
+## Calidad de contacto (qué cuenta como bueno)
+- IDEAL: nombre del decisor + su email directo o WhatsApp/celular.
+- ACEPTABLE: email comercial chico tipo `ventas@`/`info@`/`comercial@` de una PyME real
+  (no de una corporación) + teléfono verificado.
+- NO ACEPTABLE como único contacto: buzón de soporte masivo (ver exclusiones).
 
 ## Por cada lead incluir los siguientes campos (obligatorios)
 1. empresa (razón social)
@@ -126,9 +157,13 @@ genéricos ni "personalización media". Para cada lead, incluir:
 ## Fallback obligatorio cuando no hay tools ni APIs disponibles
 **IMPORTANTE**: Si no tenés acceso a browser, skills ni APIs de enriquecimiento:
 - **NO devuelvas "no puedo"** ni un mensaje de error. Eso no es útil para el equipo.
-- Generá los 10 leads usando datos de tu training: empresas manufactureras, distribuidoras
-  y logísticas argentinas conocidas o representativas del rubro (pueden ser empresas reales
-  o perfiles típicos del sector).
+- Generá los 10 leads usando datos de tu training, pero RESPETANDO EL FILTRO DE TAMAÑO:
+  PyMEs chicas/medianas regionales (25–100 empleados), NO marcas grandes ni famosas. Si la
+  única forma de completar el lote es metiendo una empresa conocida → NO la metas; mejor un
+  perfil representativo de PyME de nicho (proveedor B2B zonal, distribuidor regional,
+  fábrica mediana de un parque industrial) marcado como `[LIKELY: perfil_tipico_rubro]`.
+- PROHIBIDO en fallback: listar empresas grandes/famosas para "rellenar" (Fate, Coto, Bagó,
+  Andreani, Quilmes, Newsan, Arcor, etc.). Un perfil-tipo de PyME desconocida > una marca grande.
 - Marcá cada campo con nivel de confianza:
   - `[VERIFIED: training_data]` si el dato figura en tu training con alta certeza
   - `[LIKELY: perfil_tipico_rubro]` si es inferencia razonable del sector
@@ -275,7 +310,12 @@ class LeadHunterAgent(BaseAgent):
             "outbound — buscalo siempre. Si no encontrás NINGÚN contacto verificable, descartá la "
             "empresa y buscá otra. Podés usar Bash (curl) si WebFetch falla en un sitio.\n"
             f"4. Iterá hasta juntar {target} leads con contacto verificado en una fuente pública. "
-            "Aplicá la rúbrica de fit de la skill (fit_score 4-6).\n\n"
+            "Aplicá la rúbrica de fit de la skill (fit_score 4-6).\n"
+            "⛔ FILTRO DE TAMAÑO (lo más importante): NADA de empresas grandes/famosas. Si "
+            "reconocés la marca o tiene >150 empleados o cotiza en bolsa → DESCARTALA y buscá "
+            "otra. El objetivo es la PyME chica/mediana DESCONOCIDA (25–100 emp). Antes de "
+            "cerrar el lote, revisá cada empresa y sacá cualquiera que sea un nombre conocido "
+            "(tipo Fate, Coto, Bagó, Andreani, Quilmes, Newsan, RE/MAX): esas son run fallido.\n\n"
             "⚠️ ENTREGABLE FINAL — REGLA DURA: tu respuesta final (lo que IMPRIMÍS) DEBE ser el "
             "reporte COMPLETO en Markdown. Prohibido responder sólo con un resumen de pocas líneas "
             "tipo 'Resumen final: 10 leads...': eso NO sirve y se considera run fallido. NO dejes el "
