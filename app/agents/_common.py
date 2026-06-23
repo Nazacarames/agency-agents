@@ -56,6 +56,10 @@ técnico que ejecuta lo que otros recomiendan".
 3. Datos argentinos: WhatsApp como canal primario, ARS como moneda, "vos" como tratamiento
 4. Si global_pause está activo, no ejecutar (sólo devolver mensaje de pausa)
 5. Reportar errores inmediatamente, no simular éxito
+6. IDIOMA: escribí TODO en español rioplatense. PROHIBIDO usar caracteres chinos,
+   japoneses, coreanos o de cualquier alfabeto no latino. Si no sabés una palabra,
+   usá la española (ej: "reciclaje", NO "回收"). Sólo se permiten letras latinas
+   (con tildes/ñ), números, signos de puntuación y emojis.
 
 ## Sobre el uso de tools y datos
 - Este entorno PUEDE tener estas tools registradas (según el agente): web_search,
@@ -114,6 +118,47 @@ def get_context_block() -> str:
     tz = pytz.timezone("America/Buenos_Aires")
     now = datetime.now(tz).strftime("%Y-%m-%d %H:%M %Z")
     return f"{AGENCY_CONTEXT}\n\n---\nFecha actual: {now}\n---\n"
+
+
+# ── Sanitización de output del modelo ────────────────────────────────────────
+# MiniMax (backend de los agentes) a veces "code-switchea" e inyecta caracteres
+# CJK (chino/japonés/coreano) en medio del texto español, p.ej. "Logística de回收".
+# Esto puede terminar en un cold-email real. Los limpiamos en un solo lugar
+# (base.run, sobre el texto final) para que cubra reportes y emails de todos los
+# agentes. Los emojis viven en planos altos (fuera de estos rangos) → se preservan.
+import re as _re
+
+_CJK_RE = _re.compile(
+    "["
+    "　-〿"   # puntuación/símbolos CJK
+    "぀-ヿ"   # Hiragana + Katakana (japonés)
+    "㐀-䶿"   # CJK Ext. A
+    "一-鿿"   # CJK unificado (chino)
+    "가-힯"   # Hangul (coreano)
+    "豈-﫿"   # ideogramas de compatibilidad CJK
+    "＀-￯"   # formas fullwidth/halfwidth
+    "]+"
+)
+
+
+def sanitize_model_text(text: str) -> tuple:
+    """Quita caracteres CJK que el modelo a veces inyecta y limpia el hueco.
+
+    Devuelve (texto_limpio, cantidad_de_chars_removidos). Preserva emojis,
+    tildes/ñ y la estructura markdown (sólo colapsa espacios sobrantes que deja
+    el char removido; NO toca saltos de línea).
+    """
+    if not text:
+        return text, 0
+    removed = sum(len(m) for m in _CJK_RE.findall(text))
+    if not removed:
+        return text, 0
+    cleaned = _CJK_RE.sub("", text)
+    # El char removido suele dejar " X /" → "  /" o " ," → limpiamos artefactos
+    # conservadores: 2+ espacios/tabs a uno, y espacio antes de puntuación.
+    cleaned = _re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = _re.sub(r" +([,.;:!?])", r"\1", cleaned)
+    return cleaned, removed
 
 
 # ── Handoff entre agentes (sinergia / pipeline) ──────────────────────────────

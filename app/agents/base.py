@@ -27,6 +27,7 @@ from ..clients.claude_code import run_claude_code, ClaudeCodeError
 from ..clients.discord import DiscordWebhook
 from ..log import get_logger, write_run_log
 from ..config import Settings
+from ._common import sanitize_model_text
 
 log = get_logger("agent")
 
@@ -187,7 +188,15 @@ class BaseAgent(ABC):
                         max_tokens=self.max_tokens,
                         temperature=self.temperature,
                     )
-            output = self.post_process(response.text, ctx)
+            # Sanitización: MiniMax a veces inyecta caracteres CJK (chino/japonés)
+            # en medio del español. Los limpiamos acá (un solo punto → cubre el
+            # reporte de todos los agentes y los emails de outbound) antes de
+            # persistir/entregar/enviar.
+            clean_text, cjk_removed = sanitize_model_text(response.text)
+            if cjk_removed:
+                log.warning("sanitized_cjk_chars", agent=self.name,
+                            run_id=ctx.run_id, removed=cjk_removed)
+            output = self.post_process(clean_text, ctx)
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
             # Auditoría
