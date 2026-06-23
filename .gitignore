@@ -16,6 +16,8 @@ logs/*.jsonl
 # Data runtime (artefactos generados en ejecución — no commitear)
 data/leadhunter-*.md
 data/leadhunter-*.json
+data/outbound-report-*.md
+data/inbox-assistant-report-*.md
 data/deploy-*.json
 data/render-*.json
 data/agent-output-*.json
@@ -35,6 +37,10 @@ scripts/_discord_*.json
 
 # Sent-log de outbound (emails de leads contactados) — runtime del volume
 data/outbound-sent.json
+
+# Leads store (CRM/pipeline con datos de contacto) — runtime del volume, NUNCA commitear
+data/leads-store.json
+data/leads-store.json.tmp
 
 # Editor
 .vscode/

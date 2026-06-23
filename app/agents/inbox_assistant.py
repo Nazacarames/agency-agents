@@ -21,6 +21,7 @@ from typing import Any, Dict, List
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 from ..integrations.gmail_client import get_gmail_client, GmailError
+from ..integrations import leads_store as ls
 from ..log import get_logger
 
 log = get_logger("inbox_assistant")
@@ -139,6 +140,35 @@ class InboxAssistantAgent(BaseAgent):
                 f"- Conversación:\n{th.transcript(max_chars=3500)}"
             )
 
+        # ── Cierre del loop de ventas: ¿alguno que respondió es un lead nuestro? ──
+        # Si el remitente matchea un lead en seguimiento, lo marcamos "respondió"
+        # (frena la secuencia de outbound) y lo levantamos como LEAD CALIENTE.
+        hot: List[Dict[str, Any]] = []
+        try:
+            store = ls.load_store()
+            seen_keys = set()
+            for th in threads:
+                emails = {th.last_from_email, *(th.participants or [])}
+                for em in emails:
+                    if not em:
+                        continue
+                    lead = ls.mark_replied(store, email=em)
+                    if lead and lead.get("key") not in seen_keys:
+                        seen_keys.add(lead.get("key"))
+                        hot.append({
+                            "company": lead.get("company", "?"),
+                            "email": lead.get("email", em),
+                            "decisor": lead.get("decisor", ""),
+                            "subject": th.subject,
+                            "thread_id": th.thread_id,
+                        })
+            if hot:
+                ls.save_store(store)
+                log.info("inbox_hot_leads", run_id=ctx.run_id, count=len(hot))
+        except Exception as e:
+            log.warning("inbox_lead_linking_failed", error=str(e))
+        ctx.args["_inbox_hot"] = hot
+
         ctx.args["_inbox_status"] = "ok"
         ctx.args["_inbox_threads"] = lookup
         ctx.args["_inbox_count"] = len(threads)
@@ -156,6 +186,26 @@ class InboxAssistantAgent(BaseAgent):
             "Devolvé el array JSON especificado (un objeto por hilo, mismo orden).\n\n"
         )
         return header + "\n\n".join(blocks)
+
+    def _fire_hot_alert(self, ctx: AgentContext, hot: List[Dict[str, Any]]) -> None:
+        """Aviso separado y prominente al canal de ventas cuando un lead responde.
+        Va aparte del reporte normal del inbox para que NO se pase por alto."""
+        if not ctx.discord:
+            return
+        lines = ["**Respondieron y ya frené su secuencia. Andá a cerrar la reunión:**", ""]
+        for h in hot:
+            who = f" · {h['decisor']}" if h.get("decisor") else ""
+            lines.append(f"• **{h['company']}** <{h['email']}>{who}\n  asunto: _{h.get('subject', '')}_")
+        try:
+            ctx.discord.send_agent_output(
+                agent_name="🔥 Lead respondió",
+                text="\n".join(lines),
+                run_id=ctx.run_id,
+                url=ctx.settings.discord_webhook_for("outbound"),
+                color=0xF1C40F,  # amarillo "atención"
+            )
+        except Exception as e:
+            log.warning("inbox_hot_alert_failed", error=str(e))
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         status = ctx.args.get("_inbox_status") if isinstance(ctx.args, dict) else None
@@ -214,12 +264,26 @@ class InboxAssistantAgent(BaseAgent):
         log.info("inbox_done", run_id=ctx.run_id,
                  created=len(created), skipped=len(skipped), errors=len(errors))
 
+        hot = ctx.args.get("_inbox_hot", []) if isinstance(ctx.args, dict) else []
         parts = [
             f"# 📬 Inbox Assistant — {ctx.args.get('_inbox_count', 0)} hilo(s) no leídos",
             "",
+        ]
+        if hot:
+            parts += [
+                "## 🔥 LEADS QUE RESPONDIERON — ¡cerrá la reunión!",
+                "_Estos contestaron y ya frené su secuencia automática. Entrá vos a cerrar:_",
+            ]
+            for h in hot:
+                who = f" · {h['decisor']}" if h.get("decisor") else ""
+                parts.append(f"• **{h['company']}** <{h['email']}>{who} — _{h.get('subject', '')}_")
+            parts.append("")
+        parts += [
             f"**Borradores creados:** {len(created)} · **Omitidos:** {len(skipped)} · **Errores:** {len(errors)}",
             "",
         ]
+        if hot:
+            self._fire_hot_alert(ctx, hot)
         if created:
             parts += ["## ✅ Borradores creados (revisá y mandá desde Gmail)", *created, ""]
         if skipped:

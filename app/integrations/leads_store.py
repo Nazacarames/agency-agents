@@ -1,0 +1,413 @@
+"""
+Leads store — el "CRM" mínimo de Automiq: un JSON en el volume (data/leads-store.json)
+que es la ÚNICA fuente de verdad del pipeline de cada lead.
+
+Cierra el loop output-de-agentes → reuniones:
+  - leadhunter produce el reporte diario  → `ingest_report` lo vuelca al store (estado=nuevo)
+  - outbound corre la SECUENCIA de toques  → `due_for_touch` + `record_touch` (día 0,+2,+5,+9)
+  - inbox_assistant detecta una respuesta   → `mark_replied` corta la secuencia (estado=respondió)
+
+Estados del lead:
+  nuevo        → recién ingestado, sin contactar
+  contactado   → al menos 1 toque enviado, esperando respuesta (tiene next_touch_at)
+  respondió    → contestó → secuencia FRENADA (lead caliente para cerrar)
+  reunión      → se agendó reunión (transición manual)
+  propuesta    → se envió propuesta (manual)
+  cerrado      → ganado (manual)
+  perdido      → descartado (manual)
+  sin_respuesta→ se agotaron los 4 toques sin respuesta (nurture)
+
+⚠️ Operacional: este archivo vive SOLO en el volume (no se commitea al repo: puede
+tener datos de contacto). Está en .gitignore.
+"""
+from __future__ import annotations
+
+import json
+import re
+from datetime import date, datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from ..log import get_logger
+
+log = get_logger("leads_store")
+
+_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+_STORE_FILE = _DATA_DIR / "leads-store.json"
+
+# Cadencia de la secuencia: toque 0 (día 0), luego esperar estos días entre toques.
+# [2, 3, 4] → toques en día 0, 2, 5, 9. 4 toques en total (step 0..3).
+FOLLOWUP_OFFSETS_DAYS = [2, 3, 4]
+MAX_STEP = len(FOLLOWUP_OFFSETS_DAYS)  # 3 → steps 0,1,2,3
+
+# Etiqueta humana por step (para los mensajes y el reporte).
+STEP_LABEL = {
+    0: "Primer toque",
+    1: "Follow-up 1",
+    2: "Follow-up 2",
+    3: "Follow-up 3 (último)",
+}
+
+ACTIVE_STATES = ("nuevo", "contactado")  # estados que siguen en secuencia
+
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+# Teléfono argentino: +54 ... (tolerante a espacios/guiones/paréntesis).
+_PHONE_RE = re.compile(r"\+54[\s\-()]?[\d\s\-()]{8,}")
+# Header de lead en el MD de leadhunter: "### Lead 3: Empresa", "## 🟢 Lead #3 — Empresa", etc.
+_LEAD_HEADER_RE = re.compile(
+    r"^#{2,4}\s+(?:🟢\s+)?Lead\s*#?\s*(\d+)\s*[:\-—–]?\s*(.*?)\s*$",
+    re.IGNORECASE,
+)
+
+
+# ───────────────────────── normalización / keys ─────────────────────────
+
+def normalize_email(s: str) -> str:
+    if not s:
+        return ""
+    m = _EMAIL_RE.search(s)
+    return m.group(0).strip().lower() if m else ""
+
+
+def normalize_phone(s: str) -> str:
+    """Devuelve el teléfono en formato compacto +54XXXXXXXXXX (solo dígitos tras +54)."""
+    if not s:
+        return ""
+    m = _PHONE_RE.search(s)
+    if not m:
+        return ""
+    digits = re.sub(r"[^\d]", "", m.group(0))
+    if not digits.startswith("54"):
+        return ""
+    return "+" + digits
+
+
+def _slug(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", (s or "").strip().lower()).strip("-")[:48]
+
+
+def lead_key(email: str = "", phone: str = "", company: str = "") -> str:
+    """Identidad estable del lead. Prioridad: email > teléfono > slug de empresa."""
+    e = normalize_email(email)
+    if e:
+        return e
+    p = normalize_phone(phone)
+    if p:
+        return "tel:" + p
+    c = _slug(company)
+    return ("co:" + c) if c else ""
+
+
+# ───────────────────────── persistencia ─────────────────────────
+
+def _empty_store() -> Dict[str, Any]:
+    return {"version": 1, "updated_at": None, "leads": {}}
+
+
+def load_store() -> Dict[str, Any]:
+    try:
+        data = json.loads(_STORE_FILE.read_text(encoding="utf-8"))
+        if isinstance(data, dict) and isinstance(data.get("leads"), dict):
+            return data
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        log.warning("leads_store_load_failed", error=str(e))
+    return _empty_store()
+
+
+def save_store(store: Dict[str, Any]) -> None:
+    try:
+        _DATA_DIR.mkdir(exist_ok=True)
+        store["updated_at"] = datetime.utcnow().isoformat()
+        # Escritura atómica: tmp + replace (evita store corrupto si el proceso muere).
+        tmp = _STORE_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(store, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(_STORE_FILE)
+    except Exception as e:
+        log.error("leads_store_save_failed", error=str(e))
+
+
+# ───────────────────────── fechas ─────────────────────────
+
+def _today_str(tz_today: Optional[str] = None) -> str:
+    return tz_today or date.today().isoformat()
+
+
+def _add_days(iso_day: str, days: int) -> str:
+    d = date.fromisoformat(iso_day)
+    return (d + timedelta(days=days)).isoformat()
+
+
+def _is_due(next_touch_at: Optional[str], today: str) -> bool:
+    if not next_touch_at:
+        return False
+    try:
+        return date.fromisoformat(next_touch_at) <= date.fromisoformat(today)
+    except ValueError:
+        return False
+
+
+# ───────────────────────── mutaciones ─────────────────────────
+
+def upsert_lead(
+    store: Dict[str, Any],
+    *,
+    company: str = "",
+    email: str = "",
+    phone: str = "",
+    decisor: str = "",
+    industria: str = "",
+    web: str = "",
+    today: Optional[str] = None,
+    seed_touched_on: Optional[str] = None,
+) -> Optional[str]:
+    """Agrega un lead nuevo o refresca campos estáticos de uno existente SIN pisar
+    su estado/secuencia. Devuelve la key, o None si no hay identidad usable.
+
+    `seed_touched_on`: si se pasa (fecha ISO) y el lead es NUEVO, lo siembra como ya
+    contactado en step 0 esa fecha (para no re-mailear leads históricos del sent-log).
+    """
+    today = _today_str(today)
+    e = normalize_email(email)
+    p = normalize_phone(phone)
+    key = lead_key(e, p, company)
+    if not key:
+        return None
+
+    leads = store.setdefault("leads", {})
+    existing = leads.get(key)
+    if existing is not None:
+        # Refrescar sólo lo estático / completar lo que falte. No tocar state/touches.
+        if company and not existing.get("company"):
+            existing["company"] = company
+        if e and not existing.get("email"):
+            existing["email"] = e
+        if p and not existing.get("phone"):
+            existing["phone"] = p
+        for fld, val in (("decisor", decisor), ("industria", industria), ("web", web)):
+            if val and not existing.get(fld):
+                existing[fld] = val
+        return key
+
+    channel = "email" if e else ("whatsapp" if p else "desconocido")
+    lead = {
+        "key": key,
+        "company": company,
+        "email": e,
+        "phone": p,
+        "decisor": decisor,
+        "industria": industria,
+        "web": web,
+        "channel": channel,
+        "state": "nuevo",
+        "next_step": 0,
+        # Sólo agendamos toque automático si hay email (el canal auto es email).
+        "next_touch_at": today if e else None,
+        "touches": [],
+        "first_seen": today,
+        "last_reply_at": None,
+        "notes": [],
+    }
+    if seed_touched_on and e:
+        # Sembrar como ya contactado (step 0) en esa fecha → próximo follow-up agendado.
+        lead["touches"].append({
+            "step": 0, "date": seed_touched_on, "channel": "email",
+            "msg_id": "", "subject": "(histórico sent-log)",
+        })
+        lead["state"] = "contactado"
+        lead["next_step"] = 1
+        lead["next_touch_at"] = _add_days(seed_touched_on, FOLLOWUP_OFFSETS_DAYS[0])
+    leads[key] = lead
+    return key
+
+
+def record_touch(
+    store: Dict[str, Any],
+    key: str,
+    *,
+    step: int,
+    channel: str = "email",
+    msg_id: str = "",
+    subject: str = "",
+    today: Optional[str] = None,
+) -> None:
+    """Registra un toque enviado y AVANZA la secuencia (agenda el siguiente, o la cierra)."""
+    today = _today_str(today)
+    lead = store.get("leads", {}).get(key)
+    if not lead:
+        return
+    lead.setdefault("touches", []).append({
+        "step": step, "date": today, "channel": channel,
+        "msg_id": msg_id, "subject": subject,
+    })
+    nxt = step + 1
+    lead["next_step"] = nxt
+    lead["state"] = "contactado"
+    if step < len(FOLLOWUP_OFFSETS_DAYS):
+        lead["next_touch_at"] = _add_days(today, FOLLOWUP_OFFSETS_DAYS[step])
+    else:
+        # Se agotó la secuencia sin respuesta.
+        lead["next_touch_at"] = None
+        lead["state"] = "sin_respuesta"
+
+
+def mark_replied(
+    store: Dict[str, Any], email: str = "", phone: str = "", when: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """Marca al lead (por email o teléfono) como que RESPONDIÓ → frena la secuencia.
+    Devuelve el lead (caliente) o None si el remitente no era un lead nuestro."""
+    when = when or datetime.utcnow().isoformat()
+    e = normalize_email(email)
+    p = normalize_phone(phone)
+    leads = store.get("leads", {})
+    lead = None
+    if e and e in leads:
+        lead = leads[e]
+    elif e:
+        for l in leads.values():
+            if normalize_email(l.get("email", "")) == e:
+                lead = l
+                break
+    if lead is None and p:
+        key = "tel:" + p
+        lead = leads.get(key) or next(
+            (l for l in leads.values() if normalize_phone(l.get("phone", "")) == p), None
+        )
+    if lead is None:
+        return None
+    # Si ya estaba en una etapa avanzada (reunión/propuesta/cerrado), no degradar.
+    if lead.get("state") in ("reunión", "propuesta", "cerrado"):
+        lead["last_reply_at"] = when
+        return lead
+    lead["state"] = "respondió"
+    lead["next_touch_at"] = None
+    lead["last_reply_at"] = when
+    return lead
+
+
+def set_state(store: Dict[str, Any], key: str, state: str) -> bool:
+    lead = store.get("leads", {}).get(key)
+    if not lead:
+        return False
+    lead["state"] = state
+    if state in ("reunión", "propuesta", "cerrado", "perdido"):
+        lead["next_touch_at"] = None
+    return True
+
+
+# ───────────────────────── consultas ─────────────────────────
+
+def due_for_touch(
+    store: Dict[str, Any], today: Optional[str] = None, *, with_email: bool = True
+) -> List[Dict[str, Any]]:
+    """Leads que toca contactar HOY (secuencia automática por email)."""
+    today = _today_str(today)
+    out: List[Dict[str, Any]] = []
+    for lead in store.get("leads", {}).values():
+        if lead.get("state") not in ACTIVE_STATES:
+            continue
+        if lead.get("next_step", 0) > MAX_STEP:
+            continue
+        if with_email and not lead.get("email"):
+            continue
+        if _is_due(lead.get("next_touch_at"), today):
+            out.append(lead)
+    # Primero los más nuevos en la secuencia (primer toque) para priorizar volumen fresco.
+    out.sort(key=lambda l: (l.get("next_step", 0), l.get("first_seen", "")))
+    return out
+
+
+def whatsapp_queue(store: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Leads nuevos SIN email (sólo WhatsApp/teléfono) → cola para contactar a mano."""
+    return [
+        l for l in store.get("leads", {}).values()
+        if l.get("state") == "nuevo" and l.get("phone") and not l.get("email")
+    ]
+
+
+def summary_counts(store: Dict[str, Any]) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for lead in store.get("leads", {}).values():
+        counts[lead.get("state", "?")] = counts.get(lead.get("state", "?"), 0) + 1
+    counts["total"] = len(store.get("leads", {}))
+    return counts
+
+
+# ───────────────────────── ingest del reporte de leadhunter ─────────────────────────
+
+def _split_lead_blocks(report_md: str) -> List[Tuple[str, str]]:
+    """Devuelve [(titulo_empresa, texto_del_bloque)] por cada lead del MD."""
+    if not report_md:
+        return []
+    lines = report_md.splitlines()
+    blocks: List[Tuple[str, List[str]]] = []
+    current: Optional[Tuple[str, List[str]]] = None
+    for line in lines:
+        m = _LEAD_HEADER_RE.match(line)
+        if m:
+            if current:
+                blocks.append(current)
+            title = (m.group(2) or "").strip(" —-–:*").strip()
+            current = (title, [])
+        elif current is not None:
+            current[1].append(line)
+    if current:
+        blocks.append(current)
+    return [(t, "\n".join(ls)) for t, ls in blocks]
+
+
+def _extract_field(block: str, *labels: str) -> str:
+    """Primera línea del bloque que arranca con alguna de las labels → su valor."""
+    for line in block.splitlines():
+        low = line.lower()
+        for lab in labels:
+            if lab in low:
+                # tomar lo que viene después de los dos puntos o el guion
+                val = re.split(r"[:|]", line, maxsplit=1)
+                if len(val) > 1:
+                    return re.sub(r"[*`>\-]", "", val[1]).strip()
+    return ""
+
+
+def ingest_report(
+    store: Dict[str, Any],
+    report_md: str,
+    *,
+    today: Optional[str] = None,
+    sent_log_emails: Optional[Dict[str, Any]] = None,
+) -> Dict[str, int]:
+    """Vuelca el reporte de leadhunter al store. Idempotente (dedup por key).
+
+    Devuelve {nuevos, existentes, sin_identidad}.
+    """
+    today = _today_str(today)
+    sent_log_emails = sent_log_emails or {}
+    new = existing_n = skipped = 0
+    for title, block in _split_lead_blocks(report_md):
+        full = f"{title}\n{block}"
+        email = normalize_email(full)
+        phone = normalize_phone(full)
+        company = title or _extract_field(block, "empresa")
+        decisor = _extract_field(block, "decisor")
+        industria = _extract_field(block, "industria")
+        web = _extract_field(block, "web")
+        if not (email or phone or company):
+            skipped += 1
+            continue
+        key = lead_key(email, phone, company)
+        existed = key in store.get("leads", {})
+        seed = None
+        if email and email in sent_log_emails and not existed:
+            sl = sent_log_emails.get(email) or {}
+            seed = sl.get("date") if isinstance(sl, dict) else None
+            seed = seed or today
+        upsert_lead(
+            store, company=company, email=email, phone=phone, decisor=decisor,
+            industria=industria, web=web, today=today, seed_touched_on=seed,
+        )
+        if existed:
+            existing_n += 1
+        else:
+            new += 1
+    return {"nuevos": new, "existentes": existing_n, "sin_identidad": skipped}
