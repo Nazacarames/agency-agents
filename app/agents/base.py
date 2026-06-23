@@ -119,6 +119,17 @@ class BaseAgent(ABC):
         )
         try:
             user_msg = self.build_user_message(ctx)
+            # Tarea ad-hoc del operador (dashboard): se inyecta como instrucción
+            # prioritaria, además del trabajo normal del agente. Uniforme p/todos.
+            try:
+                if isinstance(ctx.args, dict) and ctx.args.get("task_prompt"):
+                    user_msg = (
+                        f"{user_msg}\n\n## TAREA ADICIONAL (pedido manual del operador — prioritaria)\n"
+                        f"{ctx.args['task_prompt']}\n"
+                        "Resolvé esta tarea adicional y entregá su resultado junto con tu output."
+                    )
+            except Exception:
+                pass
             # Llama a MiniMax-M3 (con fallback a M2.5 / M2.5-highspeed según config)
             # Allow a force_global override to remove "global_pause" guard from the system prompt
             local_system = self.system_prompt

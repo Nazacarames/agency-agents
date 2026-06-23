@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Automiq · Panel Operativo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --blue:#2563EB; --blue-dark:#1D4ED8; --blue-bright:#3B82F6;
+    --navy:#0F1B33; --muted:#5B6472; --bg:#F5F7FA; --paper:#FFFFFF;
+    --line:rgba(15,27,51,0.10); --line-soft:rgba(15,27,51,0.06);
+    --green:#059669; --amber:#D97706; --red:#DC2626;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--navy);-webkit-font-smoothing:antialiased}
+  h1,h2,h3,.syne{font-family:'Syne',sans-serif}
+  button{font-family:inherit;cursor:pointer}
+  input,textarea,select{font-family:inherit}
+  .hidden{display:none !important}
+  a{color:var(--blue);text-decoration:none}
+
+  /* Login */
+  #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:36px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(15,27,51,.06)}
+  .brand{display:flex;align-items:center;gap:10px;font-family:'Syne';font-weight:800;font-size:20px}
+  .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#fff,#eef2f9);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--navy);position:relative}
+  .mark::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--blue);bottom:6px;right:6px}
+  label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px}
+  .inp{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff;color:var(--navy);transition:.15s}
+  .inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+  textarea.inp{min-height:90px;resize:vertical}
+  .btn{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:11px 18px;font-weight:600;font-size:14px;transition:.15s}
+  .btn:hover{background:var(--blue-dark)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .btn-ghost:hover{background:rgba(15,27,51,.04);color:var(--navy)}
+  .btn-sm{padding:6px 12px;font-size:13px;border-radius:8px}
+  .err{color:var(--red);font-size:13px;margin-top:10px;min-height:18px}
+
+  /* App shell */
+  header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between}
+  .tabs{display:flex;gap:4px}
+  .tab{padding:8px 14px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-weight:600;font-size:14px}
+  .tab.active{background:rgba(37,99,235,.10);color:var(--navy)}
+  .tab:hover:not(.active){background:rgba(15,27,51,.04)}
+  main{max-width:1100px;margin:0 auto;padding:26px 22px 60px}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:18px;box-shadow:0 1px 2px rgba(15,27,51,.04)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .muted{color:var(--muted)}
+  .sec-title{font-family:'Syne';font-weight:700;font-size:20px;margin-bottom:4px}
+  .sec-sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--line)}
+  .badge.ok{background:rgba(5,150,105,.10);color:var(--green);border-color:rgba(5,150,105,.22)}
+  .badge.warn{background:rgba(217,119,6,.10);color:var(--amber);border-color:rgba(217,119,6,.22)}
+  .badge.blue{background:rgba(37,99,235,.10);color:var(--blue-dark);border-color:rgba(37,99,235,.22)}
+  .badge.red{background:rgba(220,38,38,.10);color:var(--red);border-color:rgba(220,38,38,.22)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);background:rgba(15,27,51,.02)}
+  td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .agent-card h3{font-size:15px;font-weight:700;margin-bottom:3px}
+  .agent-card .desc{font-size:13px;color:var(--muted);min-height:34px;margin-bottom:10px}
+  .agent-card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+  .kpi{font-family:'Syne';font-weight:800;font-size:26px}
+  .kpi-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .kpi-card{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:12px 16px;min-width:104px}
+  .kpi-card .lbl{font-size:12px;color:var(--muted);font-weight:600}
+  select.inp{appearance:auto}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(15,27,51,.25);z-index:50;opacity:0;transition:.2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .modal-bg{position:fixed;inset:0;background:rgba(15,27,51,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:20px}
+  .modal{background:#fff;border-radius:14px;max-width:760px;width:100%;max-height:84vh;display:flex;flex-direction:column}
+  .modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .modal-body{padding:20px;overflow:auto}
+  .modal-body pre{white-space:pre-wrap;word-break:break-word;font-family:'DM Sans';font-size:13px;line-height:1.6}
+  .flexbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <div class="brand"><span class="mark">A</span> Automiq</div>
+    <p class="muted" style="font-size:14px;margin-top:6px">Panel operativo de la agencia</p>
+    <label for="key">Clave de acceso</label>
+    <input id="key" class="inp" type="password" placeholder="Webhook secret" autocomplete="current-password" />
+    <div class="err" id="loginErr"></div>
+    <button class="btn" style="width:100%;margin-top:6px" id="loginBtn">Entrar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header>
+    <div class="brand" style="font-size:17px"><span class="mark" style="width:30px;height:30px">A</span> Automiq</div>
+    <div class="tabs">
+      <button class="tab active" data-tab="agentes">Agentes</button>
+      <button class="tab" data-tab="tareas">Tareas</button>
+      <button class="tab" data-tab="clientes">Clientes</button>
+      <button class="tab" data-tab="pipeline">Pipeline</button>
+    </div>
+    <button class="btn-ghost btn-sm" id="logoutBtn">Salir</button>
+  </header>
+  <main>
+    <!-- AGENTES -->
+    <section id="tab-agentes">
+      <div class="sec-title">Agentes</div>
+      <div class="sec-sub">Dispará una corrida on-demand o mirá el último output. Corren igual por su schedule.</div>
+      <div class="grid" id="agentsGrid"></div>
+    </section>
+
+    <!-- TAREAS -->
+    <section id="tab-tareas" class="hidden">
+      <div class="sec-title">Tareas ad-hoc</div>
+      <div class="sec-sub">Mandale a un agente una tarea puntual (además de lo que hace por schedule).</div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="flexbtns">
+          <div style="flex:1;min-width:180px">
+            <label>Agente</label>
+            <select id="taskAgent" class="inp"></select>
+          </div>
+        </div>
+        <label>Tarea / prompt</label>
+        <textarea id="taskPrompt" class="inp" placeholder="Ej: Armá 5 headlines para la campaña de distribuidoras de iluminación..."></textarea>
+        <button class="btn" id="taskBtn" style="margin-top:12px">Enviar tarea</button>
+      </div>
+      <div id="tasksList"></div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section id="tab-clientes" class="hidden">
+      <div class="sec-title">Clientes</div>
+      <div class="sec-sub">Registro y organización de los clientes de la agencia.</div>
+      <div class="kpi-row" id="clientsKpis"></div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="row">
+          <div style="flex:1;min-width:200px"><label>Nombre</label><input id="cName" class="inp" placeholder="Empresa"/></div>
+          <div style="flex:1;min-width:160px"><label>Vertical</label><input id="cVertical" class="inp" placeholder="Distribución, etc."/></div>
+          <div style="flex:1;min-width:160px"><label>Etapa</label><select id="cStage" class="inp"></select></div>
+        </div>
+        <div class="row" style="margin-top:4px">
+          <div style="flex:1;min-width:160px"><label>Contacto</label><input id="cContact" class="inp" placeholder="Nombre"/></div>
+          <div style="flex:1;min-width:160px"><label>WhatsApp/Tel</label><input id="cPhone" class="inp" placeholder="+54..."/></div>
+          <div style="flex:1;min-width:160px"><label>Email</label><input id="cEmail" class="inp" placeholder="info@..."/></div>
+        </div>
+        <label>Notas</label><textarea id="cNotes" class="inp" style="min-height:60px"></textarea>
+        <button class="btn" id="clientBtn" style="margin-top:12px">Agregar cliente</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden"><table><thead>
+        <tr><th>Cliente</th><th>Vertical</th><th>Etapa</th><th>Contacto</th><th></th></tr>
+      </thead><tbody id="clientsBody"></tbody></table></div>
+    </section>
+
+    <!-- PIPELINE -->
+    <section id="tab-pipeline" class="hidden">
+      <div class="sec-title">Pipeline de ventas</div>
+      <div class="sec-sub">Los leads del motor de outbound (leads_store).</div>
+      <div class="kpi-row" id="pipeKpis"></div>
+      <div class="card" style="padding:0;overflow:hidden"><table><thead>
+        <tr><th>Empresa</th><th>Estado</th><th>Canal</th><th>Contacto</th><th>Toques</th></tr>
+      </thead><tbody id="pipeBody"></tbody></table></div>
+    </section>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="modalRoot"></div>
+
+<script>
+const KEY_LS = 'automiq_panel_key';
+let KEY = localStorage.getItem(KEY_LS) || '';
+
+const $ = (s)=>document.querySelector(s);
+const el = (s)=>document.getElementById(s);
+
+function toast(msg, ms=2600){ const t=el('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), ms); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function api(path, opts={}){
+  const r = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type':'application/json', 'X-Webhook-Secret': KEY, ...(opts.headers||{}) }
+  });
+  if(r.status===401){ logout(); throw new Error('no autorizado'); }
+  if(!r.ok){ let d; try{d=await r.json()}catch(e){}; throw new Error((d&&d.detail)||('error '+r.status)); }
+  return r.json();
+}
+
+function logout(){ KEY=''; localStorage.removeItem(KEY_LS); el('app').classList.add('hidden'); el('login').classList.remove('hidden'); }
+
+async function doLogin(){
+  const secret = el('key').value.trim();
+  el('loginErr').textContent='';
+  el('loginBtn').disabled=true;
+  try{
+    const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret})});
+    if(!r.ok) throw new Error('Clave inválida');
+    KEY=secret; localStorage.setItem(KEY_LS, secret);
+    el('login').classList.add('hidden'); el('app').classList.remove('hidden');
+    initApp();
+  }catch(e){ el('loginErr').textContent = e.message || 'Error'; }
+  finally{ el('loginBtn').disabled=false; }
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  ['agentes','tareas','clientes','pipeline'].forEach(n=>el('tab-'+n).classList.add('hidden'));
+  el('tab-'+t.dataset.tab).classList.remove('hidden');
+  if(t.dataset.tab==='agentes') loadAgents();
+  if(t.dataset.tab==='tareas') loadTasks();
+  if(t.dataset.tab==='clientes') loadClients();
+  if(t.dataset.tab==='pipeline') loadPipeline();
+}));
+
+// ── Agentes ──
+async function loadAgents(){
+  const g = el('agentsGrid'); g.innerHTML='<p class="muted">Cargando...</p>';
+  try{
+    const {agents} = await api('/api/agents');
+    g.innerHTML = agents.map(a=>{
+      const badge = a.today ? '<span class="badge ok">corrió hoy</span>'
+                  : a.has_output ? '<span class="badge warn">último: '+esc(a.last_date)+'</span>'
+                  : '<span class="badge">sin output</span>';
+      return `<div class="card agent-card">
+        <h3>${esc(a.name)}</h3>
+        <div class="desc">${esc(a.description)}</div>
+        <div>${badge}</div>
+        <div class="foot">
+          <span class="muted" style="font-size:12px">cron: ${esc(a.schedule||'—')}</span>
+          <span>
+            <button class="btn-ghost btn-sm" onclick="viewLast('${a.name}')">Ver</button>
+            <button class="btn btn-sm" onclick="runAgent('${a.name}',this)">Disparar</button>
+          </span>
+        </div></div>`;
+    }).join('');
+  }catch(e){ g.innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+async function runAgent(name, btn){
+  if(btn){btn.disabled=true;btn.textContent='...';}
+  try{ await api('/api/agents/'+name+'/run',{method:'POST'}); toast('🚀 '+name+' disparado — tarda unos minutos'); }
+  catch(e){ toast('Error: '+e.message); }
+  finally{ if(btn){btn.disabled=false;btn.textContent='Disparar';} }
+}
+async function viewLast(name){
+  openModal(name, '<p class="muted">Cargando último output...</p>');
+  try{
+    const d = await api('/last/'+name);
+    let md = (d.files && (d.files.report_md||d.files.report)) || d.report_md || '';
+    if(!md && typeof d==='object') md = JSON.stringify(d,null,2);
+    openModal(name, '<pre>'+esc(md||'(sin contenido hoy)')+'</pre>');
+  }catch(e){ openModal(name, '<p class="err">'+esc(e.message)+'</p>'); }
+}
+
+// ── Tareas ──
+async function loadTasks(){
+  // poblar select de agentes (una vez)
+  const sel = el('taskAgent');
+  if(!sel.options.length){
+    try{ const {agents}=await api('/api/agents'); sel.innerHTML=agents.map(a=>'<option>'+esc(a.name)+'</option>').join(''); }catch(e){}
+  }
+  const list = el('tasksList'); list.innerHTML='<p class="muted">Cargando...</p>';
+  try{
+    const {tasks} = await api('/api/tasks');
+    if(!tasks.length){ list.innerHTML='<p class="muted">Todavía no mandaste tareas.</p>'; return; }
+    list.innerHTML = '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Agente</th><th>Tarea</th><th>Estado</th><th>Cuándo</th></tr></thead><tbody>'+
+      tasks.map(t=>{
+        const b = t.status==='done'?'badge ok':t.status==='error'?'badge red':'badge blue';
+        return `<tr><td><b>${esc(t.agent)}</b></td><td>${esc((t.prompt||'').slice(0,120))}</td>
+          <td><span class="${b}">${esc(t.status)}</span></td>
+          <td class="muted" style="font-size:12px">${esc((t.created_at||'').replace('T',' ').slice(0,16))}</td></tr>`;
+      }).join('')+'</tbody></table></div>';
+  }catch(e){ list.innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+el('taskBtn').addEventListener('click', async ()=>{
+  const agent=el('taskAgent').value, prompt=el('taskPrompt').value.trim();
+  if(!prompt){ toast('Escribí la tarea'); return; }
+  el('taskBtn').disabled=true;
+  try{ await api('/api/tasks',{method:'POST',body:JSON.stringify({agent,prompt})}); el('taskPrompt').value=''; toast('✅ Tarea enviada a '+agent); loadTasks(); }
+  catch(e){ toast('Error: '+e.message); }
+  finally{ el('taskBtn').disabled=false; }
+});
+
+// ── Clientes ──
+let STAGES=[];
+async function loadClients(){
+  try{
+    const {clients, counts, stages} = await api('/api/clients');
+    STAGES=stages;
+    if(!el('cStage').options.length) el('cStage').innerHTML=stages.map(s=>'<option>'+esc(s)+'</option>').join('');
+    el('clientsKpis').innerHTML = ['total',...stages].map(s=>
+      `<div class="kpi-card"><div class="kpi">${counts[s]||0}</div><div class="lbl">${esc(s)}</div></div>`).join('');
+    const body = el('clientsBody');
+    body.innerHTML = clients.length ? clients.map(c=>{
+      const opts = STAGES.map(s=>'<option'+(s===c.stage?' selected':'')+'>'+esc(s)+'</option>').join('');
+      return `<tr>
+        <td><b>${esc(c.name)}</b>${c.notes?'<br><span class="muted" style="font-size:12px">'+esc(c.notes.slice(0,80))+'</span>':''}</td>
+        <td>${esc(c.vertical||'—')}</td>
+        <td><select class="inp btn-sm" style="padding:5px 8px" onchange="setStage('${c.id}',this.value)">${opts}</select></td>
+        <td style="font-size:13px">${esc(c.contact_name||'')}<br><span class="muted">${esc(c.contact_phone||'')} ${esc(c.contact_email||'')}</span></td>
+        <td><button class="btn-ghost btn-sm" onclick="delClient('${c.id}','${esc(c.name)}')">🗑</button></td></tr>`;
+    }).join('') : '<tr><td colspan="5" class="muted" style="padding:18px">Sin clientes todavía.</td></tr>';
+  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="5" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+el('clientBtn').addEventListener('click', async ()=>{
+  const payload={ name:el('cName').value, vertical:el('cVertical').value, stage:el('cStage').value,
+    contact_name:el('cContact').value, contact_phone:el('cPhone').value, contact_email:el('cEmail').value, notes:el('cNotes').value };
+  if(!payload.name.trim()){ toast('Poné un nombre'); return; }
+  el('clientBtn').disabled=true;
+  try{ await api('/api/clients',{method:'POST',body:JSON.stringify(payload)});
+    ['cName','cVertical','cContact','cPhone','cEmail','cNotes'].forEach(i=>el(i).value='');
+    toast('✅ Cliente agregado'); loadClients(); }
+  catch(e){ toast('Error: '+e.message); }
+  finally{ el('clientBtn').disabled=false; }
+});
+async function setStage(id, stage){ try{ await api('/api/clients/'+id,{method:'PUT',body:JSON.stringify({stage})}); toast('Etapa actualizada'); loadClients(); }catch(e){ toast('Error: '+e.message); } }
+async function delClient(id,name){ if(!confirm('¿Borrar a '+name+'?'))return; try{ await api('/api/clients/'+id,{method:'DELETE'}); toast('Cliente borrado'); loadClients(); }catch(e){ toast('Error: '+e.message); } }
+
+// ── Pipeline ──
+async function loadPipeline(){
+  const body=el('pipeBody'); body.innerHTML='<tr><td colspan="5" class="muted">Cargando...</td></tr>';
+  try{
+    const {counts, leads} = await api('/api/pipeline');
+    const order=['nuevo','contactado','respondió','reunión','propuesta','cerrado','perdido','sin_respuesta'];
+    const keys = Object.keys(counts).filter(k=>k!=='total');
+    el('pipeKpis').innerHTML = ['total',...order.filter(k=>keys.includes(k)),...keys.filter(k=>!order.includes(k))]
+      .filter((v,i,a)=>a.indexOf(v)===i)
+      .map(s=>`<div class="kpi-card"><div class="kpi">${counts[s]||0}</div><div class="lbl">${esc(s)}</div></div>`).join('');
+    body.innerHTML = leads.length ? leads.map(l=>`<tr>
+      <td><b>${esc(l.company||'—')}</b></td><td><span class="badge blue">${esc(l.state||'')}</span></td>
+      <td>${esc(l.channel||'')}</td><td style="font-size:13px">${esc(l.email||l.phone||'')}</td>
+      <td>${esc(l.touches!=null?l.touches:'')}</td></tr>`).join('')
+      : '<tr><td colspan="5" class="muted" style="padding:18px">Pipeline vacío.</td></tr>';
+  }catch(e){ body.innerHTML='<tr><td colspan="5" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+
+// ── Modal ──
+function openModal(title, bodyHtml){
+  el('modalRoot').innerHTML = `<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal"><div class="modal-head"><b class="syne">${esc(title)}</b>
+    <button class="btn-ghost btn-sm" onclick="closeModal()">Cerrar</button></div>
+    <div class="modal-body">${bodyHtml}</div></div></div>`;
+}
+function closeModal(){ el('modalRoot').innerHTML=''; }
+
+function initApp(){ loadAgents(); }
+
+el('loginBtn').addEventListener('click', doLogin);
+el('key').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+el('logoutBtn').addEventListener('click', logout);
+
+// auto-login si hay clave guardada
+if(KEY){
+  fetch('/api/agents',{headers:{'X-Webhook-Secret':KEY}}).then(r=>{
+    if(r.ok){ el('login').classList.add('hidden'); el('app').classList.remove('hidden'); initApp(); }
+  }).catch(()=>{});
+}
+</script>
+</body>
+</html>

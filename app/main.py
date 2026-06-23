@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 from . import __version__
@@ -444,12 +444,181 @@ async def admin_leads_purge(body: PurgeRequest, request: Request):
             "remaining": ls.summary_counts(store).get("total", 0), "leads": preview}
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# Dashboard operativo de la agencia (UI interna)
+# Auth: el mismo X-Webhook-Secret (el "login" sólo valida y el front lo guarda).
+# ══════════════════════════════════════════════════════════════════════════
+
+class LoginBody(BaseModel):
+    secret: str = ""
+
+
+class ClientBody(BaseModel):
+    name: Optional[str] = None
+    vertical: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    stage: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class TaskBody(BaseModel):
+    agent: str
+    prompt: str
+
+
+_AGENT_DESCRIPTIONS = {
+    "leadhunter": "Genera 10 leads/día con contacto verificado (FIT 4-6)",
+    "content_creator": "Posts/contenido para redes de Automiq",
+    "growth_hacker": "Hipótesis de growth + quick wins",
+    "creative_strategist": "Ads de marca + personalizados + headlines",
+    "social_media": "Calendario semanal de redes",
+    "outbound": "Motor de secuencia de cold-email",
+    "media_auditor": "Auditoría de cuentas de ads",
+    "seo_specialist": "SEO: keywords + quick wins on-page",
+    "web_auditor": "Auditoría de páginas web puntuada",
+    "inbox_assistant": "Lee la bandeja + redacta borradores",
+}
+
+
+def _agent_last_output(name: str) -> Dict[str, Any]:
+    """Última corrida del agente según los reportes en data/."""
+    prefix = f"{name.replace('_', '-')}-report-"
+    files = sorted(_data_dir().glob(f"{prefix}*.md"))
+    if not files:
+        return {"has_output": False, "last_date": None}
+    last = files[-1]
+    m = re.search(r"(\d{4}-\d{2}-\d{2})", last.stem)
+    today = datetime.now(pytz.timezone("America/Buenos_Aires")).strftime("%Y-%m-%d")
+    date = m.group(1) if m else None
+    return {"has_output": True, "last_date": date, "today": date == today}
+
+
+@app.post("/api/login")
+async def api_login(body: LoginBody):
+    settings = get_settings()
+    ok = bool(settings.webhook_secret) and hmac.compare_digest(body.secret, settings.webhook_secret)
+    if not ok:
+        raise HTTPException(status_code=401, detail="Clave inválida")
+    return {"ok": True}
+
+
+@app.get("/api/agents")
+async def api_agents(request: Request):
+    _verify_webhook_secret(request)
+    out = []
+    for n in list_agents():
+        info = _agent_last_output(n)
+        out.append({
+            "name": n,
+            "description": _AGENT_DESCRIPTIONS.get(n, ""),
+            "schedule": DEFAULT_SCHEDULES.get(n),
+            **info,
+        })
+    return {"agents": out}
+
+
+@app.post("/api/agents/{name}/run")
+async def api_run_agent(name: str, request: Request, background: BackgroundTasks):
+    _verify_webhook_secret(request)
+    if name not in list_agents():
+        raise HTTPException(status_code=404, detail=f"agente {name} no existe")
+    run_id = str(uuid.uuid4())
+    background.add_task(_run_pack_agent, name, {"force_global": True}, run_id, "dashboard")
+    return {"ok": True, "run_id": run_id, "agent": name, "status": "queued"}
+
+
+async def _run_agent_task(name: str, prompt: str, run_id: str) -> None:
+    from .integrations import tasks_store as ts
+    try:
+        result = await _run_pack_agent(
+            name, {"task_prompt": prompt, "force_global": True}, run_id, "dashboard:task"
+        )
+        ts.update_task(run_id, "done", str(result)[:600] if result else "")
+    except Exception as e:
+        ts.update_task(run_id, "error", str(e)[:600])
+
+
+@app.post("/api/tasks")
+async def api_create_task(body: TaskBody, request: Request, background: BackgroundTasks):
+    _verify_webhook_secret(request)
+    from .integrations import tasks_store as ts
+    if body.agent not in list_agents():
+        raise HTTPException(status_code=404, detail=f"agente {body.agent} no existe")
+    if not body.prompt.strip():
+        raise HTTPException(status_code=400, detail="prompt vacío")
+    run_id = str(uuid.uuid4())
+    task = ts.add_task(body.agent, body.prompt.strip(), run_id)
+    background.add_task(_run_agent_task, body.agent, body.prompt.strip(), run_id)
+    return {"ok": True, "task": task}
+
+
+@app.get("/api/tasks")
+async def api_list_tasks(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import tasks_store as ts
+    return {"tasks": ts.list_tasks(50)}
+
+
+@app.get("/api/clients")
+async def api_list_clients(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import clients_store as cs
+    return {"clients": cs.list_clients(), "counts": cs.summary_counts(), "stages": cs.STAGES}
+
+
+@app.post("/api/clients")
+async def api_create_client(body: ClientBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import clients_store as cs
+    return {"ok": True, "client": cs.create_client(body.model_dump())}
+
+
+@app.put("/api/clients/{client_id}")
+async def api_update_client(client_id: str, body: ClientBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import clients_store as cs
+    c = cs.update_client(client_id, body.model_dump())
+    if not c:
+        raise HTTPException(status_code=404, detail="cliente no encontrado")
+    return {"ok": True, "client": c}
+
+
+@app.delete("/api/clients/{client_id}")
+async def api_delete_client(client_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import clients_store as cs
+    if not cs.delete_client(client_id):
+        raise HTTPException(status_code=404, detail="cliente no encontrado")
+    return {"ok": True}
+
+
+@app.get("/api/pipeline")
+async def api_pipeline(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import leads_store as ls
+    store = ls.load_store()
+    leads = [ls.lead_view(l) for l in store.get("leads", {}).values()]
+    leads.sort(key=lambda l: (str(l.get("state")), str(l.get("company"))))
+    return {"counts": ls.summary_counts(store), "leads": leads}
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page():
+    html_path = Path(__file__).resolve().parent / "dashboard" / "index.html"
+    if not html_path.exists():
+        raise HTTPException(status_code=404, detail="dashboard no encontrado")
+    return HTMLResponse(html_path.read_text(encoding="utf-8"))
+
+
 @app.get("/")
 async def root():
     return {
         "service": "automiq-agents",
         "version": __version__,
         "runtime": "hermes-pack",
+        "dashboard": "/dashboard",
         "agents": "/agents",
         "last": "/last/{agent}",
         "health": "/healthz",
