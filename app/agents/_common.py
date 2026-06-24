@@ -141,21 +141,38 @@ def official_site_directive() -> str:
 
 
 def image_prompt_directive() -> str:
-    """Pide al agente de contenido que incluya prompts de imagen para auto-generarlas."""
+    """Pide al agente de contenido que incluya prompts de imagen + el texto del cartel."""
     return (
         "\n\nIMÁGENES (obligatorio): por cada idea/post, agregá una línea que empiece EXACTO "
-        "con `IMAGEN:` seguida de un prompt EN INGLÉS, visual y concreto, para generar la "
-        "imagen del post (estilo, escena, paleta navy + royal blue de Automiq, sin texto dentro "
-        "de la imagen). Ej: `IMAGEN: flat vector illustration of a WhatsApp chatbot assisting a "
-        "small Argentine distributor, navy and royal blue palette, clean, modern`. El sistema "
-        "genera esas imágenes automáticamente a partir de esas líneas."
+        "con `IMAGEN:` con este formato:\n"
+        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional>`\n"
+        "El <prompt> describe el FONDO/ilustración (estilo, escena, paleta navy + royal blue de "
+        "Automiq, SIN texto dentro). El <TEXTO> es el titular que se compone encima con tipografía "
+        "real (máx ~5 palabras, contundente). SUBTEXTO es opcional (una línea). "
+        "Ej: `IMAGEN: flat vector illustration of a WhatsApp chatbot for an Argentine distributor, "
+        "navy and royal blue palette, clean modern, no text | TEXTO: Cobrá sin perseguir a nadie | "
+        "SUBTEXTO: WhatsApp + IA 24/7`. El sistema genera la imagen y le pone el texto exacto."
     )
 
 
 # ── Auto-generación de imágenes para contenido ───────────────────────────────
+def _parse_image_line(line: str):
+    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada>` → (prompt, texto, subtexto)."""
+    import re
+    prompt, texto, sub = line, None, None
+    m = re.search(r"\|\s*SUBTEXTO\s*:\s*(.+)$", prompt, re.IGNORECASE)
+    if m:
+        sub = m.group(1).strip(); prompt = prompt[:m.start()]
+    m = re.search(r"\|\s*TEXTO\s*:\s*(.+)$", prompt, re.IGNORECASE)
+    if m:
+        texto = m.group(1).strip(); prompt = prompt[:m.start()]
+    return prompt.strip(" |"), texto, sub
+
+
 def augment_with_images(text: str, max_images: int = 2) -> str:
-    """Busca líneas `IMAGEN: ...` en el output, genera las imágenes (MiniMax) y
-    anexa una sección con los `![](...)` listos para usar. Best-effort."""
+    """Busca líneas `IMAGEN: <prompt> | TEXTO: <titular> | SUBTEXTO: <bajada>`, genera
+    las imágenes (fondo MiniMax + texto compuesto con Pillow) y anexa la sección.
+    Best-effort."""
     import re
     pat = re.compile(r"^\s*(?:IMAGEN|PROMPT DE IMAGEN|VISUAL SUGERIDO)\s*:\s*(.+)$",
                      re.IGNORECASE | re.MULTILINE)
@@ -163,14 +180,16 @@ def augment_with_images(text: str, max_images: int = 2) -> str:
         from ..integrations import image_gen
         if not text or not image_gen.enabled():
             return text
-        prompts = [m.strip() for m in pat.findall(text)][:max_images]
-        if not prompts:
+        raw_lines = pat.findall(text)[:max_images]
+        if not raw_lines:
             return text
         blocks = []
-        for i, p in enumerate(prompts, 1):
-            urls = image_gen.generate_image(p, aspect_ratio="1:1", n=1)
+        for i, line in enumerate(raw_lines, 1):
+            prompt, texto, sub = _parse_image_line(line.strip())
+            urls = image_gen.generate_image(prompt, aspect_ratio="1:1", n=1, text=texto, subtitle=sub)
             if urls:
-                blocks.append(f"**Imagen {i}** — _{p[:90]}_\n\n![imagen {i}]({urls[0]})")
+                cap = texto or prompt[:90]
+                blocks.append(f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})")
         if not blocks:
             return text
         return text.rstrip() + "\n\n---\n\n## 🎨 Imágenes generadas\n\n" + "\n\n".join(blocks) + "\n"

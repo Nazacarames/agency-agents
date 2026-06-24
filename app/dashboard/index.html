@@ -334,13 +334,16 @@
 
         <div class="sec-head"><h2>🎨 Generar una imagen</h2><span class="faint" style="font-size:12px">Prompt → imagen (MiniMax). Queda servida desde el panel.</span></div>
         <div class="card">
-          <label>Prompt (mejor en inglés, visual, sin texto dentro de la imagen)</label>
-          <textarea id="imgPrompt" class="inp" style="min-height:54px" placeholder="flat vector illustration of a WhatsApp AI chatbot for an Argentine SME, navy and royal blue palette, modern, clean"></textarea>
-          <div class="flexbtns" style="margin-top:10px">
-            <div style="min-width:120px"><label>Formato</label>
+          <label>Fondo — prompt (mejor en inglés, visual)</label>
+          <textarea id="imgPrompt" class="inp" style="min-height:48px" placeholder="flat vector illustration of a WhatsApp AI chatbot for an Argentine SME, navy and royal blue palette, modern, clean, no text"></textarea>
+          <div class="row" style="margin-top:6px">
+            <div style="flex:2;min-width:200px"><label>Texto del cartel (se compone nítido encima)</label><input id="imgText" class="inp" placeholder="Cobrá sin perseguir a nadie"/></div>
+            <div style="flex:2;min-width:160px"><label>Subtexto (opcional)</label><input id="imgSub" class="inp" placeholder="WhatsApp + IA 24/7"/></div>
+            <div style="flex:1;min-width:120px"><label>Formato</label>
               <select id="imgAspect" class="inp"><option value="1:1">Cuadrada 1:1</option><option value="16:9">Horizontal 16:9</option><option value="9:16">Vertical 9:16</option><option value="4:5">Feed 4:5</option></select></div>
-            <button class="btn" id="imgBtn">Generar imagen</button>
           </div>
+          <div class="hint" style="margin-top:6px">El fondo lo pinta MiniMax; el texto lo compone el sistema con tipografía real → sale exacto y legible.</div>
+          <button class="btn" id="imgBtn" style="margin-top:10px">Generar imagen</button>
           <div id="imgResult" style="margin-top:14px"></div>
         </div>
       </section>
@@ -915,10 +918,11 @@ async function loadContenido(){
   }).join('');
 }
 el('imgBtn').addEventListener('click', async ()=>{
-  const prompt=el('imgPrompt').value.trim(), aspect_ratio=el('imgAspect').value;
+  const prompt=el('imgPrompt').value.trim(), aspect_ratio=el('imgAspect').value,
+        text=el('imgText').value.trim()||null, subtitle=el('imgSub').value.trim()||null;
   if(!prompt){ toast('Escribí un prompt'); return; }
   el('imgBtn').disabled=true; el('imgResult').innerHTML='<span class="badge blue"><span class="dot"></span>generando…</span>';
-  try{ const r=await api('/api/image',{method:'POST',body:JSON.stringify({prompt,aspect_ratio,n:1})});
+  try{ const r=await api('/api/image',{method:'POST',body:JSON.stringify({prompt,aspect_ratio,n:1,text,subtitle})});
     el('imgResult').innerHTML=(r.urls||[]).map(u=>`<img src="${esc(u)}" style="max-width:100%;border-radius:12px;border:1px solid var(--line)"/><div style="margin-top:6px"><a href="${esc(u)}" target="_blank" class="btn-ghost btn-xs">Abrir / descargar</a></div>`).join('');
   }catch(e){ el('imgResult').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
   finally{ el('imgBtn').disabled=false; }

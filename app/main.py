@@ -526,6 +526,8 @@ class ImageBody(BaseModel):
     prompt: str
     aspect_ratio: Optional[str] = "1:1"
     n: Optional[int] = 1
+    text: Optional[str] = None          # titular a componer encima (texto exacto)
+    subtitle: Optional[str] = None
 
 
 _AGENT_DESCRIPTIONS = {
@@ -835,7 +837,8 @@ async def api_generate_image(body: ImageBody, request: Request):
         raise HTTPException(status_code=400, detail="generación de imágenes deshabilitada (sin MINIMAX_API_KEY)")
     if not (body.prompt or "").strip():
         raise HTTPException(status_code=400, detail="prompt vacío")
-    urls = image_gen.generate_image(body.prompt, body.aspect_ratio or "1:1", body.n or 1)
+    urls = image_gen.generate_image(body.prompt, body.aspect_ratio or "1:1", body.n or 1,
+                                    text=body.text, subtitle=body.subtitle)
     if not urls:
         raise HTTPException(status_code=502, detail="no se pudo generar la imagen (proveedor)")
     return {"ok": True, "urls": urls}
