@@ -127,12 +127,13 @@ class BaseAgent(ABC):
             try:
                 from ..integrations import client_memory_store as cms, clients_store as cs
                 client = cs.get_client(cid)
-                if client:
+                # Cliente descartado → memoria congelada: no la inyectamos.
+                if client and client.get("stage") not in cs.FROZEN_STAGES:
                     blocks.append(f"## CLIENTE OBJETIVO: {client.get('name')} "
                                   f"({client.get('vertical') or 's/vertical'}) — etapa {client.get('stage')}")
-                digest = cms.context_digest(cid)
-                if digest:
-                    blocks.append("## MEMORIA DEL CLIENTE (lo que ya sabemos de él)\n" + digest)
+                    digest = cms.context_digest(cid)
+                    if digest:
+                        blocks.append("## MEMORIA DEL CLIENTE (lo que ya sabemos de él)\n" + digest)
             except Exception:
                 pass
         if not blocks:
@@ -145,6 +146,10 @@ class BaseAgent(ABC):
         """Guarda el output como report en la memoria del cliente objetivo (si lo hay)."""
         cid = ctx.args.get("client_id") if isinstance(ctx.args, dict) else None
         if not cid or not (output or "").strip():
+            return
+        from ..integrations import clients_store as cs
+        # Cliente descartado → memoria congelada: no seguimos escribiéndole.
+        if cs.is_frozen(cid):
             return
         from datetime import datetime as _dt
         from ..integrations import client_memory_store as cms

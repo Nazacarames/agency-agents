@@ -21,7 +21,12 @@ from typing import Any, Dict, List, Optional
 
 from . import db
 
-STAGES = ["prospecto", "contactado", "reunión", "propuesta", "cliente", "perdido"]
+# Funnel de la agencia. 'oferta' = preparás la propuesta/oferta para conseguir la
+# reunión (primera etapa, default). 'descartado' es TERMINAL: congela la memoria
+# del cliente (los agentes dejan de leerla y de escribirle).
+STAGES = ["oferta", "reunión", "negociación", "cliente", "descartado"]
+FROZEN_STAGES = {"descartado"}
+DEFAULT_STAGE = "oferta"
 
 _COLS = ["id", "name", "vertical", "contact_name", "contact_phone",
          "contact_email", "stage", "notes", "created_at", "updated_at"]
@@ -44,7 +49,7 @@ def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
         "contact_name": (data.get("contact_name") or "").strip(),
         "contact_phone": (data.get("contact_phone") or "").strip(),
         "contact_email": (data.get("contact_email") or "").strip(),
-        "stage": data.get("stage") if data.get("stage") in STAGES else "prospecto",
+        "stage": data.get("stage") if data.get("stage") in STAGES else DEFAULT_STAGE,
         "notes": (data.get("notes") or "").strip(),
     }
 
@@ -239,6 +244,13 @@ def delete_client(client_id: str) -> bool:
         _json_save(store)
         return True
     return False
+
+
+def is_frozen(client_id: str) -> bool:
+    """True si el cliente está en una etapa terminal (descartado) → su memoria se
+    congela: los agentes no la leen ni le escriben."""
+    c = get_client(client_id)
+    return bool(c and c.get("stage") in FROZEN_STAGES)
 
 
 def summary_counts() -> Dict[str, int]:

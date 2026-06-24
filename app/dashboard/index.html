@@ -531,20 +531,24 @@ el('taskBtn').addEventListener('click', async ()=>{
 
 // ── Clientes ──
 let STAGES=[];
-function stageBadgeCls(s){ return ({prospecto:'grey',contactado:'blue','reunión':'violet',propuesta:'warn',cliente:'ok',perdido:'red'})[s]||'grey'; }
+const STAGE_LABELS={oferta:'Oferta p/ reunión','reunión':'Reunión','negociación':'Negociación',cliente:'Cliente',descartado:'Descartado'};
+const FROZEN_STAGES=['descartado'];
+function labelStage(s){ return STAGE_LABELS[s]||s; }
+function isFrozen(s){ return FROZEN_STAGES.includes(s); }
+function stageBadgeCls(s){ return ({oferta:'grey','reunión':'violet','negociación':'warn',cliente:'ok',descartado:'red'})[s]||'grey'; }
 async function loadClients(){
   try{
     const d=await api('/api/clients'); CACHE.clients=d; STAGES=d.stages;
     setNavCount('clientes', d.counts.total||null);
-    if(!el('cStage').options.length) el('cStage').innerHTML=d.stages.map(s=>'<option>'+esc(s)+'</option>').join('');
+    if(!el('cStage').options.length) el('cStage').innerHTML=d.stages.map(s=>'<option value="'+esc(s)+'">'+esc(labelStage(s))+'</option>').join('');
     el('clientsKpis').innerHTML = kpi('Total', d.counts.total||0, ICONS.clientes,'accent') +
-      d.stages.map(s=>kpi(s, d.counts[s]||0, '')).join('');
+      d.stages.map(s=>kpi(labelStage(s), d.counts[s]||0, '')).join('');
     const body=el('clientsBody');
-    body.innerHTML = d.clients.length ? d.clients.map(c=>`<tr>
-      <td><b>${esc(c.name)}</b>${c.notes?'<br><span class="faint" style="font-size:12px">'+esc(c.notes.slice(0,90))+(c.notes.length>90?'…':'')+'</span>':''}</td>
+    body.innerHTML = d.clients.length ? d.clients.map(c=>`<tr${isFrozen(c.stage)?' style="opacity:.62"':''}>
+      <td><b>${esc(c.name)}</b>${isFrozen(c.stage)?' <span class="badge grey" title="Su memoria está congelada: los agentes ya no la leen ni la actualizan">❄ memoria congelada</span>':''}${c.notes?'<br><span class="faint" style="font-size:12px">'+esc(c.notes.slice(0,90))+(c.notes.length>90?'…':'')+'</span>':''}</td>
       <td>${esc(c.vertical||'—')}</td>
-      <td><select class="inp btn-sm" style="padding:5px 8px;min-width:120px" onchange="setStage('${c.id}',this.value)">${
-        STAGES.map(s=>'<option'+(s===c.stage?' selected':'')+'>'+esc(s)+'</option>').join('')}</select></td>
+      <td><select class="inp btn-sm" style="padding:5px 8px;min-width:130px" onchange="setStage('${c.id}',this.value)">${
+        STAGES.map(s=>'<option value="'+esc(s)+'"'+(s===c.stage?' selected':'')+'>'+esc(labelStage(s))+'</option>').join('')}</select></td>
       <td style="font-size:13px">${esc(c.contact_name||'')}${c.contact_phone||c.contact_email?'<br><span class="faint">'+esc(c.contact_phone||'')+' '+esc(c.contact_email||'')+'</span>':''}</td>
       <td class="faint" style="font-size:12px;white-space:nowrap">${fmtDate(c.created_at).slice(0,10)}</td>
       <td style="white-space:nowrap">
@@ -581,7 +585,7 @@ el('clientBtn').addEventListener('click', async ()=>{
     clearClientForm(); loadClients();
   }catch(e){ toast('Error: '+e.message); } finally{ el('clientBtn').disabled=false; }
 });
-async function setStage(id, stage){ try{ await api('/api/clients/'+id,{method:'PUT',body:JSON.stringify({stage})}); toast('Etapa → '+stage); loadClients(); }catch(e){ toast('Error: '+e.message); } }
+async function setStage(id, stage){ try{ await api('/api/clients/'+id,{method:'PUT',body:JSON.stringify({stage})}); toast(isFrozen(stage)?'Cliente descartado · memoria congelada ❄':'Etapa → '+labelStage(stage)); loadClients(); }catch(e){ toast('Error: '+e.message); } }
 async function delClient(id){
   const c=(CACHE.clients&&CACHE.clients.clients||[]).find(x=>x.id===id);
   if(!confirm('¿Borrar a '+(c?c.name:'este cliente')+'?'))return;
@@ -591,11 +595,10 @@ async function delClient(id){
 function mapStateToStage(s){
   s=(s||'').toLowerCase();
   if(s.includes('reun')) return 'reunión';
-  if(s.includes('propuesta')) return 'propuesta';
+  if(s.includes('propuesta')||s.includes('negocia')) return 'negociación';
   if(s.includes('cerrad')||s.includes('client')) return 'cliente';
-  if(s.includes('perd')) return 'perdido';
-  if(s.includes('contact')||s.includes('respon')) return 'contactado';
-  return 'prospecto';
+  if(s.includes('perd')||s.includes('descart')) return 'descartado';
+  return 'oferta';   // nuevo / contactado / respondió → primera etapa
 }
 async function loadPipeline(){
   const body=el('pipeBody'); body.innerHTML='<tr><td colspan="7" class="muted">Cargando…</td></tr>';
