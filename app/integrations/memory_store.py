@@ -202,6 +202,19 @@ def add_lesson(agent: str, lesson: str, kind: str = "feedback", weight: int = 1)
     return item
 
 
+def record_outcome(agent: str, lesson: str, weight: int = 1) -> Optional[Dict[str, Any]]:
+    """Lección automática de tipo 'outcome' con dedup: no repite una idéntica activa.
+    Es el motor del aprendizaje automático: lo dispara el pipeline cuando observa un
+    resultado real (p.ej. un lead respondió)."""
+    lesson = (lesson or "").strip()
+    if not lesson:
+        return None
+    for l in list_lessons(agent=agent, active_only=True):
+        if l.get("lesson", "").strip() == lesson:
+            return l  # ya existe, no duplicar
+    return add_lesson(agent, lesson, kind="outcome", weight=weight)
+
+
 def list_lessons(agent: Optional[str] = None, active_only: bool = True) -> List[Dict[str, Any]]:
     if db.enabled():
         clauses, params = [], []

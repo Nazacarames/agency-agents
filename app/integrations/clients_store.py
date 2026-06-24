@@ -190,20 +190,41 @@ def update_client(client_id: str, data: Dict[str, Any]) -> Optional[Dict[str, An
     if not fields:
         return get_client(client_id)
 
+    before = get_client(client_id)
     if db.enabled():
         sets = ", ".join(f"{k}=%s" for k in fields) + ", updated_at=now()"
         params = list(fields.values()) + [client_id]
         db.execute(f"UPDATE clients SET {sets} WHERE id=%s", params)
-        return get_client(client_id)
+        updated = get_client(client_id)
+    else:
+        store = _json_load()
+        updated = None
+        for c in store["clients"]:
+            if c.get("id") == client_id:
+                c.update(fields)
+                c["updated_at"] = _now()
+                _json_save(store)
+                updated = c
+                break
+    _learn_from_stage(before, updated)
+    return updated
 
-    store = _json_load()
-    for c in store["clients"]:
-        if c.get("id") == client_id:
-            c.update(fields)
-            c["updated_at"] = _now()
-            _json_save(store)
-            return c
-    return None
+
+def _learn_from_stage(before: Optional[Dict[str, Any]], after: Optional[Dict[str, Any]]) -> None:
+    """Aprendizaje automático: si un cliente pasó a etapa 'cliente' (cerrado/ganado),
+    registrar qué vertical convirtió como lección para prospecting y ventas."""
+    if not after or not before:
+        return
+    if before.get("stage") != "cliente" and after.get("stage") == "cliente":
+        try:
+            from . import memory_store as ms
+            vertical = (after.get("vertical") or "sin vertical").strip() or "sin vertical"
+            lesson = (f"Venta cerrada en el vertical '{vertical}'. Es un nicho que convierte: "
+                      f"buscá más prospectos parecidos y reusá el enfoque que funcionó.")
+            ms.record_outcome("leadhunter", lesson, weight=3)
+            ms.record_outcome("growth_hacker", lesson, weight=2)
+        except Exception:
+            pass
 
 
 def delete_client(client_id: str) -> bool:

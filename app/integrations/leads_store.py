@@ -285,7 +285,26 @@ def mark_replied(
     lead["state"] = "respondió"
     lead["next_touch_at"] = None
     lead["last_reply_at"] = when
+    _learn_from_reply(lead)
     return lead
+
+
+def _learn_from_reply(lead: Dict[str, Any]) -> None:
+    """Aprendizaje automático (Fase 2): un lead que responde es la señal de que el
+    ángulo/secuencia para ese rubro funciona → se registra como lección de outcome
+    para outbound y creative_strategist. Best-effort, con dedup."""
+    try:
+        from . import memory_store as ms
+        industria = (lead.get("industria") or "su rubro").strip() or "su rubro"
+        n = len(lead.get("touches", []))
+        channel = lead.get("channel") or "email"
+        lesson = (f"Conversión real: una empresa de {industria} respondió tras {n} "
+                  f"toque(s) por {channel}. El ángulo/secuencia para {industria} funciona — "
+                  f"priorizá ese rubro y replicá el enfoque.")
+        ms.record_outcome("outbound", lesson, weight=2)
+        ms.record_outcome("creative_strategist", lesson, weight=2)
+    except Exception:
+        pass
 
 
 def set_state(store: Dict[str, Any], key: str, state: str) -> bool:

@@ -501,6 +501,23 @@ class ClientMemoryBody(BaseModel):
     meta: Optional[Dict[str, Any]] = None
 
 
+class MeetingBody(BaseModel):
+    client_id: Optional[str] = None
+    client_name: Optional[str] = ""
+    title: Optional[str] = "Reunión"
+    scheduled_at: Optional[str] = None      # ISO datetime (cliente + día + hora)
+    location: Optional[str] = ""
+    notes: Optional[str] = ""
+    status: Optional[str] = None
+
+
+class MissionBody(BaseModel):
+    objective: str
+    agents: List[str] = []
+    client_id: Optional[str] = None
+    notes: Optional[str] = ""
+
+
 _AGENT_DESCRIPTIONS = {
     "leadhunter": "Genera 10 leads/día con contacto verificado (FIT 4-6)",
     "content_creator": "Posts/contenido para redes de Automiq",
@@ -512,6 +529,7 @@ _AGENT_DESCRIPTIONS = {
     "seo_specialist": "SEO: keywords + quick wins on-page",
     "web_auditor": "Auditoría de páginas web puntuada",
     "inbox_assistant": "Lee la bandeja + redacta borradores",
+    "meeting_prep": "Prepara reuniones con la memoria del cliente (brief, agente de test, demo, objeciones)",
 }
 
 
@@ -767,6 +785,118 @@ async def api_db_health(request: Request):
     _verify_webhook_secret(request)
     from .integrations import db
     return db.healthcheck()
+
+
+# ── Agenda de reuniones ──
+
+@app.get("/api/meetings")
+async def api_list_meetings(request: Request, upcoming: bool = False):
+    _verify_webhook_secret(request)
+    from .integrations import meetings_store as mt
+    return {"meetings": mt.list_meetings(upcoming_only=upcoming), "statuses": mt.STATUSES}
+
+
+@app.post("/api/meetings")
+async def api_create_meeting(body: MeetingBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import meetings_store as mt, clients_store as cs
+    if not body.scheduled_at:
+        raise HTTPException(status_code=400, detail="falta fecha/hora (scheduled_at)")
+    name = body.client_name or ""
+    if body.client_id and not name:
+        c = cs.get_client(body.client_id)
+        name = c["name"] if c else ""
+    m = mt.create_meeting(body.client_id, name, body.title or "Reunión",
+                          body.scheduled_at, body.location or "", body.notes or "")
+    return {"ok": True, "meeting": m}
+
+
+@app.put("/api/meetings/{meeting_id}")
+async def api_update_meeting(meeting_id: str, body: MeetingBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import meetings_store as mt
+    m = mt.update_meeting(meeting_id, body.model_dump(exclude_none=True))
+    if not m:
+        raise HTTPException(status_code=404, detail="reunión no encontrada")
+    return {"ok": True, "meeting": m}
+
+
+@app.delete("/api/meetings/{meeting_id}")
+async def api_delete_meeting(meeting_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import meetings_store as mt
+    mt.delete_meeting(meeting_id)
+    return {"ok": True}
+
+
+@app.post("/api/meetings/{meeting_id}/prep")
+async def api_meeting_prep(meeting_id: str, request: Request, background: BackgroundTasks):
+    """Dispara al agente meeting_prep con toda la memoria del cliente de la reunión."""
+    _verify_webhook_secret(request)
+    from .integrations import meetings_store as mt, tasks_store as ts
+    meeting = mt.get_meeting(meeting_id)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="reunión no encontrada")
+    run_id = str(uuid.uuid4())
+    ts.add_task("meeting_prep", f"Preparar reunión: {meeting.get('title')} "
+                f"({meeting.get('client_name') or 's/cliente'})", run_id)
+    args: Dict[str, Any] = {"force_global": True, "meeting": meeting}
+    if meeting.get("client_id"):
+        args["client_id"] = meeting["client_id"]
+
+    async def _prep():
+        from .integrations import tasks_store as ts2, meetings_store as mt2
+        try:
+            result = await _run_pack_agent("meeting_prep", args, run_id, "dashboard:meeting")
+            ts2.update_task(run_id, "done", str(result)[:600] if result else "")
+            mt2.update_meeting(meeting_id, {"prep_ready": True})
+        except Exception as e:
+            ts2.update_task(run_id, "error", str(e)[:600])
+
+    background.add_task(_prep)
+    return {"ok": True, "run_id": run_id, "status": "queued"}
+
+
+# ── Misiones del CEO (un objetivo → varios agentes) ──
+
+@app.get("/api/missions")
+async def api_list_missions(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import missions_store as mis
+    return {"missions": mis.list_missions()}
+
+
+@app.post("/api/missions")
+async def api_create_mission(body: MissionBody, request: Request, background: BackgroundTasks):
+    _verify_webhook_secret(request)
+    from .integrations import missions_store as mis
+    if not (body.objective or "").strip():
+        raise HTTPException(status_code=400, detail="objetivo vacío")
+    agents = [a for a in body.agents if a in list_agents()]
+    if not agents:
+        raise HTTPException(status_code=400, detail="elegí al menos un agente válido")
+    run_ids: Dict[str, str] = {}
+    for a in agents:
+        rid = str(uuid.uuid4())
+        run_ids[a] = rid
+    mission = mis.create_mission(body.objective.strip(), agents, body.client_id, run_ids, body.notes or "")
+    # disparar cada agente con el objetivo como tarea prioritaria
+    from .integrations import tasks_store as ts
+    for a in agents:
+        rid = run_ids[a]
+        prompt = (f"MISIÓN del CEO: {body.objective.strip()}\n"
+                  f"Resolvé tu parte de esta misión desde tu rol de {a}.")
+        ts.add_task(a, prompt, rid)
+        background.add_task(_run_agent_task, a, prompt, rid, body.client_id)
+    return {"ok": True, "mission": mission}
+
+
+@app.delete("/api/missions/{mission_id}")
+async def api_delete_mission(mission_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import missions_store as mis
+    mis.delete_mission(mission_id)
+    return {"ok": True}
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

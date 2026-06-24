@@ -279,6 +279,46 @@
         <div id="lessonsList"></div>
       </section>
 
+      <!-- CEO -->
+      <section id="tab-ceo" class="hidden">
+        <div class="card" style="margin-bottom:22px">
+          <label>Objetivo (yo lo reparto a los agentes que elijas)</label>
+          <textarea id="ceoObjective" class="inp" placeholder="Ej: Conseguir 5 distribuidoras de alimentos en GBA listas para reunión esta semana"></textarea>
+          <div class="row" style="margin-top:10px">
+            <div style="flex:1;min-width:200px"><label>Cliente (opcional)</label><select id="ceoClient" class="inp"><option value="">— ninguno —</option></select></div>
+          </div>
+          <label style="margin-top:10px">Agentes a los que se lo mando</label>
+          <div id="ceoAgents" class="row" style="gap:8px"></div>
+          <button class="btn" id="ceoBtn" style="margin-top:14px">🚀 Lanzar misión</button>
+        </div>
+        <div class="sec-head"><h2>Misiones</h2></div>
+        <div id="missionsList"></div>
+      </section>
+
+      <!-- AGENDA -->
+      <section id="tab-agenda" class="hidden">
+        <div class="card" id="meetForm" style="margin-bottom:22px">
+          <div class="row">
+            <div style="flex:1;min-width:200px"><label>Cliente</label><select id="mtClient" class="inp"><option value="">— sin cliente —</option></select></div>
+            <div style="flex:1;min-width:190px"><label>Día y hora</label><input id="mtWhen" class="inp" type="datetime-local"/></div>
+            <div style="flex:1;min-width:150px"><label>Modalidad</label><input id="mtLoc" class="inp" placeholder="Meet / Zoom / presencial"/></div>
+          </div>
+          <div class="row" style="margin-top:4px">
+            <div style="flex:2;min-width:220px"><label>Título / objetivo</label><input id="mtTitle" class="inp" placeholder="Demo + relevamiento"/></div>
+          </div>
+          <label>Notas</label><textarea id="mtNotes" class="inp" style="min-height:50px"></textarea>
+          <button class="btn" id="mtBtn" style="margin-top:12px">Agendar reunión</button>
+        </div>
+        <div class="sec-head"><h2>Próximas reuniones</h2><span class="faint" style="font-size:12px">“Preparar” dispara al agente meeting_prep con toda la memoria del cliente.</span></div>
+        <div id="meetingsList"></div>
+      </section>
+
+      <!-- CONTENIDO -->
+      <section id="tab-contenido" class="hidden">
+        <div class="sec-sub" style="margin-bottom:16px">Sector de contenido para las redes de Automiq. Estos dos agentes generan el contenido; mirá lo último o generá ahora.</div>
+        <div class="grid" id="contentGrid"></div>
+      </section>
+
     </div>
   </main>
 </div>
@@ -305,13 +345,19 @@ const ICONS = {
   clientes:ico('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'),
   pipeline:ico('<line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/>'),
   memoria: ico('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'),
+  ceo: ico('<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>'),
+  agenda: ico('<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'),
+  contenido: ico('<path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
 };
 const NAV = [
   {id:'resumen', label:'Resumen', sub:'Estado general de la agencia.'},
+  {id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
   {id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
   {id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
   {id:'clientes', label:'Clientes', sub:'Registro, memoria y organización de los clientes.'},
   {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound.'},
+  {id:'agenda', label:'Agenda', sub:'Tus reuniones. Elegí cliente, día y hora; preparalas con un click.'},
+  {id:'contenido', label:'Contenido', sub:'Generación de contenido para nuestras redes.'},
   {id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa, objetivos de growth y lecciones de los agentes.'},
 ];
 
@@ -359,6 +405,9 @@ function loadTab(tab){
   if(tab==='clientes') loadClients();
   if(tab==='pipeline') loadPipeline();
   if(tab==='memoria') loadMemory();
+  if(tab==='ceo') loadCeo();
+  if(tab==='agenda') loadAgenda();
+  if(tab==='contenido') loadContenido();
 }
 function setNavCount(id,n){ const e=el('navc-'+id); if(!e)return; if(n==null){e.classList.add('hidden');return;} e.textContent=n; e.classList.remove('hidden'); }
 
@@ -687,6 +736,107 @@ async function addClientNote(id){
   try{ await api('/api/clients/'+id+'/memory',{method:'POST',body:JSON.stringify({kind:'note',title:'Nota',content})});
     toast('✅ Nota guardada'); viewClientMemory(id); }
   catch(e){ toast('Error: '+e.message); }
+}
+
+// ── CEO (misiones) ──
+async function loadCeo(){
+  try{ const d=CACHE.agents||await api('/api/agents'); CACHE.agents=d;
+    el('ceoAgents').innerHTML = d.agents.map(a=>`<label style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer">
+      <input type="checkbox" value="${esc(a.name)}" class="ceoChk"/> ${esc(a.name.replace(/_/g,' '))}</label>`).join('');
+  }catch(e){}
+  try{ const cd=CACHE.clients||await api('/api/clients'); CACHE.clients=cd;
+    el('ceoClient').innerHTML='<option value="">— ninguno —</option>'+(cd.clients||[]).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  }catch(e){}
+  loadMissions();
+}
+async function loadMissions(){
+  try{ const d=await api('/api/missions'); const ms=d.missions||[];
+    el('missionsList').innerHTML = ms.length ? '<div class="tbl-wrap"><table><thead><tr><th>Objetivo</th><th>Agentes</th><th>Estado</th><th>Cuándo</th><th></th></tr></thead><tbody>'+
+      ms.map(m=>`<tr><td style="max-width:340px">${esc(m.objective)}</td>
+        <td>${(m.agents||[]).map(a=>'<span class="badge grey" style="margin:1px">'+esc(a.replace(/_/g,' '))+'</span>').join(' ')}</td>
+        <td><span class="badge blue">${esc(m.status)}</span></td>
+        <td class="faint" style="font-size:12px;white-space:nowrap">${fmtDate(m.created_at)}</td>
+        <td><button class="btn-ghost btn-xs" onclick="delMission('${m.id}')">🗑</button></td></tr>`).join('')+'</tbody></table></div>'
+      : '<div class="card empty">Sin misiones todavía. Escribí un objetivo arriba y repartilo.</div>';
+  }catch(e){ el('missionsList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+el('ceoBtn').addEventListener('click', async ()=>{
+  const objective=el('ceoObjective').value.trim();
+  const agents=Array.from(document.querySelectorAll('.ceoChk:checked')).map(c=>c.value);
+  const client_id=el('ceoClient').value||null;
+  if(!objective){ toast('Escribí el objetivo'); return; }
+  if(!agents.length){ toast('Elegí al menos un agente'); return; }
+  el('ceoBtn').disabled=true;
+  try{ await api('/api/missions',{method:'POST',body:JSON.stringify({objective,agents,client_id})});
+    el('ceoObjective').value=''; document.querySelectorAll('.ceoChk:checked').forEach(c=>c.checked=false);
+    toast('🚀 Misión lanzada a '+agents.length+' agente(s)'); loadMissions(); }
+  catch(e){ toast('Error: '+e.message); } finally{ el('ceoBtn').disabled=false; }
+});
+async function delMission(id){ try{ await api('/api/missions/'+id,{method:'DELETE'}); loadMissions(); }catch(e){ toast('Error: '+e.message); } }
+
+// ── Agenda (reuniones) ──
+async function loadAgenda(){
+  try{ const cd=CACHE.clients||await api('/api/clients'); CACHE.clients=cd;
+    el('mtClient').innerHTML='<option value="">— sin cliente —</option>'+(cd.clients||[]).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  }catch(e){}
+  loadMeetings();
+}
+async function loadMeetings(){
+  try{ const d=await api('/api/meetings'); const ms=d.meetings||[]; window._statuses=d.statuses||[];
+    el('meetingsList').innerHTML = ms.length ? ms.map(m=>{
+      const opts=(d.statuses||[]).map(s=>'<option'+(s===m.status?' selected':'')+'>'+esc(s)+'</option>').join('');
+      return `<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+          <div><b>${esc(m.title)}</b> ${m.prep_ready?'<span class="badge ok">prep lista</span>':''}
+            <div class="muted" style="font-size:13px;margin-top:2px">${esc(m.client_name||'sin cliente')} · ${fmtDate(m.scheduled_at)}${m.location?' · '+esc(m.location):''}</div>
+            ${m.notes?'<div class="faint" style="font-size:12px;margin-top:2px">'+esc(m.notes)+'</div>':''}</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <select class="inp btn-sm" style="padding:5px 8px" onchange="setMeetingStatus('${m.id}',this.value)">${opts}</select>
+            <button class="btn btn-sm" onclick="prepMeeting('${m.id}',this)">Preparar</button>
+            ${m.client_id?`<button class="btn-ghost btn-sm" onclick="viewClientMemory('${m.client_id}')">Ver prep</button>`:''}
+            <button class="btn-ghost btn-sm" onclick="delMeeting('${m.id}')">🗑</button>
+          </div></div></div>`;
+    }).join('') : '<div class="card empty">No tenés reuniones agendadas. Cargá una arriba.</div>';
+  }catch(e){ el('meetingsList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+el('mtBtn').addEventListener('click', async ()=>{
+  const client_id=el('mtClient').value||null, scheduled_at=el('mtWhen').value, title=el('mtTitle').value.trim()||'Reunión',
+        location=el('mtLoc').value.trim(), notes=el('mtNotes').value.trim();
+  if(!scheduled_at){ toast('Elegí día y hora'); return; }
+  const client_name = client_id ? (el('mtClient').options[el('mtClient').selectedIndex].text) : '';
+  el('mtBtn').disabled=true;
+  try{ await api('/api/meetings',{method:'POST',body:JSON.stringify({client_id,client_name,scheduled_at,title,location,notes})});
+    ['mtTitle','mtLoc','mtNotes','mtWhen'].forEach(i=>el(i).value=''); toast('✅ Reunión agendada'); loadMeetings(); }
+  catch(e){ toast('Error: '+e.message); } finally{ el('mtBtn').disabled=false; }
+});
+async function setMeetingStatus(id,status){ try{ await api('/api/meetings/'+id,{method:'PUT',body:JSON.stringify({status})}); toast('Estado → '+status); }catch(e){ toast('Error: '+e.message); } }
+async function delMeeting(id){ if(!confirm('¿Borrar la reunión?'))return; try{ await api('/api/meetings/'+id,{method:'DELETE'}); loadMeetings(); }catch(e){ toast('Error: '+e.message); } }
+async function prepMeeting(id,btn){
+  if(btn){btn.disabled=true;btn.textContent='…';}
+  try{ await api('/api/meetings/'+id+'/prep',{method:'POST'}); toast('🧠 Preparando la reunión — en unos minutos aparece en la memoria del cliente (Ver prep)'); }
+  catch(e){ toast('Error: '+e.message); }
+  finally{ if(btn){btn.disabled=false;btn.textContent='Preparar';} }
+}
+
+// ── Contenido (redes propias) ──
+const CONTENT_AGENTS=[
+  {name:'content_creator', label:'Content Creator', desc:'3 ideas de contenido listas (hook + copy + CTA + hashtags).'},
+  {name:'social_media', label:'Social Media', desc:'Calendario semanal de contenido orgánico.'},
+];
+async function loadContenido(){
+  let agents=[]; try{ const d=CACHE.agents||await api('/api/agents'); CACHE.agents=d; agents=d.agents; }catch(e){}
+  el('contentGrid').innerHTML = CONTENT_AGENTS.map(ca=>{
+    const a=agents.find(x=>x.name===ca.name)||{};
+    const badge = a.today?'<span class="badge ok"><span class="dot"></span>generado hoy</span>':a.has_output?'<span class="badge warn">último '+esc(a.last_date||'')+'</span>':'<span class="badge grey">sin contenido</span>';
+    return `<div class="card agent-card">
+      <div class="top"><div style="display:flex;gap:10px;align-items:center"><span class="ic-circle">${esc(ca.label[0])}</span><h3>${esc(ca.label)}</h3></div>${badge}</div>
+      <div class="desc">${esc(ca.desc)}</div>
+      <div class="foot"><span class="faint" style="font-size:12px">redes de Automiq</span>
+        <span style="display:flex;gap:6px">
+          <button class="btn-ghost btn-sm" onclick="viewLast('${ca.name}')">Ver</button>
+          <button class="btn btn-sm" onclick="runAgent('${ca.name}',this)">Generar</button>
+        </span></div></div>`;
+  }).join('');
 }
 
 // ── Modal ──
