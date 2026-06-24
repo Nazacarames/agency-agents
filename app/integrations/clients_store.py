@@ -28,7 +28,7 @@ STAGES = ["oferta", "reunión", "negociación", "cliente", "descartado"]
 FROZEN_STAGES = {"descartado"}
 DEFAULT_STAGE = "oferta"
 
-_COLS = ["id", "name", "vertical", "contact_name", "contact_phone",
+_COLS = ["id", "name", "vertical", "country", "contact_name", "contact_phone",
          "contact_email", "stage", "notes", "created_at", "updated_at"]
 
 
@@ -43,9 +43,11 @@ def _new_id() -> str:
 
 
 def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
+    from . import localization as loc
     return {
         "name": (data.get("name") or "").strip() or "Cliente sin nombre",
         "vertical": (data.get("vertical") or "").strip(),
+        "country": loc.normalize(data.get("country")),
         "contact_name": (data.get("contact_name") or "").strip(),
         "contact_phone": (data.get("contact_phone") or "").strip(),
         "contact_email": (data.get("contact_email") or "").strip(),
@@ -66,10 +68,11 @@ def _row_to_dict(row: Dict[str, Any]) -> Dict[str, Any]:
 def _seed_profile(client_id: str, c: Dict[str, Any]) -> None:
     """Siembra el perfil del cliente en su memoria (best-effort)."""
     try:
-        from . import client_memory_store as cms
+        from . import client_memory_store as cms, localization as loc
         body = (
             f"Cliente: {c.get('name')}\n"
             f"Vertical: {c.get('vertical') or '—'}\n"
+            f"País: {loc.label(c.get('country'))}\n"
             f"Etapa: {c.get('stage')}\n"
             f"Contacto: {c.get('contact_name') or '—'} · "
             f"{c.get('contact_phone') or ''} {c.get('contact_email') or ''}\n"
@@ -132,11 +135,11 @@ def _migrate_json_if_needed() -> None:
             cid = c.get("id") or _new_id()
             n = _normalize(c)
             db.execute(
-                "INSERT INTO clients (id,name,vertical,contact_name,contact_phone,"
+                "INSERT INTO clients (id,name,vertical,country,contact_name,contact_phone,"
                 "contact_email,stage,notes,created_at,updated_at) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(%s,now()),now()) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(%s,now()),now()) "
                 "ON CONFLICT (id) DO NOTHING",
-                (cid, n["name"], n["vertical"], n["contact_name"], n["contact_phone"],
+                (cid, n["name"], n["vertical"], n["country"], n["contact_name"], n["contact_phone"],
                  n["contact_email"], n["stage"], n["notes"], c.get("created_at")),
             )
             _seed_profile(cid, n)
@@ -170,9 +173,9 @@ def create_client(data: Dict[str, Any]) -> Dict[str, Any]:
     if db.enabled():
         _migrate_json_if_needed()
         db.execute(
-            "INSERT INTO clients (id,name,vertical,contact_name,contact_phone,"
-            "contact_email,stage,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-            (cid, n["name"], n["vertical"], n["contact_name"], n["contact_phone"],
+            "INSERT INTO clients (id,name,vertical,country,contact_name,contact_phone,"
+            "contact_email,stage,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (cid, n["name"], n["vertical"], n["country"], n["contact_name"], n["contact_phone"],
              n["contact_email"], n["stage"], n["notes"]),
         )
         client = get_client(cid) or {"id": cid, **n}
@@ -190,6 +193,9 @@ def update_client(client_id: str, data: Dict[str, Any]) -> Optional[Dict[str, An
     for k in ("name", "vertical", "contact_name", "contact_phone", "contact_email", "notes"):
         if k in data and data[k] is not None:
             fields[k] = str(data[k]).strip()
+    if data.get("country"):
+        from . import localization as loc
+        fields["country"] = loc.normalize(data.get("country"))
     if data.get("stage") in STAGES:
         fields["stage"] = data["stage"]
     if not fields:

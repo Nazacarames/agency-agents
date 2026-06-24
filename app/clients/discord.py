@@ -35,6 +35,7 @@ class DiscordEmbed:
     fields: Optional[List[Dict[str, Any]]] = None
     footer: Optional[str] = None
     url: Optional[str] = None
+    image_url: Optional[str] = None  # imagen grande del embed (image.url)
 
 
 class DiscordWebhook:
@@ -89,6 +90,8 @@ class DiscordWebhook:
                 embed_dict["url"] = embed.url
             if embed.fields:
                 embed_dict["fields"] = embed.fields[:25]
+            if embed.image_url:
+                embed_dict["image"] = {"url": embed.image_url}
             if embed.footer:
                 embed_dict["footer"] = {"text": embed.footer[:2048]}
             payload["embeds"] = [embed_dict]

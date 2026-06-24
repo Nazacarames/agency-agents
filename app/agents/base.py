@@ -129,8 +129,12 @@ class BaseAgent(ABC):
                 client = cs.get_client(cid)
                 # Cliente descartado → memoria congelada: no la inyectamos.
                 if client and client.get("stage") not in cs.FROZEN_STAGES:
+                    from ..integrations import localization as loc
                     blocks.append(f"## CLIENTE OBJETIVO: {client.get('name')} "
-                                  f"({client.get('vertical') or 's/vertical'}) — etapa {client.get('stage')}")
+                                  f"({client.get('vertical') or 's/vertical'}) — "
+                                  f"{loc.label(client.get('country'))} — etapa {client.get('stage')}")
+                    # Localización: moneda/tratamiento/regulación del país del cliente.
+                    blocks.append(loc.locale_block(client.get("country")))
                     digest = cms.context_digest(cid)
                     if digest:
                         blocks.append("## MEMORIA DEL CLIENTE (lo que ya sabemos de él)\n" + digest)

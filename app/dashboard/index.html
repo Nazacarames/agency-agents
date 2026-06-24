@@ -213,8 +213,9 @@
         <div class="card" id="clientForm" style="margin-bottom:22px">
           <div class="row">
             <div style="flex:1;min-width:200px"><label>Nombre</label><input id="cName" class="inp" placeholder="Empresa"/></div>
-            <div style="flex:1;min-width:160px"><label>Vertical</label><input id="cVertical" class="inp" placeholder="Distribución, retail…"/></div>
-            <div style="flex:1;min-width:160px"><label>Etapa</label><select id="cStage" class="inp"></select></div>
+            <div style="flex:1;min-width:150px"><label>Vertical</label><input id="cVertical" class="inp" placeholder="Distribución, retail…"/></div>
+            <div style="flex:1;min-width:150px"><label>País</label><select id="cCountry" class="inp"></select></div>
+            <div style="flex:1;min-width:140px"><label>Etapa</label><select id="cStage" class="inp"></select></div>
           </div>
           <div class="row" style="margin-top:4px">
             <div style="flex:1;min-width:160px"><label>Contacto</label><input id="cContact" class="inp" placeholder="Nombre"/></div>
@@ -229,7 +230,7 @@
           </div>
         </div>
         <div class="tbl-wrap"><table><thead>
-          <tr><th>Cliente</th><th>Vertical</th><th>Etapa</th><th>Contacto</th><th>Alta</th><th></th></tr>
+          <tr><th>Cliente</th><th>Vertical</th><th>País</th><th>Etapa</th><th>Contacto</th><th>Alta</th><th></th></tr>
         </thead><tbody id="clientsBody"></tbody></table></div>
       </section>
 
@@ -282,14 +283,18 @@
       <!-- CEO -->
       <section id="tab-ceo" class="hidden">
         <div class="card" style="margin-bottom:22px">
-          <label>Objetivo (yo lo reparto a los agentes que elijas)</label>
-          <textarea id="ceoObjective" class="inp" placeholder="Ej: Conseguir 5 distribuidoras de alimentos en GBA listas para reunión esta semana"></textarea>
+          <label>Objetivo (el CEO lo descompone en sub-tareas y se las asigna a cada agente)</label>
+          <textarea id="ceoObjective" class="inp" placeholder="Ej: Conseguir 5 distribuidoras de alimentos en CDMX listas para reunión esta semana"></textarea>
           <div class="row" style="margin-top:10px">
             <div style="flex:1;min-width:200px"><label>Cliente (opcional)</label><select id="ceoClient" class="inp"><option value="">— ninguno —</option></select></div>
           </div>
-          <label style="margin-top:10px">Agentes a los que se lo mando</label>
+          <label style="margin-top:10px">Limitar a estos agentes <span class="faint">(opcional — si no marcás ninguno, el CEO elige del equipo completo)</span></label>
           <div id="ceoAgents" class="row" style="gap:8px"></div>
-          <button class="btn" id="ceoBtn" style="margin-top:14px">🚀 Lanzar misión</button>
+          <div class="flexbtns" style="margin-top:14px">
+            <button class="btn" id="ceoPlanBtn">🧠 Planificar con el CEO</button>
+            <button class="btn-ghost btn-sm" id="ceoFanBtn" title="Manda el MISMO objetivo a los agentes marcados, sin descomponer">Lanzar directo a los marcados</button>
+          </div>
+          <div id="ceoPlan" style="margin-top:18px"></div>
         </div>
         <div class="sec-head"><h2>Misiones</h2></div>
         <div id="missionsList"></div>
@@ -560,23 +565,26 @@ el('taskBtn').addEventListener('click', async ()=>{
 });
 
 // ── Clientes ──
-let STAGES=[];
+let STAGES=[]; let COUNTRIES=[];
 const STAGE_LABELS={oferta:'Oferta p/ reunión','reunión':'Reunión','negociación':'Negociación',cliente:'Cliente',descartado:'Descartado'};
 const FROZEN_STAGES=['descartado'];
 function labelStage(s){ return STAGE_LABELS[s]||s; }
+function countryName(code){ const c=COUNTRIES.find(x=>x.code===code); return c?c.name:(code||'Argentina'); }
 function isFrozen(s){ return FROZEN_STAGES.includes(s); }
 function stageBadgeCls(s){ return ({oferta:'grey','reunión':'violet','negociación':'warn',cliente:'ok',descartado:'red'})[s]||'grey'; }
 async function loadClients(){
   try{
-    const d=await api('/api/clients'); CACHE.clients=d; STAGES=d.stages;
+    const d=await api('/api/clients'); CACHE.clients=d; STAGES=d.stages; COUNTRIES=d.countries||[];
     setNavCount('clientes', d.counts.total||null);
     if(!el('cStage').options.length) el('cStage').innerHTML=d.stages.map(s=>'<option value="'+esc(s)+'">'+esc(labelStage(s))+'</option>').join('');
+    if(!el('cCountry').options.length) el('cCountry').innerHTML=COUNTRIES.map(c=>'<option value="'+esc(c.code)+'">'+esc(c.name)+'</option>').join('');
     el('clientsKpis').innerHTML = kpi('Total', d.counts.total||0, ICONS.clientes,'accent') +
       d.stages.map(s=>kpi(labelStage(s), d.counts[s]||0, '')).join('');
     const body=el('clientsBody');
     body.innerHTML = d.clients.length ? d.clients.map(c=>`<tr${isFrozen(c.stage)?' style="opacity:.62"':''}>
       <td><b>${esc(c.name)}</b>${isFrozen(c.stage)?' <span class="badge grey" title="Su memoria está congelada: los agentes ya no la leen ni la actualizan">❄ memoria congelada</span>':''}${c.notes?'<br><span class="faint" style="font-size:12px">'+esc(c.notes.slice(0,90))+(c.notes.length>90?'…':'')+'</span>':''}</td>
       <td>${esc(c.vertical||'—')}</td>
+      <td style="font-size:13px">${esc(countryName(c.country))}</td>
       <td><select class="inp btn-sm" style="padding:5px 8px;min-width:130px" onchange="setStage('${c.id}',this.value)">${
         STAGES.map(s=>'<option value="'+esc(s)+'"'+(s===c.stage?' selected':'')+'>'+esc(labelStage(s))+'</option>').join('')}</select></td>
       <td style="font-size:13px">${esc(c.contact_name||'')}${c.contact_phone||c.contact_email?'<br><span class="faint">'+esc(c.contact_phone||'')+' '+esc(c.contact_email||'')+'</span>':''}</td>
@@ -585,20 +593,22 @@ async function loadClients(){
         <button class="btn-ghost btn-xs" onclick="viewClientMemory('${c.id}')">Memoria</button>
         <button class="btn-ghost btn-xs" onclick="editClient('${c.id}')">Editar</button>
         <button class="btn-ghost btn-xs" onclick="delClient('${c.id}')">🗑</button></td></tr>`).join('')
-      : '<tr><td colspan="6" class="empty">Sin clientes todavía. Cargá uno arriba o convertí un lead desde el Pipeline.</td></tr>';
-  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="6" class="err">'+esc(e.message)+'</td></tr>'; }
+      : '<tr><td colspan="7" class="empty">Sin clientes todavía. Cargá uno arriba o convertí un lead desde el Pipeline.</td></tr>';
+  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="7" class="err">'+esc(e.message)+'</td></tr>'; }
 }
 function clientPayload(){
-  return { name:el('cName').value, vertical:el('cVertical').value, stage:el('cStage').value,
+  return { name:el('cName').value, vertical:el('cVertical').value, country:el('cCountry').value, stage:el('cStage').value,
     contact_name:el('cContact').value, contact_phone:el('cPhone').value, contact_email:el('cEmail').value, notes:el('cNotes').value };
 }
 function clearClientForm(){
   ['cName','cVertical','cContact','cPhone','cEmail','cNotes','cEditId'].forEach(i=>el(i).value='');
+  if(el('cCountry').options.length) el('cCountry').value='AR';
   el('clientBtn').textContent='Agregar cliente'; el('clientCancel').classList.add('hidden');
 }
 function editClient(id){
   const c=(CACHE.clients&&CACHE.clients.clients||[]).find(x=>x.id===id); if(!c)return;
   el('cEditId').value=c.id; el('cName').value=c.name||''; el('cVertical').value=c.vertical||'';
+  el('cCountry').value=c.country||'AR';
   el('cStage').value=c.stage||STAGES[0]; el('cContact').value=c.contact_name||'';
   el('cPhone').value=c.contact_phone||''; el('cEmail').value=c.contact_email||''; el('cNotes').value=c.notes||'';
   el('clientBtn').textContent='Guardar cambios'; el('clientCancel').classList.remove('hidden');
@@ -793,17 +803,56 @@ async function loadMissions(){
       : '<div class="card empty">Sin misiones todavía. Escribí un objetivo arriba y repartilo.</div>';
   }catch(e){ el('missionsList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
 }
-el('ceoBtn').addEventListener('click', async ()=>{
+function ceoCheckedAgents(){ return Array.from(document.querySelectorAll('.ceoChk:checked')).map(c=>c.value); }
+function ceoReset(){ el('ceoObjective').value=''; el('ceoPlan').innerHTML=''; document.querySelectorAll('.ceoChk:checked').forEach(c=>c.checked=false); }
+
+// 1) El CEO descompone el objetivo en sub-tareas por agente (preview editable).
+el('ceoPlanBtn').addEventListener('click', async ()=>{
   const objective=el('ceoObjective').value.trim();
-  const agents=Array.from(document.querySelectorAll('.ceoChk:checked')).map(c=>c.value);
-  const client_id=el('ceoClient').value||null;
   if(!objective){ toast('Escribí el objetivo'); return; }
-  if(!agents.length){ toast('Elegí al menos un agente'); return; }
-  el('ceoBtn').disabled=true;
+  const agents=ceoCheckedAgents(), client_id=el('ceoClient').value||null;
+  el('ceoPlanBtn').disabled=true;
+  el('ceoPlan').innerHTML='<span class="badge blue"><span class="dot"></span>el CEO está descomponiendo el objetivo…</span>';
+  try{
+    const d=await api('/api/missions/plan',{method:'POST',body:JSON.stringify({objective,agents,client_id})});
+    renderCeoPlan(d.steps||[], objective, client_id);
+  }catch(e){ el('ceoPlan').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+  finally{ el('ceoPlanBtn').disabled=false; }
+});
+
+function renderCeoPlan(steps, objective, client_id){
+  if(!steps.length){ el('ceoPlan').innerHTML='<div class="card empty">El CEO no pudo armar un plan automático. Marcá agentes y usá “Lanzar directo”.</div>'; return; }
+  el('ceoPlan').innerHTML =
+    '<div class="sec-sub" style="margin-bottom:10px"><b>Plan del CEO</b> — '+steps.length+' sub-tarea(s). Editá lo que quieras y lanzá.</div>'
+    + steps.map((s,i)=>`<div class="card" style="margin-bottom:10px;padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <b class="syne">${esc(s.agent.replace(/_/g,' '))}</b>
+          ${s.why?'<span class="faint" style="font-size:12px">'+esc(s.why)+'</span>':''}
+        </div>
+        <textarea class="inp ceoStepTask" data-agent="${esc(s.agent)}" style="min-height:54px;margin-top:8px">${esc(s.task)}</textarea>
+      </div>`).join('')
+    + '<button class="btn" id="ceoLaunchBtn" style="margin-top:6px">🚀 Lanzar misión ('+steps.length+' agentes)</button>';
+  el('ceoLaunchBtn').addEventListener('click', async ()=>{
+    const stepEls=Array.from(document.querySelectorAll('.ceoStepTask'));
+    const launchSteps=stepEls.map(t=>({agent:t.dataset.agent, task:t.value.trim()})).filter(s=>s.task);
+    if(!launchSteps.length){ toast('No hay sub-tareas'); return; }
+    el('ceoLaunchBtn').disabled=true;
+    try{ await api('/api/missions',{method:'POST',body:JSON.stringify({objective,steps:launchSteps,client_id})});
+      toast('🚀 Misión lanzada · '+launchSteps.length+' agente(s) con su sub-tarea'); ceoReset(); loadMissions(); }
+    catch(e){ toast('Error: '+e.message); el('ceoLaunchBtn').disabled=false; }
+  });
+}
+
+// 2) Fan-out clásico: mismo objetivo a los agentes marcados (sin descomponer).
+el('ceoFanBtn').addEventListener('click', async ()=>{
+  const objective=el('ceoObjective').value.trim();
+  const agents=ceoCheckedAgents(), client_id=el('ceoClient').value||null;
+  if(!objective){ toast('Escribí el objetivo'); return; }
+  if(!agents.length){ toast('Marcá al menos un agente (o usá Planificar)'); return; }
+  el('ceoFanBtn').disabled=true;
   try{ await api('/api/missions',{method:'POST',body:JSON.stringify({objective,agents,client_id})});
-    el('ceoObjective').value=''; document.querySelectorAll('.ceoChk:checked').forEach(c=>c.checked=false);
-    toast('🚀 Misión lanzada a '+agents.length+' agente(s)'); loadMissions(); }
-  catch(e){ toast('Error: '+e.message); } finally{ el('ceoBtn').disabled=false; }
+    toast('🚀 Misión lanzada (directo) a '+agents.length+' agente(s)'); ceoReset(); loadMissions(); }
+  catch(e){ toast('Error: '+e.message); } finally{ el('ceoFanBtn').disabled=false; }
 });
 async function delMission(id){ try{ await api('/api/missions/'+id,{method:'DELETE'}); loadMissions(); }catch(e){ toast('Error: '+e.message); } }
 

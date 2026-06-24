@@ -61,22 +61,24 @@ def _row(r: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-_COLS = "id,objective,agents,client_id,status,run_ids,notes,created_at,updated_at"
+_COLS = "id,objective,agents,client_id,status,run_ids,plan,notes,created_at,updated_at"
 
 
 def create_mission(objective: str, agents: List[str], client_id: Optional[str] = None,
-                   run_ids: Optional[Dict[str, str]] = None, notes: str = "") -> Dict[str, Any]:
+                   run_ids: Optional[Dict[str, str]] = None, notes: str = "",
+                   plan: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     run_ids = run_ids or {}
+    plan = plan or []
     if db.enabled():
         r = db.fetchone(
-            "INSERT INTO missions (objective,agents,client_id,run_ids,notes) "
-            "VALUES (%s,%s,%s,%s,%s) RETURNING " + _COLS,
-            (objective, agents, client_id or None, json.dumps(run_ids), notes or ""))
+            "INSERT INTO missions (objective,agents,client_id,run_ids,plan,notes) "
+            "VALUES (%s,%s,%s,%s,%s,%s) RETURNING " + _COLS,
+            (objective, agents, client_id or None, json.dumps(run_ids), json.dumps(plan), notes or ""))
         return _row(r) if r else {}
     store = _json_load()
     mid = (max([int(m.get("id", 0)) for m in store["missions"]], default=0)) + 1
     m = {"id": mid, "objective": objective, "agents": agents, "client_id": client_id,
-         "status": "lanzada", "run_ids": run_ids, "notes": notes,
+         "status": "lanzada", "run_ids": run_ids, "plan": plan, "notes": notes,
          "created_at": _now(), "updated_at": _now()}
     store["missions"].insert(0, m)
     _json_save(store)

@@ -460,6 +460,7 @@ class LoginBody(BaseModel):
 class ClientBody(BaseModel):
     name: Optional[str] = None
     vertical: Optional[str] = None
+    country: Optional[str] = None
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
@@ -515,9 +516,23 @@ class MeetingBody(BaseModel):
     status: Optional[str] = None
 
 
+class MissionStep(BaseModel):
+    agent: str
+    task: str
+    why: Optional[str] = ""
+
+
+class MissionPlanBody(BaseModel):
+    objective: str
+    client_id: Optional[str] = None
+    agents: List[str] = []        # roster a considerar; vacío = todos
+
+
 class MissionBody(BaseModel):
     objective: str
-    agents: List[str] = []
+    agents: List[str] = []                       # fan-out clásico (legacy)
+    steps: Optional[List[MissionStep]] = None    # plan del CEO (sub-tarea por agente)
+    auto: bool = False                           # si True y sin steps/agents → el CEO planifica
     client_id: Optional[str] = None
     notes: Optional[str] = ""
 
@@ -635,8 +650,9 @@ async def api_list_tasks(request: Request):
 @app.get("/api/clients")
 async def api_list_clients(request: Request):
     _verify_webhook_secret(request)
-    from .integrations import clients_store as cs
-    return {"clients": cs.list_clients(), "counts": cs.summary_counts(), "stages": cs.STAGES}
+    from .integrations import clients_store as cs, localization as loc
+    return {"clients": cs.list_clients(), "counts": cs.summary_counts(),
+            "stages": cs.STAGES, "countries": loc.list_countries()}
 
 
 @app.post("/api/clients")
@@ -962,29 +978,81 @@ async def api_list_missions(request: Request):
     return {"missions": mis.list_missions()}
 
 
+def _agent_roster(only: Optional[List[str]] = None) -> List[Dict[str, str]]:
+    """Roster {name, description} para el planner del CEO."""
+    names = list_agents()
+    if only:
+        names = [a for a in names if a in only]
+    return [{"name": n, "description": _AGENT_DESCRIPTIONS.get(n, "")} for n in names]
+
+
+def _client_ctx_for_plan(client_id: Optional[str]) -> str:
+    if not client_id:
+        return ""
+    try:
+        from .integrations import clients_store as cs, localization as loc
+        c = cs.get_client(client_id)
+        if not c:
+            return ""
+        return (f"{c.get('name')} — {loc.label(c.get('country'))} — "
+                f"vertical {c.get('vertical') or 's/v'} — etapa {c.get('stage')}")
+    except Exception:
+        return ""
+
+
+@app.post("/api/missions/plan")
+async def api_plan_mission(body: MissionPlanBody, request: Request):
+    """El CEO descompone el objetivo en sub-tareas por agente (preview, no dispara)."""
+    _verify_webhook_secret(request)
+    if not (body.objective or "").strip():
+        raise HTTPException(status_code=400, detail="objetivo vacío")
+    from .integrations import ceo_planner as cp
+    roster = _agent_roster(body.agents or None)
+    steps = cp.plan_objective(body.objective.strip(), roster,
+                              client_ctx=_client_ctx_for_plan(body.client_id))
+    return {"ok": True, "steps": steps, "planner": "llm" if steps else "none"}
+
+
 @app.post("/api/missions")
 async def api_create_mission(body: MissionBody, request: Request, background: BackgroundTasks):
     _verify_webhook_secret(request)
-    from .integrations import missions_store as mis
-    if not (body.objective or "").strip():
+    from .integrations import missions_store as mis, ceo_planner as cp
+    objective = (body.objective or "").strip()
+    if not objective:
         raise HTTPException(status_code=400, detail="objetivo vacío")
-    agents = [a for a in body.agents if a in list_agents()]
-    if not agents:
-        raise HTTPException(status_code=400, detail="elegí al menos un agente válido")
-    run_ids: Dict[str, str] = {}
-    for a in agents:
-        rid = str(uuid.uuid4())
-        run_ids[a] = rid
-    mission = mis.create_mission(body.objective.strip(), agents, body.client_id, run_ids, body.notes or "")
-    # disparar cada agente con el objetivo como tarea prioritaria
+
+    valid = set(list_agents())
+    # 1) plan explícito (aprobado en el dashboard) → cada agente con SU sub-tarea
+    steps: List[Dict[str, Any]] = []
+    if body.steps:
+        steps = [{"agent": s.agent, "task": s.task} for s in body.steps if s.agent in valid and s.task.strip()]
+    # 2) auto: el CEO planifica (cuando no hay steps ni agentes elegidos)
+    elif body.auto or not body.agents:
+        roster = _agent_roster(body.agents or None)
+        plan = cp.plan_objective(objective, roster, client_ctx=_client_ctx_for_plan(body.client_id))
+        steps = [{"agent": p["agent"], "task": p["task"]} for p in plan]
+
+    # 3) fallback / legacy fan-out: mismo objetivo a los agentes elegidos
+    if not steps:
+        agents = [a for a in body.agents if a in valid]
+        if not agents:
+            raise HTTPException(status_code=400, detail="no se pudo planificar; elegí al menos un agente")
+        steps = [{"agent": a, "task": f"Resolvé tu parte de este objetivo desde tu rol de {a}."} for a in agents]
+
+    agents = [s["agent"] for s in steps]
+    run_ids: Dict[str, str] = {a: str(uuid.uuid4()) for a in agents}
+    mission = mis.create_mission(objective, agents, body.client_id, run_ids, body.notes or "", plan=steps)
+
+    # disparar cada agente con SU sub-tarea concreta
     from .integrations import tasks_store as ts
-    for a in agents:
-        rid = run_ids[a]
-        prompt = (f"MISIÓN del CEO: {body.objective.strip()}\n"
-                  f"Resolvé tu parte de esta misión desde tu rol de {a}.")
+    for s in steps:
+        a, rid = s["agent"], run_ids[s["agent"]]
+        prompt = (f"MISIÓN del CEO: {objective}\n\n"
+                  f"TU SUB-TAREA específica ({a}):\n{s['task']}\n\n"
+                  "Resolvé exactamente tu sub-tarea y entregá ese resultado, listo para usar.")
         ts.add_task(a, prompt, rid)
         background.add_task(_run_agent_task, a, prompt, rid, body.client_id)
-    return {"ok": True, "mission": mission}
+    return {"ok": True, "mission": mission, "steps": steps}
 
 
 @app.delete("/api/missions/{mission_id}")

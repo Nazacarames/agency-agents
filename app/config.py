@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     # (claves = nombre interno del agente). Si un agente no está, cae al webhook general.
     discord_agent_webhooks: str = ""
     discord_webhook_errors: str = ""           # canal de errores (fallos de agentes)
+    discord_images_webhook_url: str = ""       # canal para espejar imágenes generadas (cae al general)
+    discord_images_enabled: bool = True        # espejar a Discord cada imagen generada
 
     # ── Scheduler ──
     scheduler_timezone: str = "America/Buenos_Aires"

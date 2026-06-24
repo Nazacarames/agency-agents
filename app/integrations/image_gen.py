@@ -93,12 +93,37 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
                     raw = _overlay_text(raw, text, subtitle) or raw
                 fname = f"{uuid.uuid4().hex}.png"
                 (_images_dir() / fname).write_bytes(raw)
-                out.append(f"/media/{fname}")
+                local_url = f"/media/{fname}"
+                out.append(local_url)
+                _notify_discord(local_url, text, subtitle)
         log.info("image_gen_ok", generated=len(out), with_text=bool(text))
         return out
     except Exception as e:
         log.warning("image_gen_failed", error=str(e)[:200])
         return []
+
+
+def _notify_discord(local_url: str, text: Optional[str], subtitle: Optional[str]) -> None:
+    """Espeja la imagen recién generada a Discord (best-effort, no rompe nada)."""
+    s = get_settings()
+    if not getattr(s, "discord_images_enabled", True) or not s.discord_configured:
+        return
+    try:
+        from .social_publish import absolute_url
+        from ..clients.discord import DiscordWebhook, DiscordEmbed
+        url = absolute_url(local_url)
+        if not url.startswith("http"):
+            return  # sin URL pública Discord no puede mostrarla
+        title = (text or "Imagen generada")[:256]
+        desc = subtitle or ""
+        dw = DiscordWebhook(s)
+        dw.send("", embed=DiscordEmbed(title=f"🎨 {title}", description=desc,
+                                       image_url=url, color=0x2563EB),
+                url=s.discord_images_webhook_url or None)
+        dw.close()
+        log.info("image_discord_sent", url=url)
+    except Exception as e:
+        log.warning("image_discord_failed", error=str(e)[:200])
 
 
 def _fit_font(draw, text: str, font_path: Path, max_w: int, max_h: int,
