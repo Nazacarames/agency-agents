@@ -160,17 +160,23 @@ def image_prompt_directive() -> str:
 
 
 # ── Auto-generación de imágenes para contenido ───────────────────────────────
+def _clean_fragment(s: str):
+    """Saca backticks/asteriscos/comillas/espacios que el modelo deja alrededor."""
+    return (s or "").strip().strip("`*\"' |").strip()
+
+
 def _parse_image_line(line: str):
-    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada>` → (prompt, texto, subtexto)."""
+    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada>` → (prompt, texto, subtexto).
+    Tolera que el modelo envuelva la línea en backticks/asteriscos de markdown."""
     import re
     prompt, texto, sub = line, None, None
     m = re.search(r"\|\s*SUBTEXTO\s*:\s*(.+)$", prompt, re.IGNORECASE)
     if m:
-        sub = m.group(1).strip(); prompt = prompt[:m.start()]
+        sub = m.group(1); prompt = prompt[:m.start()]
     m = re.search(r"\|\s*TEXTO\s*:\s*(.+)$", prompt, re.IGNORECASE)
     if m:
-        texto = m.group(1).strip(); prompt = prompt[:m.start()]
-    return prompt.strip(" |"), texto, sub
+        texto = m.group(1); prompt = prompt[:m.start()]
+    return _clean_fragment(prompt), _clean_fragment(texto) or None, _clean_fragment(sub) or None
 
 
 def augment_with_images(text: str, max_images: int = 2) -> str:
@@ -178,18 +184,25 @@ def augment_with_images(text: str, max_images: int = 2) -> str:
     las imágenes (fondo MiniMax + texto compuesto con Pillow) y anexa la sección.
     Best-effort."""
     import re
-    pat = re.compile(r"^\s*(?:IMAGEN|PROMPT DE IMAGEN|VISUAL SUGERIDO)\s*:\s*(.+)$",
+    # Tolera que el modelo escriba la línea envuelta en markdown:
+    # `` `IMAGEN: ...` ``, ``- IMAGEN: ...``, ``**IMAGEN:** ...`` o ``> IMAGEN: ...``.
+    pat = re.compile(r"^[\s>*`\-]*(?:IMAGEN|PROMPT DE IMAGEN|VISUAL SUGERIDO)\s*[:：]\s*(.+)$",
                      re.IGNORECASE | re.MULTILINE)
     try:
         from ..integrations import image_gen
         if not text or not image_gen.enabled():
             return text
-        raw_lines = pat.findall(text)[:max_images]
-        if not raw_lines:
+        # Parsear todas y descartar las vacías (p.ej. el label suelto `**IMAGEN:**`)
+        parsed = []
+        for raw in pat.findall(text):
+            prompt, texto, sub = _parse_image_line(raw.strip())
+            if len(prompt) >= 8:           # un prompt real, no un label vacío
+                parsed.append((prompt, texto, sub))
+        parsed = parsed[:max_images]
+        if not parsed:
             return text
         blocks = []
-        for i, line in enumerate(raw_lines, 1):
-            prompt, texto, sub = _parse_image_line(line.strip())
+        for i, (prompt, texto, sub) in enumerate(parsed, 1):
             urls = image_gen.generate_image(prompt, aspect_ratio="1:1", n=1, text=texto, subtitle=sub)
             if urls:
                 cap = texto or prompt[:90]
