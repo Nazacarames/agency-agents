@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from pydantic import BaseModel, Field
 
 from . import __version__
@@ -334,8 +334,12 @@ async def last_agent_output(name: str, request: Request):
         "seo_specialist": ("seo-specialist-report-{d}.md", None, "seo-specialist-report-{d}.json"),
         "web_auditor": ("web-auditor-report-{d}.md", None, "web-auditor-report-{d}.json"),
         "inbox_assistant": ("inbox-assistant-report-{d}.md", None, None),
+        "meeting_prep": ("meeting-prep-report-{d}.md", None, None),
     }
-    md_tpl, leads_tpl, json_tpl = patterns[name]
+    # Default robusto para agentes sin patrón explícito (post_process genérico
+    # guarda en data/<name-con-guiones>-report-<fecha>.md). Evita el KeyError/500.
+    default_tpl = (f"{name.replace('_', '-')}-report-{{d}}.md", None, None)
+    md_tpl, leads_tpl, json_tpl = patterns.get(name, default_tpl)
 
     md_path = data_dir / md_tpl.format(d=today)
     if not md_path.exists():
@@ -518,6 +522,12 @@ class MissionBody(BaseModel):
     notes: Optional[str] = ""
 
 
+class ImageBody(BaseModel):
+    prompt: str
+    aspect_ratio: Optional[str] = "1:1"
+    n: Optional[int] = 1
+
+
 _AGENT_DESCRIPTIONS = {
     "leadhunter": "Genera 10 leads/día con contacto verificado (FIT 4-6)",
     "content_creator": "Posts/contenido para redes de Automiq",
@@ -688,6 +698,34 @@ async def api_del_client_memory(client_id: str, mem_id: str, request: Request):
     return {"ok": True}
 
 
+@app.post("/api/clients/{client_id}/prep")
+async def api_client_prep(client_id: str, request: Request, background: BackgroundTasks):
+    """Prepara una reunión para el cliente (sin agendar): dispara meeting_prep con
+    toda su memoria. El brief queda en su memoria del cliente."""
+    _verify_webhook_secret(request)
+    from .integrations import clients_store as cs, tasks_store as ts
+    client = cs.get_client(client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="cliente no encontrado")
+    if cs.is_frozen(client_id):
+        raise HTTPException(status_code=400, detail="cliente descartado (memoria congelada)")
+    run_id = str(uuid.uuid4())
+    ts.add_task("meeting_prep", f"Preparar reunión para {client.get('name')}", run_id)
+    args = {"force_global": True, "client_id": client_id,
+            "meeting": {"client_name": client.get("name"), "title": "Reunión comercial"}}
+
+    async def _prep():
+        from .integrations import tasks_store as ts2
+        try:
+            result = await _run_pack_agent("meeting_prep", args, run_id, "dashboard:client-prep")
+            ts2.update_task(run_id, "done", str(result)[:600] if result else "")
+        except Exception as e:
+            ts2.update_task(run_id, "error", str(e)[:600])
+
+    background.add_task(_prep)
+    return {"ok": True, "run_id": run_id, "status": "queued"}
+
+
 # ── Memoria general (knowledge base de la empresa) ──
 
 @app.get("/api/memory")
@@ -785,6 +823,32 @@ async def api_db_health(request: Request):
     _verify_webhook_secret(request)
     from .integrations import db
     return db.healthcheck()
+
+
+# ── Generación de imágenes para contenido ──
+
+@app.post("/api/image")
+async def api_generate_image(body: ImageBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import image_gen
+    if not image_gen.enabled():
+        raise HTTPException(status_code=400, detail="generación de imágenes deshabilitada (sin MINIMAX_API_KEY)")
+    if not (body.prompt or "").strip():
+        raise HTTPException(status_code=400, detail="prompt vacío")
+    urls = image_gen.generate_image(body.prompt, body.aspect_ratio or "1:1", body.n or 1)
+    if not urls:
+        raise HTTPException(status_code=502, detail="no se pudo generar la imagen (proveedor)")
+    return {"ok": True, "urls": urls}
+
+
+@app.get("/media/{filename}")
+async def media_file(filename: str):
+    """Sirve las imágenes generadas (guardadas en el volume data/images/)."""
+    safe = Path(filename).name  # evita path traversal
+    path = _data_dir() / "images" / safe
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="imagen no encontrada")
+    return FileResponse(str(path), media_type="image/png")
 
 
 # ── Agenda de reuniones ──

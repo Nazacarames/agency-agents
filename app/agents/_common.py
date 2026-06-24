@@ -140,6 +140,44 @@ def official_site_directive() -> str:
     )
 
 
+def image_prompt_directive() -> str:
+    """Pide al agente de contenido que incluya prompts de imagen para auto-generarlas."""
+    return (
+        "\n\nIMÁGENES (obligatorio): por cada idea/post, agregá una línea que empiece EXACTO "
+        "con `IMAGEN:` seguida de un prompt EN INGLÉS, visual y concreto, para generar la "
+        "imagen del post (estilo, escena, paleta navy + royal blue de Automiq, sin texto dentro "
+        "de la imagen). Ej: `IMAGEN: flat vector illustration of a WhatsApp chatbot assisting a "
+        "small Argentine distributor, navy and royal blue palette, clean, modern`. El sistema "
+        "genera esas imágenes automáticamente a partir de esas líneas."
+    )
+
+
+# ── Auto-generación de imágenes para contenido ───────────────────────────────
+def augment_with_images(text: str, max_images: int = 2) -> str:
+    """Busca líneas `IMAGEN: ...` en el output, genera las imágenes (MiniMax) y
+    anexa una sección con los `![](...)` listos para usar. Best-effort."""
+    import re
+    pat = re.compile(r"^\s*(?:IMAGEN|PROMPT DE IMAGEN|VISUAL SUGERIDO)\s*:\s*(.+)$",
+                     re.IGNORECASE | re.MULTILINE)
+    try:
+        from ..integrations import image_gen
+        if not text or not image_gen.enabled():
+            return text
+        prompts = [m.strip() for m in pat.findall(text)][:max_images]
+        if not prompts:
+            return text
+        blocks = []
+        for i, p in enumerate(prompts, 1):
+            urls = image_gen.generate_image(p, aspect_ratio="1:1", n=1)
+            if urls:
+                blocks.append(f"**Imagen {i}** — _{p[:90]}_\n\n![imagen {i}]({urls[0]})")
+        if not blocks:
+            return text
+        return text.rstrip() + "\n\n---\n\n## 🎨 Imágenes generadas\n\n" + "\n\n".join(blocks) + "\n"
+    except Exception:
+        return text
+
+
 # ── Sanitización de output del modelo ────────────────────────────────────────
 # MiniMax (backend de los agentes) a veces "code-switchea" e inyecta caracteres
 # CJK (chino/japonés/coreano) en medio del texto español, p.ej. "Logística de回收".

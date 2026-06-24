@@ -295,8 +295,22 @@
         <div id="missionsList"></div>
       </section>
 
-      <!-- AGENDA -->
+      <!-- REUNIONES (preparación + agenda) -->
       <section id="tab-agenda" class="hidden">
+        <div class="card" style="margin-bottom:22px;border-color:rgba(37,99,235,.25);background:linear-gradient(180deg,#fff,#f7faff)">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="ic-circle">🧠</span><b class="syne" style="font-size:16px">Preparar una reunión</b></div>
+          <div class="hint" style="margin-bottom:12px">Elegí un cliente y el agente <b>meeting_prep</b> arma el brief con TODA su memoria y contexto: dolores→solución, preguntas de discovery, agente de WhatsApp de test a medida, productos a mostrar, pricing, objeciones y cierre.</div>
+          <div class="flexbtns">
+            <div style="flex:1;min-width:220px"><label>Cliente</label><select id="prepClient" class="inp"></select></div>
+            <button class="btn" id="prepBtn">Preparar reunión</button>
+          </div>
+          <div id="prepStatus" style="margin-top:14px"></div>
+        </div>
+
+        <div class="sec-head"><h2>Briefs preparados</h2><span class="faint" style="font-size:12px">Del cliente seleccionado arriba.</span></div>
+        <div id="prepBriefs" style="margin-bottom:26px"><div class="card empty">Elegí un cliente para ver sus briefs.</div></div>
+
+        <div class="sec-head"><h2>Agenda (calendario)</h2><span class="faint" style="font-size:12px">Reuniones con fecha y hora.</span></div>
         <div class="card" id="meetForm" style="margin-bottom:22px">
           <div class="row">
             <div style="flex:1;min-width:200px"><label>Cliente</label><select id="mtClient" class="inp"><option value="">— sin cliente —</option></select></div>
@@ -315,8 +329,20 @@
 
       <!-- CONTENIDO -->
       <section id="tab-contenido" class="hidden">
-        <div class="sec-sub" style="margin-bottom:16px">Sector de contenido para las redes de Automiq. Estos dos agentes generan el contenido; mirá lo último o generá ahora.</div>
+        <div class="sec-sub" style="margin-bottom:16px">Sector de contenido para las redes de Automiq. Los agentes generan copy <b>con imágenes</b> (MiniMax). Mirá lo último o generá ahora.</div>
         <div class="grid" id="contentGrid"></div>
+
+        <div class="sec-head"><h2>🎨 Generar una imagen</h2><span class="faint" style="font-size:12px">Prompt → imagen (MiniMax). Queda servida desde el panel.</span></div>
+        <div class="card">
+          <label>Prompt (mejor en inglés, visual, sin texto dentro de la imagen)</label>
+          <textarea id="imgPrompt" class="inp" style="min-height:54px" placeholder="flat vector illustration of a WhatsApp AI chatbot for an Argentine SME, navy and royal blue palette, modern, clean"></textarea>
+          <div class="flexbtns" style="margin-top:10px">
+            <div style="min-width:120px"><label>Formato</label>
+              <select id="imgAspect" class="inp"><option value="1:1">Cuadrada 1:1</option><option value="16:9">Horizontal 16:9</option><option value="9:16">Vertical 9:16</option><option value="4:5">Feed 4:5</option></select></div>
+            <button class="btn" id="imgBtn">Generar imagen</button>
+          </div>
+          <div id="imgResult" style="margin-top:14px"></div>
+        </div>
       </section>
 
     </div>
@@ -356,7 +382,7 @@ const NAV = [
   {id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
   {id:'clientes', label:'Clientes', sub:'Registro, memoria y organización de los clientes.'},
   {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound.'},
-  {id:'agenda', label:'Agenda', sub:'Tus reuniones. Elegí cliente, día y hora; preparalas con un click.'},
+  {id:'agenda', label:'Reuniones', sub:'Preparación de reuniones: elegí un cliente y el agente la prepara con todo su contexto. Abajo, tu agenda.'},
   {id:'contenido', label:'Contenido', sub:'Generación de contenido para nuestras redes.'},
   {id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa, objetivos de growth y lecciones de los agentes.'},
 ];
@@ -483,7 +509,7 @@ async function viewLast(name){
   try{ const d=await api('/last/'+name);
     let md=(d.files&&(d.files.report_md||d.files.report))||d.report_md||'';
     if(!md && typeof d==='object') md=JSON.stringify(d,null,2);
-    openModal(name.replace(/_/g,' '), '<pre>'+esc(md||'(sin contenido hoy)')+'</pre>');
+    openModal(name.replace(/_/g,' '), renderWithImages(md||'(sin contenido hoy)'));
   }catch(e){ openModal(name.replace(/_/g,' '), '<p class="err">'+esc(e.message)+'</p>'); }
 }
 
@@ -777,13 +803,60 @@ el('ceoBtn').addEventListener('click', async ()=>{
 });
 async function delMission(id){ try{ await api('/api/missions/'+id,{method:'DELETE'}); loadMissions(); }catch(e){ toast('Error: '+e.message); } }
 
-// ── Agenda (reuniones) ──
+// ── Reuniones (preparación por cliente + agenda) ──
 async function loadAgenda(){
-  try{ const cd=CACHE.clients||await api('/api/clients'); CACHE.clients=cd;
+  try{ const cd=await api('/api/clients'); CACHE.clients=cd;
+    const active=(cd.clients||[]).filter(c=>!isFrozen(c.stage));
     el('mtClient').innerHTML='<option value="">— sin cliente —</option>'+(cd.clients||[]).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+    el('prepClient').innerHTML = active.length ? active.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+esc(labelStage(c.stage))+'</option>').join('')
+      : '<option value="">(no hay clientes activos — cargá uno en Clientes)</option>';
+    if(el('prepClient').value) loadBriefs(el('prepClient').value);
   }catch(e){}
   loadMeetings();
 }
+el('prepBtn').addEventListener('click', async ()=>{
+  const id=el('prepClient').value; if(!id){ toast('Elegí un cliente'); return; }
+  el('prepBtn').disabled=true;
+  el('prepStatus').innerHTML='<span class="badge blue"><span class="dot"></span>preparando…</span> <span class="muted" style="font-size:13px">el agente está leyendo toda la memoria del cliente. Tarda unos minutos.</span>';
+  try{
+    const r=await api('/api/clients/'+id+'/prep',{method:'POST'});
+    pollPrep(id, r.run_id);
+  }catch(e){ el('prepStatus').innerHTML='<span class="err">'+esc(e.message)+'</span>'; el('prepBtn').disabled=false; }
+});
+async function pollPrep(clientId, runId, tries=0){
+  if(tries>40){ el('prepStatus').innerHTML='<span class="badge warn">sigue corriendo…</span> <span class="muted" style="font-size:13px">tarda más de lo normal; revisá los briefs en un rato.</span>'; el('prepBtn').disabled=false; return; }
+  try{
+    const {tasks}=await api('/api/tasks');
+    const t=(tasks||[]).find(x=>x.run_id===runId);
+    if(t && t.status==='done'){
+      el('prepStatus').innerHTML='<span class="badge ok">✓ brief listo</span>';
+      el('prepBtn').disabled=false; loadBriefs(clientId); return;
+    }
+    if(t && t.status==='error'){
+      el('prepStatus').innerHTML='<span class="err">Error: '+esc(t.result_excerpt||'falló')+'</span>'; el('prepBtn').disabled=false; return;
+    }
+  }catch(e){}
+  setTimeout(()=>pollPrep(clientId, runId, tries+1), 9000);
+}
+async function loadBriefs(clientId){
+  if(!clientId){ el('prepBriefs').innerHTML='<div class="card empty">Elegí un cliente para ver sus briefs.</div>'; return; }
+  try{
+    const d=await api('/api/clients/'+clientId+'/memory?kind=report');
+    const briefs=(d.memory||[]).filter(m=>m.agent==='meeting_prep');
+    el('prepBriefs').innerHTML = briefs.length ? briefs.map(m=>`<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(m.title||'Brief de reunión')}</b>
+        <span class="faint" style="font-size:12px">${fmtDate(m.created_at)}</span></div>
+      <button class="btn-ghost btn-sm" style="margin-top:8px" onclick='showBrief(${JSON.stringify(m.id)},${JSON.stringify(clientId)})'>Ver brief</button></div>`).join('')
+      : '<div class="card empty">Este cliente todavía no tiene briefs. Tocá “Preparar reunión”.</div>';
+    window._briefs=briefs;
+  }catch(e){ el('prepBriefs').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+function showBrief(id, clientId){
+  const m=(window._briefs||[]).find(x=>String(x.id)===String(id)); if(!m)return;
+  openModal(m.title||'Brief de reunión', renderWithImages(m.content||''));
+}
+// cuando cambia el cliente seleccionado, mostrar sus briefs
+document.addEventListener('change', e=>{ if(e.target && e.target.id==='prepClient') loadBriefs(e.target.value); });
 async function loadMeetings(){
   try{ const d=await api('/api/meetings'); const ms=d.meetings||[]; window._statuses=d.statuses||[];
     el('meetingsList').innerHTML = ms.length ? ms.map(m=>{
@@ -840,6 +913,23 @@ async function loadContenido(){
           <button class="btn btn-sm" onclick="runAgent('${ca.name}',this)">Generar</button>
         </span></div></div>`;
   }).join('');
+}
+el('imgBtn').addEventListener('click', async ()=>{
+  const prompt=el('imgPrompt').value.trim(), aspect_ratio=el('imgAspect').value;
+  if(!prompt){ toast('Escribí un prompt'); return; }
+  el('imgBtn').disabled=true; el('imgResult').innerHTML='<span class="badge blue"><span class="dot"></span>generando…</span>';
+  try{ const r=await api('/api/image',{method:'POST',body:JSON.stringify({prompt,aspect_ratio,n:1})});
+    el('imgResult').innerHTML=(r.urls||[]).map(u=>`<img src="${esc(u)}" style="max-width:100%;border-radius:12px;border:1px solid var(--line)"/><div style="margin-top:6px"><a href="${esc(u)}" target="_blank" class="btn-ghost btn-xs">Abrir / descargar</a></div>`).join('');
+  }catch(e){ el('imgResult').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+  finally{ el('imgBtn').disabled=false; }
+});
+
+// renderiza texto con imágenes markdown ![](url) como <img>
+function renderWithImages(md){
+  let html = esc(md||'(sin contenido)');
+  html = html.replace(/!\[[^\]]*\]\((\/media\/[^\s)]+|https?:\/\/[^\s)]+)\)/g,
+    '<img src="$1" style="max-width:100%;border-radius:10px;margin:10px 0;border:1px solid var(--line)" loading="lazy"/>');
+  return '<pre style="white-space:pre-wrap">'+html+'</pre>';
 }
 
 // ── Modal ──

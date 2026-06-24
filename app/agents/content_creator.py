@@ -7,7 +7,8 @@ v2 (2026-06-12) — Actualizado con:
 - max_tokens subido de 5000 a 12000 para evitar truncamiento
 """
 from .base import BaseAgent, AgentContext
-from ._common import get_context_block, official_site_directive
+from ._common import (get_context_block, official_site_directive,
+                      image_prompt_directive, augment_with_images)
 
 
 CONTENT_CREATOR_INSTRUCTIONS = """
@@ -78,4 +79,10 @@ class ContentCreatorAgent(BaseAgent):
             "NO recortes las ideas. El copy tiene que estar completo en cada una, "
             "aunque sean largas. El equipo de diseño las va a tomar tal cual salen."
             + official_site_directive()
+            + image_prompt_directive()
         )
+
+    def post_process(self, response_text: str, ctx: AgentContext) -> str:
+        from ..config import get_settings
+        text = augment_with_images(response_text, get_settings().content_image_count)
+        return super().post_process(text, ctx)

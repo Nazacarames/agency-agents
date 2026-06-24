@@ -42,6 +42,15 @@ data/outbound-sent.json
 data/leads-store.json
 data/leads-store.json.tmp
 
+# Stores de memoria/agencia + imágenes generadas — runtime del volume, NUNCA commitear
+data/clients-store.json
+data/client-memory.json
+data/agency-memory.json
+data/meetings-store.json
+data/missions-store.json
+data/tasks-store.json
+data/images/
+
 # Editor
 .vscode/
 .idea/

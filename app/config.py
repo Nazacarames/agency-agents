@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     database_url: str = ""
     db_schema: str = "agency"
 
+    # ── Generación de imágenes (MiniMax /v1/image_generation) ──
+    images_enabled: bool = True
+    image_model: str = "image-01"
+    image_aspect: str = "1:1"
+    content_image_count: int = 2     # imágenes a generar por reporte de contenido
+
     # ── Render (auto-injected) ──
     render_service_id: str = ""
     render_external_url: str = ""

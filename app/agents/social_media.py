@@ -3,7 +3,8 @@ Social Media Strategist — calendario semanal de contenido.
 Schedule: Domingos 18:00 ART (para la semana que viene).
 """
 from .base import BaseAgent, AgentContext
-from ._common import get_context_block, official_site_directive
+from ._common import (get_context_block, official_site_directive,
+                      image_prompt_directive, augment_with_images)
 
 
 SOCIAL_MEDIA_INSTRUCTIONS = """
@@ -75,4 +76,10 @@ class SocialMediaAgent(BaseAgent):
             "Revisá el contenido de la semana actual en data/ para no repetir formatos ni temas. "
             "Balanceá: si la semana pasada fue mucha venta, esta que sea más educativa."
             + official_site_directive()
+            + image_prompt_directive()
         )
+
+    def post_process(self, response_text: str, ctx: AgentContext) -> str:
+        from ..config import get_settings
+        text = augment_with_images(response_text, get_settings().content_image_count)
+        return super().post_process(text, ctx)
