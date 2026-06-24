@@ -63,6 +63,22 @@ class Settings(BaseSettings):
     # costo/tiempo de MiniMax sin control.
     content_image_count: int = 8     # máx imágenes por reporte de contenido
 
+    # ── Publicación a redes (Meta Graph API: Instagram + Facebook) ──
+    # Se setean cuando se crean las cuentas: una Página de FB + una cuenta de IG
+    # Business linkeada a esa página. El Page token (long-lived) sirve para ambas.
+    # Si faltan, /api/publish responde "no configurado" (no rompe nada más).
+    meta_graph_version: str = "v21.0"
+    meta_page_id: str = ""           # ID de la Página de Facebook
+    meta_page_token: str = ""        # Page access token long-lived (SECRET)
+    ig_business_id: str = ""         # ID de la cuenta de Instagram Business
+    # URL pública del backend, para que la Graph API pueda DESCARGAR la imagen
+    # (las imágenes viven en /media/<file>). Ej: https://...up.railway.app
+    public_base_url: str = ""
+
+    @property
+    def social_publish_configured(self) -> bool:
+        return bool(self.meta_page_token and (self.meta_page_id or self.ig_business_id))
+
     # ── Render (auto-injected) ──
     render_service_id: str = ""
     render_external_url: str = ""

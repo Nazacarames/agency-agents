@@ -530,6 +530,12 @@ class ImageBody(BaseModel):
     subtitle: Optional[str] = None
 
 
+class PublishBody(BaseModel):
+    image: str                          # /media/<file> o URL absoluta
+    caption: Optional[str] = ""
+    targets: Optional[List[str]] = None  # ["instagram","facebook"]; default ambos
+
+
 _AGENT_DESCRIPTIONS = {
     "leadhunter": "Genera 10 leads/día con contacto verificado (FIT 4-6)",
     "content_creator": "Posts/contenido para redes de Automiq",
@@ -842,6 +848,29 @@ async def api_generate_image(body: ImageBody, request: Request):
     if not urls:
         raise HTTPException(status_code=502, detail="no se pudo generar la imagen (proveedor)")
     return {"ok": True, "urls": urls}
+
+
+@app.get("/api/publish/status")
+async def api_publish_status(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import social_publish as sp
+    return sp.status()
+
+
+@app.post("/api/publish")
+async def api_publish(body: PublishBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import social_publish as sp
+    if not sp.enabled():
+        raise HTTPException(status_code=400,
+                            detail="publicación a redes no configurada (faltan tokens de Meta: META_PAGE_TOKEN + META_PAGE_ID/IG_BUSINESS_ID)")
+    if not (body.image or "").strip():
+        raise HTTPException(status_code=400, detail="falta la imagen a publicar")
+    res = sp.publish(body.image.strip(), body.caption or "", body.targets)
+    if not res.get("ok"):
+        # devolver el detalle por red para poder diagnosticar
+        raise HTTPException(status_code=502, detail={"msg": "no se pudo publicar", **res})
+    return res
 
 
 @app.get("/media/{filename}")

@@ -330,6 +330,7 @@
       <!-- CONTENIDO -->
       <section id="tab-contenido" class="hidden">
         <div class="sec-sub" style="margin-bottom:16px">Sector de contenido para las redes de Automiq. Los agentes generan copy <b>con imágenes</b> (MiniMax). Mirá lo último o generá ahora.</div>
+        <div id="pubStatus" style="margin-bottom:16px"></div>
         <div class="grid" id="contentGrid"></div>
 
         <div class="sec-head"><h2>🎨 Generar una imagen</h2><span class="faint" style="font-size:12px">Prompt → imagen (MiniMax). Queda servida desde el panel.</span></div>
@@ -903,6 +904,14 @@ const CONTENT_AGENTS=[
   {name:'social_media', label:'Social Media', desc:'Calendario semanal de contenido orgánico.'},
 ];
 async function loadContenido(){
+  // estado de publicación a redes (Meta)
+  try{
+    const st=await api('/api/publish/status');
+    const reds=[st.instagram?'Instagram ✓':'Instagram ✗', st.facebook?'Facebook ✓':'Facebook ✗'].join(' · ');
+    el('pubStatus').innerHTML = st.configured
+      ? `<div class="card" style="padding:10px 14px"><b>📤 Publicación a redes:</b> conectada — ${esc(reds)}. Usá “Publicar en IG/FB” en cualquier imagen.</div>`
+      : `<div class="card" style="padding:10px 14px;border-color:#E8B84B"><b>📤 Publicación a redes: falta configurar.</b> Cuando crees las cuentas, cargá en Railway <code>META_PAGE_TOKEN</code>, <code>META_PAGE_ID</code>, <code>IG_BUSINESS_ID</code> y <code>PUBLIC_BASE_URL</code>. El botón “Publicar” ya está listo.</div>`;
+  }catch(e){ el('pubStatus').innerHTML=''; }
   let agents=[]; try{ const d=CACHE.agents||await api('/api/agents'); CACHE.agents=d; agents=d.agents; }catch(e){}
   el('contentGrid').innerHTML = CONTENT_AGENTS.map(ca=>{
     const a=agents.find(x=>x.name===ca.name)||{};
@@ -923,16 +932,31 @@ el('imgBtn').addEventListener('click', async ()=>{
   if(!prompt){ toast('Escribí un prompt'); return; }
   el('imgBtn').disabled=true; el('imgResult').innerHTML='<span class="badge blue"><span class="dot"></span>generando…</span>';
   try{ const r=await api('/api/image',{method:'POST',body:JSON.stringify({prompt,aspect_ratio,n:1,text,subtitle})});
-    el('imgResult').innerHTML=(r.urls||[]).map(u=>`<img src="${esc(u)}" style="max-width:100%;border-radius:12px;border:1px solid var(--line)"/><div style="margin-top:6px"><a href="${esc(u)}" target="_blank" class="btn-ghost btn-xs">Abrir / descargar</a></div>`).join('');
+    el('imgResult').innerHTML=(r.urls||[]).map(u=>`<img src="${esc(u)}" style="max-width:100%;border-radius:12px;border:1px solid var(--line)"/><div style="margin-top:6px;display:flex;gap:6px"><a href="${esc(u)}" target="_blank" class="btn-ghost btn-xs">Abrir / descargar</a><button class="btn-ghost btn-xs" onclick="publishImg(this,'${esc(u)}')">📤 Publicar en IG/FB</button></div>`).join('');
   }catch(e){ el('imgResult').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
   finally{ el('imgBtn').disabled=false; }
 });
+
+// Publica una imagen ya generada en Instagram + Facebook (Meta Graph API).
+async function publishImg(btn, src){
+  const caption = window.prompt('Caption del post (sirve para IG y FB).\nDejalo vacío si no querés texto:', '');
+  if(caption===null) return; // canceló
+  const old = btn.textContent; btn.disabled=true; btn.textContent='publicando…';
+  try{
+    const r = await api('/api/publish',{method:'POST',body:JSON.stringify({image:src,caption,targets:['instagram','facebook']})});
+    const reds = Object.entries(r.results||{}).map(([k,v])=>`${k}:${v.ok?'✓':'✗'}`).join('  ');
+    toast('Publicado · '+reds); btn.textContent='✓ publicado';
+  }catch(e){
+    toast('No se pudo publicar: '+e.message); btn.disabled=false; btn.textContent=old;
+  }
+}
 
 // renderiza texto con imágenes markdown ![](url) como <img>
 function renderWithImages(md){
   let html = esc(md||'(sin contenido)');
   html = html.replace(/!\[[^\]]*\]\((\/media\/[^\s)]+|https?:\/\/[^\s)]+)\)/g,
-    '<img src="$1" style="max-width:100%;border-radius:10px;margin:10px 0;border:1px solid var(--line)" loading="lazy"/>');
+    (m,src)=>`<img src="${src}" style="max-width:100%;border-radius:10px;margin:10px 0 4px;border:1px solid var(--line)" loading="lazy"/>`
+      +`<div style="margin:0 0 14px"><button class="btn-ghost btn-xs" onclick="publishImg(this,'${src}')">📤 Publicar en IG/FB</button></div>`);
   return '<pre style="white-space:pre-wrap">'+html+'</pre>';
 }
 
