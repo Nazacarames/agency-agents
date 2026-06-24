@@ -145,22 +145,64 @@ def official_site_directive() -> str:
     )
 
 
+def competitor_visual_directive(vertical: str = "", country: str = "") -> str:
+    """Hace que el agente estudie la competencia ANTES de diseñar las imágenes, para
+    que la dirección de arte sea diferenciada y no genérica."""
+    foco = []
+    if vertical:
+        foco.append(f"vertical «{vertical}»")
+    if country:
+        foco.append(f"país «{country}»")
+    foco_txt = (" (foco: " + ", ".join(foco) + ")") if foco else ""
+    return (
+        "\n\nESTUDIO DE COMPETENCIA (obligatorio, ANTES de las imágenes)" + foco_txt + ":\n"
+        "Investigá con WebSearch/WebFetch 2-3 competidores o referentes REALES (agencias de "
+        "IA/automatización, o marcas que le hablan al mismo público) y mirá su Instagram/landing. "
+        "Anotá en 2-4 líneas (sección «Estudio de competencia» en tu output):\n"
+        "- Qué lenguaje visual dominan (estilo, paleta, tipo de imagen) y qué CLICHÉS repiten todos "
+        "(lo ya quemado: stock 3D azul genérico, robots sonrientes, 'businessman con laptop', etc.).\n"
+        "- Cómo se va a DIFERENCIAR Automiq: una dirección de arte concreta que se despegue de eso.\n"
+        "Esa decisión tiene que reflejarse en CADA prompt de imagen de abajo."
+    )
+
+
+def competitor_visual_directive_for(ctx) -> str:
+    """Igual que competitor_visual_directive pero toma vertical/país del cliente
+    objetivo (si la tarea apunta a uno) para enfocar la investigación."""
+    vertical = country = ""
+    try:
+        args = getattr(ctx, "args", None) or {}
+        cid = args.get("client_id") if isinstance(args, dict) else None
+        if cid:
+            from ..integrations import clients_store as cs, localization as loc
+            c = cs.get_client(cid)
+            if c:
+                vertical = c.get("vertical") or ""
+                country = loc.label(c.get("country"))
+    except Exception:
+        pass
+    return competitor_visual_directive(vertical, country)
+
+
 def image_prompt_directive() -> str:
     """Pide al agente de contenido que incluya prompts de imagen + el texto del cartel."""
     return (
-        "\n\nIMÁGENES (obligatorio): la cantidad de imágenes la decidís VOS según tu "
-        "planificación — generá UNA imagen por cada pieza que planifiques (1 por idea, o "
-        "1 por cada post/día clave del calendario). No te limites a un número fijo: si el "
-        "plan tiene 5 posts con visual, son 5 imágenes; si tiene 2, son 2. "
-        "Por cada pieza, agregá una línea que empiece EXACTO "
-        "con `IMAGEN:` con este formato:\n"
+        "\n\nIMÁGENES (obligatorio): la cantidad la decidís VOS según tu planificación "
+        "(1 por idea / 1 por post clave). No te limites a un número fijo. "
+        "Por cada pieza agregá una línea que empiece EXACTO con `IMAGEN:` así:\n"
         "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional>`\n"
-        "El <prompt> describe el FONDO/ilustración (estilo, escena, paleta navy + royal blue de "
-        "Automiq, SIN texto dentro). El <TEXTO> es el titular que se compone encima con tipografía "
-        "real (máx ~5 palabras, contundente). SUBTEXTO es opcional (una línea). "
-        "Ej: `IMAGEN: flat vector illustration of a WhatsApp chatbot for an Argentine distributor, "
-        "navy and royal blue palette, clean modern, no text | TEXTO: Cobrá sin perseguir a nadie | "
-        "SUBTEXTO: WhatsApp + IA 24/7`. El sistema genera la imagen y le pone el texto exacto."
+        "ARTE (clave para que NO salgan genéricas): el <prompt> tiene que ser ESPECÍFICO y basado "
+        "en tu estudio de competencia. Describí un SUJETO y una ESCENA concreta del vertical/país real "
+        "(no abstracciones tipo 'businessman with laptop'), con estilo, composición, luz y mood "
+        "definidos. VARIÁ el estilo entre piezas (foto editorial, 3D render, ilustración con textura, "
+        "collage, isométrico…) — NO repitas el mismo 'flat vector, navy and royal blue, clean modern' "
+        "en todas. La paleta navy + royal blue de Automiq es el ancla de marca (usala como acento), "
+        "pero la dirección de arte tiene que diferenciarse de los clichés que viste. SIN texto dentro "
+        "de la imagen (el sistema compone el <TEXTO> con tipografía real, máx ~5 palabras). "
+        "Ej específico: `IMAGEN: editorial photo, close-up of a warehouse manager in Monterrey checking "
+        "a phone with WhatsApp order confirmations, warm morning light, shallow depth of field, navy and "
+        "royal blue accents on signage, cinematic | TEXTO: Pedidos que se cierran solos | SUBTEXTO: "
+        "WhatsApp + IA`. El sistema genera la imagen y le compone el texto exacto."
     )
 
 

@@ -8,7 +8,8 @@ v2 (2026-06-12) — Actualizado con:
 """
 from .base import BaseAgent, AgentContext
 from ._common import (get_context_block, official_site_directive,
-                      image_prompt_directive, augment_with_images)
+                      image_prompt_directive, augment_with_images,
+                      competitor_visual_directive_for)
 
 
 CONTENT_CREATOR_INSTRUCTIONS = """
@@ -79,6 +80,7 @@ class ContentCreatorAgent(BaseAgent):
             "NO recortes las ideas. El copy tiene que estar completo en cada una, "
             "aunque sean largas. El equipo de diseño las va a tomar tal cual salen."
             + official_site_directive()
+            + competitor_visual_directive_for(ctx)
             + image_prompt_directive()
         )
 
