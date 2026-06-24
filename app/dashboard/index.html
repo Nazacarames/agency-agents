@@ -9,75 +9,128 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root{
-    --blue:#2563EB; --blue-dark:#1D4ED8; --blue-bright:#3B82F6;
-    --navy:#0F1B33; --muted:#5B6472; --bg:#F5F7FA; --paper:#FFFFFF;
-    --line:rgba(15,27,51,0.10); --line-soft:rgba(15,27,51,0.06);
-    --green:#059669; --amber:#D97706; --red:#DC2626;
+    --blue:#2563EB; --blue-dark:#1D4ED8; --blue-bright:#3B82F6; --blue-tint:#EEF3FF;
+    --navy:#0F1B33; --muted:#6B7480; --faint:#9AA2AE;
+    --bg:#F4F6FB; --paper:#FFFFFF; --sidebar:#FFFFFF;
+    --line:rgba(15,27,51,0.09); --line-soft:rgba(15,27,51,0.055);
+    --green:#059669; --green-tint:#E7F6F0; --amber:#D97706; --amber-tint:#FCF3E6;
+    --red:#DC2626; --red-tint:#FBEAEA; --violet:#7C3AED; --violet-tint:#F1ECFD;
+    --shadow:0 1px 2px rgba(15,27,51,.05),0 1px 3px rgba(15,27,51,.04);
+    --shadow-lg:0 12px 40px rgba(15,27,51,.10);
+    --radius:14px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--navy);-webkit-font-smoothing:antialiased}
+  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--navy);-webkit-font-smoothing:antialiased;font-size:14px}
   h1,h2,h3,.syne{font-family:'Syne',sans-serif}
   button{font-family:inherit;cursor:pointer}
   input,textarea,select{font-family:inherit}
   .hidden{display:none !important}
   a{color:var(--blue);text-decoration:none}
+  ::selection{background:rgba(37,99,235,.18)}
+
+  /* Brand mark */
+  .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(150deg,#fff,#e9eefb);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Syne';font-weight:800;color:var(--navy);position:relative;font-size:18px;flex:none}
+  .mark::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--blue);bottom:6px;right:6px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:'Syne';font-weight:800;font-size:19px;letter-spacing:-.2px}
 
   /* Login */
-  #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .login-card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:36px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(15,27,51,.06)}
-  .brand{display:flex;align-items:center;gap:10px;font-family:'Syne';font-weight:800;font-size:20px}
-  .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#fff,#eef2f9);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--navy);position:relative}
-  .mark::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--blue);bottom:6px;right:6px}
+  #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:radial-gradient(1200px 600px at 50% -10%,#eaf0ff 0%,var(--bg) 55%)}
+  .login-card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:38px;width:100%;max-width:392px;box-shadow:var(--shadow-lg)}
   label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px}
-  .inp{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff;color:var(--navy);transition:.15s}
+  .inp{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;color:var(--navy);transition:.15s}
   .inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
-  textarea.inp{min-height:90px;resize:vertical}
-  .btn{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:11px 18px;font-weight:600;font-size:14px;transition:.15s}
+  textarea.inp{min-height:92px;resize:vertical;line-height:1.5}
+  select.inp{appearance:auto}
+  .btn{background:var(--blue);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-weight:600;font-size:14px;transition:.15s;box-shadow:0 1px 2px rgba(37,99,235,.25)}
   .btn:hover{background:var(--blue-dark)}
+  .btn:active{transform:translateY(1px)}
   .btn:disabled{opacity:.5;cursor:default}
-  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
-  .btn-ghost:hover{background:rgba(15,27,51,.04);color:var(--navy)}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line);box-shadow:none}
+  .btn-ghost:hover{background:rgba(15,27,51,.035)}
   .btn-sm{padding:6px 12px;font-size:13px;border-radius:8px}
+  .btn-xs{padding:4px 9px;font-size:12px;border-radius:7px}
   .err{color:var(--red);font-size:13px;margin-top:10px;min-height:18px}
 
-  /* App shell */
-  header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between}
-  .tabs{display:flex;gap:4px}
-  .tab{padding:8px 14px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-weight:600;font-size:14px}
-  .tab.active{background:rgba(37,99,235,.10);color:var(--navy)}
-  .tab:hover:not(.active){background:rgba(15,27,51,.04)}
-  main{max-width:1100px;margin:0 auto;padding:26px 22px 60px}
-  .row{display:flex;gap:16px;flex-wrap:wrap}
-  .card{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:18px;box-shadow:0 1px 2px rgba(15,27,51,.04)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-  .muted{color:var(--muted)}
-  .sec-title{font-family:'Syne';font-weight:700;font-size:20px;margin-bottom:4px}
-  .sec-sub{color:var(--muted);font-size:14px;margin-bottom:18px}
-  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--line)}
-  .badge.ok{background:rgba(5,150,105,.10);color:var(--green);border-color:rgba(5,150,105,.22)}
-  .badge.warn{background:rgba(217,119,6,.10);color:var(--amber);border-color:rgba(217,119,6,.22)}
-  .badge.blue{background:rgba(37,99,235,.10);color:var(--blue-dark);border-color:rgba(37,99,235,.22)}
-  .badge.red{background:rgba(220,38,38,.10);color:var(--red);border-color:rgba(220,38,38,.22)}
+  /* App shell — Paperclip-style */
+  #app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+  aside{position:sticky;top:0;height:100vh;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px}
+  .side-brand{padding:6px 8px 18px;display:flex;align-items:center;gap:11px}
+  .side-brand .sub{font-size:11px;color:var(--faint);font-weight:600;font-family:'DM Sans';letter-spacing:.3px;margin-top:1px}
+  .nav{display:flex;flex-direction:column;gap:3px;flex:1}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:none;background:transparent;color:var(--muted);font-weight:600;font-size:14px;text-align:left;width:100%;transition:.12s}
+  .nav-item:hover{background:rgba(15,27,51,.04);color:var(--navy)}
+  .nav-item.active{background:var(--blue-tint);color:var(--blue-dark)}
+  .nav-item svg{width:18px;height:18px;flex:none;stroke-width:2}
+  .nav-item .count{margin-left:auto;font-size:11px;font-weight:700;background:rgba(15,27,51,.06);color:var(--muted);padding:1px 7px;border-radius:20px}
+  .nav-item.active .count{background:#fff;color:var(--blue-dark)}
+  .side-foot{border-top:1px solid var(--line-soft);padding-top:12px;margin-top:6px}
+  .side-foot .who{font-size:12px;color:var(--faint);padding:2px 8px 10px}
+
+  main{padding:0;min-width:0}
+  .topbar{position:sticky;top:0;z-index:10;background:rgba(244,246,251,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:18px 30px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+  .topbar h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
+  .topbar .sub{color:var(--muted);font-size:13.5px;margin-top:3px}
+  .content{padding:24px 30px 70px;max-width:1180px}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .muted{color:var(--muted)} .faint{color:var(--faint)}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--line);white-space:nowrap}
+  .badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .badge.ok{background:var(--green-tint);color:var(--green);border-color:transparent}
+  .badge.warn{background:var(--amber-tint);color:var(--amber);border-color:transparent}
+  .badge.blue{background:var(--blue-tint);color:var(--blue-dark);border-color:transparent}
+  .badge.red{background:var(--red-tint);color:var(--red);border-color:transparent}
+  .badge.violet{background:var(--violet-tint);color:var(--violet);border-color:transparent}
+  .badge.grey{background:rgba(15,27,51,.05);color:var(--muted);border-color:transparent}
+
+  /* KPI cards */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .kpi-card{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:15px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi-card .lbl{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:3px;text-transform:capitalize}
+  .kpi-card .kpi{font-family:'Syne';font-weight:800;font-size:28px;line-height:1.1}
+  .kpi-card .ic{position:absolute;top:13px;right:13px;opacity:.6}
+  .kpi-card.accent{background:linear-gradient(150deg,#2563EB,#1D4ED8);border-color:transparent;color:#fff}
+  .kpi-card.accent .lbl{color:rgba(255,255,255,.85)}
+
+  /* tables */
+  .tbl-wrap{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);background:rgba(15,27,51,.02)}
-  td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);font-weight:700;padding:11px 14px;border-bottom:1px solid var(--line);background:rgba(15,27,51,.018)}
+  td{padding:12px 14px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+  tbody tr{transition:.1s}
+  tbody tr:hover{background:rgba(37,99,235,.028)}
   tr:last-child td{border-bottom:none}
-  .agent-card h3{font-size:15px;font-weight:700;margin-bottom:3px}
-  .agent-card .desc{font-size:13px;color:var(--muted);min-height:34px;margin-bottom:10px}
-  .agent-card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
-  .kpi{font-family:'Syne';font-weight:800;font-size:26px}
-  .kpi-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-  .kpi-card{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:12px 16px;min-width:104px}
-  .kpi-card .lbl{font-size:12px;color:var(--muted);font-weight:600}
-  select.inp{appearance:auto}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(15,27,51,.25);z-index:50;opacity:0;transition:.2s;pointer-events:none}
-  .toast.show{opacity:1}
-  .modal-bg{position:fixed;inset:0;background:rgba(15,27,51,.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:20px}
-  .modal{background:#fff;border-radius:14px;max-width:760px;width:100%;max-height:84vh;display:flex;flex-direction:column}
-  .modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-  .modal-body{padding:20px;overflow:auto}
-  .modal-body pre{white-space:pre-wrap;word-break:break-word;font-family:'DM Sans';font-size:13px;line-height:1.6}
+
+  /* agent card */
+  .agent-card{display:flex;flex-direction:column}
+  .agent-card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .agent-card h3{font-size:15px;font-weight:700;letter-spacing:-.2px}
+  .agent-card .desc{font-size:13px;color:var(--muted);line-height:1.45;margin:7px 0 12px;min-height:38px}
+  .agent-card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:10px;border-top:1px solid var(--line-soft)}
+  .ic-circle{width:32px;height:32px;border-radius:9px;background:var(--blue-tint);color:var(--blue-dark);display:flex;align-items:center;justify-content:center;font-family:'Syne';font-weight:800;font-size:14px;flex:none}
+
+  .sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 12px}
+  .sec-head h2{font-size:16px;font-weight:700}
+  .empty{padding:28px;text-align:center;color:var(--muted)}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--navy);color:#fff;padding:11px 18px;border-radius:11px;font-size:14px;font-weight:500;box-shadow:var(--shadow-lg);z-index:60;opacity:0;transition:.22s;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .modal-bg{position:fixed;inset:0;background:rgba(15,27,51,.42);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal{background:#fff;border-radius:16px;max-width:780px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+  .modal-head{padding:17px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .modal-body{padding:22px;overflow:auto}
+  .modal-body pre{white-space:pre-wrap;word-break:break-word;font-family:'DM Sans';font-size:13.5px;line-height:1.65;color:var(--navy)}
   .flexbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+  .hint{font-size:12px;color:var(--faint);margin-top:6px}
+  @media(max-width:760px){
+    #app{grid-template-columns:1fr}
+    aside{position:fixed;z-index:30;width:236px;transform:translateX(-110%);transition:.2s;box-shadow:var(--shadow-lg)}
+    aside.open{transform:none}
+    .content,.topbar{padding-left:18px;padding-right:18px}
+  }
 </style>
 </head>
 <body>
@@ -86,85 +139,105 @@
 <div id="login">
   <div class="login-card">
     <div class="brand"><span class="mark">A</span> Automiq</div>
-    <p class="muted" style="font-size:14px;margin-top:6px">Panel operativo de la agencia</p>
+    <p class="muted" style="font-size:14px;margin-top:8px">Panel operativo de la agencia</p>
     <label for="key">Clave de acceso</label>
     <input id="key" class="inp" type="password" placeholder="Webhook secret" autocomplete="current-password" />
     <div class="err" id="loginErr"></div>
-    <button class="btn" style="width:100%;margin-top:6px" id="loginBtn">Entrar</button>
+    <button class="btn" style="width:100%;margin-top:8px" id="loginBtn">Entrar</button>
   </div>
 </div>
 
 <!-- APP -->
 <div id="app" class="hidden">
-  <header>
-    <div class="brand" style="font-size:17px"><span class="mark" style="width:30px;height:30px">A</span> Automiq</div>
-    <div class="tabs">
-      <button class="tab active" data-tab="agentes">Agentes</button>
-      <button class="tab" data-tab="tareas">Tareas</button>
-      <button class="tab" data-tab="clientes">Clientes</button>
-      <button class="tab" data-tab="pipeline">Pipeline</button>
+  <aside id="sidebar">
+    <div class="side-brand">
+      <span class="mark">A</span>
+      <div><div class="brand" style="font-size:17px">Automiq</div><div class="sub">PANEL OPERATIVO</div></div>
     </div>
-    <button class="btn-ghost btn-sm" id="logoutBtn">Salir</button>
-  </header>
-  <main>
-    <!-- AGENTES -->
-    <section id="tab-agentes">
-      <div class="sec-title">Agentes</div>
-      <div class="sec-sub">Dispará una corrida on-demand o mirá el último output. Corren igual por su schedule.</div>
-      <div class="grid" id="agentsGrid"></div>
-    </section>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <div class="who" id="whoami">conectado</div>
+      <button class="btn-ghost btn-sm" id="logoutBtn" style="width:100%">Cerrar sesión</button>
+    </div>
+  </aside>
 
-    <!-- TAREAS -->
-    <section id="tab-tareas" class="hidden">
-      <div class="sec-title">Tareas ad-hoc</div>
-      <div class="sec-sub">Mandale a un agente una tarea puntual (además de lo que hace por schedule).</div>
-      <div class="card" style="margin-bottom:20px">
-        <div class="flexbtns">
-          <div style="flex:1;min-width:180px">
-            <label>Agente</label>
-            <select id="taskAgent" class="inp"></select>
+  <main>
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Resumen</h1>
+        <div class="sub" id="pageSub">Estado general de la agencia.</div>
+      </div>
+      <button class="btn-ghost btn-sm" id="refreshBtn">↻ Actualizar</button>
+    </div>
+    <div class="content">
+
+      <!-- RESUMEN -->
+      <section id="tab-resumen">
+        <div class="kpi-row" id="overviewKpis"></div>
+        <div class="sec-head"><h2>Agentes que corrieron hoy</h2></div>
+        <div class="grid" id="overviewAgents"></div>
+        <div class="sec-head"><h2>Últimas tareas</h2></div>
+        <div id="overviewTasks"></div>
+      </section>
+
+      <!-- AGENTES -->
+      <section id="tab-agentes" class="hidden">
+        <div class="grid" id="agentsGrid"></div>
+      </section>
+
+      <!-- TAREAS -->
+      <section id="tab-tareas" class="hidden">
+        <div class="card" style="margin-bottom:22px">
+          <div class="flexbtns">
+            <div style="flex:1;min-width:200px">
+              <label>Agente</label>
+              <select id="taskAgent" class="inp"></select>
+            </div>
+          </div>
+          <label>Tarea / prompt</label>
+          <textarea id="taskPrompt" class="inp" placeholder="Ej: Armá 5 headlines para la campaña de distribuidoras de iluminación…"></textarea>
+          <div class="hint">El agente la resuelve además de su trabajo programado. Tarda unos minutos; el resultado aparece abajo.</div>
+          <button class="btn" id="taskBtn" style="margin-top:12px">Enviar tarea</button>
+        </div>
+        <div id="tasksList"></div>
+      </section>
+
+      <!-- CLIENTES -->
+      <section id="tab-clientes" class="hidden">
+        <div class="kpi-row" id="clientsKpis"></div>
+        <div class="card" id="clientForm" style="margin-bottom:22px">
+          <div class="row">
+            <div style="flex:1;min-width:200px"><label>Nombre</label><input id="cName" class="inp" placeholder="Empresa"/></div>
+            <div style="flex:1;min-width:160px"><label>Vertical</label><input id="cVertical" class="inp" placeholder="Distribución, retail…"/></div>
+            <div style="flex:1;min-width:160px"><label>Etapa</label><select id="cStage" class="inp"></select></div>
+          </div>
+          <div class="row" style="margin-top:4px">
+            <div style="flex:1;min-width:160px"><label>Contacto</label><input id="cContact" class="inp" placeholder="Nombre"/></div>
+            <div style="flex:1;min-width:160px"><label>WhatsApp/Tel</label><input id="cPhone" class="inp" placeholder="+54…"/></div>
+            <div style="flex:1;min-width:160px"><label>Email</label><input id="cEmail" class="inp" placeholder="info@…"/></div>
+          </div>
+          <label>Notas</label><textarea id="cNotes" class="inp" style="min-height:60px"></textarea>
+          <input type="hidden" id="cEditId"/>
+          <div class="flexbtns" style="margin-top:12px">
+            <button class="btn" id="clientBtn">Agregar cliente</button>
+            <button class="btn-ghost btn-sm hidden" id="clientCancel">Cancelar edición</button>
           </div>
         </div>
-        <label>Tarea / prompt</label>
-        <textarea id="taskPrompt" class="inp" placeholder="Ej: Armá 5 headlines para la campaña de distribuidoras de iluminación..."></textarea>
-        <button class="btn" id="taskBtn" style="margin-top:12px">Enviar tarea</button>
-      </div>
-      <div id="tasksList"></div>
-    </section>
+        <div class="tbl-wrap"><table><thead>
+          <tr><th>Cliente</th><th>Vertical</th><th>Etapa</th><th>Contacto</th><th>Alta</th><th></th></tr>
+        </thead><tbody id="clientsBody"></tbody></table></div>
+      </section>
 
-    <!-- CLIENTES -->
-    <section id="tab-clientes" class="hidden">
-      <div class="sec-title">Clientes</div>
-      <div class="sec-sub">Registro y organización de los clientes de la agencia.</div>
-      <div class="kpi-row" id="clientsKpis"></div>
-      <div class="card" style="margin-bottom:20px">
-        <div class="row">
-          <div style="flex:1;min-width:200px"><label>Nombre</label><input id="cName" class="inp" placeholder="Empresa"/></div>
-          <div style="flex:1;min-width:160px"><label>Vertical</label><input id="cVertical" class="inp" placeholder="Distribución, etc."/></div>
-          <div style="flex:1;min-width:160px"><label>Etapa</label><select id="cStage" class="inp"></select></div>
-        </div>
-        <div class="row" style="margin-top:4px">
-          <div style="flex:1;min-width:160px"><label>Contacto</label><input id="cContact" class="inp" placeholder="Nombre"/></div>
-          <div style="flex:1;min-width:160px"><label>WhatsApp/Tel</label><input id="cPhone" class="inp" placeholder="+54..."/></div>
-          <div style="flex:1;min-width:160px"><label>Email</label><input id="cEmail" class="inp" placeholder="info@..."/></div>
-        </div>
-        <label>Notas</label><textarea id="cNotes" class="inp" style="min-height:60px"></textarea>
-        <button class="btn" id="clientBtn" style="margin-top:12px">Agregar cliente</button>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden"><table><thead>
-        <tr><th>Cliente</th><th>Vertical</th><th>Etapa</th><th>Contacto</th><th></th></tr>
-      </thead><tbody id="clientsBody"></tbody></table></div>
-    </section>
+      <!-- PIPELINE -->
+      <section id="tab-pipeline" class="hidden">
+        <div class="kpi-row" id="pipeKpis"></div>
+        <div class="sec-head"><h2 class="muted" style="font-weight:600;font-size:13.5px">Leads del motor de outbound · convertí cualquiera a cliente con “→ Cliente”.</h2></div>
+        <div class="tbl-wrap"><table><thead>
+          <tr><th>Empresa</th><th>Estado</th><th>Canal</th><th>Contacto</th><th>Próx. paso</th><th>Toques</th><th></th></tr>
+        </thead><tbody id="pipeBody"></tbody></table></div>
+      </section>
 
-    <!-- PIPELINE -->
-    <section id="tab-pipeline" class="hidden">
-      <div class="sec-title">Pipeline de ventas</div>
-      <div class="sec-sub">Los leads del motor de outbound (leads_store).</div>
-      <div class="kpi-row" id="pipeKpis"></div>
-      <div class="card" style="padding:0;overflow:hidden"><table><thead>
-        <tr><th>Empresa</th><th>Estado</th><th>Canal</th><th>Contacto</th><th>Toques</th></tr>
-      </thead><tbody id="pipeBody"></tbody></table></div>
-    </section>
+    </div>
   </main>
 </div>
 
@@ -174,191 +247,319 @@
 <script>
 const KEY_LS = 'automiq_panel_key';
 let KEY = localStorage.getItem(KEY_LS) || '';
+let CURRENT = 'resumen';
+let CACHE = { agents:null, clients:null, pipeline:null, tasks:null };
 
-const $ = (s)=>document.querySelector(s);
 const el = (s)=>document.getElementById(s);
-
 function toast(msg, ms=2600){ const t=el('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), ms); }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtDate(s){ return s ? String(s).replace('T',' ').slice(0,16) : '—'; }
+function ico(p){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; }
+
+const ICONS = {
+  resumen: ico('<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>'),
+  agentes: ico('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'),
+  tareas:  ico('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),
+  clientes:ico('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'),
+  pipeline:ico('<line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/>'),
+};
+const NAV = [
+  {id:'resumen', label:'Resumen', sub:'Estado general de la agencia.'},
+  {id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
+  {id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
+  {id:'clientes', label:'Clientes', sub:'Registro y organización de los clientes de la agencia.'},
+  {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound.'},
+];
 
 async function api(path, opts={}){
-  const r = await fetch(path, {
-    ...opts,
-    headers: { 'Content-Type':'application/json', 'X-Webhook-Secret': KEY, ...(opts.headers||{}) }
-  });
+  const r = await fetch(path, { ...opts, headers:{ 'Content-Type':'application/json', 'X-Webhook-Secret':KEY, ...(opts.headers||{}) }});
   if(r.status===401){ logout(); throw new Error('no autorizado'); }
   if(!r.ok){ let d; try{d=await r.json()}catch(e){}; throw new Error((d&&d.detail)||('error '+r.status)); }
   return r.json();
 }
-
 function logout(){ KEY=''; localStorage.removeItem(KEY_LS); el('app').classList.add('hidden'); el('login').classList.remove('hidden'); }
 
 async function doLogin(){
   const secret = el('key').value.trim();
-  el('loginErr').textContent='';
-  el('loginBtn').disabled=true;
+  el('loginErr').textContent=''; el('loginBtn').disabled=true;
   try{
     const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret})});
     if(!r.ok) throw new Error('Clave inválida');
     KEY=secret; localStorage.setItem(KEY_LS, secret);
     el('login').classList.add('hidden'); el('app').classList.remove('hidden');
-    initApp();
+    bootApp();
   }catch(e){ el('loginErr').textContent = e.message || 'Error'; }
   finally{ el('loginBtn').disabled=false; }
 }
 
-// Tabs
-document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-  t.classList.add('active');
-  ['agentes','tareas','clientes','pipeline'].forEach(n=>el('tab-'+n).classList.add('hidden'));
-  el('tab-'+t.dataset.tab).classList.remove('hidden');
-  if(t.dataset.tab==='agentes') loadAgents();
-  if(t.dataset.tab==='tareas') loadTasks();
-  if(t.dataset.tab==='clientes') loadClients();
-  if(t.dataset.tab==='pipeline') loadPipeline();
-}));
+// ── Nav / routing ──
+function buildNav(){
+  el('nav').innerHTML = NAV.map(n=>`<button class="nav-item${n.id===CURRENT?' active':''}" data-tab="${n.id}">
+    ${ICONS[n.id]}<span>${n.label}</span><span class="count hidden" id="navc-${n.id}"></span></button>`).join('');
+  document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
+}
+function go(tab){
+  CURRENT=tab;
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
+  NAV.forEach(n=>el('tab-'+n.id).classList.add('hidden'));
+  el('tab-'+tab).classList.remove('hidden');
+  const meta = NAV.find(n=>n.id===tab);
+  el('pageTitle').textContent = meta.label; el('pageSub').textContent = meta.sub;
+  el('sidebar').classList.remove('open');
+  loadTab(tab);
+}
+function loadTab(tab){
+  if(tab==='resumen') loadOverview();
+  if(tab==='agentes') loadAgents();
+  if(tab==='tareas') loadTasks();
+  if(tab==='clientes') loadClients();
+  if(tab==='pipeline') loadPipeline();
+}
+function setNavCount(id,n){ const e=el('navc-'+id); if(!e)return; if(n==null){e.classList.add('hidden');return;} e.textContent=n; e.classList.remove('hidden'); }
+
+// ── Resumen ──
+async function loadOverview(){
+  el('overviewKpis').innerHTML='<p class="muted">Cargando…</p>';
+  try{
+    const [ag, pipe, cli, tk] = await Promise.all([
+      api('/api/agents'), api('/api/pipeline'), api('/api/clients'), api('/api/tasks')
+    ]);
+    CACHE.agents=ag; CACHE.pipeline=pipe; CACHE.clients=cli; CACHE.tasks=tk;
+    const ranToday = ag.agents.filter(a=>a.today).length;
+    const running = (tk.tasks||[]).filter(t=>t.status==='queued'||t.status==='running').length;
+    el('overviewKpis').innerHTML = `
+      ${kpi('Agentes', ag.agents.length, ICONS.agentes,'accent')}
+      ${kpi('Corrieron hoy', ranToday, ICONS.tareas)}
+      ${kpi('Leads en pipeline', pipe.counts.total||0, ICONS.pipeline)}
+      ${kpi('Clientes', cli.counts.total||0, ICONS.clientes)}
+      ${kpi('Tareas en curso', running, ICONS.tareas)}`;
+    setNavCount('agentes', ag.agents.length);
+    setNavCount('clientes', cli.counts.total||null);
+    setNavCount('pipeline', pipe.counts.total||null);
+
+    const today = ag.agents.filter(a=>a.today);
+    el('overviewAgents').innerHTML = today.length
+      ? today.map(agentCard).join('')
+      : '<div class="card empty">Ningún agente corrió hoy todavía.</div>';
+
+    const tasks=(tk.tasks||[]).slice(0,5);
+    el('overviewTasks').innerHTML = tasks.length ? taskTable(tasks)
+      : '<div class="card empty">Sin tareas ad-hoc todavía.</div>';
+  }catch(e){ el('overviewKpis').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+function kpi(lbl,val,icon,cls=''){ return `<div class="kpi-card ${cls}"><div class="ic">${icon}</div><div class="lbl">${esc(lbl)}</div><div class="kpi">${esc(val)}</div></div>`; }
 
 // ── Agentes ──
+function agentBadge(a){
+  return a.today ? '<span class="badge ok"><span class="dot"></span>corrió hoy</span>'
+       : a.has_output ? '<span class="badge warn"><span class="dot"></span>último '+esc(a.last_date)+'</span>'
+       : '<span class="badge grey">sin output</span>';
+}
+function agentCard(a){
+  const initials = (a.name||'?').replace(/_/g,' ').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  return `<div class="card agent-card">
+    <div class="top">
+      <div style="display:flex;gap:10px;align-items:center"><span class="ic-circle">${esc(initials)}</span>
+        <h3>${esc((a.name||'').replace(/_/g,' '))}</h3></div>
+      ${agentBadge(a)}
+    </div>
+    <div class="desc">${esc(a.description||'')}</div>
+    <div class="foot">
+      <span class="faint" style="font-size:12px">cron: ${esc(a.schedule||'—')}</span>
+      <span style="display:flex;gap:6px">
+        <button class="btn-ghost btn-sm" onclick="viewLast('${a.name}')">Ver</button>
+        <button class="btn btn-sm" onclick="runAgent('${a.name}',this)">Disparar</button>
+      </span>
+    </div></div>`;
+}
 async function loadAgents(){
-  const g = el('agentsGrid'); g.innerHTML='<p class="muted">Cargando...</p>';
-  try{
-    const {agents} = await api('/api/agents');
-    g.innerHTML = agents.map(a=>{
-      const badge = a.today ? '<span class="badge ok">corrió hoy</span>'
-                  : a.has_output ? '<span class="badge warn">último: '+esc(a.last_date)+'</span>'
-                  : '<span class="badge">sin output</span>';
-      return `<div class="card agent-card">
-        <h3>${esc(a.name)}</h3>
-        <div class="desc">${esc(a.description)}</div>
-        <div>${badge}</div>
-        <div class="foot">
-          <span class="muted" style="font-size:12px">cron: ${esc(a.schedule||'—')}</span>
-          <span>
-            <button class="btn-ghost btn-sm" onclick="viewLast('${a.name}')">Ver</button>
-            <button class="btn btn-sm" onclick="runAgent('${a.name}',this)">Disparar</button>
-          </span>
-        </div></div>`;
-    }).join('');
+  const g=el('agentsGrid'); g.innerHTML='<p class="muted">Cargando…</p>';
+  try{ const d=await api('/api/agents'); CACHE.agents=d; setNavCount('agentes',d.agents.length);
+    g.innerHTML=d.agents.map(agentCard).join('');
   }catch(e){ g.innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
 }
 async function runAgent(name, btn){
-  if(btn){btn.disabled=true;btn.textContent='...';}
-  try{ await api('/api/agents/'+name+'/run',{method:'POST'}); toast('🚀 '+name+' disparado — tarda unos minutos'); }
+  if(btn){btn.disabled=true;btn.textContent='…';}
+  try{ await api('/api/agents/'+name+'/run',{method:'POST'}); toast('🚀 '+name.replace(/_/g,' ')+' disparado — tarda unos minutos'); }
   catch(e){ toast('Error: '+e.message); }
   finally{ if(btn){btn.disabled=false;btn.textContent='Disparar';} }
 }
 async function viewLast(name){
-  openModal(name, '<p class="muted">Cargando último output...</p>');
-  try{
-    const d = await api('/last/'+name);
-    let md = (d.files && (d.files.report_md||d.files.report)) || d.report_md || '';
-    if(!md && typeof d==='object') md = JSON.stringify(d,null,2);
-    openModal(name, '<pre>'+esc(md||'(sin contenido hoy)')+'</pre>');
-  }catch(e){ openModal(name, '<p class="err">'+esc(e.message)+'</p>'); }
+  openModal(name.replace(/_/g,' '), '<p class="muted">Cargando último output…</p>');
+  try{ const d=await api('/last/'+name);
+    let md=(d.files&&(d.files.report_md||d.files.report))||d.report_md||'';
+    if(!md && typeof d==='object') md=JSON.stringify(d,null,2);
+    openModal(name.replace(/_/g,' '), '<pre>'+esc(md||'(sin contenido hoy)')+'</pre>');
+  }catch(e){ openModal(name.replace(/_/g,' '), '<p class="err">'+esc(e.message)+'</p>'); }
 }
 
 // ── Tareas ──
+function taskStatusBadge(s){
+  const map={done:'badge ok',error:'badge red',running:'badge blue',queued:'badge grey'};
+  return `<span class="${map[s]||'badge grey'}">${esc(s)}</span>`;
+}
+function taskTable(tasks){
+  return '<div class="tbl-wrap"><table><thead><tr><th>Agente</th><th>Tarea</th><th>Estado</th><th>Cuándo</th><th></th></tr></thead><tbody>'+
+    tasks.map(t=>`<tr>
+      <td><b>${esc((t.agent||'').replace(/_/g,' '))}</b></td>
+      <td style="max-width:340px">${esc((t.prompt||'').slice(0,130))}${(t.prompt||'').length>130?'…':''}</td>
+      <td>${taskStatusBadge(t.status)}</td>
+      <td class="faint" style="font-size:12px;white-space:nowrap">${fmtDate(t.created_at)}</td>
+      <td>${t.result_excerpt?`<button class="btn-ghost btn-xs" onclick='viewTask(${JSON.stringify(t.id)})'>Resultado</button>`:''}</td>
+    </tr>`).join('')+'</tbody></table></div>';
+}
 async function loadTasks(){
-  // poblar select de agentes (una vez)
-  const sel = el('taskAgent');
-  if(!sel.options.length){
-    try{ const {agents}=await api('/api/agents'); sel.innerHTML=agents.map(a=>'<option>'+esc(a.name)+'</option>').join(''); }catch(e){}
-  }
-  const list = el('tasksList'); list.innerHTML='<p class="muted">Cargando...</p>';
-  try{
-    const {tasks} = await api('/api/tasks');
-    if(!tasks.length){ list.innerHTML='<p class="muted">Todavía no mandaste tareas.</p>'; return; }
-    list.innerHTML = '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Agente</th><th>Tarea</th><th>Estado</th><th>Cuándo</th></tr></thead><tbody>'+
-      tasks.map(t=>{
-        const b = t.status==='done'?'badge ok':t.status==='error'?'badge red':'badge blue';
-        return `<tr><td><b>${esc(t.agent)}</b></td><td>${esc((t.prompt||'').slice(0,120))}</td>
-          <td><span class="${b}">${esc(t.status)}</span></td>
-          <td class="muted" style="font-size:12px">${esc((t.created_at||'').replace('T',' ').slice(0,16))}</td></tr>`;
-      }).join('')+'</tbody></table></div>';
+  const sel=el('taskAgent');
+  if(!sel.options.length){ try{ const d=CACHE.agents||await api('/api/agents'); sel.innerHTML=d.agents.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replace(/_/g,' '))+'</option>').join(''); }catch(e){} }
+  const list=el('tasksList'); list.innerHTML='<p class="muted">Cargando…</p>';
+  try{ const d=await api('/api/tasks'); CACHE.tasks=d;
+    list.innerHTML = d.tasks.length ? taskTable(d.tasks) : '<div class="card empty">Todavía no mandaste tareas.</div>';
   }catch(e){ list.innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+function viewTask(id){
+  const t=(CACHE.tasks&&CACHE.tasks.tasks||[]).find(x=>x.id===id); if(!t)return;
+  openModal('Tarea · '+(t.agent||'').replace(/_/g,' '),
+    `<p class="faint" style="font-size:12px;margin-bottom:6px">${fmtDate(t.created_at)} · ${esc(t.status)}</p>
+     <p style="margin-bottom:14px"><b>Pedido:</b> ${esc(t.prompt)}</p>
+     <p style="margin-bottom:4px"><b>Resultado:</b></p><pre>${esc(t.result_excerpt||'(sin resultado)')}</pre>`);
 }
 el('taskBtn').addEventListener('click', async ()=>{
   const agent=el('taskAgent').value, prompt=el('taskPrompt').value.trim();
   if(!prompt){ toast('Escribí la tarea'); return; }
   el('taskBtn').disabled=true;
-  try{ await api('/api/tasks',{method:'POST',body:JSON.stringify({agent,prompt})}); el('taskPrompt').value=''; toast('✅ Tarea enviada a '+agent); loadTasks(); }
-  catch(e){ toast('Error: '+e.message); }
-  finally{ el('taskBtn').disabled=false; }
+  try{ await api('/api/tasks',{method:'POST',body:JSON.stringify({agent,prompt})}); el('taskPrompt').value=''; toast('✅ Tarea enviada a '+agent.replace(/_/g,' ')); loadTasks(); }
+  catch(e){ toast('Error: '+e.message); } finally{ el('taskBtn').disabled=false; }
 });
 
 // ── Clientes ──
 let STAGES=[];
+function stageBadgeCls(s){ return ({prospecto:'grey',contactado:'blue','reunión':'violet',propuesta:'warn',cliente:'ok',perdido:'red'})[s]||'grey'; }
 async function loadClients(){
   try{
-    const {clients, counts, stages} = await api('/api/clients');
-    STAGES=stages;
-    if(!el('cStage').options.length) el('cStage').innerHTML=stages.map(s=>'<option>'+esc(s)+'</option>').join('');
-    el('clientsKpis').innerHTML = ['total',...stages].map(s=>
-      `<div class="kpi-card"><div class="kpi">${counts[s]||0}</div><div class="lbl">${esc(s)}</div></div>`).join('');
-    const body = el('clientsBody');
-    body.innerHTML = clients.length ? clients.map(c=>{
-      const opts = STAGES.map(s=>'<option'+(s===c.stage?' selected':'')+'>'+esc(s)+'</option>').join('');
-      return `<tr>
-        <td><b>${esc(c.name)}</b>${c.notes?'<br><span class="muted" style="font-size:12px">'+esc(c.notes.slice(0,80))+'</span>':''}</td>
-        <td>${esc(c.vertical||'—')}</td>
-        <td><select class="inp btn-sm" style="padding:5px 8px" onchange="setStage('${c.id}',this.value)">${opts}</select></td>
-        <td style="font-size:13px">${esc(c.contact_name||'')}<br><span class="muted">${esc(c.contact_phone||'')} ${esc(c.contact_email||'')}</span></td>
-        <td><button class="btn-ghost btn-sm" onclick="delClient('${c.id}','${esc(c.name)}')">🗑</button></td></tr>`;
-    }).join('') : '<tr><td colspan="5" class="muted" style="padding:18px">Sin clientes todavía.</td></tr>';
-  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="5" class="err">'+esc(e.message)+'</td></tr>'; }
+    const d=await api('/api/clients'); CACHE.clients=d; STAGES=d.stages;
+    setNavCount('clientes', d.counts.total||null);
+    if(!el('cStage').options.length) el('cStage').innerHTML=d.stages.map(s=>'<option>'+esc(s)+'</option>').join('');
+    el('clientsKpis').innerHTML = kpi('Total', d.counts.total||0, ICONS.clientes,'accent') +
+      d.stages.map(s=>kpi(s, d.counts[s]||0, '')).join('');
+    const body=el('clientsBody');
+    body.innerHTML = d.clients.length ? d.clients.map(c=>`<tr>
+      <td><b>${esc(c.name)}</b>${c.notes?'<br><span class="faint" style="font-size:12px">'+esc(c.notes.slice(0,90))+(c.notes.length>90?'…':'')+'</span>':''}</td>
+      <td>${esc(c.vertical||'—')}</td>
+      <td><select class="inp btn-sm" style="padding:5px 8px;min-width:120px" onchange="setStage('${c.id}',this.value)">${
+        STAGES.map(s=>'<option'+(s===c.stage?' selected':'')+'>'+esc(s)+'</option>').join('')}</select></td>
+      <td style="font-size:13px">${esc(c.contact_name||'')}${c.contact_phone||c.contact_email?'<br><span class="faint">'+esc(c.contact_phone||'')+' '+esc(c.contact_email||'')+'</span>':''}</td>
+      <td class="faint" style="font-size:12px;white-space:nowrap">${fmtDate(c.created_at).slice(0,10)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-ghost btn-xs" onclick="editClient('${c.id}')">Editar</button>
+        <button class="btn-ghost btn-xs" onclick="delClient('${c.id}')">🗑</button></td></tr>`).join('')
+      : '<tr><td colspan="6" class="empty">Sin clientes todavía. Cargá uno arriba o convertí un lead desde el Pipeline.</td></tr>';
+  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="6" class="err">'+esc(e.message)+'</td></tr>'; }
 }
-el('clientBtn').addEventListener('click', async ()=>{
-  const payload={ name:el('cName').value, vertical:el('cVertical').value, stage:el('cStage').value,
+function clientPayload(){
+  return { name:el('cName').value, vertical:el('cVertical').value, stage:el('cStage').value,
     contact_name:el('cContact').value, contact_phone:el('cPhone').value, contact_email:el('cEmail').value, notes:el('cNotes').value };
+}
+function clearClientForm(){
+  ['cName','cVertical','cContact','cPhone','cEmail','cNotes','cEditId'].forEach(i=>el(i).value='');
+  el('clientBtn').textContent='Agregar cliente'; el('clientCancel').classList.add('hidden');
+}
+function editClient(id){
+  const c=(CACHE.clients&&CACHE.clients.clients||[]).find(x=>x.id===id); if(!c)return;
+  el('cEditId').value=c.id; el('cName').value=c.name||''; el('cVertical').value=c.vertical||'';
+  el('cStage').value=c.stage||STAGES[0]; el('cContact').value=c.contact_name||'';
+  el('cPhone').value=c.contact_phone||''; el('cEmail').value=c.contact_email||''; el('cNotes').value=c.notes||'';
+  el('clientBtn').textContent='Guardar cambios'; el('clientCancel').classList.remove('hidden');
+  el('clientForm').scrollIntoView({behavior:'smooth',block:'center'});
+}
+el('clientCancel').addEventListener('click', clearClientForm);
+el('clientBtn').addEventListener('click', async ()=>{
+  const id=el('cEditId').value, payload=clientPayload();
   if(!payload.name.trim()){ toast('Poné un nombre'); return; }
   el('clientBtn').disabled=true;
-  try{ await api('/api/clients',{method:'POST',body:JSON.stringify(payload)});
-    ['cName','cVertical','cContact','cPhone','cEmail','cNotes'].forEach(i=>el(i).value='');
-    toast('✅ Cliente agregado'); loadClients(); }
-  catch(e){ toast('Error: '+e.message); }
-  finally{ el('clientBtn').disabled=false; }
+  try{
+    if(id){ await api('/api/clients/'+id,{method:'PUT',body:JSON.stringify(payload)}); toast('✅ Cliente actualizado'); }
+    else{ await api('/api/clients',{method:'POST',body:JSON.stringify(payload)}); toast('✅ Cliente agregado'); }
+    clearClientForm(); loadClients();
+  }catch(e){ toast('Error: '+e.message); } finally{ el('clientBtn').disabled=false; }
 });
-async function setStage(id, stage){ try{ await api('/api/clients/'+id,{method:'PUT',body:JSON.stringify({stage})}); toast('Etapa actualizada'); loadClients(); }catch(e){ toast('Error: '+e.message); } }
-async function delClient(id,name){ if(!confirm('¿Borrar a '+name+'?'))return; try{ await api('/api/clients/'+id,{method:'DELETE'}); toast('Cliente borrado'); loadClients(); }catch(e){ toast('Error: '+e.message); } }
+async function setStage(id, stage){ try{ await api('/api/clients/'+id,{method:'PUT',body:JSON.stringify({stage})}); toast('Etapa → '+stage); loadClients(); }catch(e){ toast('Error: '+e.message); } }
+async function delClient(id){
+  const c=(CACHE.clients&&CACHE.clients.clients||[]).find(x=>x.id===id);
+  if(!confirm('¿Borrar a '+(c?c.name:'este cliente')+'?'))return;
+  try{ await api('/api/clients/'+id,{method:'DELETE'}); toast('Cliente borrado'); loadClients(); }catch(e){ toast('Error: '+e.message); } }
 
 // ── Pipeline ──
+function mapStateToStage(s){
+  s=(s||'').toLowerCase();
+  if(s.includes('reun')) return 'reunión';
+  if(s.includes('propuesta')) return 'propuesta';
+  if(s.includes('cerrad')||s.includes('client')) return 'cliente';
+  if(s.includes('perd')) return 'perdido';
+  if(s.includes('contact')||s.includes('respon')) return 'contactado';
+  return 'prospecto';
+}
 async function loadPipeline(){
-  const body=el('pipeBody'); body.innerHTML='<tr><td colspan="5" class="muted">Cargando...</td></tr>';
+  const body=el('pipeBody'); body.innerHTML='<tr><td colspan="7" class="muted">Cargando…</td></tr>';
   try{
-    const {counts, leads} = await api('/api/pipeline');
+    const d=await api('/api/pipeline'); CACHE.pipeline=d;
+    setNavCount('pipeline', d.counts.total||null);
     const order=['nuevo','contactado','respondió','reunión','propuesta','cerrado','perdido','sin_respuesta'];
-    const keys = Object.keys(counts).filter(k=>k!=='total');
-    el('pipeKpis').innerHTML = ['total',...order.filter(k=>keys.includes(k)),...keys.filter(k=>!order.includes(k))]
-      .filter((v,i,a)=>a.indexOf(v)===i)
-      .map(s=>`<div class="kpi-card"><div class="kpi">${counts[s]||0}</div><div class="lbl">${esc(s)}</div></div>`).join('');
-    body.innerHTML = leads.length ? leads.map(l=>`<tr>
-      <td><b>${esc(l.company||'—')}</b></td><td><span class="badge blue">${esc(l.state||'')}</span></td>
-      <td>${esc(l.channel||'')}</td><td style="font-size:13px">${esc(l.email||l.phone||'')}</td>
-      <td>${esc(l.touches!=null?l.touches:'')}</td></tr>`).join('')
-      : '<tr><td colspan="5" class="muted" style="padding:18px">Pipeline vacío.</td></tr>';
-  }catch(e){ body.innerHTML='<tr><td colspan="5" class="err">'+esc(e.message)+'</td></tr>'; }
+    const keys=Object.keys(d.counts).filter(k=>k!=='total');
+    const ordered=['total',...order.filter(k=>keys.includes(k)),...keys.filter(k=>!order.includes(k))].filter((v,i,a)=>a.indexOf(v)===i);
+    el('pipeKpis').innerHTML = ordered.map((s,i)=>kpi(s, d.counts[s]||0, '', i===0?'accent':'')).join('');
+    window._leads = d.leads;
+    body.innerHTML = d.leads.length ? d.leads.map((l,i)=>`<tr>
+      <td><b>${esc(l.company||'—')}</b></td>
+      <td><span class="badge blue">${esc(l.state||'')}</span></td>
+      <td>${esc(l.channel||'—')}</td>
+      <td style="font-size:13px">${esc(l.email||l.phone||'—')}</td>
+      <td style="font-size:13px" class="muted">${esc(l.next_step||'—')}${l.next_touch_at?'<br><span class="faint">'+fmtDate(l.next_touch_at)+'</span>':''}</td>
+      <td>${esc(l.touches!=null?l.touches:'')}</td>
+      <td><button class="btn-ghost btn-xs" onclick="toClient(${i})">→ Cliente</button></td></tr>`).join('')
+      : '<tr><td colspan="7" class="empty">Pipeline vacío.</td></tr>';
+  }catch(e){ body.innerHTML='<tr><td colspan="7" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+function toClient(i){
+  const l=(window._leads||[])[i]; if(!l)return;
+  go('clientes');
+  // esperar a que cargue la pestaña y prellenar el form
+  setTimeout(()=>{
+    if(!STAGES.length){ STAGES=(CACHE.clients&&CACHE.clients.stages)||[]; }
+    el('cEditId').value=''; el('clientBtn').textContent='Agregar cliente'; el('clientCancel').classList.add('hidden');
+    el('cName').value=l.company||'';
+    el('cVertical').value='';
+    el('cStage').value=mapStateToStage(l.state);
+    el('cContact').value='';
+    el('cPhone').value=l.phone||'';
+    el('cEmail').value=l.email||'';
+    el('cNotes').value=`Importado del pipeline · estado ${l.state||'?'} · canal ${l.channel||'?'} · ${l.touches||0} toques`;
+    el('clientForm').scrollIntoView({behavior:'smooth',block:'center'});
+    toast('Revisá los datos y guardá el cliente');
+  }, 220);
 }
 
 // ── Modal ──
 function openModal(title, bodyHtml){
-  el('modalRoot').innerHTML = `<div class="modal-bg" onclick="if(event.target===this)closeModal()">
-    <div class="modal"><div class="modal-head"><b class="syne">${esc(title)}</b>
+  el('modalRoot').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal"><div class="modal-head"><b class="syne" style="font-size:16px">${esc(title)}</b>
     <button class="btn-ghost btn-sm" onclick="closeModal()">Cerrar</button></div>
     <div class="modal-body">${bodyHtml}</div></div></div>`;
 }
 function closeModal(){ el('modalRoot').innerHTML=''; }
 
-function initApp(){ loadAgents(); }
-
+function bootApp(){
+  el('whoami').textContent='conectado · '+location.hostname;
+  buildNav(); go('resumen');
+}
 el('loginBtn').addEventListener('click', doLogin);
 el('key').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 el('logoutBtn').addEventListener('click', logout);
+el('refreshBtn').addEventListener('click', ()=>{ loadTab(CURRENT); toast('Actualizado'); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
 
-// auto-login si hay clave guardada
 if(KEY){
   fetch('/api/agents',{headers:{'X-Webhook-Secret':KEY}}).then(r=>{
-    if(r.ok){ el('login').classList.add('hidden'); el('app').classList.remove('hidden'); initApp(); }
+    if(r.ok){ el('login').classList.add('hidden'); el('app').classList.remove('hidden'); bootApp(); }
   }).catch(()=>{});
 }
 </script>
