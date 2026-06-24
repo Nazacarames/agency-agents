@@ -32,6 +32,9 @@ beautifulsoup4>=4.12.0
 # Render/Railway healthcheck
 structlog>=24.1.0
 
+# Base de datos (Supabase Postgres) — capa de memoria de la agencia (schema `agency`)
+psycopg[binary]>=3.1.0
+
 # Gmail (Inbox Assistant — leer + borradores, OAuth2 refresh token)
 google-api-python-client>=2.120.0
 google-auth>=2.28.0

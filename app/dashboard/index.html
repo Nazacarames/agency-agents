@@ -193,7 +193,12 @@
               <label>Agente</label>
               <select id="taskAgent" class="inp"></select>
             </div>
+            <div style="flex:1;min-width:200px">
+              <label>Cliente (opcional)</label>
+              <select id="taskClient" class="inp"><option value="">— ninguno —</option></select>
+            </div>
           </div>
+          <div class="hint" style="margin-top:6px">Si elegís un cliente, el agente recibe su memoria y el resultado queda guardado en ella.</div>
           <label>Tarea / prompt</label>
           <textarea id="taskPrompt" class="inp" placeholder="Ej: Armá 5 headlines para la campaña de distribuidoras de iluminación…"></textarea>
           <div class="hint">El agente la resuelve además de su trabajo programado. Tarda unos minutos; el resultado aparece abajo.</div>
@@ -237,6 +242,43 @@
         </thead><tbody id="pipeBody"></tbody></table></div>
       </section>
 
+      <!-- MEMORIA -->
+      <section id="tab-memoria" class="hidden">
+        <div class="card" id="dbBanner" style="margin-bottom:18px;display:none"></div>
+
+        <div class="sec-head"><h2>Contexto de la empresa</h2><span class="faint" style="font-size:12px">Lo que todos los agentes saben de Automiq. Se siembra desde Obsidian.</span></div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="row">
+            <div style="flex:1;min-width:140px"><label>Sección</label><input id="mSection" class="inp" placeholder="identidad / servicios / pricing…"/></div>
+            <div style="flex:2;min-width:200px"><label>Título</label><input id="mTitle" class="inp" placeholder="Qué es Automiq"/></div>
+          </div>
+          <label>Contenido</label><textarea id="mContent" class="inp" style="min-height:54px"></textarea>
+          <button class="btn btn-sm" id="mBtn" style="margin-top:10px">Guardar en memoria</button>
+        </div>
+        <div id="memList" style="margin-bottom:26px"></div>
+
+        <div class="sec-head"><h2>Objetivos de growth</h2><span class="faint" style="font-size:12px">Por sector. Los activos se inyectan a los agentes.</span></div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="row">
+            <div style="flex:1;min-width:140px"><label>Sector</label><input id="gSector" class="inp" placeholder="iluminación / general…"/></div>
+            <div style="flex:2;min-width:220px"><label>Objetivo</label><input id="gObjective" class="inp" placeholder="Cerrar 3 distribuidoras"/></div>
+            <div style="flex:1;min-width:110px"><label>Meta</label><input id="gTarget" class="inp" placeholder="3"/></div>
+          </div>
+          <button class="btn btn-sm" id="gBtn" style="margin-top:10px">Agregar objetivo</button>
+        </div>
+        <div id="growthList" style="margin-bottom:26px"></div>
+
+        <div class="sec-head"><h2>Lecciones de los agentes</h2><span class="faint" style="font-size:12px">Mejora continua: lo que aprendés acá se inyecta en su próximo prompt.</span></div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="row">
+            <div style="flex:1;min-width:160px"><label>Agente</label><select id="lAgent" class="inp"></select></div>
+            <div style="flex:3;min-width:240px"><label>Lección / directiva</label><input id="lLesson" class="inp" placeholder="Los ads con 'WhatsApp 24/7' performan mejor"/></div>
+          </div>
+          <button class="btn btn-sm" id="lBtn" style="margin-top:10px">Enseñar al agente</button>
+        </div>
+        <div id="lessonsList"></div>
+      </section>
+
     </div>
   </main>
 </div>
@@ -262,13 +304,15 @@ const ICONS = {
   tareas:  ico('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),
   clientes:ico('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'),
   pipeline:ico('<line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/>'),
+  memoria: ico('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'),
 };
 const NAV = [
   {id:'resumen', label:'Resumen', sub:'Estado general de la agencia.'},
   {id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
   {id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
-  {id:'clientes', label:'Clientes', sub:'Registro y organización de los clientes de la agencia.'},
+  {id:'clientes', label:'Clientes', sub:'Registro, memoria y organización de los clientes.'},
   {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound.'},
+  {id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa, objetivos de growth y lecciones de los agentes.'},
 ];
 
 async function api(path, opts={}){
@@ -314,6 +358,7 @@ function loadTab(tab){
   if(tab==='tareas') loadTasks();
   if(tab==='clientes') loadClients();
   if(tab==='pipeline') loadPipeline();
+  if(tab==='memoria') loadMemory();
 }
 function setNavCount(id,n){ const e=el('navc-'+id); if(!e)return; if(n==null){e.classList.add('hidden');return;} e.textContent=n; e.classList.remove('hidden'); }
 
@@ -411,6 +456,10 @@ function taskTable(tasks){
 async function loadTasks(){
   const sel=el('taskAgent');
   if(!sel.options.length){ try{ const d=CACHE.agents||await api('/api/agents'); sel.innerHTML=d.agents.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replace(/_/g,' '))+'</option>').join(''); }catch(e){} }
+  // clientes para el target opcional
+  try{ const cd=CACHE.clients||await api('/api/clients'); CACHE.clients=cd;
+    el('taskClient').innerHTML='<option value="">— ninguno —</option>'+(cd.clients||[]).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  }catch(e){}
   const list=el('tasksList'); list.innerHTML='<p class="muted">Cargando…</p>';
   try{ const d=await api('/api/tasks'); CACHE.tasks=d;
     list.innerHTML = d.tasks.length ? taskTable(d.tasks) : '<div class="card empty">Todavía no mandaste tareas.</div>';
@@ -424,10 +473,10 @@ function viewTask(id){
      <p style="margin-bottom:4px"><b>Resultado:</b></p><pre>${esc(t.result_excerpt||'(sin resultado)')}</pre>`);
 }
 el('taskBtn').addEventListener('click', async ()=>{
-  const agent=el('taskAgent').value, prompt=el('taskPrompt').value.trim();
+  const agent=el('taskAgent').value, prompt=el('taskPrompt').value.trim(), client_id=el('taskClient').value||null;
   if(!prompt){ toast('Escribí la tarea'); return; }
   el('taskBtn').disabled=true;
-  try{ await api('/api/tasks',{method:'POST',body:JSON.stringify({agent,prompt})}); el('taskPrompt').value=''; toast('✅ Tarea enviada a '+agent.replace(/_/g,' ')); loadTasks(); }
+  try{ await api('/api/tasks',{method:'POST',body:JSON.stringify({agent,prompt,client_id})}); el('taskPrompt').value=''; toast('✅ Tarea enviada a '+agent.replace(/_/g,' ')); loadTasks(); }
   catch(e){ toast('Error: '+e.message); } finally{ el('taskBtn').disabled=false; }
 });
 
@@ -450,6 +499,7 @@ async function loadClients(){
       <td style="font-size:13px">${esc(c.contact_name||'')}${c.contact_phone||c.contact_email?'<br><span class="faint">'+esc(c.contact_phone||'')+' '+esc(c.contact_email||'')+'</span>':''}</td>
       <td class="faint" style="font-size:12px;white-space:nowrap">${fmtDate(c.created_at).slice(0,10)}</td>
       <td style="white-space:nowrap">
+        <button class="btn-ghost btn-xs" onclick="viewClientMemory('${c.id}')">Memoria</button>
         <button class="btn-ghost btn-xs" onclick="editClient('${c.id}')">Editar</button>
         <button class="btn-ghost btn-xs" onclick="delClient('${c.id}')">🗑</button></td></tr>`).join('')
       : '<tr><td colspan="6" class="empty">Sin clientes todavía. Cargá uno arriba o convertí un lead desde el Pipeline.</td></tr>';
@@ -536,6 +586,107 @@ function toClient(i){
     el('clientForm').scrollIntoView({behavior:'smooth',block:'center'});
     toast('Revisá los datos y guardá el cliente');
   }, 220);
+}
+
+// ── Memoria (empresa + growth + lecciones) ──
+async function loadMemory(){
+  // banner si la DB no está conectada (modo JSON fallback)
+  try{
+    const m = await api('/api/memory');
+    const banner = el('dbBanner');
+    if(m.db===false){ banner.style.display='block'; banner.innerHTML='<span class="badge warn">⚠ DB no conectada</span> <span class="muted" style="font-size:13px">Falta <code>DATABASE_URL</code> en Railway — la memoria está corriendo en modo JSON local (no compartida).</span>'; }
+    else banner.style.display='none';
+    el('memList').innerHTML = renderMemory(m.memory||[]);
+  }catch(e){ el('memList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+  // agentes para el select de lecciones
+  const sel=el('lAgent');
+  if(!sel.options.length){ try{ const d=CACHE.agents||await api('/api/agents'); sel.innerHTML=d.agents.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replace(/_/g,' '))+'</option>').join(''); }catch(e){} }
+  loadGrowth(); loadLessons();
+}
+function renderMemory(items){
+  if(!items.length) return '<div class="card empty">Sin contexto cargado. Agregá arriba o corré el seed desde Obsidian.</div>';
+  const bySec={}; items.forEach(m=>{ (bySec[m.section]=bySec[m.section]||[]).push(m); });
+  return Object.keys(bySec).map(sec=>`<div class="card" style="margin-bottom:12px">
+    <div class="badge blue" style="margin-bottom:10px">${esc(sec)}</div>
+    ${bySec[sec].map(m=>`<div style="padding:8px 0;border-bottom:1px solid var(--line-soft)">
+      <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(m.title)}</b>
+      <button class="btn-ghost btn-xs" onclick="delMemory('${m.id}')">🗑</button></div>
+      <div class="muted" style="font-size:13px;line-height:1.5;white-space:pre-wrap">${esc(m.content)}</div>
+      ${m.source?'<div class="faint" style="font-size:11px;margin-top:3px">'+esc(m.source)+'</div>':''}</div>`).join('')}
+  </div>`).join('');
+}
+el('mBtn').addEventListener('click', async ()=>{
+  const section=el('mSection').value.trim()||'general', title=el('mTitle').value.trim(), content=el('mContent').value.trim();
+  if(!title||!content){ toast('Completá título y contenido'); return; }
+  try{ await api('/api/memory',{method:'POST',body:JSON.stringify({section,title,content})});
+    ['mTitle','mContent'].forEach(i=>el(i).value=''); toast('✅ Guardado'); loadMemory(); }
+  catch(e){ toast('Error: '+e.message); }
+});
+async function delMemory(id){ if(!confirm('¿Borrar esta entrada?'))return; try{ await api('/api/memory/'+id,{method:'DELETE'}); loadMemory(); }catch(e){ toast('Error: '+e.message); } }
+
+async function loadGrowth(){
+  try{ const d=await api('/api/growth'); const o=d.objectives||[];
+    el('growthList').innerHTML = o.length ? '<div class="tbl-wrap"><table><thead><tr><th>Sector</th><th>Objetivo</th><th>Meta</th><th>Estado</th><th></th></tr></thead><tbody>'+
+      o.map(g=>`<tr><td><span class="badge grey">${esc(g.sector)}</span></td><td>${esc(g.objective)}</td>
+        <td class="muted">${esc(g.target||'—')}</td><td><span class="badge ${g.status==='logrado'?'ok':g.status==='pausado'?'warn':'blue'}">${esc(g.status)}</span></td>
+        <td><button class="btn-ghost btn-xs" onclick="delGrowth('${g.id}')">🗑</button></td></tr>`).join('')+'</tbody></table></div>'
+      : '<div class="card empty">Sin objetivos cargados.</div>';
+  }catch(e){ el('growthList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+el('gBtn').addEventListener('click', async ()=>{
+  const sector=el('gSector').value.trim()||'general', objective=el('gObjective').value.trim(), target=el('gTarget').value.trim();
+  if(!objective){ toast('Escribí el objetivo'); return; }
+  try{ await api('/api/growth',{method:'POST',body:JSON.stringify({sector,objective,target})});
+    ['gObjective','gTarget'].forEach(i=>el(i).value=''); toast('✅ Objetivo agregado'); loadGrowth(); }
+  catch(e){ toast('Error: '+e.message); }
+});
+async function delGrowth(id){ try{ await api('/api/growth/'+id,{method:'DELETE'}); loadGrowth(); }catch(e){ toast('Error: '+e.message); } }
+
+async function loadLessons(){
+  try{ const d=await api('/api/lessons'); const ls=d.lessons||[];
+    el('lessonsList').innerHTML = ls.length ? '<div class="tbl-wrap"><table><thead><tr><th>Agente</th><th>Lección</th><th>Tipo</th><th>Activa</th><th></th></tr></thead><tbody>'+
+      ls.map(l=>`<tr><td><b>${esc((l.agent||'').replace(/_/g,' '))}</b></td><td>${esc(l.lesson)}</td>
+        <td><span class="badge grey">${esc(l.kind)}</span></td><td>${l.active?'<span class="badge ok">sí</span>':'<span class="badge red">no</span>'}</td>
+        <td>${l.active?`<button class="btn-ghost btn-xs" onclick="delLesson('${l.id}')">desactivar</button>`:''}</td></tr>`).join('')+'</tbody></table></div>'
+      : '<div class="card empty">Todavía no le enseñaste nada a los agentes.</div>';
+  }catch(e){ el('lessonsList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+el('lBtn').addEventListener('click', async ()=>{
+  const agent=el('lAgent').value, lesson=el('lLesson').value.trim();
+  if(!lesson){ toast('Escribí la lección'); return; }
+  try{ await api('/api/lessons',{method:'POST',body:JSON.stringify({agent,lesson})});
+    el('lLesson').value=''; toast('✅ Aprendido'); loadLessons(); }
+  catch(e){ toast('Error: '+e.message); }
+});
+async function delLesson(id){ try{ await api('/api/lessons/'+id,{method:'DELETE'}); loadLessons(); }catch(e){ toast('Error: '+e.message); } }
+
+// ── Memoria de un cliente (modal) ──
+async function viewClientMemory(id){
+  const c=(CACHE.clients&&CACHE.clients.clients||[]).find(x=>x.id===id);
+  openModal('Memoria · '+(c?c.name:id), '<p class="muted">Cargando…</p>');
+  try{
+    const d=await api('/api/clients/'+id+'/memory');
+    const items=d.memory||[];
+    const body = `
+      <div class="flexbtns" style="margin-bottom:14px">
+        <div style="flex:1"><input id="cmNote" class="inp" placeholder="Agregar una nota a este cliente…"/></div>
+        <button class="btn btn-sm" onclick="addClientNote('${id}')">Agregar</button>
+      </div>
+      ${items.length ? items.map(m=>`<div style="padding:10px 0;border-bottom:1px solid var(--line-soft)">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <span class="badge ${m.kind==='report'?'blue':m.kind==='profile'?'grey':m.kind==='audit'?'violet':'ok'}">${esc(m.kind)}${m.agent?' · '+esc(m.agent):''}</span>
+            <span class="faint" style="font-size:11px">${fmtDate(m.created_at)}</span></div>
+          ${m.title?'<b style="display:block;margin-top:5px">'+esc(m.title)+'</b>':''}
+          <div class="muted" style="font-size:13px;line-height:1.55;white-space:pre-wrap;margin-top:3px">${esc((m.content||'').slice(0,1500))}${(m.content||'').length>1500?'…':''}</div>
+        </div>`).join('') : '<div class="empty">Sin memoria todavía. Se va llenando cuando un agente trabaja sobre este cliente.</div>'}`;
+    openModal('Memoria · '+(c?c.name:id), body);
+  }catch(e){ openModal('Memoria', '<p class="err">'+esc(e.message)+'</p>'); }
+}
+async function addClientNote(id){
+  const v=el('cmNote'); const content=v?v.value.trim():''; if(!content){ toast('Escribí algo'); return; }
+  try{ await api('/api/clients/'+id+'/memory',{method:'POST',body:JSON.stringify({kind:'note',title:'Nota',content})});
+    toast('✅ Nota guardada'); viewClientMemory(id); }
+  catch(e){ toast('Error: '+e.message); }
 }
 
 // ── Modal ──

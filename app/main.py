@@ -466,6 +466,39 @@ class ClientBody(BaseModel):
 class TaskBody(BaseModel):
     agent: str
     prompt: str
+    client_id: Optional[str] = None     # si la tarea apunta a un cliente, su memoria se inyecta
+
+
+class MemoryBody(BaseModel):
+    section: Optional[str] = "general"
+    title: str
+    content: str
+    source: Optional[str] = ""
+    tags: Optional[List[str]] = None
+
+
+class GrowthBody(BaseModel):
+    sector: Optional[str] = "general"
+    objective: Optional[str] = None
+    metric: Optional[str] = ""
+    target: Optional[str] = ""
+    status: Optional[str] = "activo"
+    notes: Optional[str] = ""
+
+
+class LessonBody(BaseModel):
+    agent: str
+    lesson: str
+    kind: Optional[str] = "feedback"
+    weight: Optional[int] = 1
+
+
+class ClientMemoryBody(BaseModel):
+    kind: Optional[str] = "note"
+    agent: Optional[str] = ""
+    title: Optional[str] = ""
+    content: str
+    meta: Optional[Dict[str, Any]] = None
 
 
 _AGENT_DESCRIPTIONS = {
@@ -529,12 +562,14 @@ async def api_run_agent(name: str, request: Request, background: BackgroundTasks
     return {"ok": True, "run_id": run_id, "agent": name, "status": "queued"}
 
 
-async def _run_agent_task(name: str, prompt: str, run_id: str) -> None:
+async def _run_agent_task(name: str, prompt: str, run_id: str,
+                          client_id: Optional[str] = None) -> None:
     from .integrations import tasks_store as ts
     try:
-        result = await _run_pack_agent(
-            name, {"task_prompt": prompt, "force_global": True}, run_id, "dashboard:task"
-        )
+        args: Dict[str, Any] = {"task_prompt": prompt, "force_global": True}
+        if client_id:
+            args["client_id"] = client_id
+        result = await _run_pack_agent(name, args, run_id, "dashboard:task")
         ts.update_task(run_id, "done", str(result)[:600] if result else "")
     except Exception as e:
         ts.update_task(run_id, "error", str(e)[:600])
@@ -550,7 +585,7 @@ async def api_create_task(body: TaskBody, request: Request, background: Backgrou
         raise HTTPException(status_code=400, detail="prompt vacío")
     run_id = str(uuid.uuid4())
     task = ts.add_task(body.agent, body.prompt.strip(), run_id)
-    background.add_task(_run_agent_task, body.agent, body.prompt.strip(), run_id)
+    background.add_task(_run_agent_task, body.agent, body.prompt.strip(), run_id, body.client_id)
     return {"ok": True, "task": task}
 
 
@@ -602,6 +637,136 @@ async def api_pipeline(request: Request):
     leads = [ls.lead_view(l) for l in store.get("leads", {}).values()]
     leads.sort(key=lambda l: (str(l.get("state")), str(l.get("company"))))
     return {"counts": ls.summary_counts(store), "leads": leads}
+
+
+# ── Memoria por cliente (reports + info recaudada) ──
+
+@app.get("/api/clients/{client_id}/memory")
+async def api_client_memory(client_id: str, request: Request, kind: Optional[str] = None):
+    _verify_webhook_secret(request)
+    from .integrations import client_memory_store as cms, clients_store as cs
+    client = cs.get_client(client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="cliente no encontrado")
+    return {"client": client, "memory": cms.list_memory(client_id, kind=kind)}
+
+
+@app.post("/api/clients/{client_id}/memory")
+async def api_add_client_memory(client_id: str, body: ClientMemoryBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import client_memory_store as cms, clients_store as cs
+    if not cs.get_client(client_id):
+        raise HTTPException(status_code=404, detail="cliente no encontrado")
+    item = cms.add_memory(client_id, kind=body.kind or "note", agent=body.agent or "",
+                          title=body.title or "", content=body.content, meta=body.meta)
+    return {"ok": True, "item": item}
+
+
+@app.delete("/api/clients/{client_id}/memory/{mem_id}")
+async def api_del_client_memory(client_id: str, mem_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import client_memory_store as cms
+    cms.delete_memory(mem_id)
+    return {"ok": True}
+
+
+# ── Memoria general (knowledge base de la empresa) ──
+
+@app.get("/api/memory")
+async def api_list_memory(request: Request, section: Optional[str] = None):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    return {"memory": ms.list_company_memory(section), "db": ms.db.enabled()}
+
+
+@app.post("/api/memory")
+async def api_upsert_memory(body: MemoryBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    item = ms.upsert_company_memory(body.section or "general", body.title, body.content,
+                                    body.source or "", body.tags or [])
+    return {"ok": True, "item": item}
+
+
+@app.delete("/api/memory/{mem_id}")
+async def api_del_memory(mem_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    ms.delete_company_memory(mem_id)
+    return {"ok": True}
+
+
+# ── Objetivos de growth por sector ──
+
+@app.get("/api/growth")
+async def api_list_growth(request: Request, sector: Optional[str] = None, status: Optional[str] = None):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    return {"objectives": ms.list_growth(sector, status)}
+
+
+@app.post("/api/growth")
+async def api_add_growth(body: GrowthBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    if not (body.objective or "").strip():
+        raise HTTPException(status_code=400, detail="objetivo vacío")
+    return {"ok": True, "objective": ms.add_growth(body.sector or "general", body.objective,
+            body.metric or "", body.target or "", body.status or "activo", body.notes or "")}
+
+
+@app.put("/api/growth/{obj_id}")
+async def api_update_growth(obj_id: str, body: GrowthBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    o = ms.update_growth(obj_id, body.model_dump())
+    if not o:
+        raise HTTPException(status_code=404, detail="objetivo no encontrado")
+    return {"ok": True, "objective": o}
+
+
+@app.delete("/api/growth/{obj_id}")
+async def api_del_growth(obj_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    ms.delete_growth(obj_id)
+    return {"ok": True}
+
+
+# ── Lecciones por agente (loop de mejora continua) ──
+
+@app.get("/api/lessons")
+async def api_list_lessons(request: Request, agent: Optional[str] = None):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    return {"lessons": ms.list_lessons(agent=agent, active_only=False)}
+
+
+@app.post("/api/lessons")
+async def api_add_lesson(body: LessonBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    if body.agent not in list_agents():
+        raise HTTPException(status_code=404, detail=f"agente {body.agent} no existe")
+    if not (body.lesson or "").strip():
+        raise HTTPException(status_code=400, detail="lección vacía")
+    return {"ok": True, "lesson": ms.add_lesson(body.agent, body.lesson,
+            body.kind or "feedback", body.weight or 1)}
+
+
+@app.delete("/api/lessons/{lesson_id}")
+async def api_del_lesson(lesson_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    ms.deactivate_lesson(lesson_id)
+    return {"ok": True}
+
+
+@app.get("/api/db/health")
+async def api_db_health(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import db
+    return db.healthcheck()
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

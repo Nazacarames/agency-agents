@@ -47,6 +47,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     webhook_secret: str = ""
 
+    # ── Base de datos (Supabase Postgres) ──
+    # Capa de memoria/DB de la agencia (memoria general + por-cliente + lecciones).
+    # TODO vive bajo el schema `agency` (aislado de las tablas de Paperclip que
+    # comparten la instancia). Si está vacío, los stores caen a JSON en el volume.
+    database_url: str = ""
+    db_schema: str = "agency"
+
     # ── Render (auto-injected) ──
     render_service_id: str = ""
     render_external_url: str = ""
@@ -89,6 +96,10 @@ class Settings(BaseSettings):
     @property
     def gmail_configured(self) -> bool:
         return bool(self.gmail_client_id and self.gmail_client_secret and self.gmail_refresh_token)
+
+    @property
+    def db_configured(self) -> bool:
+        return bool(self.database_url)
 
     @property
     def discord_agent_webhooks_map(self) -> dict:

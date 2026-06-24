@@ -1,10 +1,14 @@
 """
 clients_store — CRM mínimo de CLIENTES de la agencia (no leads de ventas).
 
-Es el registro de clientes/cuentas de Automiq para el dashboard operativo: alta,
-edición, estado y notas. Persistencia: JSON en el volume (data/clients-store.json),
-mismo patrón atómico que leads_store. El provisioning del CRM por cliente (futuro
-agente generador) se enganchará sobre estos registros.
+Registro de clientes/cuentas de Automiq para el dashboard operativo: alta,
+edición, estado y notas. Backend: Postgres (Supabase, schema `agency`) si
+`DATABASE_URL` está configurada; si no, JSON en el volume (fallback).
+
+Al crear un cliente se siembra automáticamente su "perfil" en la memoria por
+cliente (`client_memory`), de modo que cualquier agente que trabaje sobre él
+arranca con su contexto. El provisioning del CRM por cliente (futuro agente
+generador) se engancha sobre estos registros.
 """
 from __future__ import annotations
 
@@ -15,8 +19,63 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from . import db
+
 STAGES = ["prospecto", "contactado", "reunión", "propuesta", "cliente", "perdido"]
 
+_COLS = ["id", "name", "vertical", "contact_name", "contact_phone",
+         "contact_email", "stage", "notes", "created_at", "updated_at"]
+
+
+# ───────────────────────── helpers ─────────────────────────
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _new_id() -> str:
+    return uuid.uuid4().hex[:12]
+
+
+def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "name": (data.get("name") or "").strip() or "Cliente sin nombre",
+        "vertical": (data.get("vertical") or "").strip(),
+        "contact_name": (data.get("contact_name") or "").strip(),
+        "contact_phone": (data.get("contact_phone") or "").strip(),
+        "contact_email": (data.get("contact_email") or "").strip(),
+        "stage": data.get("stage") if data.get("stage") in STAGES else "prospecto",
+        "notes": (data.get("notes") or "").strip(),
+    }
+
+
+def _row_to_dict(row: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(row)
+    for k in ("created_at", "updated_at"):
+        v = out.get(k)
+        if v is not None and not isinstance(v, str):
+            out[k] = v.isoformat()
+    return out
+
+
+def _seed_profile(client_id: str, c: Dict[str, Any]) -> None:
+    """Siembra el perfil del cliente en su memoria (best-effort)."""
+    try:
+        from . import client_memory_store as cms
+        body = (
+            f"Cliente: {c.get('name')}\n"
+            f"Vertical: {c.get('vertical') or '—'}\n"
+            f"Etapa: {c.get('stage')}\n"
+            f"Contacto: {c.get('contact_name') or '—'} · "
+            f"{c.get('contact_phone') or ''} {c.get('contact_email') or ''}\n"
+            f"Notas: {c.get('notes') or '—'}"
+        )
+        cms.add_memory(client_id, kind="profile", agent="", title="Perfil del cliente", content=body)
+    except Exception:
+        pass
+
+
+# ───────────────────────── modo JSON (fallback) ─────────────────────────
 
 def _data_dir() -> Path:
     return Path(__file__).resolve().parent.parent.parent / "data"
@@ -26,25 +85,20 @@ def _store_path() -> Path:
     return _data_dir() / "clients-store.json"
 
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def load_store() -> Dict[str, Any]:
+def _json_load() -> Dict[str, Any]:
     p = _store_path()
     if not p.exists():
         return {"clients": []}
     try:
         with p.open("r", encoding="utf-8") as f:
             data = json.load(f)
-        if "clients" not in data:
-            data["clients"] = []
+        data.setdefault("clients", [])
         return data
     except Exception:
         return {"clients": []}
 
 
-def save_store(store: Dict[str, Any]) -> None:
+def _json_save(store: Dict[str, Any]) -> None:
     p = _store_path()
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".json.tmp")
@@ -53,65 +107,130 @@ def save_store(store: Dict[str, Any]) -> None:
     os.replace(tmp, p)
 
 
+# ───────────────────────── migración JSON → DB ─────────────────────────
+
+_MIGRATED = False
+
+
+def _migrate_json_if_needed() -> None:
+    """Si hay DB y la tabla está vacía pero existe el JSON del volume, importarlo."""
+    global _MIGRATED
+    if _MIGRATED or not db.enabled():
+        return
+    _MIGRATED = True
+    try:
+        row = db.fetchone("SELECT count(*) AS n FROM clients")
+        if row and row.get("n", 0) > 0:
+            return
+        legacy = _json_load().get("clients", [])
+        for c in legacy:
+            cid = c.get("id") or _new_id()
+            n = _normalize(c)
+            db.execute(
+                "INSERT INTO clients (id,name,vertical,contact_name,contact_phone,"
+                "contact_email,stage,notes,created_at,updated_at) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(%s,now()),now()) "
+                "ON CONFLICT (id) DO NOTHING",
+                (cid, n["name"], n["vertical"], n["contact_name"], n["contact_phone"],
+                 n["contact_email"], n["stage"], n["notes"], c.get("created_at")),
+            )
+            _seed_profile(cid, n)
+    except Exception:
+        pass
+
+
+# ───────────────────────── API pública ─────────────────────────
+
 def list_clients() -> List[Dict[str, Any]]:
-    return load_store().get("clients", [])
+    if db.enabled():
+        _migrate_json_if_needed()
+        rows = db.fetchall(f"SELECT {','.join(_COLS)} FROM clients ORDER BY created_at DESC")
+        return [_row_to_dict(r) for r in rows]
+    return _json_load().get("clients", [])
 
 
 def get_client(client_id: str) -> Optional[Dict[str, Any]]:
-    for c in list_clients():
+    if db.enabled():
+        row = db.fetchone(f"SELECT {','.join(_COLS)} FROM clients WHERE id=%s", (client_id,))
+        return _row_to_dict(row) if row else None
+    for c in _json_load().get("clients", []):
         if c.get("id") == client_id:
             return c
     return None
 
 
 def create_client(data: Dict[str, Any]) -> Dict[str, Any]:
-    store = load_store()
-    client = {
-        "id": uuid.uuid4().hex[:12],
-        "name": (data.get("name") or "").strip() or "Cliente sin nombre",
-        "vertical": (data.get("vertical") or "").strip(),
-        "contact_name": (data.get("contact_name") or "").strip(),
-        "contact_phone": (data.get("contact_phone") or "").strip(),
-        "contact_email": (data.get("contact_email") or "").strip(),
-        "stage": data.get("stage") if data.get("stage") in STAGES else "prospecto",
-        "notes": (data.get("notes") or "").strip(),
-        "created_at": _now(),
-        "updated_at": _now(),
-    }
-    store["clients"].insert(0, client)
-    save_store(store)
+    cid = _new_id()
+    n = _normalize(data)
+    if db.enabled():
+        _migrate_json_if_needed()
+        db.execute(
+            "INSERT INTO clients (id,name,vertical,contact_name,contact_phone,"
+            "contact_email,stage,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+            (cid, n["name"], n["vertical"], n["contact_name"], n["contact_phone"],
+             n["contact_email"], n["stage"], n["notes"]),
+        )
+        client = get_client(cid) or {"id": cid, **n}
+    else:
+        store = _json_load()
+        client = {"id": cid, **n, "created_at": _now(), "updated_at": _now()}
+        store["clients"].insert(0, client)
+        _json_save(store)
+    _seed_profile(cid, n)
     return client
 
 
 def update_client(client_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    store = load_store()
+    fields = {}
+    for k in ("name", "vertical", "contact_name", "contact_phone", "contact_email", "notes"):
+        if k in data and data[k] is not None:
+            fields[k] = str(data[k]).strip()
+    if data.get("stage") in STAGES:
+        fields["stage"] = data["stage"]
+    if not fields:
+        return get_client(client_id)
+
+    if db.enabled():
+        sets = ", ".join(f"{k}=%s" for k in fields) + ", updated_at=now()"
+        params = list(fields.values()) + [client_id]
+        db.execute(f"UPDATE clients SET {sets} WHERE id=%s", params)
+        return get_client(client_id)
+
+    store = _json_load()
     for c in store["clients"]:
         if c.get("id") == client_id:
-            for k in ("name", "vertical", "contact_name", "contact_phone", "contact_email", "notes"):
-                if k in data and data[k] is not None:
-                    c[k] = str(data[k]).strip()
-            if data.get("stage") in STAGES:
-                c["stage"] = data["stage"]
+            c.update(fields)
             c["updated_at"] = _now()
-            save_store(store)
+            _json_save(store)
             return c
     return None
 
 
 def delete_client(client_id: str) -> bool:
-    store = load_store()
+    if db.enabled():
+        before = get_client(client_id)
+        db.execute("DELETE FROM clients WHERE id=%s", (client_id,))  # client_memory cae por FK cascade
+        return before is not None
+    store = _json_load()
     before = len(store["clients"])
     store["clients"] = [c for c in store["clients"] if c.get("id") != client_id]
     if len(store["clients"]) != before:
-        save_store(store)
+        _json_save(store)
         return True
     return False
 
 
 def summary_counts() -> Dict[str, int]:
     counts = {s: 0 for s in STAGES}
-    for c in list_clients():
+    if db.enabled():
+        for r in db.fetchall("SELECT stage, count(*) AS n FROM clients GROUP BY stage"):
+            counts[r["stage"]] = r["n"]
+        total = db.fetchone("SELECT count(*) AS n FROM clients")
+        counts["total"] = total["n"] if total else 0
+        return counts
+    clients = _json_load().get("clients", [])
+    for c in clients:
         st = c.get("stage", "prospecto")
         counts[st] = counts.get(st, 0) + 1
-    counts["total"] = len(list_clients())
+    counts["total"] = len(clients)
     return counts

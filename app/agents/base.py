@@ -109,6 +109,50 @@ class BaseAgent(ABC):
             log.warning("post_process_persist_failed", agent=self.name, error=str(e))
         return response_text
 
+    # ── Memoria de la agencia (contexto + aprendizaje) ──
+
+    def _augment_with_memory(self, user_msg: str, ctx: AgentContext) -> str:
+        """Inyecta contexto de empresa + lecciones + memoria del cliente al prompt."""
+        from ..integrations import memory_store as ms
+        blocks: List[str] = []
+        company = ms.company_digest()
+        if company:
+            blocks.append("## CONTEXTO DE AUTOMIQ (memoria general)\n" + company)
+        lessons = ms.lessons_for(self.name)
+        if lessons:
+            blocks.append("## " + lessons)
+        # cliente objetivo (args.client_id) → su memoria acumulada
+        cid = ctx.args.get("client_id") if isinstance(ctx.args, dict) else None
+        if cid:
+            try:
+                from ..integrations import client_memory_store as cms, clients_store as cs
+                client = cs.get_client(cid)
+                if client:
+                    blocks.append(f"## CLIENTE OBJETIVO: {client.get('name')} "
+                                  f"({client.get('vertical') or 's/vertical'}) — etapa {client.get('stage')}")
+                digest = cms.context_digest(cid)
+                if digest:
+                    blocks.append("## MEMORIA DEL CLIENTE (lo que ya sabemos de él)\n" + digest)
+            except Exception:
+                pass
+        if not blocks:
+            return user_msg
+        header = "\n\n".join(blocks)
+        return (f"{header}\n\nUsá ese contexto para que tu trabajo sea coherente con la "
+                f"empresa, los objetivos y lo aprendido.\n\n---\n\n{user_msg}")
+
+    def _persist_client_report(self, output: str, ctx: AgentContext) -> None:
+        """Guarda el output como report en la memoria del cliente objetivo (si lo hay)."""
+        cid = ctx.args.get("client_id") if isinstance(ctx.args, dict) else None
+        if not cid or not (output or "").strip():
+            return
+        from datetime import datetime as _dt
+        from ..integrations import client_memory_store as cms
+        title = f"{self.name} · {_dt.now(pytz.timezone(self.timezone)).strftime('%Y-%m-%d')}"
+        cms.add_memory(cid, kind="report", agent=self.name, title=title,
+                       content=(output or "").strip()[:20000],
+                       meta={"run_id": ctx.run_id, "triggered_by": ctx.triggered_by})
+
     def run(self, ctx: AgentContext) -> str:
         t0 = time.perf_counter()
         log.info(
@@ -130,6 +174,14 @@ class BaseAgent(ABC):
                     )
             except Exception:
                 pass
+            # Memoria de la agencia: contexto de empresa + lecciones aprendidas +
+            # (si la tarea apunta a un cliente) su memoria. Best-effort: nunca
+            # rompe una corrida. Este es el sustrato del "aprendizaje continuo":
+            # cada run arranca con el contexto y lo aprendido hasta ahora.
+            try:
+                user_msg = self._augment_with_memory(user_msg, ctx)
+            except Exception as e:
+                log.warning("memory_augment_failed", agent=self.name, error=str(e))
             # Llama a MiniMax-M3 (con fallback a M2.5 / M2.5-highspeed según config)
             # Allow a force_global override to remove "global_pause" guard from the system prompt
             local_system = self.system_prompt
@@ -208,6 +260,13 @@ class BaseAgent(ABC):
                 log.warning("sanitized_cjk_chars", agent=self.name,
                             run_id=ctx.run_id, removed=cjk_removed)
             output = self.post_process(clean_text, ctx)
+            # Si la corrida apuntaba a un cliente, guardar el report en su memoria
+            # (así "una vez que guardás un cliente, el report y la info recaudada
+            # queda en su memoria" y cualquier agente futuro la lee).
+            try:
+                self._persist_client_report(output, ctx)
+            except Exception as e:
+                log.warning("client_report_persist_failed", agent=self.name, error=str(e))
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
             # Auditoría
