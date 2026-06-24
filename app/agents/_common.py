@@ -143,7 +143,11 @@ def official_site_directive() -> str:
 def image_prompt_directive() -> str:
     """Pide al agente de contenido que incluya prompts de imagen + el texto del cartel."""
     return (
-        "\n\nIMÁGENES (obligatorio): por cada idea/post, agregá una línea que empiece EXACTO "
+        "\n\nIMÁGENES (obligatorio): la cantidad de imágenes la decidís VOS según tu "
+        "planificación — generá UNA imagen por cada pieza que planifiques (1 por idea, o "
+        "1 por cada post/día clave del calendario). No te limites a un número fijo: si el "
+        "plan tiene 5 posts con visual, son 5 imágenes; si tiene 2, son 2. "
+        "Por cada pieza, agregá una línea que empiece EXACTO "
         "con `IMAGEN:` con este formato:\n"
         "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional>`\n"
         "El <prompt> describe el FONDO/ilustración (estilo, escena, paleta navy + royal blue de "

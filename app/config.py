@@ -58,7 +58,10 @@ class Settings(BaseSettings):
     images_enabled: bool = True
     image_model: str = "image-01"
     image_aspect: str = "1:1"
-    content_image_count: int = 2     # imágenes a generar por reporte de contenido
+    # Tope de seguridad: el agente decide CUÁNTAS imágenes generar según su
+    # planificación (1 por idea/post). Esto sólo evita que un plan enorme dispare
+    # costo/tiempo de MiniMax sin control.
+    content_image_count: int = 8     # máx imágenes por reporte de contenido
 
     # ── Render (auto-injected) ──
     render_service_id: str = ""
