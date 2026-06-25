@@ -53,6 +53,10 @@ DEFAULT_TIMEZONE = "America/Buenos_Aires"
 # hayan encolado. drain_one() se autolimita a 1/día aunque el job dispare de más.
 PUBLISH_DRAIN_CRON = "0 11 * * *"
 
+# Snapshot diario de métricas (MRR, clientes, leads, ganancia) para la línea de
+# crecimiento del panel. 06:00 ART.
+METRICS_SNAPSHOT_CRON = "0 6 * * *"
+
 
 class AgentScheduler:
     def __init__(self, settings: Settings):
@@ -73,6 +77,8 @@ class AgentScheduler:
         for name, cron in DEFAULT_SCHEDULES.items():
             self._register_agent(name, cron, DEFAULT_TIMEZONE)
         self._register_publisher(PUBLISH_DRAIN_CRON, DEFAULT_TIMEZONE)
+        self._register_simple("metrics:snapshot", METRICS_SNAPSHOT_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_metrics_snapshot)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -121,6 +127,19 @@ class AgentScheduler:
         self.jobs_registered += 1
         log.info("publisher_scheduled", cron=cron, tz=tzname)
 
+    def _register_simple(self, job_id: str, cron: str, tzname: str, func) -> None:
+        try:
+            trigger = CronTrigger.from_crontab(cron, timezone=pytz.timezone(tzname))
+        except Exception as e:
+            log.error("job_schedule_invalid", job=job_id, schedule=cron, error=str(e))
+            return
+        self.scheduler.add_job(
+            func, trigger=trigger, id=job_id, name=job_id,
+            replace_existing=True, max_instances=1, coalesce=True, misfire_grace_time=3600,
+        )
+        self.jobs_registered += 1
+        log.info("job_scheduled", job=job_id, cron=cron, tz=tzname)
+
     def get_jobs_summary(self) -> list[dict]:
         if not self.scheduler:
             return []
@@ -151,3 +170,14 @@ async def _scheduled_publish_drain() -> None:
         log.info("publish_drain_done", result=res)
     except Exception as e:
         log.error("publish_drain_failed", error=str(e)[:200])
+
+
+async def _scheduled_metrics_snapshot() -> None:
+    """Snapshot diario de métricas para la línea de crecimiento del panel."""
+    import asyncio
+    from .integrations import metrics_store as ms
+    try:
+        pt = await asyncio.to_thread(ms.snapshot)
+        log.info("metrics_snapshot_done", point=pt)
+    except Exception as e:
+        log.error("metrics_snapshot_failed", error=str(e)[:200])

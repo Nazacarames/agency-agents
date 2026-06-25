@@ -467,6 +467,24 @@ class ClientBody(BaseModel):
     contact_email: Optional[str] = None
     stage: Optional[str] = None
     notes: Optional[str] = None
+    currency: Optional[str] = None
+    monthly_fee: Optional[float] = None
+    services: Optional[str] = None
+    status: Optional[str] = None
+    start_date: Optional[str] = None
+
+
+class ExpenseBody(BaseModel):
+    category: Optional[str] = "otros"
+    label: Optional[str] = ""
+    amount: float = 0
+    currency: Optional[str] = "USD"
+    date: Optional[str] = None
+    recurring: Optional[bool] = False
+
+
+class FxBody(BaseModel):
+    rates: Dict[str, float]
 
 
 class TaskBody(BaseModel):
@@ -923,6 +941,105 @@ async def api_publish_queue_delete(item_id: str, request: Request):
     _verify_webhook_secret(request)
     from .integrations import publish_queue as pq
     return {"ok": pq.delete_item(item_id)}
+
+
+# ── Finanzas / facturación / métricas (panel de gestión) ──
+
+@app.get("/api/finance")
+async def api_finance_list(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import finance_store as fs
+    return {"expenses": fs.list_expenses(), "categories": fs.CATEGORIES}
+
+
+@app.post("/api/finance")
+async def api_finance_add(body: ExpenseBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import finance_store as fs
+    item = fs.add_expense(body.category or "otros", body.label or "", body.amount,
+                          body.currency or "USD", body.date or "", bool(body.recurring))
+    return {"ok": True, "expense": item}
+
+
+@app.delete("/api/finance/{expense_id}")
+async def api_finance_delete(expense_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import finance_store as fs
+    return {"ok": fs.delete_expense(expense_id)}
+
+
+@app.get("/api/finance/summary")
+async def api_finance_summary(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import finance_store as fs, clients_store as cs
+    summary = fs.finance_summary()
+    summary["billing"] = cs.summary_billing()
+    summary["by_client"] = cs.revenue_by_client()
+    return summary
+
+
+@app.get("/api/fx")
+async def api_fx_get(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import fx_store
+    return {"rates": fx_store.get_rates()}
+
+
+@app.put("/api/fx")
+async def api_fx_set(body: FxBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import fx_store
+    return {"ok": True, "rates": fx_store.set_rates(body.rates)}
+
+
+@app.get("/api/metrics")
+async def api_metrics(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import metrics_store as ms
+    return ms.series()
+
+
+@app.get("/api/dashboard/stats")
+async def api_dashboard_stats(request: Request):
+    """Consolidado para el Resumen: facturación, finanzas, pipeline, clientes,
+    growth y conteos del 'motor' (conexiones entre piezas)."""
+    _verify_webhook_secret(request)
+    from .integrations import (clients_store as cs, finance_store as fs,
+                               leads_store as ls, memory_store as ms,
+                               metrics_store as mt)
+    billing = cs.summary_billing()
+    fin = fs.finance_summary()
+    pipe = ls.summary_counts(ls.load_store())
+    try:
+        growth = ms.list_growth()
+    except Exception:
+        growth = []
+    growth_open = [g for g in growth if (g.get("status") or "").lower() not in ("hecho", "done", "cerrado")]
+    return {
+        "billing": billing,
+        "finance": {
+            "mrr_usd": fin["mrr_usd"],
+            "expenses_month_usd": fin["expenses_month_usd"],
+            "profit_month_usd": fin["profit_month_usd"],
+            "months": fin["months"],
+            "revenue_series": fin["revenue_series"],
+            "expenses_series": fin["expenses_series"],
+            "profit_series": fin["profit_series"],
+            "by_category": fin["by_category"],
+        },
+        "pipeline": pipe,
+        "clients_by_stage": cs.summary_counts(),
+        "growth_total": len(growth),
+        "growth_open": len(growth_open),
+        "metrics": mt.series(),
+        "engine": {
+            "leads": pipe.get("total", 0),
+            "clients_active": billing["active"],
+            "clients_total": billing["total"],
+            "mrr_usd": billing["mrr_usd"],
+            "growth_open": len(growth_open),
+        },
+    }
 
 
 @app.get("/media/{filename}")
