@@ -48,6 +48,11 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 
+# Drenado de la cola de publicaciones: 1 sola publicación por día (regla del usuario).
+# Corre a las 11:00 ART, después de que los agentes de contenido del día anterior
+# hayan encolado. drain_one() se autolimita a 1/día aunque el job dispare de más.
+PUBLISH_DRAIN_CRON = "0 11 * * *"
+
 
 class AgentScheduler:
     def __init__(self, settings: Settings):
@@ -67,6 +72,7 @@ class AgentScheduler:
         self.scheduler = AsyncIOScheduler(timezone=tz)
         for name, cron in DEFAULT_SCHEDULES.items():
             self._register_agent(name, cron, DEFAULT_TIMEZONE)
+        self._register_publisher(PUBLISH_DRAIN_CRON, DEFAULT_TIMEZONE)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -96,6 +102,25 @@ class AgentScheduler:
         self.jobs_registered += 1
         log.info("agent_scheduled", agent=name, cron=cron, tz=tzname)
 
+    def _register_publisher(self, cron: str, tzname: str) -> None:
+        try:
+            trigger = CronTrigger.from_crontab(cron, timezone=pytz.timezone(tzname))
+        except Exception as e:
+            log.error("publisher_schedule_invalid", schedule=cron, error=str(e))
+            return
+        self.scheduler.add_job(
+            _scheduled_publish_drain,
+            trigger=trigger,
+            id="publish:drain",
+            name="publish_queue_drain",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=3600,
+        )
+        self.jobs_registered += 1
+        log.info("publisher_scheduled", cron=cron, tz=tzname)
+
     def get_jobs_summary(self) -> list[dict]:
         if not self.scheduler:
             return []
@@ -114,3 +139,15 @@ async def _scheduled_run(agent_name: str) -> None:
     """Entry point del scheduler. Resuelve el agente via el container de la app."""
     from .container import run_scheduled_agent
     await run_scheduled_agent(agent_name)
+
+
+async def _scheduled_publish_drain() -> None:
+    """Publica como mucho 1 pieza pendiente por día. Corre el publish SÍNCRONO en un
+    thread para no bloquear el event loop (la Graph API hace self-fetch de /media)."""
+    import asyncio
+    from .integrations import publish_queue as pq
+    try:
+        res = await asyncio.to_thread(pq.drain_one)
+        log.info("publish_drain_done", result=res)
+    except Exception as e:
+        log.error("publish_drain_failed", error=str(e)[:200])

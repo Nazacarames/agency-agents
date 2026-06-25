@@ -277,9 +277,9 @@ def _publish_summary(res: dict) -> str:
 def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -> str:
     """Busca líneas `IMAGEN: <prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | CAPTION: <post>`,
     genera las imágenes (fondo MiniMax + texto compuesto con Pillow), anexa la sección y
-    —si `publish` y hay tokens Meta— PUBLICA cada imagen en IG/FB con su caption.
-    Best-effort. Seguro contra deadlock: esto corre en un worker thread (asyncio.to_thread),
-    así que el event loop queda libre para servirle /media a la Graph API."""
+    —si `publish` y hay tokens Meta— ENCOLA cada imagen para publicarse en IG/FB.
+    NO publica inline: encola en publish_queue y un job diario drena 1 sola por día
+    (regla del usuario: como mucho 1 publicación por día). Best-effort."""
     import re
     # Tolera que el modelo escriba la línea envuelta en markdown:
     # `` `IMAGEN: ...` ``, ``- IMAGEN: ...``, ``**IMAGEN:** ...`` o ``> IMAGEN: ...``.
@@ -298,18 +298,19 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         parsed = parsed[:max_images]
         if not parsed:
             return text
-        # ¿Publicamos? Sólo si nos lo piden Y hay tokens configurados.
-        sp = None
+        # ¿Encolamos para publicar? Sólo si nos lo piden Y hay tokens configurados.
+        pq = None
         targets = []
+        source = ""
         if publish:
             try:
-                from ..integrations import social_publish as sp_mod
+                from ..integrations import social_publish as sp_mod, publish_queue as pq_mod
                 from ..config import get_settings
                 if sp_mod.enabled():
-                    sp = sp_mod
+                    pq = pq_mod
                     targets = get_settings().social_targets_list() or ["instagram", "facebook"]
             except Exception:
-                sp = None
+                pq = None
         blocks = []
         for i, (prompt, texto, sub, caption) in enumerate(parsed, 1):
             urls = image_gen.generate_image(prompt, aspect_ratio="1:1", n=1, text=texto, subtitle=sub)
@@ -317,19 +318,20 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
                 continue
             cap = texto or prompt[:90]
             block = f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})"
-            if sp:
+            if pq:
                 post_caption = caption or "\n\n".join(x for x in (texto, sub) if x) or ""
                 try:
-                    res = sp.publish(urls[0], post_caption, targets)
-                    summ = _publish_summary(res)
-                    if summ:
-                        block += "\n\n" + summ
+                    item = pq.enqueue(urls[0], post_caption, targets, source="content")
+                    if item:
+                        block += "\n\n> 🗓️ Encolado para publicación (se publica máx 1 por día)."
+                    else:
+                        block += "\n\n> ⚠️ Cola de publicación llena: no se encoló (revisá el panel)."
                 except Exception as e:
-                    block += f"\n\n> ⚠️ No se pudo publicar: {str(e)[:140]}"
+                    block += f"\n\n> ⚠️ No se pudo encolar: {str(e)[:140]}"
             blocks.append(block)
         if not blocks:
             return text
-        titulo = "## 🎨 Imágenes generadas" + (" y publicadas" if sp else "")
+        titulo = "## 🎨 Imágenes generadas" + (" (encoladas para publicar 1/día)" if pq else "")
         return text.rstrip() + "\n\n---\n\n" + titulo + "\n\n" + "\n\n".join(blocks) + "\n"
     except Exception:
         return text

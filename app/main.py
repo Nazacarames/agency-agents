@@ -895,6 +895,36 @@ async def api_publish(body: PublishBody, request: Request):
     return res
 
 
+@app.get("/api/publish/queue")
+async def api_publish_queue(request: Request):
+    """Cola de publicaciones: pendientes + publicadas hoy. Se drena 1/día."""
+    _verify_webhook_secret(request)
+    from .integrations import publish_queue as pq
+    return pq.summary()
+
+
+@app.post("/api/publish/drain")
+async def api_publish_drain(request: Request):
+    """Drena manualmente la cola. Por defecto respeta el límite de 1/día; con
+    {"force": true} publica igual aunque ya se haya publicado hoy."""
+    _verify_webhook_secret(request)
+    from .integrations import publish_queue as pq
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    force = bool(body.get("force")) if isinstance(body, dict) else False
+    res = await run_in_threadpool(pq.drain_one, force)
+    return res
+
+
+@app.delete("/api/publish/queue/{item_id}")
+async def api_publish_queue_delete(item_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import publish_queue as pq
+    return {"ok": pq.delete_item(item_id)}
+
+
 @app.get("/media/{filename}")
 async def media_file(filename: str):
     """Sirve las imágenes generadas (guardadas en el volume data/images/)."""
