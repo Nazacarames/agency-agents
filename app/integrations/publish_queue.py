@@ -130,7 +130,7 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
     Pensado para correr 1x/día. SÍNCRONO (llamarlo con asyncio.to_thread desde el
     scheduler para no bloquear el event loop: la Graph API hace self-fetch de /media).
     Devuelve un dict con el resultado."""
-    from .log import get_logger
+    from ..log import get_logger
     log = get_logger("publish_queue")
     store = load_store()
     if not force and published_today_count(store) >= 1:
