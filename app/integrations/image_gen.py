@@ -61,10 +61,14 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
     if not enabled() or not (prompt or "").strip():
         return []
     full_prompt = prompt.strip()
+    # SIEMPRE prohibir texto: MiniMax dibuja letras/números deformes e ilegibles.
+    # El texto real lo compone Pillow por encima. Negativo fuerte y repetido.
+    full_prompt += (". IMPORTANT: photographic/illustrated scene only, absolutely NO text, "
+                    "no letters, no words, no numbers, no captions, no watermark, no logos, "
+                    "no UI, no chat bubbles, no screenshots, no charts. Pure imagery.")
     if text:
-        # que MiniMax NO escriba texto (lo ponemos nosotros) y deje espacio limpio
-        full_prompt += (". Clean simple background with empty space at the bottom for a text "
-                        "banner. Do NOT render any text, letters or words in the image.")
+        # además dejar espacio limpio abajo para la banda de texto compuesta
+        full_prompt += " Leave clean empty space at the bottom for a text banner."
     body = {
         "model": getattr(s, "image_model", "image-01"),
         "prompt": full_prompt[:1500],
