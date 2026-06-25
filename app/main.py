@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional
 import pytz
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from . import __version__
@@ -882,7 +883,12 @@ async def api_publish(body: PublishBody, request: Request):
                             detail="publicación a redes no configurada (faltan tokens de Meta: META_PAGE_TOKEN + META_PAGE_ID/IG_BUSINESS_ID)")
     if not (body.image or "").strip():
         raise HTTPException(status_code=400, detail="falta la imagen a publicar")
-    res = sp.publish(body.image.strip(), body.caption or "", body.targets)
+    # IMPORTANTE: sp.publish hace llamadas HTTP síncronas a la Graph API, y la Graph
+    # API a su vez descarga la imagen /media/... DE ESTE MISMO backend. Si corriéramos
+    # esto en el event loop lo bloquearíamos y el contenedor no podría servir el fetch
+    # de /media que FB le hace en paralelo -> "Missing or invalid image file" (deadlock
+    # consigo mismo). Lo offloadeamos a un threadpool para mantener el loop libre.
+    res = await run_in_threadpool(sp.publish, body.image.strip(), body.caption or "", body.targets)
     if not res.get("ok"):
         # devolver el detalle por red para poder diagnosticar
         raise HTTPException(status_code=502, detail={"msg": "no se pudo publicar", **res})
