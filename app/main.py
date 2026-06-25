@@ -902,7 +902,8 @@ async def media_file(filename: str):
     path = _data_dir() / "images" / safe
     if not path.exists():
         raise HTTPException(status_code=404, detail="imagen no encontrada")
-    return FileResponse(str(path), media_type="image/png")
+    mt = "image/jpeg" if safe.lower().endswith((".jpg", ".jpeg")) else "image/png"
+    return FileResponse(str(path), media_type=mt)
 
 
 # ── Agenda de reuniones ──

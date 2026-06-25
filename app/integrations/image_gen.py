@@ -91,7 +91,11 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
                     log.warning("image_download_failed", error=str(e)[:150]); continue
                 if text:
                     raw = _overlay_text(raw, text, subtitle) or raw
-                fname = f"{uuid.uuid4().hex}.png"
+                else:
+                    # Instagram SÓLO acepta JPEG (PNG → "Only photo or video can be
+                    # accepted as media type"). Normalizamos todo a JPEG.
+                    raw = _to_jpeg(raw) or raw
+                fname = f"{uuid.uuid4().hex}.jpg"
                 (_images_dir() / fname).write_bytes(raw)
                 local_url = f"/media/{fname}"
                 out.append(local_url)
@@ -194,8 +198,22 @@ def _overlay_text(img_bytes: bytes, text: str, subtitle: Optional[str] = None) -
         draw.rectangle([0, 0, W, int(H * 0.012)], fill=(_BLUE[0], _BLUE[1], _BLUE[2], 255))
 
         out = io.BytesIO()
-        img.convert("RGB").save(out, format="PNG")
+        # JPEG: Instagram no acepta PNG en su API de publicación.
+        img.convert("RGB").save(out, format="JPEG", quality=90)
         return out.getvalue()
     except Exception as e:
         log.warning("overlay_text_failed", error=str(e)[:200])
+        return None
+
+
+def _to_jpeg(img_bytes: bytes) -> Optional[bytes]:
+    """Convierte cualquier imagen a JPEG (RGB). IG sólo acepta JPEG."""
+    try:
+        from PIL import Image
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=90)
+        return out.getvalue()
+    except Exception as e:
+        log.warning("to_jpeg_failed", error=str(e)[:200])
         return None
