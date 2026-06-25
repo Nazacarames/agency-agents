@@ -145,31 +145,53 @@ def official_site_directive() -> str:
     )
 
 
-def competitor_visual_directive(vertical: str = "", country: str = "") -> str:
-    """Hace que el agente estudie la competencia ANTES de diseñar las imágenes, para
-    que la dirección de arte sea diferenciada y no genérica."""
+def _ad_library_url(country_code: str = "AR", query: str = "") -> str:
+    """URL de la Biblioteca de Anuncios de Meta para un país + término."""
+    from urllib.parse import quote
+    cc = (country_code or "AR").upper()
+    q = quote(query or "")
+    return (f"https://www.facebook.com/ads/library/?active_status=all&ad_type=all"
+            f"&country={cc}&q={q}&media_type=all")
+
+
+def competitor_visual_directive(vertical: str = "", country: str = "", country_code: str = "AR") -> str:
+    """Hace que el agente estudie la competencia ANTES de diseñar las imágenes —usando
+    la Biblioteca de Anuncios de Meta como fuente principal— para que la dirección de
+    arte sea diferenciada, VARIADA y basada en lo que la competencia realmente corre."""
     foco = []
     if vertical:
         foco.append(f"vertical «{vertical}»")
     if country:
         foco.append(f"país «{country}»")
     foco_txt = (" (foco: " + ", ".join(foco) + ")") if foco else ""
+    ad_url = _ad_library_url(country_code, vertical or "automatizacion IA marketing")
     return (
-        "\n\nESTUDIO DE COMPETENCIA (obligatorio, ANTES de las imágenes)" + foco_txt + ":\n"
-        "Investigá con WebSearch/WebFetch 2-3 competidores o referentes REALES (agencias de "
-        "IA/automatización, o marcas que le hablan al mismo público) y mirá su Instagram/landing. "
-        "Anotá en 2-4 líneas (sección «Estudio de competencia» en tu output):\n"
-        "- Qué lenguaje visual dominan (estilo, paleta, tipo de imagen) y qué CLICHÉS repiten todos "
-        "(lo ya quemado: stock 3D azul genérico, robots sonrientes, 'businessman con laptop', etc.).\n"
-        "- Cómo se va a DIFERENCIAR Automiq: una dirección de arte concreta que se despegue de eso.\n"
-        "Esa decisión tiene que reflejarse en CADA prompt de imagen de abajo."
+        "\n\nESTUDIO DE COMPETENCIA EN LA BIBLIOTECA DE ANUNCIOS (obligatorio, ANTES de las imágenes)"
+        + foco_txt + ":\n"
+        "FUENTE PRINCIPAL — la **Biblioteca de Anuncios de Meta** (Meta Ad Library), que muestra los "
+        "anuncios REALES que la competencia está corriendo ahora en IG/FB. Abrila con WebFetch/WebSearch:\n"
+        f"  {ad_url}\n"
+        "Cambiá el `q=` por 2-3 competidores reales o términos del rubro/país. Si la página no renderiza, "
+        "buscá igual con WebSearch (\"<competidor> meta ad library\", \"<rubro> ads instagram <país>\") y "
+        "mirá sus perfiles de IG/landing. Analizá los CREATIVOS de esos anuncios y anotá en la sección "
+        "«Estudio de competencia» de tu output (4-6 líneas):\n"
+        "- El RANGO de formatos/estilos que usan (foto UGC, testimonio con screenshot, before/after, "
+        "tipográfico audaz, 3D producto, captura de chat, data-viz, carrusel, etc.).\n"
+        "- Los CLICHÉS que repiten todos y hay que EVITAR (stock 3D azul genérico, robots sonrientes, "
+        "'businessman con laptop', cerebros con circuitos).\n"
+        "- La dirección de arte diferenciada de Automiq que se despega de eso.\n"
+        "VARIEDAD OBLIGATORIA: NO todas las imágenes pueden ser del mismo tipo. Asigná a CADA pieza un "
+        "formato/estilo DISTINTO de los que viste funcionando en la biblioteca (rotá entre foto editorial, "
+        "tipográfico, UGC/testimonio, captura de chat de WhatsApp, before/after, 3D, ilustración con "
+        "textura…). Esa decisión por-pieza tiene que reflejarse en cada prompt `IMAGEN:` de abajo."
     )
 
 
 def competitor_visual_directive_for(ctx) -> str:
     """Igual que competitor_visual_directive pero toma vertical/país del cliente
-    objetivo (si la tarea apunta a uno) para enfocar la investigación."""
+    objetivo (si la tarea apunta a uno) para enfocar la investigación y la Ad Library."""
     vertical = country = ""
+    country_code = "AR"
     try:
         args = getattr(ctx, "args", None) or {}
         cid = args.get("client_id") if isinstance(args, dict) else None
@@ -179,9 +201,10 @@ def competitor_visual_directive_for(ctx) -> str:
             if c:
                 vertical = c.get("vertical") or ""
                 country = loc.label(c.get("country"))
+                country_code = loc.normalize(c.get("country"))
     except Exception:
         pass
-    return competitor_visual_directive(vertical, country)
+    return competitor_visual_directive(vertical, country, country_code)
 
 
 def image_prompt_directive() -> str:
@@ -190,7 +213,9 @@ def image_prompt_directive() -> str:
         "\n\nIMÁGENES (obligatorio): la cantidad la decidís VOS según tu planificación "
         "(1 por idea / 1 por post clave). No te limites a un número fijo. "
         "Por cada pieza agregá una línea que empiece EXACTO con `IMAGEN:` así:\n"
-        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional>`\n"
+        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | CAPTION: <caption COMPLETO del post, en español, con hook + cuerpo + CTA + hashtags>`\n"
+        "El CAPTION es lo que se PUBLICA de verdad en Instagram/Facebook, así que tiene que ser el "
+        "copy final listo para postear (no un resumen). Si no ponés CAPTION, se publica con el TEXTO + SUBTEXTO.\n"
         "ARTE (clave para que NO salgan genéricas): el <prompt> tiene que ser ESPECÍFICO y basado "
         "en tu estudio de competencia. Describí un SUJETO y una ESCENA concreta del vertical/país real "
         "(no abstracciones tipo 'businessman with laptop'), con estilo, composición, luz y mood "
@@ -213,23 +238,48 @@ def _clean_fragment(s: str):
 
 
 def _parse_image_line(line: str):
-    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada>` → (prompt, texto, subtexto).
+    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | CAPTION: <post>` →
+    (prompt, texto, subtexto, caption). Los campos labelados pueden venir en
+    cualquier orden; el prompt es todo lo que va antes del primer `|`.
     Tolera que el modelo envuelva la línea en backticks/asteriscos de markdown."""
     import re
-    prompt, texto, sub = line, None, None
-    m = re.search(r"\|\s*SUBTEXTO\s*:\s*(.+)$", prompt, re.IGNORECASE)
-    if m:
-        sub = m.group(1); prompt = prompt[:m.start()]
-    m = re.search(r"\|\s*TEXTO\s*:\s*(.+)$", prompt, re.IGNORECASE)
-    if m:
-        texto = m.group(1); prompt = prompt[:m.start()]
-    return _clean_fragment(prompt), _clean_fragment(texto) or None, _clean_fragment(sub) or None
+
+    def _grab(label: str):
+        # captura el valor del campo hasta el próximo campo conocido o el fin de línea
+        m = re.search(
+            rf"\|\s*{label}\s*[:：]\s*(.+?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION)\s*[:：]|$)",
+            line, re.IGNORECASE | re.DOTALL)
+        return _clean_fragment(m.group(1)) or None if m else None
+
+    texto = _grab("TEXTO")
+    sub = _grab("SUBTEXTO")
+    caption = _grab("CAPTION")
+    prompt = line.split("|", 1)[0]
+    return _clean_fragment(prompt), texto, sub, caption
 
 
-def augment_with_images(text: str, max_images: int = 2) -> str:
-    """Busca líneas `IMAGEN: <prompt> | TEXTO: <titular> | SUBTEXTO: <bajada>`, genera
-    las imágenes (fondo MiniMax + texto compuesto con Pillow) y anexa la sección.
-    Best-effort."""
+def _publish_summary(res: dict) -> str:
+    """Formatea el resultado de social_publish.publish para anexar al reporte."""
+    parts = []
+    for net, r in (res.get("results") or {}).items():
+        label = "Instagram" if net == "instagram" else "Facebook"
+        if r.get("ok"):
+            pid = r.get("id") or ""
+            if net == "facebook" and pid:
+                parts.append(f"✅ {label} → https://www.facebook.com/{pid}")
+            else:
+                parts.append(f"✅ {label} (id `{pid}`)")
+        else:
+            parts.append(f"❌ {label}: {str(r.get('error',''))[:140]}")
+    return ("> **📤 Publicado:** " + " · ".join(parts)) if parts else ""
+
+
+def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -> str:
+    """Busca líneas `IMAGEN: <prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | CAPTION: <post>`,
+    genera las imágenes (fondo MiniMax + texto compuesto con Pillow), anexa la sección y
+    —si `publish` y hay tokens Meta— PUBLICA cada imagen en IG/FB con su caption.
+    Best-effort. Seguro contra deadlock: esto corre en un worker thread (asyncio.to_thread),
+    así que el event loop queda libre para servirle /media a la Graph API."""
     import re
     # Tolera que el modelo escriba la línea envuelta en markdown:
     # `` `IMAGEN: ...` ``, ``- IMAGEN: ...``, ``**IMAGEN:** ...`` o ``> IMAGEN: ...``.
@@ -242,21 +292,45 @@ def augment_with_images(text: str, max_images: int = 2) -> str:
         # Parsear todas y descartar las vacías (p.ej. el label suelto `**IMAGEN:**`)
         parsed = []
         for raw in pat.findall(text):
-            prompt, texto, sub = _parse_image_line(raw.strip())
+            prompt, texto, sub, caption = _parse_image_line(raw.strip())
             if len(prompt) >= 8:           # un prompt real, no un label vacío
-                parsed.append((prompt, texto, sub))
+                parsed.append((prompt, texto, sub, caption))
         parsed = parsed[:max_images]
         if not parsed:
             return text
+        # ¿Publicamos? Sólo si nos lo piden Y hay tokens configurados.
+        sp = None
+        targets = []
+        if publish:
+            try:
+                from ..integrations import social_publish as sp_mod
+                from ..config import get_settings
+                if sp_mod.enabled():
+                    sp = sp_mod
+                    targets = get_settings().social_targets_list() or ["instagram", "facebook"]
+            except Exception:
+                sp = None
         blocks = []
-        for i, (prompt, texto, sub) in enumerate(parsed, 1):
+        for i, (prompt, texto, sub, caption) in enumerate(parsed, 1):
             urls = image_gen.generate_image(prompt, aspect_ratio="1:1", n=1, text=texto, subtitle=sub)
-            if urls:
-                cap = texto or prompt[:90]
-                blocks.append(f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})")
+            if not urls:
+                continue
+            cap = texto or prompt[:90]
+            block = f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})"
+            if sp:
+                post_caption = caption or "\n\n".join(x for x in (texto, sub) if x) or ""
+                try:
+                    res = sp.publish(urls[0], post_caption, targets)
+                    summ = _publish_summary(res)
+                    if summ:
+                        block += "\n\n" + summ
+                except Exception as e:
+                    block += f"\n\n> ⚠️ No se pudo publicar: {str(e)[:140]}"
+            blocks.append(block)
         if not blocks:
             return text
-        return text.rstrip() + "\n\n---\n\n## 🎨 Imágenes generadas\n\n" + "\n\n".join(blocks) + "\n"
+        titulo = "## 🎨 Imágenes generadas" + (" y publicadas" if sp else "")
+        return text.rstrip() + "\n\n---\n\n" + titulo + "\n\n" + "\n\n".join(blocks) + "\n"
     except Exception:
         return text
 

@@ -76,10 +76,18 @@ class Settings(BaseSettings):
     # URL pública del backend, para que la Graph API pueda DESCARGAR la imagen
     # (las imágenes viven en /media/<file>). Ej: https://...up.railway.app
     public_base_url: str = ""
+    # Auto-publicación: si está ON, los agentes que planifican contenido
+    # (content_creator, social_media) publican CADA imagen que generan en las
+    # redes indicadas, con el caption que planificaron. Requiere tokens Meta.
+    social_auto_publish: bool = True
+    social_publish_targets: str = "instagram,facebook"   # CSV: instagram,facebook
 
     @property
     def social_publish_configured(self) -> bool:
         return bool(self.meta_page_token and (self.meta_page_id or self.ig_business_id))
+
+    def social_targets_list(self) -> list:
+        return [t.strip().lower() for t in (self.social_publish_targets or "").split(",") if t.strip()]
 
     # ── Render (auto-injected) ──
     render_service_id: str = ""

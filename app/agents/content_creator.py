@@ -86,5 +86,10 @@ class ContentCreatorAgent(BaseAgent):
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         from ..config import get_settings
-        text = augment_with_images(response_text, get_settings().content_image_count)
+        s = get_settings()
+        pub = s.social_auto_publish
+        args = getattr(ctx, "args", None) or {}
+        if isinstance(args, dict) and "publish" in args:
+            pub = bool(args["publish"])
+        text = augment_with_images(response_text, s.content_image_count, publish=pub)
         return super().post_process(text, ctx)
