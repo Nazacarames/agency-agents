@@ -18,6 +18,7 @@ Best-effort: si no está configurado o falla, devuelve {ok: False, error: ...}.
 """
 from __future__ import annotations
 
+import time
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -107,6 +108,19 @@ def publish_instagram(image: str, caption: str = "") -> Dict[str, Any]:
             creation_id = d.get("id")
             if not creation_id:
                 return {"ok": False, "error": "sin creation_id de la Graph API"}
+            # 1b) IG procesa el contenedor de forma ASÍNCRONA: hay que esperar a que
+            # status_code == FINISHED antes de publicarlo, si no da "Media ID is not
+            # available". Polleamos hasta ~25s.
+            for _ in range(12):
+                rs = c.get(_graph_url(creation_id),
+                           params={"fields": "status_code,status", "access_token": s.meta_page_token})
+                ds = rs.json() if rs.content else {}
+                st = (ds.get("status_code") or "").upper()
+                if st == "FINISHED":
+                    break
+                if st == "ERROR":
+                    return {"ok": False, "error": f"IG no pudo procesar la imagen: {ds.get('status') or 'ERROR'}"}
+                time.sleep(2)
             # 2) publicar el contenedor
             r2 = c.post(_graph_url(f"{s.ig_business_id}/media_publish"),
                         data={"creation_id": creation_id, "access_token": s.meta_page_token})
