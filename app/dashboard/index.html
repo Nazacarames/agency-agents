@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Automiq · Panel Operativo</title>
+<title>Automiq · Gestión de Agencia</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" href="/favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -217,6 +220,7 @@
 
       <!-- RESUMEN / COCKPIT -->
       <section id="tab-resumen">
+        <div id="overviewAlerts"></div>
         <div class="kpi-row" id="overviewKpis"></div>
         <div class="grid-2">
           <div class="panel"><h3>Crecimiento</h3><div class="ph-sub">MRR y ganancia mensual (USD), últimos 12 meses.</div><div id="chartGrowth"></div></div>
@@ -246,6 +250,10 @@
         <div class="grid-2">
           <div class="panel"><h3>Ingresos por país</h3><div class="ph-sub">MRR en USD por país.</div><div id="finByCountry"></div></div>
           <div class="panel"><h3>Clientes por estado</h3><div class="ph-sub">Distribución de la cartera.</div><div id="finByStatus"></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><h3>Ingresos por servicio</h3><div class="ph-sub">MRR repartido entre los servicios de cada cliente.</div><div id="finByService"></div></div>
+          <div class="panel"><h3>Retención de cartera</h3><div class="ph-sub">Salud de la base de clientes.</div><div id="finRetention"></div></div>
         </div>
         <div class="sec-head"><h2>Ingresos por cliente</h2><span class="faint" style="font-size:12px">Lo que paga cada cliente activo (nativo → USD).</span></div>
         <div class="tbl-wrap" style="margin-bottom:24px"><table><thead>
@@ -300,12 +308,49 @@
           <button class="btn btn-sm" id="pubDrainBtn">📣 Publicar la próxima ahora</button>
           <span class="hint" style="margin:0">Se publica 1 por día automático a las 11:00. Acá podés forzar la próxima.</span>
         </div>
+        <div class="panel" style="margin-bottom:18px"><h3>Calendario de contenido</h3><div class="ph-sub">Próximos 14 días · 1 post por día.</div><div id="pubCalendar"></div></div>
         <div class="sec-head"><h2>Publicadas</h2><span class="faint" style="font-size:12px">Posts que salieron a IG/FB.</span></div>
         <div class="grid" id="pubDone"></div>
         <div class="sec-head"><h2>En cola</h2><span class="faint" style="font-size:12px">Esperando su turno (1 por día).</span></div>
         <div id="pubQueue"></div>
         <div class="sec-head"><h2>Fallidas</h2></div>
         <div id="pubFailed"></div>
+      </section>
+
+      <!-- ADS -->
+      <section id="tab-ads" class="hidden">
+        <div class="kpi-row" id="adsKpis"></div>
+        <div class="grid-2">
+          <div class="panel"><h3>Gasto por plataforma</h3><div class="ph-sub">En USD.</div><div id="adsDonut"></div></div>
+          <div class="panel">
+            <h3>Nueva campaña</h3><div class="ph-sub">Cargá una campaña para trackear gasto y ROAS.</div>
+            <div class="row" style="margin-top:6px">
+              <div style="flex:2;min-width:160px"><label>Nombre</label><input id="adName" class="inp" placeholder="Distribuidoras CDMX"/></div>
+              <div style="flex:1;min-width:130px"><label>Cliente</label><select id="adClient" class="inp"><option value="">— interno —</option></select></div>
+            </div>
+            <div class="row" style="margin-top:4px">
+              <div style="flex:1;min-width:110px"><label>Plataforma</label><select id="adPlatform" class="inp"></select></div>
+              <div style="flex:1;min-width:120px"><label>Objetivo</label><input id="adObjective" class="inp" placeholder="Leads / Ventas"/></div>
+              <div style="flex:1;min-width:110px"><label>Estado</label><select id="adStatus" class="inp"></select></div>
+            </div>
+            <div class="row" style="margin-top:4px">
+              <div style="flex:1;min-width:80px"><label>Moneda</label><select id="adCur" class="inp"></select></div>
+              <div style="flex:1;min-width:90px"><label>Gasto</label><input id="adSpend" class="inp" type="number" step="0.01" placeholder="0"/></div>
+              <div style="flex:1;min-width:90px"><label>Resultados</label><input id="adResults" class="inp" type="number" step="1" placeholder="leads"/></div>
+              <div style="flex:1;min-width:90px"><label>Ingreso</label><input id="adRevenue" class="inp" type="number" step="0.01" placeholder="0"/></div>
+            </div>
+            <button class="btn btn-sm" id="adBtn" style="margin-top:12px">Agregar campaña</button>
+          </div>
+        </div>
+        <div class="sec-head"><h2>Campañas</h2><span class="faint" style="font-size:12px">ROAS = ingreso / gasto · CPL = gasto / resultados.</span></div>
+        <div class="tbl-wrap" style="margin-bottom:18px"><table><thead>
+          <tr><th>Campaña</th><th>Plataforma</th><th>Estado</th><th style="text-align:right">Gasto</th><th style="text-align:right">Result.</th><th style="text-align:right">CPL</th><th style="text-align:right">ROAS</th><th></th></tr>
+        </thead><tbody id="adsBody"></tbody></table></div>
+        <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px"><b>Creatividades de ads</b><div class="muted" style="font-size:13px">El agente <b>creative_strategist</b> genera copy + imágenes de ads.</div></div>
+          <button class="btn-ghost btn-sm" onclick="runAgent('creative_strategist')">Generar creatividades</button>
+          <button class="btn-ghost btn-sm" onclick="viewLast('creative_strategist')">Ver últimas</button>
+        </div>
       </section>
 
       <!-- AGENTES -->
@@ -522,6 +567,7 @@ const ICONS = {
   finanzas: ico('<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),
   growth: ico('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'),
   publicaciones: ico('<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>'),
+  ads: ico('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>'),
 };
 const NAV = [
   {id:'resumen', label:'Resumen', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
@@ -529,6 +575,7 @@ const NAV = [
   {id:'clientes', label:'Clientes', sub:'Facturación, servicios, estado y memoria de cada cliente.'},
   {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound. Convertí a cliente.'},
   {id:'publicaciones', label:'Publicaciones', sub:'Posts publicados en IG/FB, cola del día y resultados.'},
+  {id:'ads', label:'Ads', sub:'Campañas de ads por cliente: gasto, resultados y ROAS.'},
   {id:'growth', label:'Growth', sub:'Objetivos y tareas de crecimiento de la empresa.'},
   {id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
   {id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
@@ -579,6 +626,7 @@ function loadTab(tab){
   if(tab==='resumen') loadOverview();
   if(tab==='finanzas') loadFinanzas();
   if(tab==='publicaciones') loadPublicaciones();
+  if(tab==='ads') loadAds();
   if(tab==='growth') loadGrowthBoard();
   if(tab==='agentes') loadAgents();
   if(tab==='tareas') loadTasks();
@@ -707,6 +755,7 @@ async function loadOverview(){
     el('chartRevExp').innerHTML += `<div class="legend"><span class="lg"><span class="sw" style="background:${CH.blue}"></span>Ingresos</span><span class="lg"><span class="sw" style="background:${CH.amber}"></span>Gastos</span></div>`;
     el('chartFunnel').innerHTML = funnelFromPipeline(stats.pipeline);
     el('engineFlow').innerHTML = engineFlow(stats.engine);
+    el('overviewAlerts').innerHTML = alertsHtml(stats.alerts);
     el('overviewPosts').innerHTML = overviewPostsHtml(pubq);
     el('overviewHealth').innerHTML = overviewHealthHtml(health);
     setNavCount('publicaciones', pubq && pubq.pending ? pubq.pending : null);
@@ -738,6 +787,15 @@ function kpiBig(lbl,val,sub,icon,cls,spark,valCls){
   return `<div class="kpi-card ${cls||''}"><div class="ic">${icon||''}</div>
     <div class="lbl">${esc(lbl)}</div><div class="kpi ${valCls||''}">${esc(val)}</div>
     <div class="sub">${esc(sub||'')}</div>${spark||''}</div>`;
+}
+function alertsHtml(alerts){
+  if(!alerts || !alerts.length) return '';
+  const c={red:'red',amber:'warn'};
+  return `<div class="card" style="margin-bottom:18px;padding:14px 16px;border-color:rgba(248,113,113,.28)">
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:7px">⚠️ Alertas <span class="badge grey">${alerts.length}</span></div>
+    ${alerts.map(a=>`<div style="display:flex;align-items:center;gap:9px;padding:5px 0;font-size:13.5px">
+      <span class="dot" style="width:7px;height:7px;border-radius:50%;background:var(--${a.level==='red'?'red':'amber'});flex:none"></span>${esc(a.msg)}</div>`).join('')}
+  </div>`;
 }
 function overviewPostsHtml(pubq){
   if(!pubq) return '<div class="empty" style="padding:18px">—</div>';
@@ -798,6 +856,17 @@ async function loadFinanzas(){
       <div style="display:flex;align-items:center;gap:10px"><div style="width:84px;font-size:12.5px;color:var(--muted);text-transform:capitalize">${k}</div>
       <div style="flex:1;height:22px;background:rgba(255,255,255,.04);border-radius:6px;overflow:hidden"><div style="width:${(bs[k]||0)/maxSt*100}%;height:100%;background:var(--${cls==='ok'?'green':cls==='blue'?'blue':cls==='warn'?'amber':'red'})"></div></div>
       <div class="money" style="width:28px;text-align:right">${bs[k]||0}</div></div>`).join('')+'</div>';
+    // ingresos por servicio (reparte el MRR de cada cliente entre sus servicios)
+    const byService={}; (s.by_client||[]).forEach(c=>{ const svcs=(c.services||'').split(',').map(x=>x.trim()).filter(Boolean); if(!svcs.length||c.monthly_fee_usd<=0)return; const share=c.monthly_fee_usd/svcs.length; svcs.forEach(sv=>{ byService[sv]=(byService[sv]||0)+share; }); });
+    el('finByService').innerHTML = svgDonut(Object.entries(byService).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>({label:k,value:Math.round(v)})));
+    // retención
+    const tot=s.billing.total||0, act=s.billing.active||0, baja=bs.baja||0, paus=bs.pausado||0;
+    const churn=tot?Math.round(baja/tot*100):0; const retain=tot?Math.round(act/tot*100):0;
+    el('finRetention').innerHTML = `<div class="kpi-row" style="margin-bottom:6px">
+      ${kpiBig('Retención', retain+'%', act+' activos / '+tot, ICONS.clientes,'')}
+      ${kpiBig('Churn', churn+'%', baja+' bajas', ICONS.clientes, churn>0?'down':'')}
+      ${kpiBig('En pausa', paus, 'a recuperar', ICONS.clientes,'')}</div>
+      <div class="muted" style="font-size:12.5px;line-height:1.5">${baja?('⚠️ '+baja+' cliente(s) de baja. '):'✅ Sin bajas. '}${paus?(paus+' en pausa — buen momento para reactivar.'):''}</div>`;
     // ingresos por cliente
     const rows=(s.by_client||[]).filter(c=>c.monthly_fee_usd>0||c.status==='activo');
     el('finByClient').innerHTML = rows.length ? rows.map(c=>`<tr>
@@ -850,8 +919,11 @@ async function loadGrowthBoard(){
     setNavCount('growth', objs.filter(o=>gwStatusNorm(o.status)!=='hecho').length||null);
     el('growthBoard').innerHTML = GW_COLS.map(([key,title])=>{
       const items=objs.filter(o=>gwStatusNorm(o.status)===key);
+      const prog=key==='hecho'?100:key==='en curso'?55:15;
+      const pcol=key==='hecho'?'var(--green)':'var(--blue-bright)';
       return `<div class="col"><h4><span>${title}</span><span>${items.length}</span></h4>${
         items.map(g=>`<div class="gcard"><div class="gobj">${esc(g.objective||'')}</div>
+          <div style="height:5px;background:rgba(255,255,255,.06);border-radius:4px;margin-top:9px;overflow:hidden"><div style="width:${prog}%;height:100%;background:${pcol}"></div></div>
           <div class="gmeta"><span class="badge grey">${esc(g.sector||'general')}</span>${g.target?'<span>🎯 '+esc(g.target)+'</span>':''}
           <span style="margin-left:auto;display:flex;gap:4px">${key!=='hecho'?`<button class="btn-ghost btn-xs" onclick="gwAdvance('${g.id}','${key}')">→</button>`:''}<button class="btn-ghost btn-xs" onclick="gwDel('${g.id}')">🗑</button></span></div></div>`).join('')
         || '<div class="faint" style="font-size:12px;padding:8px 2px">—</div>'}</div>`;
@@ -887,6 +959,18 @@ async function loadPublicaciones(){
       kpiBig('En cola', pend.length, 'esperando turno', ICONS.publicaciones,'') +
       kpiBig('Próxima', nextDate, pend.length?'1 por día':'cola vacía', ICONS.agenda,'') +
       kpiBig('Fallidas', fail.length, fail.length?'revisar abajo':'todo ok', ICONS.publicaciones, fail.length?'':'');
+    // calendario (próximos 14 días)
+    const DOW=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    let cal='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">';
+    for(let dd=0; dd<14; dd++){ const date=new Date(); date.setDate(date.getDate()+dd);
+      const idx=dd-startOffset; const it=(idx>=0&&idx<pend.length)?pend[idx]:null;
+      const isToday=dd===0; const publishedToday=isToday&&q.published_today>0;
+      cal+=`<div style="background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:9px;padding:7px;min-height:74px;${it?'border-color:rgba(91,140,247,.4)':''}">
+        <div class="faint" style="font-size:10.5px;font-weight:700">${DOW[date.getDay()]} ${date.getDate()}</div>
+        ${it?`<img src="${esc(it.image)}" loading="lazy" style="width:100%;height:42px;object-fit:cover;border-radius:5px;margin-top:5px"/>`:(publishedToday?'<div style="font-size:11px;color:var(--green);margin-top:14px;text-align:center">✓ hoy</div>':'<div style="font-size:11px;color:var(--faint);margin-top:18px;text-align:center">—</div>')}
+      </div>`; }
+    cal+='</div>';
+    el('pubCalendar').innerHTML = pend.length||q.published_today ? cal : '<div class="empty" style="padding:20px">Nada programado. Cuando los agentes generen contenido, se agenda 1 por día.</div>';
     // publicadas (galería)
     el('pubDone').innerHTML = done.length ? done.map(it=>`<div class="card" style="padding:12px">
       ${pubThumb(it.image)}
@@ -918,6 +1002,50 @@ el('pubDrainBtn').addEventListener('click', async ()=>{
     toast(r.skipped?('Cola: '+r.skipped):(r.ok?'✅ Publicado':'❌ No se pudo publicar')); loadPublicaciones(); }
   catch(e){ toast('Error: '+e.message); } finally{ el('pubDrainBtn').disabled=false; }
 });
+
+// ── Ads ──
+const AD_STATUS_CLS={activa:'ok',pausada:'warn',finalizada:'grey',borrador:'blue'};
+async function loadAds(){
+  el('adsKpis').innerHTML='<p class="muted">Cargando…</p>';
+  try{
+    const [d, cli] = await Promise.all([ api('/api/ads'), api('/api/clients').catch(()=>({clients:[]})) ]);
+    const s=d.summary, camps=d.campaigns||[];
+    setNavCount('ads', s.active||null);
+    const roasCls = s.roas>=1?'up':(s.roas>0?'down':'');
+    el('adsKpis').innerHTML =
+      kpiBig('Gasto', fmtUsd(s.spend_usd), s.active+' activas / '+s.total, ICONS.ads,'accent') +
+      kpiBig('Resultados', s.results, 'leads / conversiones', ICONS.pipeline,'') +
+      kpiBig('ROAS', (s.roas||0).toFixed(2)+'×', 'ingreso / gasto', ICONS.growth,'', '', roasCls) +
+      kpiBig('CPL', fmtUsd(s.cpl_usd), 'costo por resultado', ICONS.finanzas,'');
+    el('adsDonut').innerHTML = svgDonut(Object.entries(s.by_platform||{}).map(([k,v])=>({label:k,value:Math.round(v)})));
+    // selects
+    if(!el('adPlatform').options.length) el('adPlatform').innerHTML=s.platforms.map(p=>'<option>'+p+'</option>').join('');
+    if(!el('adStatus').options.length) el('adStatus').innerHTML=s.statuses.map(p=>'<option value="'+p+'">'+p+'</option>').join('');
+    if(!el('adCur').options.length) el('adCur').innerHTML=CURRENCIES.map(c=>'<option>'+c+'</option>').join('');
+    el('adClient').innerHTML='<option value="">— interno —</option>'+(cli.clients||[]).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+    // tabla
+    el('adsBody').innerHTML = camps.length ? camps.map(c=>`<tr>
+      <td><b>${esc(c.name)}</b>${c.client_name?'<br><span class="faint" style="font-size:12px">'+esc(c.client_name)+'</span>':''}${c.objective?' <span class="faint" style="font-size:12px">· '+esc(c.objective)+'</span>':''}</td>
+      <td><span class="badge grey">${esc(c.platform)}</span></td>
+      <td><span class="badge ${AD_STATUS_CLS[c.status]||'grey'}">${esc(c.status)}</span></td>
+      <td style="text-align:right" class="money">${fmtUsd(c.spend_usd)}</td>
+      <td style="text-align:right" class="money">${c.results||0}</td>
+      <td style="text-align:right" class="money">${c.cpl_usd?fmtUsd(c.cpl_usd):'—'}</td>
+      <td style="text-align:right"><span class="money ${c.roas>=1?'up':c.roas>0?'down':''}">${c.roas?c.roas.toFixed(2)+'×':'—'}</span></td>
+      <td><button class="btn-ghost btn-xs" onclick="delAd('${c.id}')">🗑</button></td></tr>`).join('')
+      : '<tr><td colspan="8" class="empty">Sin campañas. Cargá una arriba para trackear gasto y ROAS.</td></tr>';
+  }catch(e){ el('adsKpis').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+el('adBtn').addEventListener('click', async ()=>{
+  const cn=el('adClient'); const body={ name:el('adName').value.trim(), client_id:el('adClient').value||'', client_name:(cn.value?cn.options[cn.selectedIndex].text:''),
+    platform:el('adPlatform').value, objective:el('adObjective').value.trim(), status:el('adStatus').value, currency:el('adCur').value,
+    spend:parseFloat(el('adSpend').value||'0'), results:parseFloat(el('adResults').value||'0'), revenue:parseFloat(el('adRevenue').value||'0') };
+  if(!body.name){ toast('Poné un nombre'); return; }
+  el('adBtn').disabled=true;
+  try{ await api('/api/ads',{method:'POST',body:JSON.stringify(body)}); ['adName','adObjective','adSpend','adResults','adRevenue'].forEach(i=>el(i).value=''); toast('✅ Campaña agregada'); loadAds(); }
+  catch(e){ toast('Error: '+e.message); } finally{ el('adBtn').disabled=false; }
+});
+async function delAd(id){ if(!confirm('¿Borrar esta campaña?'))return; try{ await api('/api/ads/'+id,{method:'DELETE'}); loadAds(); }catch(e){ toast('Error: '+e.message); } }
 el('gwBtn').addEventListener('click', async ()=>{
   const body={sector:el('gwSector').value.trim()||'general',objective:el('gwObjective').value.trim(),target:el('gwTarget').value.trim(),status:el('gwStatus').value};
   if(!body.objective){ toast('Escribí el objetivo'); return; }

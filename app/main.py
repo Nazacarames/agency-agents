@@ -487,6 +487,22 @@ class FxBody(BaseModel):
     rates: Dict[str, float]
 
 
+class AdBody(BaseModel):
+    name: Optional[str] = None
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
+    platform: Optional[str] = "Meta"
+    objective: Optional[str] = ""
+    status: Optional[str] = "activa"
+    currency: Optional[str] = "USD"
+    budget: Optional[float] = 0
+    spend: Optional[float] = 0
+    results: Optional[float] = 0
+    revenue: Optional[float] = 0
+    start_date: Optional[str] = None
+    notes: Optional[str] = ""
+
+
 class TaskBody(BaseModel):
     agent: str
     prompt: str
@@ -1006,7 +1022,7 @@ async def api_dashboard_stats(request: Request):
     _verify_webhook_secret(request)
     from .integrations import (clients_store as cs, finance_store as fs,
                                leads_store as ls, memory_store as ms,
-                               metrics_store as mt)
+                               metrics_store as mt, publish_queue as pq)
     billing = cs.summary_billing()
     fin = fs.finance_summary()
     pipe = ls.summary_counts(ls.load_store())
@@ -1015,6 +1031,25 @@ async def api_dashboard_stats(request: Request):
     except Exception:
         growth = []
     growth_open = [g for g in growth if (g.get("status") or "").lower() not in ("hecho", "done", "cerrado")]
+
+    # ── Alertas (señales accionables) ──
+    alerts: List[Dict[str, str]] = []
+    if fin["profit_month_usd"] < 0:
+        alerts.append({"level": "red", "msg": f"Ganancia del mes negativa: {fin['profit_month_usd']:.0f} USD (gastos > ingresos)."})
+    paused = billing["by_status"].get("pausado", 0) + billing["by_status"].get("baja", 0)
+    if paused:
+        alerts.append({"level": "amber", "msg": f"{paused} cliente(s) pausados o de baja: revisá la cartera."})
+    if billing["active"] == 0 and billing["total"] > 0:
+        alerts.append({"level": "amber", "msg": "No hay clientes activos facturando."})
+    try:
+        qs = pq.summary()
+        failed = sum(1 for it in qs.get("items", []) if it.get("status") == "failed")
+        if failed:
+            alerts.append({"level": "red", "msg": f"{failed} publicación(es) fallaron: revisá la sección Publicaciones."})
+    except Exception:
+        pass
+    if not growth_open and growth:
+        alerts.append({"level": "amber", "msg": "No quedan objetivos de growth abiertos: definí los próximos."})
     return {
         "billing": billing,
         "finance": {
@@ -1031,7 +1066,9 @@ async def api_dashboard_stats(request: Request):
         "clients_by_stage": cs.summary_counts(),
         "growth_total": len(growth),
         "growth_open": len(growth_open),
+        "growth_items": growth,
         "metrics": mt.series(),
+        "alerts": alerts,
         "engine": {
             "leads": pipe.get("total", 0),
             "clients_active": billing["active"],
@@ -1059,6 +1096,39 @@ async def api_system_health(request: Request):
         "images_enabled": image_gen.enabled(),
         "queue": {"pending": qs.get("pending", 0), "published_today": qs.get("published_today", 0)},
     }
+
+
+# ── Ads (campañas) ──
+
+@app.get("/api/ads")
+async def api_ads_list(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import ads_store as ads
+    return {"campaigns": ads.list_campaigns(), "summary": ads.summary()}
+
+
+@app.post("/api/ads")
+async def api_ads_add(body: AdBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import ads_store as ads
+    return {"ok": True, "campaign": ads.add_campaign(body.model_dump())}
+
+
+@app.put("/api/ads/{cid}")
+async def api_ads_update(cid: str, body: AdBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import ads_store as ads
+    c = ads.update_campaign(cid, body.model_dump(exclude_none=True))
+    if not c:
+        raise HTTPException(status_code=404, detail="campaña no encontrada")
+    return {"ok": True, "campaign": c}
+
+
+@app.delete("/api/ads/{cid}")
+async def api_ads_delete(cid: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import ads_store as ads
+    return {"ok": ads.delete_campaign(cid)}
 
 
 @app.get("/media/{filename}")
@@ -1242,6 +1312,22 @@ async def dashboard_page():
     if not html_path.exists():
         raise HTTPException(status_code=404, detail="dashboard no encontrado")
     return HTMLResponse(html_path.read_text(encoding="utf-8"))
+
+
+@app.get("/favicon.ico")
+async def favicon_ico():
+    p = Path(__file__).resolve().parent / "dashboard" / "favicon.ico"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="no favicon")
+    return FileResponse(str(p), media_type="image/x-icon")
+
+
+@app.get("/favicon.png")
+async def favicon_png():
+    p = Path(__file__).resolve().parent / "dashboard" / "favicon.png"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="no favicon")
+    return FileResponse(str(p), media_type="image/png")
 
 
 @app.get("/")
