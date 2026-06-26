@@ -30,10 +30,14 @@ from ..log import get_logger
 
 log = get_logger("gmail")
 
-# Scopes mínimos: leer + componer borradores. NO incluimos gmail.send.
+# Scopes: leer + componer/enviar + crear eventos de Calendar (Meet).
+# El refresh token se mintea con estos 3; agregar calendar NO rompe gmail (en el
+# refresh, Google devuelve los scopes realmente otorgados). Si el token viejo no
+# tiene calendar, calendar_client falla con gracia y el inbox propone horarios.
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/calendar.events",
 ]
 
 TOKEN_URI = "https://oauth2.googleapis.com/token"

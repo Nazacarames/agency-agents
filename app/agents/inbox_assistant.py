@@ -23,7 +23,9 @@ from typing import Any, Dict, List
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 from ..integrations.gmail_client import get_gmail_client, GmailError
+from ..integrations.calendar_client import get_calendar_client, CalendarError
 from ..integrations import leads_store as ls
+from ..integrations import meetings_store as ms
 from ..log import get_logger
 
 log = get_logger("inbox_assistant")
@@ -54,14 +56,22 @@ responder cada detalle por mail.
 - Breve y al grano (máx ~110 palabras): 1 saludo + respondé lo justo que preguntan + el CTA a reunión.
 - Conectá lo que preguntan con la oferta de Automiq (agentes IA / automatización / landings /
   ads para PyMEs) en 1 frase concreta de beneficio, sin ser vendedor agresivo.
-- **CTA a reunión (OBLIGATORIO si should_reply=true):**
-  - Si te paso un LINK DE AGENDA, ofrecelo claro: "Si querés lo charlamos 15 min, agendá el
-    horario que te quede cómodo acá: <link>".
-  - Si NO hay link, proponé 2 ventanas concretas y pedí que confirmen: "¿Te viene bien un
-    Meet de 15 min mañana 11h o pasado 16h (ART)? Decime cuál y te paso el invite."
 - Si NO tenés un dato puntual (precio exacto, algo interno), NO lo inventes: usá eso mismo
   como excusa perfecta para la reunión ("eso lo vemos en 15 min según tu caso").
 - Firmá como "Equipo Automiq". NUNCA prometas algo que no podés cumplir ni inventes precios/plazos.
+
+## Dos situaciones para el CTA (MUY IMPORTANTE)
+**(A) Todavía NO acordaron un horario concreto** → proponé y pedí que confirmen:
+  - Con LINK DE AGENDA: "Si querés lo charlamos 15 min, reservá el horario que te quede cómodo acá: <link>".
+  - Sin link: proponé 2 ventanas concretas: "¿Te viene bien un Meet de 15 min mañana 11h o pasado 16h (ART)? Decime cuál y te paso el invite con el link."
+  En este caso dejá `book.confirm` en false.
+
+**(B) El prospecto YA eligió/confirmó un día y hora puntual** (en su último mensaje dice algo
+  como "dale, el jueves a las 15h", "me sirve mañana 11", etc.) → cerralo: poné
+  `book.confirm=true` con la fecha/hora en ISO-8601 con offset ART (-03:00) y, en `reply`,
+  CONFIRMÁ la reunión e incluí LITERALMENTE el token `{{MEET_LINK}}` donde irá el link del Meet
+  (yo lo reemplazo por el link real). Ej. de reply: "¡Listo! Te agendé para el jueves 15h.
+  Acá tenés el link del Meet: {{MEET_LINK}} — nos vemos ahí. Equipo Automiq."
 
 ## Formato de salida (OBLIGATORIO)
 Devolvé EXCLUSIVAMENTE un array JSON válido (sin texto antes ni después, sin ```),
@@ -72,9 +82,19 @@ un objeto por hilo recibido, en el MISMO orden:
     "thread_id": "<el thread_id que te pasé>",
     "should_reply": true,
     "reason": "por qué sí/no responder (1 frase)",
-    "reply": "el cuerpo completo de la respuesta, listo para enviar (vacío si should_reply=false)"
+    "reply": "el cuerpo completo de la respuesta, listo para enviar (vacío si should_reply=false)",
+    "book": {
+      "confirm": false,
+      "datetime_iso": "",
+      "duration_min": 20,
+      "title": ""
+    }
   }
 ]
+
+En `book`: `confirm` true SOLO si el prospecto ya eligió un horario puntual (situación B).
+`datetime_iso` ej. "2026-06-27T15:00:00-03:00". `title` ej. "Automiq × <empresa> — demo".
+Si no hay horario confirmado, dejá `confirm:false` y `datetime_iso:""`.
 """.strip()
 
 
@@ -236,6 +256,55 @@ class InboxAssistantAgent(BaseAgent):
         except Exception as e:
             log.warning("inbox_hot_alert_failed", error=str(e))
 
+    def _fire_booked_alert(self, ctx: AgentContext, booked: List[str]) -> None:
+        """Aviso prominente al canal de ventas cuando se cierra una reunión."""
+        if not ctx.discord:
+            return
+        try:
+            ctx.discord.send_agent_output(
+                agent_name="🎉 Reunión agendada",
+                text="**El Inbox Assistant cerró una reunión (Meet creado + en el panel):**\n\n"
+                     + "\n".join(booked),
+                run_id=ctx.run_id,
+                url=ctx.settings.discord_webhook_for("outbound"),
+                color=0x2ECC71,  # verde "ganamos"
+            )
+        except Exception as e:
+            log.warning("inbox_booked_alert_failed", error=str(e))
+
+    def _book_meeting(self, ctx: AgentContext, book: Dict[str, Any], company: str, email: str):
+        """Crea el evento con Google Meet y lo registra en el panel (meetings_store).
+        Devuelve (meet_link, cuando_legible). Si falla, (None, '')."""
+        dt_iso = (book.get("datetime_iso") or "").strip()
+        title = (book.get("title") or f"Automiq × {company}").strip()
+        try:
+            dur = int(book.get("duration_min") or 20)
+        except (TypeError, ValueError):
+            dur = 20
+        try:
+            cal = get_calendar_client(ctx.settings)
+            ev = cal.create_meet_event(
+                summary=title, start_iso=dt_iso, duration_min=dur,
+                attendee_email=email or None,
+                description=f"Reunión agendada automáticamente por el Inbox Assistant de Automiq.\nContacto: {email}",
+            )
+        except (CalendarError, Exception) as e:
+            log.error("inbox_book_failed", email=email, error=str(e))
+            return None, ""
+
+        meet_link = ev.get("meet_link") or ev.get("html_link") or ""
+        # Registrar en el panel (agenda de la agencia) para que meeting_prep la prepare.
+        try:
+            ms.create_meeting(
+                client_id=None, client_name=company or email or "Prospecto",
+                title=title, scheduled_at=ev.get("start") or dt_iso,
+                location=meet_link, notes=f"Agendada por Inbox Assistant · {email}",
+            )
+        except Exception as e:
+            log.warning("inbox_meeting_log_failed", error=str(e))
+        when = (ev.get("start") or dt_iso or "").replace("T", " ")[:16]
+        return meet_link, when
+
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         status = ctx.args.get("_inbox_status") if isinstance(ctx.args, dict) else None
 
@@ -263,7 +332,7 @@ class InboxAssistantAgent(BaseAgent):
             log.error("inbox_gmail_unavailable_postprocess", error=str(e))
 
         verb = "respuesta enviada" if live else "borrador"
-        created, skipped, errors = [], [], []
+        created, skipped, errors, booked = [], [], [], []
         for it in items:
             tid = (it or {}).get("thread_id", "")
             meta = lookup.get(tid)
@@ -273,6 +342,8 @@ class InboxAssistantAgent(BaseAgent):
             reason = (it.get("reason") or "").strip()
             subj = meta["subject"] if meta else it.get("subject", "(sin asunto)")
             to = meta["to"] if meta else it.get("to", "")
+            book = it.get("book") if isinstance(it.get("book"), dict) else {}
+            wants_book = bool(book.get("confirm")) and bool((book.get("datetime_iso") or "").strip())
 
             if not should or not reply:
                 skipped.append(f"• **{subj}** → no responder ({reason or 's/d'})")
@@ -283,6 +354,25 @@ class InboxAssistantAgent(BaseAgent):
             if client is None:
                 errors.append(f"• **{subj}** → ❌ Gmail no disponible, sin {verb}")
                 continue
+
+            # ── Agendar reunión (crear Meet) si el prospecto confirmó horario ──
+            # Sólo en modo live (crear un evento real es una acción, como enviar).
+            if wants_book and live:
+                meet_link, when = self._book_meeting(ctx, book, company=subj, email=to)
+                if meet_link:
+                    reply = reply.replace("{{MEET_LINK}}", meet_link)
+                    booked.append(f"• **{subj}** <{to}> → 📅 {when} · Meet: {meet_link}")
+                else:
+                    # No se pudo crear el Meet: que la respuesta no quede rota.
+                    reply = reply.replace(
+                        "{{MEET_LINK}}",
+                        "te lo confirmo en un toque por acá")
+            else:
+                # Sin booking (o draft): limpiar el token si quedó.
+                reply = reply.replace(
+                    "{{MEET_LINK}}",
+                    "(coordinamos el link cuando confirmes el horario)")
+
             if not live:
                 try:
                     draft_id = client.create_draft(
@@ -304,14 +394,22 @@ class InboxAssistantAgent(BaseAgent):
                 log.error("inbox_send_failed", thread_id=tid, error=str(e))
                 errors.append(f"• **{subj}** → ❌ falló enviar: {e}")
 
-        log.info("inbox_done", run_id=ctx.run_id, live=live,
+        ctx.args["_inbox_booked"] = booked
+        log.info("inbox_done", run_id=ctx.run_id, live=live, booked=len(booked),
                  created=len(created), skipped=len(skipped), errors=len(errors))
 
         hot = ctx.args.get("_inbox_hot", []) if isinstance(ctx.args, dict) else []
+        booked = ctx.args.get("_inbox_booked", []) if isinstance(ctx.args, dict) else []
         parts = [
             f"# 📬 Inbox Assistant — {ctx.args.get('_inbox_count', 0)} hilo(s) no leídos",
             "",
         ]
+        if booked:
+            parts += [
+                "## 🎉 REUNIONES AGENDADAS (Meet creado + cargado al panel)",
+                *booked, "",
+            ]
+            self._fire_booked_alert(ctx, booked)
         if hot:
             parts += [
                 "## 🔥 LEADS QUE RESPONDIERON — ¡cerrá la reunión!",

@@ -29,6 +29,9 @@ from pathlib import Path
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.compose",
+    # Calendar.events → el Inbox Assistant crea reuniones con Google Meet y manda el
+    # link al prospecto. Habilitá también "Google Calendar API" en Cloud Console.
+    "https://www.googleapis.com/auth/calendar.events",
 ]
 
 
