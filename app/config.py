@@ -111,6 +111,12 @@ class Settings(BaseSettings):
     gmail_enabled: bool = True
     inbox_max_threads: int = 8           # cuántos hilos no-leídos procesar por run
     inbox_lookback_days: int = 7         # ventana de antigüedad para considerar un hilo
+    # ⚠️ Si inbox_auto_send=True, el Inbox Assistant RESPONDE solo (no borradores),
+    # siempre empujando a agendar una reunión. Default OFF por seguridad.
+    inbox_auto_send: bool = False
+    # Link de agenda (Calendly / Cal.com) que se ofrece en cada respuesta para cerrar
+    # la reunión sin ida y vuelta. Si está vacío, el agente propone horarios concretos.
+    booking_url: str = ""
 
     # ── Outbound (cold-email automático a los leads) ──
     # ⚠️ Si auto_send=True, el agente outbound ENVÍA cold-emails reales (no borradores).

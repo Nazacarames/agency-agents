@@ -4,14 +4,17 @@ Gmail client — integración para el Inbox Assistant.
 Cuenta dedicada: automiqaiagency@gmail.com. Auth OAuth2 con refresh token
 (client_id + client_secret + refresh_token en env / Settings).
 
-Scopes usados: gmail.readonly + gmail.compose → LEER + crear BORRADORES.
+Scopes usados: gmail.readonly + gmail.compose → LEER + crear/enviar.
+(gmail.compose habilita messages.send, así que el cliente puede enviar.)
 
-⚠️ SEGURIDAD: este módulo NUNCA envía correo. Sólo expone:
-  - list_unread_threads()  → lectura
-  - get_thread()           → lectura
-  - create_draft()         → crea un BORRADOR (drafts.create), no lo manda
-No existe ningún método de envío acá a propósito (el scope compose permitiría
-enviar a nivel API, pero el código jamás llama drafts.send / messages.send).
+Métodos:
+  - list_unread_threads() / get_thread()  → lectura
+  - create_draft()  → BORRADOR (drafts.create), no envía
+  - send_message()  → ENVÍA un email nuevo (outbound cold-email)
+  - send_reply()    → ENVÍA una respuesta dentro de un hilo (inbox_assistant auto-send)
+
+⚠️ El ENVÍO está gateado por settings (outbound_auto_send / inbox_auto_send):
+con esos flags en False, los agentes sólo crean borradores / previews.
 """
 from __future__ import annotations
 
@@ -251,6 +254,34 @@ class GmailClient:
         sent = svc.users().messages().send(userId=self.user_id, body={"raw": raw}).execute()
         msg_id = sent.get("id", "")
         log.info("gmail_message_sent", to=to, msg_id=msg_id, subject=subject[:60])
+        return msg_id
+
+    def send_reply(
+        self, thread_id: str, to: str, subject: str, body: str, from_name: Optional[str] = None
+    ) -> str:
+        """ENVÍA una respuesta DENTRO del hilo (no borrador). Devuelve el message id.
+        Usado por el inbox_assistant cuando inbox_auto_send=True: responde solo,
+        apuntando a agendar una reunión. Threadea por `threadId` + asunto 'Re:'."""
+        svc = self._build_service()
+        mime = MIMEText(body, "plain", "utf-8")
+        mime["To"] = to
+        mime["Subject"] = subject if subject.lower().startswith("re:") else f"Re: {subject}"
+        if from_name:
+            try:
+                addr = svc.users().getProfile(userId=self.user_id).execute().get("emailAddress", "")
+                if addr:
+                    mime["From"] = f"{from_name} <{addr}>"
+            except Exception:
+                pass
+        raw = base64.urlsafe_b64encode(mime.as_bytes()).decode("utf-8")
+        sent = (
+            svc.users()
+            .messages()
+            .send(userId=self.user_id, body={"raw": raw, "threadId": thread_id})
+            .execute()
+        )
+        msg_id = sent.get("id", "")
+        log.info("gmail_reply_sent", thread_id=thread_id, msg_id=msg_id, to=to)
         return msg_id
 
     def create_draft(

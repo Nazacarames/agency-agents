@@ -30,6 +30,10 @@ services:
         value: "true"
       - key: GLOBAL_PAUSE
         value: "false"
+      - key: INBOX_AUTO_SEND
+        value: "true"                    # el inbox responde solo apuntando a reunión
+      - key: BOOKING_URL
+        sync: false                      # link Calendly/Cal.com (opcional) p/ el CTA
       - key: WEBHOOK_SECRET
         generateValue: true              # Render genera un valor aleatorio
       - key: LOG_LEVEL

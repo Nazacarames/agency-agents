@@ -1,13 +1,15 @@
 """
 Inbox Assistant — lee la bandeja de la cuenta dedicada de Automiq
-(automiqaiagency@gmail.com) y redacta BORRADORES de respuesta para revisión humana.
+(automiqaiagency@gmail.com) y RESPONDE los hilos apuntando SIEMPRE a agendar una reunión.
 
 Flujo (determinístico + LLM):
   1. build_user_message: trae los hilos NO leídos vía Gmail API (Python, no tool-use)
-     y los mete en el prompt.
-  2. El LLM (MiniMax-M3) decide por hilo si conviene responder y redacta la respuesta.
-  3. post_process: parsea el JSON del LLM y crea un BORRADOR por respuesta (drafts.create).
-     NUNCA envía: el humano revisa y manda desde Gmail.
+     y los mete en el prompt, con el link de agenda / horarios para ofrecer.
+  2. El LLM (MiniMax-M3) decide por hilo si conviene responder y redacta la respuesta
+     orientada a cerrar una reunión.
+  3. post_process: parsea el JSON del LLM y, según `inbox_auto_send`:
+     - True  → ENVÍA la respuesta dentro del hilo (send_reply). Cierra el loop solo.
+     - False → crea un BORRADOR (drafts.create) para revisión humana.
 
 Esto NO usa Claude Code (es composición de texto pura → liviano en cuota MiniMax).
 La I/O de Gmail corre en el proceso principal (que tiene las env vars), no en el sandbox.
@@ -28,28 +30,38 @@ log = get_logger("inbox_assistant")
 
 
 INBOX_INSTRUCTIONS = """
-# Inbox Assistant — Automiq
+# Inbox Assistant — Automiq (cierra reuniones)
 
-Sos el asistente de bandeja de entrada de Automiq. Recibís hilos de email NO leídos
-de la casilla de la agencia y, por cada uno, decidís si corresponde responder y
-redactás un BORRADOR de respuesta listo para que un humano lo revise y mande.
+Sos el asistente de bandeja de Automiq. Recibís hilos de email NO leídos de la casilla
+de la agencia y, por cada uno, decidís si corresponde responder y redactás la respuesta.
+Tu RESPUESTA SE MANDA SOLA, así que escribila lista para enviar.
+
+## Objetivo nº1 de CADA respuesta: AGENDAR UNA REUNIÓN
+Toda respuesta a una persona real tiene que terminar empujando, de forma natural y sin
+ser pesado, a una llamada/reunión corta (15-20 min) para mostrarles cómo Automiq les
+resuelve su problema. La reunión es la conversión: priorizá cerrarla por encima de
+responder cada detalle por mail.
 
 ## Cómo decidir si responder (should_reply)
-- ✅ Respondé: consultas de prospectos/clientes, pedidos de info, preguntas
-  comerciales, follow-ups de gente real, partners.
+- ✅ Respondé: consultas de prospectos/clientes, pedidos de info, preguntas comerciales,
+  follow-ups de gente real, partners, cualquiera que muestre interés.
 - ❌ NO respondas (should_reply=false): newsletters, notificaciones automáticas,
   no-reply@, facturas/recibos, spam, promociones, confirmaciones de plataformas,
   o cualquier cosa que claramente no espera respuesta humana.
 
-## Cómo redactar la respuesta (draft_reply)
-- Español argentino, tono humano y profesional (no robótico, no plantilla obvia).
-- Breve y al grano (máx ~120 palabras). 1 saludo, respondé lo que preguntan, 1 CTA claro.
-- Si es un prospecto, alineá con la oferta de Automiq (agentes IA / automatización /
-  landings / ads para PyMEs argentinas), pero sin ser vendedor agresivo.
-- Si NO tenés info suficiente para responder con certeza (precio exacto, dato interno),
-  redactá una respuesta que pida los datos faltantes o proponga una llamada — NO inventes.
-- Firmá como "Equipo Automiq".
-- NUNCA prometas algo que no podés cumplir. NUNCA inventes precios o plazos concretos.
+## Cómo redactar la respuesta (reply)  — se ENVÍA tal cual
+- Español argentino, tono humano y cálido (no robótico, no plantilla obvia, sin "Estimado señor").
+- Breve y al grano (máx ~110 palabras): 1 saludo + respondé lo justo que preguntan + el CTA a reunión.
+- Conectá lo que preguntan con la oferta de Automiq (agentes IA / automatización / landings /
+  ads para PyMEs) en 1 frase concreta de beneficio, sin ser vendedor agresivo.
+- **CTA a reunión (OBLIGATORIO si should_reply=true):**
+  - Si te paso un LINK DE AGENDA, ofrecelo claro: "Si querés lo charlamos 15 min, agendá el
+    horario que te quede cómodo acá: <link>".
+  - Si NO hay link, proponé 2 ventanas concretas y pedí que confirmen: "¿Te viene bien un
+    Meet de 15 min mañana 11h o pasado 16h (ART)? Decime cuál y te paso el invite."
+- Si NO tenés un dato puntual (precio exacto, algo interno), NO lo inventes: usá eso mismo
+  como excusa perfecta para la reunión ("eso lo vemos en 15 min según tu caso").
+- Firmá como "Equipo Automiq". NUNCA prometas algo que no podés cumplir ni inventes precios/plazos.
 
 ## Formato de salida (OBLIGATORIO)
 Devolvé EXCLUSIVAMENTE un array JSON válido (sin texto antes ni después, sin ```),
@@ -60,7 +72,7 @@ un objeto por hilo recibido, en el MISMO orden:
     "thread_id": "<el thread_id que te pasé>",
     "should_reply": true,
     "reason": "por qué sí/no responder (1 frase)",
-    "draft_reply": "el cuerpo completo de la respuesta (vacío si should_reply=false)"
+    "reply": "el cuerpo completo de la respuesta, listo para enviar (vacío si should_reply=false)"
   }
 ]
 """.strip()
@@ -88,8 +100,9 @@ def _parse_llm_json(text: str) -> List[Dict[str, Any]]:
 
 class InboxAssistantAgent(BaseAgent):
     name = "inbox_assistant"
-    description = "Lee la bandeja de Automiq y redacta borradores de respuesta (read + drafts, no envía)"
-    schedule = "0 9 * * *"   # diario 09:00 ART — liviano, no usa Claude Code
+    description = "Responde la bandeja de Automiq apuntando a agendar reuniones (auto-send o borradores)"
+    # Varias pasadas al día = speed-to-lead: contestar rápido dispara las reuniones.
+    schedule = "0 9,12,15,18 * * *"   # 09/12/15/18 ART — liviano, no usa Claude Code
     timezone = "America/Buenos_Aires"
     max_tokens = 6000
     temperature = 0.6
@@ -98,6 +111,20 @@ class InboxAssistantAgent(BaseAgent):
     @property
     def system_prompt(self) -> str:
         return f"{get_context_block()}\n\n{INBOX_INSTRUCTIONS}"
+
+    def _booking_block(self, ctx: AgentContext) -> str:
+        """Contexto de agenda para que el CTA de cada respuesta cierre la reunión."""
+        url = (ctx.settings.booking_url or "").strip()
+        if url:
+            return (
+                f"\n\n## LINK DE AGENDA (usalo en el CTA de cada respuesta)\n"
+                f"Ofrecé este link para que reserven el horario que quieran: {url}\n"
+            )
+        return (
+            "\n\n## SIN LINK DE AGENDA\n"
+            "No hay link de agenda configurado: proponé 2 ventanas concretas de 15 min "
+            "(ej. 'mañana 11h o pasado 16h ART') y pedí que confirmen cuál les sirve.\n"
+        )
 
     def build_user_message(self, ctx: AgentContext) -> str:
         if not ctx.settings.gmail_configured:
@@ -182,8 +209,10 @@ class InboxAssistantAgent(BaseAgent):
 
         header = (
             f"Tenés {len(threads)} hilo(s) de email NO leídos en la bandeja de Automiq. "
-            "Por cada hilo decidí si corresponde responder y, si sí, redactá el borrador. "
-            "Devolvé el array JSON especificado (un objeto por hilo, mismo orden).\n\n"
+            "Por cada hilo decidí si corresponde responder y, si sí, redactá la respuesta "
+            "lista para enviar, SIEMPRE empujando a agendar una reunión. "
+            "Devolvé el array JSON especificado (un objeto por hilo, mismo orden)."
+            + self._booking_block(ctx) + "\n"
         )
         return header + "\n\n".join(blocks)
 
@@ -225,19 +254,22 @@ class InboxAssistantAgent(BaseAgent):
             return super().post_process(summary, ctx)
 
         dry_run = bool(ctx.args.get("dry_run")) if isinstance(ctx.args, dict) else False
+        auto = bool(ctx.settings.inbox_auto_send)
+        live = auto and not dry_run   # True → ENVÍA; False → crea borrador
         client = None
-        if not dry_run:
-            try:
-                client = get_gmail_client(ctx.settings)
-            except GmailError as e:
-                log.error("inbox_gmail_unavailable_postprocess", error=str(e))
+        try:
+            client = get_gmail_client(ctx.settings)
+        except GmailError as e:
+            log.error("inbox_gmail_unavailable_postprocess", error=str(e))
 
+        verb = "respuesta enviada" if live else "borrador"
         created, skipped, errors = [], [], []
         for it in items:
             tid = (it or {}).get("thread_id", "")
             meta = lookup.get(tid)
             should = bool(it.get("should_reply"))
-            reply = (it.get("draft_reply") or "").strip()
+            # `reply` es el campo nuevo; toleramos `draft_reply` por compatibilidad.
+            reply = (it.get("reply") or it.get("draft_reply") or "").strip()
             reason = (it.get("reason") or "").strip()
             subj = meta["subject"] if meta else it.get("subject", "(sin asunto)")
             to = meta["to"] if meta else it.get("to", "")
@@ -246,22 +278,33 @@ class InboxAssistantAgent(BaseAgent):
                 skipped.append(f"• **{subj}** → no responder ({reason or 's/d'})")
                 continue
             if not meta:
-                errors.append(f"• thread_id desconocido `{tid}` — borrador NO creado")
+                errors.append(f"• thread_id desconocido `{tid}` — {verb} NO creada")
                 continue
-            if dry_run or client is None:
-                created.append(f"• **{subj}** → (dry-run) borrador para {to}:\n  > {reply[:200]}")
+            if client is None:
+                errors.append(f"• **{subj}** → ❌ Gmail no disponible, sin {verb}")
+                continue
+            if not live:
+                try:
+                    draft_id = client.create_draft(
+                        thread_id=tid, to=to, subject=subj, body=reply,
+                        in_reply_to_msg_id=meta.get("last_msg_id"),
+                    )
+                    created.append(f"• **{subj}** → 📝 borrador `{draft_id}` para {to}")
+                except Exception as e:
+                    log.error("inbox_draft_failed", thread_id=tid, error=str(e))
+                    errors.append(f"• **{subj}** → ❌ falló crear borrador: {e}")
                 continue
             try:
-                draft_id = client.create_draft(
+                msg_id = client.send_reply(
                     thread_id=tid, to=to, subject=subj, body=reply,
-                    in_reply_to_msg_id=meta.get("last_msg_id"),
+                    from_name=ctx.settings.outbound_from_name,
                 )
-                created.append(f"• **{subj}** → ✅ borrador `{draft_id}` para {to}")
+                created.append(f"• **{subj}** → ✅ respondido a {to} (`{msg_id[:10]}`)")
             except Exception as e:
-                log.error("inbox_draft_failed", thread_id=tid, error=str(e))
-                errors.append(f"• **{subj}** → ❌ falló crear borrador: {e}")
+                log.error("inbox_send_failed", thread_id=tid, error=str(e))
+                errors.append(f"• **{subj}** → ❌ falló enviar: {e}")
 
-        log.info("inbox_done", run_id=ctx.run_id,
+        log.info("inbox_done", run_id=ctx.run_id, live=live,
                  created=len(created), skipped=len(skipped), errors=len(errors))
 
         hot = ctx.args.get("_inbox_hot", []) if isinstance(ctx.args, dict) else []
@@ -278,14 +321,19 @@ class InboxAssistantAgent(BaseAgent):
                 who = f" · {h['decisor']}" if h.get("decisor") else ""
                 parts.append(f"• **{h['company']}** <{h['email']}>{who} — _{h.get('subject', '')}_")
             parts.append("")
+        mode = "RESPUESTAS ENVIADAS" if live else "BORRADORES (auto-send OFF)"
+        label_count = "Respondidos" if live else "Borradores"
         parts += [
-            f"**Borradores creados:** {len(created)} · **Omitidos:** {len(skipped)} · **Errores:** {len(errors)}",
+            f"_Modo: **{mode}**_",
+            f"**{label_count}:** {len(created)} · **Omitidos:** {len(skipped)} · **Errores:** {len(errors)}",
             "",
         ]
         if hot:
             self._fire_hot_alert(ctx, hot)
         if created:
-            parts += ["## ✅ Borradores creados (revisá y mandá desde Gmail)", *created, ""]
+            title = ("## ✅ Respuestas enviadas (apuntando a reunión)" if live
+                     else "## 📝 Borradores creados (revisá y mandá desde Gmail)")
+            parts += [title, *created, ""]
         if skipped:
             parts += ["## ⏭️ Omitidos (no requieren respuesta)", *skipped, ""]
         if errors:
