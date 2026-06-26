@@ -564,6 +564,17 @@ class MeetingBody(BaseModel):
     status: Optional[str] = None
 
 
+class CalendarEventBody(BaseModel):
+    title: Optional[str] = "Reunión"
+    start_iso: Optional[str] = None         # ISO-8601 con offset ART (-03:00)
+    duration_min: Optional[int] = 30
+    attendee_email: Optional[str] = ""
+    create_meet: Optional[bool] = True      # crea Google Meet
+    notes: Optional[str] = ""
+    location: Optional[str] = ""
+    client_name: Optional[str] = ""
+
+
 class MissionStep(BaseModel):
     agent: str
     task: str
@@ -1307,6 +1318,100 @@ async def api_meeting_prep(meeting_id: str, request: Request, background: Backgr
 
     background.add_task(_prep)
     return {"ok": True, "run_id": run_id, "status": "queued"}
+
+
+# ── Calendario (sync con Google Calendar) ──
+
+@app.get("/api/calendar")
+async def api_calendar_events(request: Request):
+    """Eventos del Google Calendar de la agencia entre ?from y ?to (RFC3339)."""
+    _verify_webhook_secret(request)
+    s = get_settings()
+    if not s.gmail_configured:
+        return {"configured": False, "events": [], "detail": "Gmail/Calendar no configurado."}
+    from .integrations.calendar_client import get_calendar_client, CalendarError
+    qp = request.query_params
+    time_min = qp.get("from") or ""
+    time_max = qp.get("to") or ""
+    if not time_min or not time_max:
+        raise HTTPException(status_code=400, detail="faltan ?from y ?to (RFC3339)")
+    try:
+        cal = get_calendar_client(s)
+        events = await run_in_threadpool(cal.list_events, time_min, time_max)
+        return {"configured": True, "events": events}
+    except CalendarError as e:
+        return {"configured": False, "events": [], "detail": str(e)}
+    except Exception as e:
+        # Scope insuficiente / token sin re-auth → reportar sin romper el panel.
+        return {"configured": False, "events": [], "detail": f"calendar error: {e}"}
+
+
+@app.post("/api/calendar")
+async def api_calendar_create(body: CalendarEventBody, request: Request):
+    """Crea un evento en Google Calendar (opcionalmente con Meet) y lo registra en el panel."""
+    _verify_webhook_secret(request)
+    s = get_settings()
+    if not s.gmail_configured:
+        raise HTTPException(status_code=400, detail="Gmail/Calendar no configurado (re-auth pendiente).")
+    if not body.start_iso:
+        raise HTTPException(status_code=400, detail="falta fecha/hora (start_iso)")
+    from .integrations.calendar_client import get_calendar_client, CalendarError
+    from .integrations import meetings_store as mt
+    title = (body.title or "Reunión").strip()
+    try:
+        cal = get_calendar_client(s)
+        if body.create_meet:
+            ev = await run_in_threadpool(
+                cal.create_meet_event, title, body.start_iso,
+                int(body.duration_min or 30), body.attendee_email or None,
+                body.notes or "")
+        else:
+            ev = await run_in_threadpool(
+                _calendar_plain_event, cal, title, body.start_iso,
+                int(body.duration_min or 30), body.attendee_email or None, body.notes or "")
+    except CalendarError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"calendar error: {e}")
+    # Registrar también en el panel (agenda) para que meeting_prep lo prepare.
+    try:
+        mt.create_meeting(None, body.client_name or "", title,
+                          ev.get("start") or body.start_iso,
+                          ev.get("meet_link") or body.location or "", body.notes or "")
+    except Exception:
+        pass
+    return {"ok": True, "event": ev}
+
+
+@app.delete("/api/calendar/{event_id}")
+async def api_calendar_delete(event_id: str, request: Request):
+    _verify_webhook_secret(request)
+    s = get_settings()
+    if not s.gmail_configured:
+        raise HTTPException(status_code=400, detail="Gmail/Calendar no configurado.")
+    from .integrations.calendar_client import get_calendar_client
+    cal = get_calendar_client(s)
+    await run_in_threadpool(cal.delete_event, event_id)
+    return {"ok": True}
+
+
+def _calendar_plain_event(cal, title, start_iso, duration_min, attendee, notes):
+    """Crea un evento SIN Meet (reutiliza el service del calendar_client)."""
+    from datetime import timedelta
+    from .integrations.calendar_client import _parse_dt
+    svc = cal._build_service()
+    start_dt = _parse_dt(start_iso)
+    end_dt = start_dt + timedelta(minutes=max(10, duration_min))
+    body = {
+        "summary": title, "description": notes or "",
+        "start": {"dateTime": start_dt.isoformat(), "timeZone": "America/Argentina/Buenos_Aires"},
+        "end": {"dateTime": end_dt.isoformat(), "timeZone": "America/Argentina/Buenos_Aires"},
+    }
+    if attendee:
+        body["attendees"] = [{"email": attendee}]
+    ev = svc.events().insert(calendarId="primary", body=body, sendUpdates="all").execute()
+    return {"event_id": ev.get("id", ""), "meet_link": "", "html_link": ev.get("htmlLink", ""),
+            "start": start_dt.isoformat(), "end": end_dt.isoformat()}
 
 
 # ── Misiones del CEO (un objetivo → varios agentes) ──

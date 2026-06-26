@@ -60,6 +60,38 @@ class CalendarClient:
         self._service = build("calendar", "v3", credentials=creds, cache_discovery=False)
         return self._service
 
+    def list_events(self, time_min: str, time_max: str, max_results: int = 250) -> list:
+        """Lista eventos del calendario primario entre time_min y time_max (RFC3339).
+        Devuelve dicts simplificados para el panel."""
+        svc = self._build_service()
+        res = (
+            svc.events()
+            .list(calendarId="primary", timeMin=time_min, timeMax=time_max,
+                  singleEvents=True, orderBy="startTime", maxResults=max_results)
+            .execute()
+        )
+        out = []
+        for ev in res.get("items", []):
+            start = ev.get("start", {}) or {}
+            end = ev.get("end", {}) or {}
+            out.append({
+                "id": ev.get("id", ""),
+                "title": ev.get("summary", "(sin título)"),
+                "start": start.get("dateTime") or start.get("date"),
+                "end": end.get("dateTime") or end.get("date"),
+                "all_day": "date" in start and "dateTime" not in start,
+                "meet_link": _extract_meet_link(ev),
+                "html_link": ev.get("htmlLink", ""),
+                "attendees": [a.get("email") for a in ev.get("attendees", []) if a.get("email")],
+                "description": ev.get("description", ""),
+                "location": ev.get("location", ""),
+            })
+        return out
+
+    def delete_event(self, event_id: str) -> None:
+        svc = self._build_service()
+        svc.events().delete(calendarId="primary", eventId=event_id, sendUpdates="all").execute()
+
     def create_meet_event(
         self,
         summary: str,

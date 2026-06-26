@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root{
     --blue:#2B5BE8; --blue-dark:#2348C0; --blue-bright:#5B8CF7; --blue-tint:rgba(59,130,246,.16);
@@ -24,9 +24,10 @@
     --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--navy);-webkit-font-smoothing:antialiased;font-size:14px;
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--navy);-webkit-font-smoothing:antialiased;font-size:14px;
+    font-feature-settings:'cv05' 1,'ss03' 1;letter-spacing:-.01em;
     background-image:radial-gradient(900px 500px at 88% -8%,rgba(43,91,232,.16),transparent 60%),radial-gradient(700px 500px at -5% 4%,rgba(43,91,232,.10),transparent 55%)}
-  h1,h2,h3,.syne{font-family:'Syne',sans-serif}
+  h1,h2,h3,.syne{font-family:'Inter',sans-serif;letter-spacing:-.02em}
   button{font-family:inherit;cursor:pointer}
   input,textarea,select{font-family:inherit}
   .hidden{display:none !important}
@@ -37,7 +38,7 @@
   /* Brand mark — logo real (círculo navy + A + línea de crecimiento) */
   .mark{width:36px;height:36px;flex:none}
   .mark svg{width:100%;height:100%;display:block}
-  .brand{display:flex;align-items:center;gap:11px;font-family:'Syne';font-weight:800;font-size:19px;letter-spacing:-.2px;color:var(--navy)}
+  .brand{display:flex;align-items:center;gap:11px;font-family:'Inter';font-weight:800;font-size:19px;letter-spacing:-.2px;color:var(--navy)}
 
   /* Login */
   #login{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px;
@@ -64,7 +65,7 @@
   #app{display:grid;grid-template-columns:240px 1fr;min-height:100dvh}
   aside{position:sticky;top:0;height:100dvh;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px}
   .side-brand{padding:6px 8px 18px;display:flex;align-items:center;gap:11px}
-  .side-brand .sub{font-size:10.5px;color:var(--faint);font-weight:700;font-family:'DM Sans';letter-spacing:1.2px;margin-top:2px}
+  .side-brand .sub{font-size:10.5px;color:var(--faint);font-weight:700;font-family:'Inter';letter-spacing:1.2px;margin-top:2px}
   .nav{display:flex;flex-direction:column;gap:3px;flex:1;overflow-y:auto}
   .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:none;background:transparent;color:var(--muted);font-weight:600;font-size:14px;text-align:left;width:100%;transition:.12s}
   .nav-item:hover{background:rgba(255,255,255,.05);color:var(--navy)}
@@ -77,7 +78,7 @@
 
   main{padding:0;min-width:0}
   .topbar{position:sticky;top:0;z-index:10;background:rgba(10,16,32,.78);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:18px 30px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
-  .topbar h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
+  .topbar h1{font-size:22px;font-weight:700;letter-spacing:-.3px}
   .topbar .sub{color:var(--muted);font-size:13.5px;margin-top:3px}
   .content{padding:24px 30px 70px;max-width:1280px}
 
@@ -98,7 +99,7 @@
   .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:20px}
   .kpi-card{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:15px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
   .kpi-card .lbl{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:3px}
-  .kpi-card .kpi{font-family:'Syne';font-weight:800;font-size:27px;line-height:1.1;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+  .kpi-card .kpi{font-family:'Inter';font-weight:700;font-size:27px;line-height:1.1;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
   .kpi-card .sub{font-size:11.5px;color:var(--faint);margin-top:3px}
   .kpi-card .ic{position:absolute;top:13px;right:13px;opacity:.5;color:var(--blue-bright)}
   .kpi-card .spark{margin-top:8px;height:30px}
@@ -122,7 +123,7 @@
   .agent-card h3{font-size:15px;font-weight:700;letter-spacing:-.2px}
   .agent-card .desc{font-size:13px;color:var(--muted);line-height:1.45;margin:7px 0 12px;min-height:38px}
   .agent-card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:10px;border-top:1px solid var(--line-soft)}
-  .ic-circle{width:32px;height:32px;border-radius:9px;background:var(--blue-tint);color:var(--blue-bright);display:flex;align-items:center;justify-content:center;font-family:'Syne';font-weight:800;font-size:14px;flex:none}
+  .ic-circle{width:32px;height:32px;border-radius:9px;background:var(--blue-tint);color:var(--blue-bright);display:flex;align-items:center;justify-content:center;font-family:'Inter';font-weight:800;font-size:14px;flex:none}
 
   .sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 12px}
   .sec-head h2{font-size:16px;font-weight:700}
@@ -134,7 +135,7 @@
   .modal{background:var(--paper);border:1px solid var(--line);border-radius:16px;max-width:780px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
   .modal-head{padding:17px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
   .modal-body{padding:22px;overflow:auto}
-  .modal-body pre{white-space:pre-wrap;word-break:break-word;font-family:'DM Sans';font-size:13.5px;line-height:1.65;color:var(--navy)}
+  .modal-body pre{white-space:pre-wrap;word-break:break-word;font-family:'Inter';font-size:13.5px;line-height:1.65;color:var(--navy)}
   .flexbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
   .hint{font-size:12px;color:var(--faint);margin-top:6px}
 
@@ -154,7 +155,7 @@
   .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
   .flow .node{flex:1;min-width:120px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:13px 14px;position:relative}
   .flow .node .nlbl{font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
-  .flow .node .nval{font-family:'Syne';font-weight:800;font-size:22px;margin-top:4px;font-variant-numeric:tabular-nums}
+  .flow .node .nval{font-family:'Inter';font-weight:700;font-size:22px;margin-top:4px;font-variant-numeric:tabular-nums}
   .flow .node .nsub{font-size:11.5px;color:var(--muted);margin-top:2px}
   .flow .arr{display:flex;align-items:center;color:var(--blue-bright);padding:0 4px;font-size:18px}
   @media(max-width:820px){.flow .arr{transform:rotate(90deg);padding:4px 0}.flow{flex-direction:column}}
@@ -178,6 +179,32 @@
     aside.open{transform:none}
     .content,.topbar{padding-left:18px;padding-right:18px}
   }
+
+  /* ── Calendario (estilo Google Calendar) ── */
+  .cal-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .cal-nav{display:flex;align-items:center;gap:8px}
+  .cal-arrow{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--paper);color:var(--navy);font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:.12s}
+  .cal-arrow:hover{background:var(--paper-2);border-color:rgba(91,140,247,.5)}
+  .cal-today{border:1px solid var(--line);background:var(--paper);color:var(--navy);border-radius:9px;padding:7px 13px;font-weight:600;font-size:13px;transition:.12s}
+  .cal-today:hover{background:var(--paper-2)}
+  .cal-month{font-size:19px;font-weight:700;letter-spacing:-.02em;margin-left:6px;text-transform:capitalize}
+  .cal-wrap{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)}
+  .cal-dow span{padding:9px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
+  .cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal-cell{min-height:104px;border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);padding:6px 7px;position:relative;transition:.1s;cursor:pointer}
+  .cal-cell:nth-child(7n){border-right:none}
+  .cal-cell:hover{background:rgba(91,140,247,.06)}
+  .cal-cell.other{background:rgba(255,255,255,.012)}
+  .cal-cell.other .cal-num{color:var(--faint);opacity:.5}
+  .cal-num{font-size:12.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+  .cal-cell.today .cal-num{background:var(--blue);color:#fff;font-weight:700}
+  .cal-ev{display:block;width:100%;text-align:left;border:none;background:var(--blue-tint);color:#DCE8FF;border-left:3px solid var(--blue-bright);border-radius:5px;padding:3px 7px;margin-top:4px;font-size:11.5px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.1s}
+  .cal-ev:hover{background:rgba(91,140,247,.3)}
+  .cal-ev .et{opacity:.85;font-weight:700;margin-right:5px;font-variant-numeric:tabular-nums}
+  .cal-ev.meet{border-left-color:var(--green);background:var(--green-tint);color:#C9F5E4}
+  .cal-more{font-size:10.5px;color:var(--faint);font-weight:700;margin-top:3px;padding-left:2px}
+  @media(max-width:760px){ .cal-cell{min-height:74px} .cal-ev .et{display:none} }
 </style>
 </head>
 <body>
@@ -485,6 +512,48 @@
       </section>
 
       <!-- REUNIONES (preparación + agenda) -->
+      <!-- CALENDARIO (sync Google Calendar) -->
+      <section id="tab-calendario" class="hidden">
+        <div class="cal-bar">
+          <div class="cal-nav">
+            <button class="cal-arrow" id="calPrev" aria-label="Mes anterior">‹</button>
+            <button class="cal-today" id="calToday">Hoy</button>
+            <button class="cal-arrow" id="calNext" aria-label="Mes siguiente">›</button>
+            <h2 id="calMonthLbl" class="cal-month">—</h2>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="badge" id="calSync">⟳ Sincronizando…</span>
+            <button class="btn" id="calNewBtn">+ Agendar reunión</button>
+          </div>
+        </div>
+
+        <div class="card hidden" id="calForm" style="margin-bottom:18px">
+          <div class="row">
+            <div style="flex:2;min-width:220px"><label>Título</label><input id="ceTitle" class="inp" placeholder="Demo con [empresa]"/></div>
+            <div style="flex:1;min-width:190px"><label>Día y hora</label><input id="ceWhen" class="inp" type="datetime-local"/></div>
+            <div style="flex:1;min-width:110px"><label>Duración (min)</label><input id="ceDur" class="inp" type="number" value="30" min="10" step="5"/></div>
+          </div>
+          <div class="row" style="margin-top:4px">
+            <div style="flex:2;min-width:220px"><label>Email del invitado (opcional)</label><input id="ceEmail" class="inp" type="email" placeholder="contacto@empresa.com"/></div>
+            <div style="flex:1;min-width:170px;display:flex;align-items:flex-end;padding-bottom:2px">
+              <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;font-weight:600;color:var(--navy)">
+                <input id="ceMeet" type="checkbox" checked style="width:16px;height:16px;accent-color:var(--blue)"/> Crear Google Meet
+              </label>
+            </div>
+          </div>
+          <label>Notas (opcional)</label><textarea id="ceNotes" class="inp" style="min-height:46px"></textarea>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn" id="ceSave">Agendar</button>
+            <button class="btn btn-ghost" id="ceCancel">Cancelar</button>
+          </div>
+        </div>
+
+        <div id="calGrid" class="cal-wrap"><div class="card empty">Cargando calendario…</div></div>
+
+        <div class="sec-head" style="margin-top:24px"><h2>Próximas reuniones</h2><span class="faint" style="font-size:12px">De tu Google Calendar.</span></div>
+        <div id="calUpcoming"></div>
+      </section>
+
       <section id="tab-agenda" class="hidden">
         <div class="card" style="margin-bottom:22px;border-color:rgba(91,140,247,.35);background:linear-gradient(180deg,rgba(43,91,232,.14),rgba(43,91,232,.05))">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="ic-circle">🧠</span><b class="syne" style="font-size:16px">Preparar una reunión</b></div>
@@ -566,6 +635,7 @@ const ICONS = {
   memoria: ico('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'),
   ceo: ico('<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>'),
   agenda: ico('<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'),
+  calendario: ico('<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/>'),
   contenido: ico('<path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
   finanzas: ico('<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),
   growth: ico('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'),
@@ -583,6 +653,7 @@ const NAV = [
   {id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
   {id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
   {id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
+  {id:'calendario', label:'Calendario', sub:'Tu Google Calendar: mirá y agendá reuniones desde acá. Sincronizado en vivo.'},
   {id:'agenda', label:'Reuniones', sub:'Preparación de reuniones con todo el contexto del cliente. Abajo, tu agenda.'},
   {id:'contenido', label:'Contenido', sub:'Generación y publicación de contenido para nuestras redes.'},
   {id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
@@ -638,6 +709,7 @@ function loadTab(tab){
   if(tab==='memoria') loadMemory();
   if(tab==='ceo') loadCeo();
   if(tab==='agenda') loadAgenda();
+  if(tab==='calendario') loadCalendar();
   if(tab==='contenido') loadContenido();
 }
 function setNavCount(id,n){ const e=el('navc-'+id); if(!e)return; if(n==null){e.classList.add('hidden');return;} e.textContent=n; e.classList.remove('hidden'); }
@@ -719,7 +791,7 @@ function svgDonut(parts){
   parts.forEach((p,i)=>{ const frac=p.value/total,len=frac*C,col=PALETTE[i%PALETTE.length];
     segs+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${col}" stroke-width="${R-r}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`; off+=len; });
   const legend=parts.map((p,i)=>`<span class="lg"><span class="sw" style="background:${PALETTE[i%PALETTE.length]}"></span>${esc(p.label)} <b style="color:var(--navy);margin-left:3px">${fmtUsd(p.value)}</b></span>`).join('');
-  return `<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><svg width="140" height="140" viewBox="0 0 140 140" style="flex:none">${segs}<text x="70" y="66" fill="var(--navy)" font-size="15" font-weight="800" text-anchor="middle" font-family="Syne">${fmtUsdK(total)}</text><text x="70" y="84" fill="${CH.txt}" font-size="10" text-anchor="middle">gasto mes</text></svg><div class="legend" style="flex-direction:column;gap:8px;margin-top:0">${legend}</div></div>`;
+  return `<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><svg width="140" height="140" viewBox="0 0 140 140" style="flex:none">${segs}<text x="70" y="66" fill="var(--navy)" font-size="15" font-weight="800" text-anchor="middle" font-family="Inter">${fmtUsdK(total)}</text><text x="70" y="84" fill="${CH.txt}" font-size="10" text-anchor="middle">gasto mes</text></svg><div class="legend" style="flex-direction:column;gap:8px;margin-top:0">${legend}</div></div>`;
 }
 
 // Sparkline para KPIs
@@ -1610,6 +1682,125 @@ const CONTENT_AGENTS=[
   {name:'content_creator', label:'Content Creator', desc:'3 ideas de contenido listas (hook + copy + CTA + hashtags).'},
   {name:'social_media', label:'Social Media', desc:'Calendario semanal de contenido orgánico.'},
 ];
+// ══════════ Calendario (sync Google Calendar) ══════════
+let CAL_REF = new Date();
+let CAL_EVENTS = [];
+let CAL_WIRED = false;
+const CAL_MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function calDayKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function calHM(iso){ const d=new Date(iso); if(isNaN(d))return ''; return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function calGridStart(ref){ const f=new Date(ref.getFullYear(),ref.getMonth(),1); const dow=(f.getDay()+6)%7; return new Date(ref.getFullYear(),ref.getMonth(),1-dow); }
+
+function calWire(){
+  if(CAL_WIRED) return; CAL_WIRED=true;
+  el('calPrev').onclick=()=>{ CAL_REF=new Date(CAL_REF.getFullYear(),CAL_REF.getMonth()-1,1); loadCalendar(); };
+  el('calNext').onclick=()=>{ CAL_REF=new Date(CAL_REF.getFullYear(),CAL_REF.getMonth()+1,1); loadCalendar(); };
+  el('calToday').onclick=()=>{ CAL_REF=new Date(); loadCalendar(); };
+  el('calNewBtn').onclick=()=>{ el('calForm').classList.toggle('hidden'); };
+  el('ceCancel').onclick=()=>{ el('calForm').classList.add('hidden'); };
+  el('ceSave').onclick=calCreate;
+}
+
+async function loadCalendar(){
+  calWire();
+  const ref=new Date(CAL_REF.getFullYear(),CAL_REF.getMonth(),1);
+  el('calMonthLbl').textContent=CAL_MES[ref.getMonth()]+' '+ref.getFullYear();
+  const gs=calGridStart(ref); const ge=new Date(gs); ge.setDate(gs.getDate()+42);
+  el('calSync').textContent='⟳ Sincronizando…';
+  try{
+    const d=await api('/api/calendar?from='+encodeURIComponent(gs.toISOString())+'&to='+encodeURIComponent(ge.toISOString()));
+    if(!d.configured){
+      el('calSync').textContent='⚠️ sin conexión';
+      el('calGrid').innerHTML='<div class="card empty">📅 El calendario todavía no está conectado.<br><span class="faint">'+esc(d.detail||'Falta re-autorizar Gmail con permiso de Calendar.')+'</span></div>';
+      el('calUpcoming').innerHTML=''; return;
+    }
+    CAL_EVENTS=d.events||[];
+    el('calSync').textContent='✓ Sincronizado · '+CAL_EVENTS.length+' eventos';
+    renderCalGrid(gs, ref.getMonth(), CAL_EVENTS);
+    renderCalUpcoming(CAL_EVENTS);
+  }catch(e){ el('calGrid').innerHTML='<div class="card empty">Error: '+esc(e.message)+'</div>'; }
+}
+
+function renderCalGrid(gs, month, events){
+  const DOW=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const byDay={};
+  events.forEach(ev=>{ const dt=new Date(ev.start); if(isNaN(dt))return; const k=calDayKey(dt); (byDay[k]=byDay[k]||[]).push(ev); });
+  const today=calDayKey(new Date());
+  let cells='';
+  for(let i=0;i<42;i++){
+    const d=new Date(gs); d.setDate(gs.getDate()+i);
+    const k=calDayKey(d), other=d.getMonth()!==month;
+    const evs=(byDay[k]||[]).sort((a,b)=>new Date(a.start)-new Date(b.start));
+    const shown=evs.slice(0,3).map(ev=>{
+      const t=ev.all_day?'':calHM(ev.start);
+      return `<button class="cal-ev${ev.meet_link?' meet':''}" onclick="event.stopPropagation();calEventClick('${esc(ev.id)}')" title="${esc(ev.title)}">${t?`<span class="et">${t}</span>`:''}${esc(ev.title)}</button>`;
+    }).join('');
+    const more=evs.length>3?`<div class="cal-more">+${evs.length-3} más</div>`:'';
+    cells+=`<div class="cal-cell${other?' other':''}${k===today?' today':''}" onclick="calQuickNew('${k}')"><span class="cal-num">${d.getDate()}</span>${shown}${more}</div>`;
+  }
+  el('calGrid').innerHTML=`<div class="cal-dow">${DOW.map(x=>`<span>${x}</span>`).join('')}</div><div class="cal-days">${cells}</div>`;
+}
+
+function renderCalUpcoming(events){
+  const now=Date.now();
+  const up=events.filter(e=>new Date(e.start).getTime()>=now-3600000).sort((a,b)=>new Date(a.start)-new Date(b.start)).slice(0,8);
+  if(!up.length){ el('calUpcoming').innerHTML='<div class="card empty">Sin reuniones próximas. Agendá una con “+ Agendar reunión”.</div>'; return; }
+  el('calUpcoming').innerHTML=up.map(ev=>{
+    const d=new Date(ev.start);
+    const fecha=d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'})+' · '+calHM(ev.start);
+    const meet=ev.meet_link?`<a href="${esc(ev.meet_link)}" target="_blank" class="chip" style="background:var(--green-tint);color:#C9F5E4">🎥 Meet</a>`:'';
+    const who=(ev.attendees&&ev.attendees.length)?`<span class="faint" style="font-size:12px"> · ${esc(ev.attendees[0])}</span>`:'';
+    return `<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;padding:13px 16px">
+      <div><b style="font-size:14px">${esc(ev.title)}</b>${who}<div class="faint" style="font-size:12.5px;margin-top:2px;font-variant-numeric:tabular-nums">${esc(fecha)}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">${meet}<button class="btn-ghost btn-sm" onclick="calEventClick('${esc(ev.id)}')">Ver</button></div></div>`;
+  }).join('');
+}
+
+function calQuickNew(k){
+  el('calForm').classList.remove('hidden');
+  el('ceWhen').value=k+'T10:00';
+  el('ceTitle').focus();
+  el('calForm').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function calEventClick(id){
+  const ev=CAL_EVENTS.find(e=>e.id===id); if(!ev)return;
+  const d=new Date(ev.start);
+  const cuando=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})+' · '+calHM(ev.start)+(ev.end?'–'+calHM(ev.end):'');
+  const meet=ev.meet_link?`<p style="margin-top:10px"><a href="${esc(ev.meet_link)}" target="_blank" class="btn btn-sm">🎥 Unirse al Meet</a></p>`:'';
+  const gcal=ev.html_link?`<a href="${esc(ev.html_link)}" target="_blank" class="faint" style="font-size:12px">Abrir en Google Calendar ↗</a>`:'';
+  const att=(ev.attendees&&ev.attendees.length)?`<p style="margin-top:6px"><span class="faint">Invitados:</span> ${esc(ev.attendees.join(', '))}</p>`:'';
+  const notes=ev.description?`<p style="margin-top:8px;white-space:pre-wrap">${esc(ev.description)}</p>`:'';
+  openModal(ev.title, `<p class="faint" style="font-variant-numeric:tabular-nums;text-transform:capitalize">${esc(cuando)}</p>${att}${notes}${meet}
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+      ${gcal||'<span></span>'}<button class="btn-ghost btn-sm" style="color:var(--red);border-color:rgba(248,113,113,.4)" onclick="calDelete('${esc(ev.id)}')">Borrar</button></div>`);
+}
+
+async function calDelete(id){
+  if(!confirm('¿Borrar esta reunión del calendario? Se cancela para los invitados.'))return;
+  try{ await api('/api/calendar/'+encodeURIComponent(id),{method:'DELETE'}); closeModal(); toast('🗑 Reunión borrada'); loadCalendar(); }
+  catch(e){ toast('Error: '+e.message); }
+}
+
+async function calCreate(){
+  const title=el('ceTitle').value.trim();
+  const when=el('ceWhen').value;
+  if(!title){ toast('Poné un título'); return; }
+  if(!when){ toast('Elegí día y hora'); return; }
+  const body={ title, start_iso: when+':00-03:00', duration_min: parseInt(el('ceDur').value)||30,
+    attendee_email: el('ceEmail').value.trim(), create_meet: el('ceMeet').checked, notes: el('ceNotes').value.trim() };
+  el('ceSave').disabled=true; el('ceSave').textContent='Agendando…';
+  try{
+    const r=await api('/api/calendar',{method:'POST',body:JSON.stringify(body)});
+    toast('✅ Reunión agendada'+(r.event&&r.event.meet_link?' con Meet':''));
+    el('calForm').classList.add('hidden');
+    ['ceTitle','ceEmail','ceNotes'].forEach(i=>el(i).value=''); el('ceWhen').value='';
+    loadCalendar();
+  }catch(e){ toast('Error: '+e.message); }
+  finally{ el('ceSave').disabled=false; el('ceSave').textContent='Agendar'; }
+}
+
 async function loadContenido(){
   // estado de publicación a redes (Meta)
   try{
