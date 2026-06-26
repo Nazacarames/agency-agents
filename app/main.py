@@ -1042,6 +1042,25 @@ async def api_dashboard_stats(request: Request):
     }
 
 
+@app.get("/api/system/health")
+async def api_system_health(request: Request):
+    """Estado del sistema para el panel: DB, publicación IG/FB, imágenes, cola."""
+    _verify_webhook_secret(request)
+    from .integrations import social_publish as sp, image_gen, publish_queue as pq, db
+    try:
+        dbh = db.healthcheck()
+        db_ok = bool(dbh.get("ok")) if isinstance(dbh, dict) else bool(dbh)
+    except Exception:
+        db_ok = False
+    qs = pq.summary()
+    return {
+        "db": db_ok,
+        "publish": sp.status(),
+        "images_enabled": image_gen.enabled(),
+        "queue": {"pending": qs.get("pending", 0), "published_today": qs.get("published_today", 0)},
+    }
+
+
 @app.get("/media/{filename}")
 async def media_file(filename: str):
     """Sirve las imágenes generadas (guardadas en el volume data/images/)."""

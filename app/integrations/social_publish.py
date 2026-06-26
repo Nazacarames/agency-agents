@@ -85,7 +85,9 @@ def publish_facebook(image: str, caption: str = "") -> Dict[str, Any]:
             data = r.json() if r.content else {}
             if r.status_code >= 400 or data.get("error"):
                 return {"ok": False, "error": _err(data, r)}
-            return {"ok": True, "target": "facebook", "id": data.get("post_id") or data.get("id")}
+            pid = data.get("post_id") or data.get("id")
+            link = f"https://www.facebook.com/{pid}" if pid else ""
+            return {"ok": True, "target": "facebook", "id": pid, "permalink": link}
     except Exception as e:
         return {"ok": False, "error": str(e)[:200]}
 
@@ -127,7 +129,15 @@ def publish_instagram(image: str, caption: str = "") -> Dict[str, Any]:
             d2 = r2.json() if r2.content else {}
             if r2.status_code >= 400 or d2.get("error"):
                 return {"ok": False, "error": _err(d2, r2)}
-            return {"ok": True, "target": "instagram", "id": d2.get("id")}
+            media_id = d2.get("id")
+            # permalink (best-effort) para linkear al post desde el panel
+            link = ""
+            try:
+                rp = c.get(_graph_url(media_id), params={"fields": "permalink", "access_token": s.meta_page_token})
+                link = (rp.json() or {}).get("permalink", "") if rp.content else ""
+            except Exception:
+                pass
+            return {"ok": True, "target": "instagram", "id": media_id, "permalink": link}
     except Exception as e:
         return {"ok": False, "error": str(e)[:200]}
 

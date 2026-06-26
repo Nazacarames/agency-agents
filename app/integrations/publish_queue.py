@@ -156,7 +156,29 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
             break
     save_store(store)
     log.info("publish_queue_drained", id=item["id"], ok=res.get("ok"), source=item.get("source"))
+    _notify_discord(item, res)
     return {"ok": res.get("ok"), "item": item["id"], "results": res.get("results")}
+
+
+def _notify_discord(item: Dict[str, Any], res: Dict[str, Any]) -> None:
+    """Avisa a Discord el resultado de la publicación (best-effort)."""
+    try:
+        from ..config import get_settings
+        from ..clients.discord import DiscordWebhook
+        s = get_settings()
+        if not getattr(s, "discord_configured", False):
+            return
+        parts = []
+        for net, r in (res.get("results") or {}).items():
+            lbl = "Instagram" if net == "instagram" else "Facebook"
+            parts.append(f"✅ {lbl}: {r.get('permalink') or 'ok'}" if r.get("ok") else f"❌ {lbl}: {str(r.get('error',''))[:120]}")
+        cap = (item.get("caption") or "")[:120]
+        msg = ("📣 **Publicación del día**\n" + "\n".join(parts) + (f"\n> {cap}…" if cap else ""))
+        dw = DiscordWebhook(s)
+        dw.send(msg, url=getattr(s, "discord_images_webhook_url", "") or None)
+        dw.close()
+    except Exception:
+        pass
 
 
 def delete_item(item_id: str) -> bool:
