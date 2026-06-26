@@ -34,6 +34,14 @@ services:
         value: "true"                    # el inbox responde solo apuntando a reunión
       - key: BOOKING_URL
         sync: false                      # link Calendly/Cal.com (opcional) p/ el CTA
+      - key: VERCEL_TOKEN
+        sync: false                      # token de Vercel (web_optimizer) — set en dashboard
+      - key: VERCEL_TEAM_ID
+        value: team_5SSE9hdpxjqTunX3RjIgJsHa
+      - key: VERCEL_PROJECT
+        value: prj_OkvgoL8Uze17FUm7gAkuTTOuk6Zr   # automiq-landing-astro
+      - key: WEB_AUTO_DEPLOY
+        value: "false"                   # false = sólo preview + aprobación humana
       - key: WEBHOOK_SECRET
         generateValue: true              # Render genera un valor aleatorio
       - key: LOG_LEVEL

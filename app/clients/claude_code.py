@@ -149,11 +149,17 @@ def run_claude_code(
     allowed_tools: Optional[List[str]] = None,
     model: Optional[str] = None,
     timeout: int = 600,
+    cwd: Optional[str] = None,
+    extra_env: Optional[dict] = None,
 ) -> str:
     """Corre `claude -p <prompt>` headless con backend MiniMax y devuelve el texto final.
 
     Lanza ClaudeCodeError si el binario no existe o el run falla; el caller
     decide el fallback (p.ej. completion directa a MiniMax).
+
+    `cwd`: si se pasa, Claude Code corre EN ese directorio (en vez de un temp aislado)
+    → permite que un agente edite un repo/proyecto ya clonado en disco (web_optimizer).
+    `extra_env`: variables extra para el subproceso (p.ej. tokens de deploy).
     """
     if not claude_available():
         raise ClaudeCodeError("CLI `claude` no encontrado en PATH")
@@ -174,6 +180,8 @@ def run_claude_code(
     # El container es efímero/aislado → seguro habilitarlo.
     env["IS_SANDBOX"] = "1"
     env.setdefault("HOME", "/root")  # para que ~/.claude/skills se resuelva en el container
+    if extra_env:
+        env.update({k: str(v) for k, v in extra_env.items() if v is not None})
 
     cmd = [
         "claude", "-p", prompt,
@@ -188,16 +196,20 @@ def run_claude_code(
     if system_append:
         cmd += ["--append-system-prompt", system_append]
 
-    # cwd temporal y aislado por run (Claude Code escribe estado de sesión ahí).
-    workdir = tempfile.mkdtemp(prefix="cc_run_")
+    # Directorio de I/O (siempre temporal) para los .bin de stdout/stderr.
+    io_dir = tempfile.mkdtemp(prefix="cc_io_")
+    # Directorio de ejecución: si el caller pasó `cwd`, corremos AHÍ (repo/proyecto
+    # real a editar); si no, un temp aislado por run (comportamiento default).
+    own_workdir = cwd is None
+    workdir = cwd or tempfile.mkdtemp(prefix="cc_run_")
     # Redirigimos stdout/stderr a ARCHIVOS, no a pipes. CAUSA RAÍZ de la truncación:
     # `claude` (CLI de Node) escribe el JSON final de una sola vez y hace process.exit;
     # sobre un PIPE la escritura es asíncrona y el proceso sale antes de que libuv
     # drene el buffer → stdout truncado a mitad del `result` (envelope sin cerrar, con
     # un multibyte partido → '�'). Sobre un fd de archivo REGULAR las escrituras de
     # Node son SÍNCRONAS → el envelope se escribe entero. Leemos el archivo después.
-    stdout_path = os.path.join(workdir, "_cc_stdout.bin")
-    stderr_path = os.path.join(workdir, "_cc_stderr.bin")
+    stdout_path = os.path.join(io_dir, "_cc_stdout.bin")
+    stderr_path = os.path.join(io_dir, "_cc_stderr.bin")
     try:
         with open(stdout_path, "wb") as fout, open(stderr_path, "wb") as ferr:
             proc = subprocess.run(
@@ -208,14 +220,19 @@ def run_claude_code(
             stdout_b = f.read()
         with open(stderr_path, "rb") as f:
             stderr_b = f.read()
-        # Antes de borrar el workdir, rescatamos el .md/.txt más grande que el modelo
-        # haya escrito (por si imprimió sólo un resumen y dejó el reporte en disco).
-        artifact = _largest_text_artifact(workdir, exclude={stdout_path, stderr_path})
+        # Rescate de artefacto sólo cuando usamos un workdir propio/efímero. Si el
+        # caller pasó su `cwd` (repo real), NO escaneamos: el entregable es el texto
+        # impreso, no un .md suelto, y el repo puede tener miles de archivos.
+        artifact = None
+        if own_workdir:
+            artifact = _largest_text_artifact(workdir, exclude={stdout_path, stderr_path})
     except subprocess.TimeoutExpired as e:
         log.error("claude_code_timeout", timeout=timeout)
         raise ClaudeCodeError(f"claude -p timeout tras {timeout}s") from e
     finally:
-        shutil.rmtree(workdir, ignore_errors=True)
+        shutil.rmtree(io_dir, ignore_errors=True)
+        if own_workdir:
+            shutil.rmtree(workdir, ignore_errors=True)
 
     # Decodificamos con errors="replace" igual, por si el backend emite algún byte
     # UTF-8 inválido suelto (no debe abortar la lectura).

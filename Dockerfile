@@ -40,7 +40,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Claude Code CLI (harness de los agentes, backend MiniMax vía ANTHROPIC_BASE_URL) ──
-RUN npm install -g @anthropic-ai/claude-code && claude --version
+# + Vercel CLI (lo usa el web_optimizer para deployar previews del sitio)
+RUN npm install -g @anthropic-ai/claude-code vercel && claude --version && vercel --version
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 

@@ -118,6 +118,17 @@ class Settings(BaseSettings):
     # la reunión sin ida y vuelta. Si está vacío, el agente propone horarios concretos.
     booking_url: str = ""
 
+    # ── Web Optimizer (mejora la landing y deploya preview en Vercel) ──
+    # El agente clona web_repo_url, mejora el sitio (CRO/SEO/diseño) y crea un
+    # deploy PREVIEW en Vercel para que apruebes antes de prod. Default OFF.
+    vercel_token: str = ""               # token de Vercel (deploy via CLI/API)
+    vercel_team_id: str = ""             # team/org id (scope) en Vercel
+    vercel_project: str = ""             # nombre o ID del proyecto en Vercel
+    web_repo_url: str = ""               # clone URL del sitio (con token si es privado)
+    web_branch_base: str = "main"        # rama base de producción
+    # Si =True el agente promueve a PRODUCCIÓN solo; default False = sólo preview + aviso.
+    web_auto_deploy: bool = False
+
     # ── Outbound (cold-email automático a los leads) ──
     # ⚠️ Si auto_send=True, el agente outbound ENVÍA cold-emails reales (no borradores).
     # Dedup por email (sent-log en el volume) + tope diario. Default OFF por seguridad.
@@ -144,6 +155,11 @@ class Settings(BaseSettings):
     @property
     def gmail_configured(self) -> bool:
         return bool(self.gmail_client_id and self.gmail_client_secret and self.gmail_refresh_token)
+
+    @property
+    def web_optimizer_configured(self) -> bool:
+        """Mínimo para que el web_optimizer trabaje (modo CLI): token + proyecto Vercel."""
+        return bool(self.vercel_token and self.vercel_project)
 
     @property
     def db_configured(self) -> bool:

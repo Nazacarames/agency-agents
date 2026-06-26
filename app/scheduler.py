@@ -45,6 +45,7 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
     "seo_specialist": "0 16 * * *",       # 16:00 — auditoría SEO
     "media_auditor": "0 17 * * *",        # 17:00 — auditoría de ads
     "growth_hacker": "0 18 * * *",        # 18:00 — growth / funnel
+    "web_optimizer": "0 20 * * wed",      # mié 20:00 — mejora la landing + preview Vercel (semanal)
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 
