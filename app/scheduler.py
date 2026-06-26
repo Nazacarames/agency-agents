@@ -57,6 +57,9 @@ PUBLISH_DRAIN_CRON = "0 11 * * *"
 # crecimiento del panel. 06:00 ART.
 METRICS_SNAPSHOT_CRON = "0 6 * * *"
 
+# Auto-archivado de prospectos fríos (>N días sin movimiento). 05:00 ART.
+CLIENT_ARCHIVE_CRON = "0 5 * * *"
+
 
 class AgentScheduler:
     def __init__(self, settings: Settings):
@@ -79,6 +82,8 @@ class AgentScheduler:
         self._register_publisher(PUBLISH_DRAIN_CRON, DEFAULT_TIMEZONE)
         self._register_simple("metrics:snapshot", METRICS_SNAPSHOT_CRON, DEFAULT_TIMEZONE,
                               _scheduled_metrics_snapshot)
+        self._register_simple("clients:archive", CLIENT_ARCHIVE_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_client_archive)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -181,3 +186,16 @@ async def _scheduled_metrics_snapshot() -> None:
         log.info("metrics_snapshot_done", point=pt)
     except Exception as e:
         log.error("metrics_snapshot_failed", error=str(e)[:200])
+
+
+async def _scheduled_client_archive() -> None:
+    """Archiva prospectos fríos (>N días sin movimiento) para liberar memoria."""
+    import asyncio
+    from .integrations import clients_store as cs
+    from .config import get_settings
+    try:
+        days = get_settings().client_archive_days
+        res = await asyncio.to_thread(cs.auto_archive, days)
+        log.info("client_archive_done", result=res)
+    except Exception as e:
+        log.error("client_archive_failed", error=str(e)[:200])

@@ -376,6 +376,32 @@ def revenue_by_client() -> List[Dict[str, Any]]:
     return out
 
 
+def auto_archive(days: int = 10) -> Dict[str, Any]:
+    """Archiva (stage='descartado' → memoria congelada) los clientes/prospectos que
+    NO son activos pagos y llevan > `days` días sin movimiento (proxy: updated_at).
+    Pensado para correr a diario: libera memoria de los leads/prospectos fríos.
+    Los clientes 'activo' (facturando) o ya en 'cliente'/'descartado' NO se tocan."""
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    archived = []
+    for c in list_clients():
+        if c.get("stage") in ("cliente", "descartado"):
+            continue
+        if c.get("status") == "activo":
+            continue
+        ts = c.get("updated_at") or c.get("created_at") or ""
+        try:
+            dt = datetime.fromisoformat(str(ts))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            continue
+        if dt < cutoff:
+            update_client(c["id"], {"stage": "descartado"})
+            archived.append(c.get("name"))
+    return {"archived": len(archived), "names": archived, "days": days}
+
+
 def summary_billing() -> Dict[str, Any]:
     clients = list_clients()
     by_status = {s: 0 for s in BILLING_STATUSES}

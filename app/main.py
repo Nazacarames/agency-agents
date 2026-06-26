@@ -487,6 +487,19 @@ class FxBody(BaseModel):
     rates: Dict[str, float]
 
 
+class LeadBody(BaseModel):
+    company: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    channel: Optional[str] = None
+    state: Optional[str] = None
+    next_step: Optional[int] = None
+
+
+class LessonEditBody(BaseModel):
+    lesson: str
+
+
 class AdBody(BaseModel):
     name: Optional[str] = None
     client_id: Optional[str] = None
@@ -682,6 +695,13 @@ async def api_list_tasks(request: Request):
     return {"tasks": ts.list_tasks(50)}
 
 
+@app.delete("/api/tasks/{task_id}")
+async def api_delete_task(task_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import tasks_store as ts
+    return {"ok": ts.delete_task(task_id)}
+
+
 @app.get("/api/clients")
 async def api_list_clients(request: Request):
     _verify_webhook_secret(request)
@@ -707,6 +727,14 @@ async def api_update_client(client_id: str, body: ClientBody, request: Request):
     return {"ok": True, "client": c}
 
 
+@app.post("/api/clients/archive")
+async def api_archive_clients(request: Request):
+    """Archiva manualmente los prospectos fríos (>N días sin movimiento)."""
+    _verify_webhook_secret(request)
+    from .integrations import clients_store as cs
+    return await run_in_threadpool(cs.auto_archive, get_settings().client_archive_days)
+
+
 @app.delete("/api/clients/{client_id}")
 async def api_delete_client(client_id: str, request: Request):
     _verify_webhook_secret(request)
@@ -724,6 +752,23 @@ async def api_pipeline(request: Request):
     leads = [ls.lead_view(l) for l in store.get("leads", {}).values()]
     leads.sort(key=lambda l: (str(l.get("state")), str(l.get("company"))))
     return {"counts": ls.summary_counts(store), "leads": leads}
+
+
+@app.put("/api/pipeline/{key}")
+async def api_update_lead(key: str, body: LeadBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import leads_store as ls
+    lead = ls.update_lead(key, body.model_dump(exclude_none=True))
+    if not lead:
+        raise HTTPException(status_code=404, detail="lead no encontrado")
+    return {"ok": True, "lead": lead}
+
+
+@app.delete("/api/pipeline/{key}")
+async def api_delete_lead(key: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import leads_store as ls
+    return {"ok": ls.delete_lead(key)}
 
 
 # ── Memoria por cliente (reports + info recaudada) ──
@@ -803,6 +848,16 @@ async def api_upsert_memory(body: MemoryBody, request: Request):
     return {"ok": True, "item": item}
 
 
+@app.put("/api/memory/{mem_id}")
+async def api_update_memory(mem_id: str, body: MemoryBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    item = ms.update_company_memory(mem_id, body.model_dump(exclude_none=True))
+    if not item:
+        raise HTTPException(status_code=404, detail="entrada no encontrada")
+    return {"ok": True, "item": item}
+
+
 @app.delete("/api/memory/{mem_id}")
 async def api_del_memory(mem_id: str, request: Request):
     _verify_webhook_secret(request)
@@ -869,11 +924,19 @@ async def api_add_lesson(body: LessonBody, request: Request):
             body.kind or "feedback", body.weight or 1)}
 
 
-@app.delete("/api/lessons/{lesson_id}")
-async def api_del_lesson(lesson_id: str, request: Request):
+@app.put("/api/lessons/{lesson_id}")
+async def api_update_lesson(lesson_id: str, body: LessonEditBody, request: Request):
     _verify_webhook_secret(request)
     from .integrations import memory_store as ms
-    ms.deactivate_lesson(lesson_id)
+    return {"ok": ms.update_lesson(lesson_id, body.lesson)}
+
+
+@app.delete("/api/lessons/{lesson_id}")
+async def api_del_lesson(lesson_id: str, request: Request):
+    """Borrado real de la lección (el 🗑 del panel la elimina)."""
+    _verify_webhook_secret(request)
+    from .integrations import memory_store as ms
+    ms.delete_lesson(lesson_id)
     return {"ok": True}
 
 
@@ -975,6 +1038,16 @@ async def api_finance_add(body: ExpenseBody, request: Request):
     item = fs.add_expense(body.category or "otros", body.label or "", body.amount,
                           body.currency or "USD", body.date or "", bool(body.recurring))
     return {"ok": True, "expense": item}
+
+
+@app.put("/api/finance/{expense_id}")
+async def api_finance_update(expense_id: str, body: ExpenseBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import finance_store as fs
+    e = fs.update_expense(expense_id, body.model_dump())
+    if not e:
+        raise HTTPException(status_code=404, detail="gasto no encontrado")
+    return {"ok": True, "expense": e}
 
 
 @app.delete("/api/finance/{expense_id}")

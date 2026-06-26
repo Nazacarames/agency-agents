@@ -410,6 +410,8 @@
             <button class="btn-ghost btn-sm hidden" id="clientCancel">Cancelar edición</button>
           </div>
         </div>
+        <div class="sec-head"><h2 class="muted" style="font-weight:600;font-size:13.5px">Cartera de clientes</h2>
+          <button class="btn-ghost btn-sm" id="archiveBtn" title="Archiva prospectos no-activos sin movimiento hace 10+ días (libera su memoria)">🗄️ Archivar fríos (10 días)</button></div>
         <div class="tbl-wrap"><table><thead>
           <tr><th>Cliente</th><th>País</th><th>Servicios</th><th style="text-align:right">Paga/mes</th><th>Estado</th><th>Etapa</th><th></th></tr>
         </thead><tbody id="clientsBody"></tbody></table></div>
@@ -886,22 +888,32 @@ async function loadFinanzas(){
     el('fxEditor').innerHTML='<div class="row" style="gap:8px">'+Object.entries(FX_RATES).map(([c,r])=>
       `<div style="flex:1;min-width:96px"><label style="margin-top:6px">${c}</label><input class="inp fxinp" data-cur="${c}" type="number" step="0.00001" value="${r}"/></div>`).join('')+'</div>';
     // gastos
+    CACHE.expenses=exp.expenses||[];
     el('expBody').innerHTML = (exp.expenses||[]).length ? exp.expenses.map(x=>`<tr>
       <td class="faint" style="font-size:12px;white-space:nowrap">${esc(x.date)}</td>
       <td><span class="badge grey">${esc(CAT_LABELS[x.category]||x.category)}</span></td>
       <td>${esc(x.label)}</td>
       <td style="text-align:right" class="money">${(x.amount||0).toLocaleString('es-AR')} ${esc(x.currency)}</td>
       <td style="text-align:right" class="money">${fmtUsd((FX_RATES[x.currency]||1)*x.amount)}</td>
-      <td><button class="btn-ghost btn-xs" onclick="delExpense('${x.id}')">🗑</button></td></tr>`).join('')
+      <td style="white-space:nowrap"><button class="btn-ghost btn-xs" onclick="editExpense('${x.id}')">✎</button><button class="btn-ghost btn-xs" onclick="delExpense('${x.id}')">🗑</button></td></tr>`).join('')
       : '<tr><td colspan="6" class="empty">Sin gastos cargados.</td></tr>';
   }catch(e){ el('finKpis').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+let exEditId=null;
+function editExpense(id){
+  const x=(CACHE.expenses||[]).find(e=>e.id===id); if(!x)return;
+  exEditId=x.id; el('exCat').value=x.category; el('exLabel').value=x.label||''; el('exAmount').value=x.amount||''; el('exCur').value=x.currency||'USD'; el('exDate').value=x.date||'';
+  el('exBtn').textContent='Guardar cambios'; el('exCat').scrollIntoView({behavior:'smooth',block:'center'});
 }
 el('exBtn').addEventListener('click', async ()=>{
   const body={category:el('exCat').value,label:el('exLabel').value.trim(),amount:parseFloat(el('exAmount').value||'0'),currency:el('exCur').value,date:el('exDate').value};
   if(!body.amount){ toast('Poné un monto'); return; }
   el('exBtn').disabled=true;
-  try{ await api('/api/finance',{method:'POST',body:JSON.stringify(body)}); el('exLabel').value='';el('exAmount').value=''; toast('✅ Gasto agregado'); loadFinanzas(); }
-  catch(e){ toast('Error: '+e.message); } finally{ el('exBtn').disabled=false; }
+  try{
+    if(exEditId){ await api('/api/finance/'+exEditId,{method:'PUT',body:JSON.stringify(body)}); exEditId=null; el('exBtn').textContent='Agregar gasto'; toast('✅ Editado'); }
+    else{ await api('/api/finance',{method:'POST',body:JSON.stringify(body)}); toast('✅ Gasto agregado'); }
+    el('exLabel').value='';el('exAmount').value=''; loadFinanzas();
+  }catch(e){ toast('Error: '+e.message); } finally{ el('exBtn').disabled=false; }
 });
 async function delExpense(id){ if(!confirm('¿Borrar este gasto?'))return; try{ await api('/api/finance/'+id,{method:'DELETE'}); loadFinanzas(); }catch(e){ toast('Error: '+e.message); } }
 el('fxBtn').addEventListener('click', async ()=>{
@@ -916,7 +928,7 @@ function gwStatusNorm(s){ s=(s||'').toLowerCase(); if(['hecho','done','logrado',
 async function loadGrowthBoard(){
   el('growthBoard').innerHTML='<p class="muted">Cargando…</p>';
   try{
-    const d=await api('/api/growth'); const objs=d.objectives||[];
+    const d=await api('/api/growth'); const objs=d.objectives||[]; CACHE.growth=objs;
     setNavCount('growth', objs.filter(o=>gwStatusNorm(o.status)!=='hecho').length||null);
     el('growthBoard').innerHTML = GW_COLS.map(([key,title])=>{
       const items=objs.filter(o=>gwStatusNorm(o.status)===key);
@@ -926,7 +938,7 @@ async function loadGrowthBoard(){
         items.map(g=>`<div class="gcard"><div class="gobj">${esc(g.objective||'')}</div>
           <div style="height:5px;background:rgba(255,255,255,.06);border-radius:4px;margin-top:9px;overflow:hidden"><div style="width:${prog}%;height:100%;background:${pcol}"></div></div>
           <div class="gmeta"><span class="badge grey">${esc(g.sector||'general')}</span>${g.target?'<span>🎯 '+esc(g.target)+'</span>':''}
-          <span style="margin-left:auto;display:flex;gap:4px">${key!=='hecho'?`<button class="btn-ghost btn-xs" onclick="gwAdvance('${g.id}','${key}')">→</button>`:''}<button class="btn-ghost btn-xs" onclick="gwDel('${g.id}')">🗑</button></span></div></div>`).join('')
+          <span style="margin-left:auto;display:flex;gap:4px">${key!=='hecho'?`<button class="btn-ghost btn-xs" onclick="gwAdvance('${g.id}','${key}')">→</button>`:''}<button class="btn-ghost btn-xs" onclick="editGrowth('${g.id}')">✎</button><button class="btn-ghost btn-xs" onclick="gwDel('${g.id}')">🗑</button></span></div></div>`).join('')
         || '<div class="faint" style="font-size:12px;padding:8px 2px">—</div>'}</div>`;
     }).join('');
   }catch(e){ el('growthBoard').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
@@ -1036,9 +1048,18 @@ async function loadAds(){
       <td style="text-align:right" class="money">${c.results||0}</td>
       <td style="text-align:right" class="money">${c.cpl_usd?fmtUsd(c.cpl_usd):'—'}</td>
       <td style="text-align:right"><span class="money ${c.roas>=1?'up':c.roas>0?'down':''}">${c.roas?c.roas.toFixed(2)+'×':'—'}</span></td>
-      <td>${c.live?'<span class="faint" style="font-size:11px">Meta</span>':`<button class="btn-ghost btn-xs" onclick="delAd('${c.id}')">🗑</button>`}</td></tr>`).join('')
+      <td style="white-space:nowrap">${c.live?'<span class="faint" style="font-size:11px">Meta</span>':`<button class="btn-ghost btn-xs" onclick="editAd('${c.id}')">✎</button><button class="btn-ghost btn-xs" onclick="delAd('${c.id}')">🗑</button>`}</td></tr>`).join('')
       : '<tr><td colspan="8" class="empty">Sin campañas. Conectá Meta Ads o cargá una manual arriba.</td></tr>';
+    CACHE.ads=camps;
   }catch(e){ el('adsKpis').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+let adEditId=null;
+function editAd(id){
+  const c=(CACHE.ads||[]).find(x=>x.id===id); if(!c)return;
+  adEditId=c.id; el('adName').value=c.name||''; el('adClient').value=c.client_id||''; el('adPlatform').value=c.platform||'Meta';
+  el('adObjective').value=c.objective||''; el('adStatus').value=c.status||'activa'; el('adCur').value=c.currency||'USD';
+  el('adSpend').value=c.spend||''; el('adResults').value=c.results||''; el('adRevenue').value=c.revenue||'';
+  el('adBtn').textContent='Guardar cambios'; el('adName').scrollIntoView({behavior:'smooth',block:'center'});
 }
 el('adBtn').addEventListener('click', async ()=>{
   const cn=el('adClient'); const body={ name:el('adName').value.trim(), client_id:el('adClient').value||'', client_name:(cn.value?cn.options[cn.selectedIndex].text:''),
@@ -1046,15 +1067,27 @@ el('adBtn').addEventListener('click', async ()=>{
     spend:parseFloat(el('adSpend').value||'0'), results:parseFloat(el('adResults').value||'0'), revenue:parseFloat(el('adRevenue').value||'0') };
   if(!body.name){ toast('Poné un nombre'); return; }
   el('adBtn').disabled=true;
-  try{ await api('/api/ads',{method:'POST',body:JSON.stringify(body)}); ['adName','adObjective','adSpend','adResults','adRevenue'].forEach(i=>el(i).value=''); toast('✅ Campaña agregada'); loadAds(); }
-  catch(e){ toast('Error: '+e.message); } finally{ el('adBtn').disabled=false; }
+  try{
+    if(adEditId){ await api('/api/ads/'+adEditId,{method:'PUT',body:JSON.stringify(body)}); adEditId=null; el('adBtn').textContent='Agregar campaña'; toast('✅ Editada'); }
+    else{ await api('/api/ads',{method:'POST',body:JSON.stringify(body)}); toast('✅ Campaña agregada'); }
+    ['adName','adObjective','adSpend','adResults','adRevenue'].forEach(i=>el(i).value=''); loadAds();
+  }catch(e){ toast('Error: '+e.message); } finally{ el('adBtn').disabled=false; }
 });
 async function delAd(id){ if(!confirm('¿Borrar esta campaña?'))return; try{ await api('/api/ads/'+id,{method:'DELETE'}); loadAds(); }catch(e){ toast('Error: '+e.message); } }
+let gwEditId=null;
+function editGrowth(id){
+  const g=(CACHE.growth||[]).find(x=>String(x.id)===String(id)); if(!g)return;
+  gwEditId=g.id; el('gwSector').value=g.sector||''; el('gwObjective').value=g.objective||''; el('gwTarget').value=g.target||'';
+  el('gwStatus').value=gwStatusNorm(g.status); el('gwBtn').textContent='Guardar cambios'; el('gwSector').scrollIntoView({behavior:'smooth',block:'center'});
+}
 el('gwBtn').addEventListener('click', async ()=>{
   const body={sector:el('gwSector').value.trim()||'general',objective:el('gwObjective').value.trim(),target:el('gwTarget').value.trim(),status:el('gwStatus').value};
   if(!body.objective){ toast('Escribí el objetivo'); return; }
-  try{ await api('/api/growth',{method:'POST',body:JSON.stringify(body)}); ['gwObjective','gwTarget'].forEach(i=>el(i).value=''); toast('✅ Objetivo agregado'); loadGrowthBoard(); }
-  catch(e){ toast('Error: '+e.message); }
+  try{
+    if(gwEditId){ await api('/api/growth/'+gwEditId,{method:'PUT',body:JSON.stringify(body)}); gwEditId=null; el('gwBtn').textContent='Agregar objetivo de growth'; toast('✅ Editado'); }
+    else{ await api('/api/growth',{method:'POST',body:JSON.stringify(body)}); toast('✅ Objetivo agregado'); }
+    ['gwObjective','gwTarget'].forEach(i=>el(i).value=''); loadGrowthBoard();
+  }catch(e){ toast('Error: '+e.message); }
 });
 
 // ── Agentes ──
@@ -1113,9 +1146,10 @@ function taskTable(tasks){
       <td style="max-width:340px">${esc((t.prompt||'').slice(0,130))}${(t.prompt||'').length>130?'…':''}</td>
       <td>${taskStatusBadge(t.status)}</td>
       <td class="faint" style="font-size:12px;white-space:nowrap">${fmtDate(t.created_at)}</td>
-      <td>${t.result_excerpt?`<button class="btn-ghost btn-xs" onclick='viewTask(${JSON.stringify(t.id)})'>Resultado</button>`:''}</td>
+      <td style="white-space:nowrap">${t.result_excerpt?`<button class="btn-ghost btn-xs" onclick='viewTask(${JSON.stringify(t.id)})'>Resultado</button>`:''}<button class="btn-ghost btn-xs" onclick="delTask('${t.id}')">🗑</button></td>
     </tr>`).join('')+'</tbody></table></div>';
 }
+async function delTask(id){ if(!confirm('¿Borrar esta tarea del historial?'))return; try{ await api('/api/tasks/'+id,{method:'DELETE'}); toast('Tarea borrada'); loadTasks(); if(CURRENT==='resumen')loadOverview(); }catch(e){ toast('Error: '+e.message); } }
 async function loadTasks(){
   const sel=el('taskAgent');
   if(!sel.options.length){ try{ const d=CACHE.agents||await api('/api/agents'); sel.innerHTML=d.agents.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replace(/_/g,' '))+'</option>').join(''); }catch(e){} }
@@ -1227,6 +1261,12 @@ async function delClient(id){
   const c=(CACHE.clients&&CACHE.clients.clients||[]).find(x=>x.id===id);
   if(!confirm('¿Borrar a '+(c?c.name:'este cliente')+'?'))return;
   try{ await api('/api/clients/'+id,{method:'DELETE'}); toast('Cliente borrado'); loadClients(); }catch(e){ toast('Error: '+e.message); } }
+document.addEventListener('click', (ev)=>{ if(ev.target&&ev.target.id==='archiveBtn') archiveCold(); });
+async function archiveCold(){
+  if(!confirm('Archivar los prospectos no-activos sin movimiento hace 10+ días? (se congela su memoria, no se borran)'))return;
+  try{ const r=await api('/api/clients/archive',{method:'POST'}); toast(r.archived?('🗄️ '+r.archived+' archivados'):'No había prospectos fríos'); loadClients(); }
+  catch(e){ toast('Error: '+e.message); }
+}
 
 // ── Pipeline ──
 function mapStateToStage(s){
@@ -1255,9 +1295,17 @@ async function loadPipeline(){
       <td style="font-size:13px">${esc(l.email||l.phone||'—')}</td>
       <td style="font-size:13px" class="muted">${esc(l.next_step||'—')}${l.next_touch_at?'<br><span class="faint">'+fmtDate(l.next_touch_at)+'</span>':''}</td>
       <td>${esc(l.touches!=null?l.touches:'')}</td>
-      <td><button class="btn-ghost btn-xs" onclick="toClient(${i})">→ Cliente</button></td></tr>`).join('')
+      <td style="white-space:nowrap"><button class="btn-ghost btn-xs" onclick="toClient(${i})">→ Cliente</button><button class="btn-ghost btn-xs" onclick='editLead(${JSON.stringify(l.key)})'>✎</button><button class="btn-ghost btn-xs" onclick='delLead(${JSON.stringify(l.key)})'>🗑</button></td></tr>`).join('')
       : '<tr><td colspan="7" class="empty">Pipeline vacío.</td></tr>';
   }catch(e){ body.innerHTML='<tr><td colspan="7" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+async function delLead(key){ if(!confirm('¿Borrar este lead del pipeline?'))return; try{ await api('/api/pipeline/'+encodeURIComponent(key),{method:'DELETE'}); toast('Lead borrado'); loadPipeline(); }catch(e){ toast('Error: '+e.message); } }
+async function editLead(key){
+  const l=(window._leads||[]).find(x=>x.key===key); if(!l)return;
+  const company=prompt('Empresa:', l.company||''); if(company==null)return;
+  const email=prompt('Email:', l.email||''); if(email==null)return;
+  const state=prompt('Estado (nuevo/contactado/respondió/reunión/propuesta/cerrado/perdido):', l.state||''); if(state==null)return;
+  try{ await api('/api/pipeline/'+encodeURIComponent(key),{method:'PUT',body:JSON.stringify({company:company.trim(),email:email.trim(),state:state.trim()})}); toast('✅ Lead editado'); loadPipeline(); }catch(e){ toast('Error: '+e.message); }
 }
 function toClient(i){
   const l=(window._leads||[])[i]; if(!l)return;
@@ -1286,7 +1334,7 @@ async function loadMemory(){
     const banner = el('dbBanner');
     if(m.db===false){ banner.style.display='block'; banner.innerHTML='<span class="badge warn">⚠ DB no conectada</span> <span class="muted" style="font-size:13px">Falta <code>DATABASE_URL</code> en Railway — la memoria está corriendo en modo JSON local (no compartida).</span>'; }
     else banner.style.display='none';
-    el('memList').innerHTML = renderMemory(m.memory||[]);
+    CACHE.memory=m.memory||[]; el('memList').innerHTML = renderMemory(m.memory||[]);
   }catch(e){ el('memList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
   // agentes para el select de lecciones
   const sel=el('lAgent');
@@ -1300,17 +1348,25 @@ function renderMemory(items){
     <div class="badge blue" style="margin-bottom:10px">${esc(sec)}</div>
     ${bySec[sec].map(m=>`<div style="padding:8px 0;border-bottom:1px solid var(--line-soft)">
       <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(m.title)}</b>
-      <button class="btn-ghost btn-xs" onclick="delMemory('${m.id}')">🗑</button></div>
+      <span style="white-space:nowrap"><button class="btn-ghost btn-xs" onclick="editMemory('${m.id}')">Editar</button><button class="btn-ghost btn-xs" onclick="delMemory('${m.id}')">🗑</button></span></div>
       <div class="muted" style="font-size:13px;line-height:1.5;white-space:pre-wrap">${esc(m.content)}</div>
       ${m.source?'<div class="faint" style="font-size:11px;margin-top:3px">'+esc(m.source)+'</div>':''}</div>`).join('')}
   </div>`).join('');
 }
+let mEditId=null;
+function editMemory(id){
+  const m=(CACHE.memory||[]).find(x=>String(x.id)===String(id)); if(!m)return;
+  mEditId=m.id; el('mSection').value=m.section||''; el('mTitle').value=m.title||''; el('mContent').value=m.content||'';
+  el('mBtn').textContent='Guardar cambios'; el('mSection').scrollIntoView({behavior:'smooth',block:'center'});
+}
 el('mBtn').addEventListener('click', async ()=>{
   const section=el('mSection').value.trim()||'general', title=el('mTitle').value.trim(), content=el('mContent').value.trim();
   if(!title||!content){ toast('Completá título y contenido'); return; }
-  try{ await api('/api/memory',{method:'POST',body:JSON.stringify({section,title,content})});
-    ['mTitle','mContent'].forEach(i=>el(i).value=''); toast('✅ Guardado'); loadMemory(); }
-  catch(e){ toast('Error: '+e.message); }
+  try{
+    if(mEditId){ await api('/api/memory/'+mEditId,{method:'PUT',body:JSON.stringify({section,title,content})}); mEditId=null; el('mBtn').textContent='Guardar en memoria'; toast('✅ Editado'); }
+    else{ await api('/api/memory',{method:'POST',body:JSON.stringify({section,title,content})}); toast('✅ Guardado'); }
+    ['mSection','mTitle','mContent'].forEach(i=>el(i).value=''); loadMemory();
+  }catch(e){ toast('Error: '+e.message); }
 });
 async function delMemory(id){ if(!confirm('¿Borrar esta entrada?'))return; try{ await api('/api/memory/'+id,{method:'DELETE'}); loadMemory(); }catch(e){ toast('Error: '+e.message); } }
 
@@ -1337,9 +1393,13 @@ async function loadLessons(){
     el('lessonsList').innerHTML = ls.length ? '<div class="tbl-wrap"><table><thead><tr><th>Agente</th><th>Lección</th><th>Tipo</th><th>Activa</th><th></th></tr></thead><tbody>'+
       ls.map(l=>`<tr><td><b>${esc((l.agent||'').replace(/_/g,' '))}</b></td><td>${esc(l.lesson)}</td>
         <td><span class="badge grey">${esc(l.kind)}</span></td><td>${l.active?'<span class="badge ok">sí</span>':'<span class="badge red">no</span>'}</td>
-        <td>${l.active?`<button class="btn-ghost btn-xs" onclick="delLesson('${l.id}')">desactivar</button>`:''}</td></tr>`).join('')+'</tbody></table></div>'
+        <td style="white-space:nowrap"><button class="btn-ghost btn-xs" onclick='editLesson(${JSON.stringify(l.id)},${JSON.stringify(l.lesson||"")})'>✎</button><button class="btn-ghost btn-xs" onclick="delLesson('${l.id}')">🗑</button></td></tr>`).join('')+'</tbody></table></div>'
       : '<div class="card empty">Todavía no le enseñaste nada a los agentes.</div>';
   }catch(e){ el('lessonsList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+async function editLesson(id, current){
+  const v=prompt('Editar la lección:', current); if(v==null||!v.trim())return;
+  try{ await api('/api/lessons/'+id,{method:'PUT',body:JSON.stringify({lesson:v.trim()})}); toast('✅ Editada'); loadLessons(); }catch(e){ toast('Error: '+e.message); }
 }
 el('lBtn').addEventListener('click', async ()=>{
   const agent=el('lAgent').value, lesson=el('lLesson').value.trim();
@@ -1348,7 +1408,7 @@ el('lBtn').addEventListener('click', async ()=>{
     el('lLesson').value=''; toast('✅ Aprendido'); loadLessons(); }
   catch(e){ toast('Error: '+e.message); }
 });
-async function delLesson(id){ try{ await api('/api/lessons/'+id,{method:'DELETE'}); loadLessons(); }catch(e){ toast('Error: '+e.message); } }
+async function delLesson(id){ if(!confirm('¿Borrar esta lección?'))return; try{ await api('/api/lessons/'+id,{method:'DELETE'}); toast('Lección borrada'); loadLessons(); }catch(e){ toast('Error: '+e.message); } }
 
 // ── Memoria de un cliente (modal) ──
 async function viewClientMemory(id){

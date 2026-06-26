@@ -372,6 +372,28 @@ def reset_store() -> Dict[str, Any]:
     return fresh
 
 
+def delete_lead(key: str) -> bool:
+    store = load_store()
+    leads = store.get("leads", {})
+    if key in leads:
+        del leads[key]
+        save_store(store)
+        return True
+    return False
+
+
+def update_lead(key: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    store = load_store()
+    lead = store.get("leads", {}).get(key)
+    if not lead:
+        return None
+    for k in ("company", "email", "phone", "channel", "state", "next_step"):
+        if k in fields and fields[k] is not None:
+            lead[k] = fields[k]
+    save_store(store)
+    return lead_view(lead)
+
+
 def lead_view(lead: Dict[str, Any]) -> Dict[str, Any]:
     """Vista compacta de un lead para listar (sin volcar todo el historial)."""
     return {

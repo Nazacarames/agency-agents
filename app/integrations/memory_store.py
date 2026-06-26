@@ -116,6 +116,27 @@ def delete_company_memory(mem_id: Any) -> bool:
     return False
 
 
+def update_company_memory(mem_id: Any, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    allowed = {k: (v if k != "tags" else (v or []))
+               for k, v in fields.items()
+               if k in ("section", "title", "content", "source", "tags") and v is not None}
+    if not allowed:
+        return None
+    if db.enabled():
+        sets = ", ".join(f"{k}=%s" for k in allowed) + ", updated_at=now()"
+        row = db.fetchone(f"UPDATE company_memory SET {sets} WHERE id=%s "
+                          "RETURNING id,section,title,content,source,tags,created_at,updated_at",
+                          list(allowed.values()) + [mem_id])
+        return {**row, "created_at": _iso(row["created_at"]), "updated_at": _iso(row["updated_at"])} if row else None
+    store = _json_load()
+    for m in store["company_memory"]:
+        if str(m["id"]) == str(mem_id):
+            m.update(allowed); m["updated_at"] = _now()
+            _json_save(store)
+            return m
+    return None
+
+
 # ───────────────────────── growth_objectives ─────────────────────────
 
 def list_growth(sector: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -239,6 +260,33 @@ def deactivate_lesson(lesson_id: Any) -> bool:
     for l in store["agent_lessons"]:
         if str(l["id"]) == str(lesson_id):
             l["active"] = False
+            _json_save(store)
+            return True
+    return False
+
+
+def delete_lesson(lesson_id: Any) -> bool:
+    """Borrado real (no sólo desactivar)."""
+    if db.enabled():
+        db.execute("DELETE FROM agent_lessons WHERE id=%s", (lesson_id,))
+        return True
+    store = _json_load()
+    before = len(store["agent_lessons"])
+    store["agent_lessons"] = [l for l in store["agent_lessons"] if str(l["id"]) != str(lesson_id)]
+    if len(store["agent_lessons"]) != before:
+        _json_save(store)
+        return True
+    return False
+
+
+def update_lesson(lesson_id: Any, lesson: str) -> bool:
+    if db.enabled():
+        db.execute("UPDATE agent_lessons SET lesson=%s WHERE id=%s", (lesson, lesson_id))
+        return True
+    store = _json_load()
+    for l in store["agent_lessons"]:
+        if str(l["id"]) == str(lesson_id):
+            l["lesson"] = lesson
             _json_save(store)
             return True
     return False

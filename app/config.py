@@ -85,6 +85,9 @@ class Settings(BaseSettings):
     # redes indicadas, con el caption que planificaron. Requiere tokens Meta.
     social_auto_publish: bool = True
     social_publish_targets: str = "instagram,facebook"   # CSV: instagram,facebook
+    # Auto-archivar prospectos/clientes no-activos sin movimiento hace N días
+    # (libera su memoria). Los clientes 'activo' (pagando) nunca se archivan.
+    client_archive_days: int = 10
 
     @property
     def social_publish_configured(self) -> bool:

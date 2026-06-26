@@ -84,3 +84,13 @@ def update_task(run_id: str, status: str, result_excerpt: str = "") -> Optional[
 
 def list_tasks(limit: int = 50) -> List[Dict[str, Any]]:
     return load_store().get("tasks", [])[:limit]
+
+
+def delete_task(task_id: str) -> bool:
+    store = load_store()
+    before = len(store["tasks"])
+    store["tasks"] = [t for t in store["tasks"] if t.get("id") != task_id and t.get("run_id") != task_id]
+    if len(store["tasks"]) != before:
+        save_store(store)
+        return True
+    return False

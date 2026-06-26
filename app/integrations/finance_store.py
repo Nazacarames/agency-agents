@@ -104,6 +104,28 @@ def delete_expense(expense_id: str) -> bool:
     return len(store["expenses"]) < before
 
 
+def update_expense(expense_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    store = load_store()
+    for e in store["expenses"]:
+        if e.get("id") == expense_id:
+            if data.get("category") in CATEGORIES:
+                e["category"] = data["category"]
+            if data.get("label") is not None:
+                e["label"] = str(data["label"]).strip() or e["label"]
+            if data.get("amount") not in (None, ""):
+                try:
+                    e["amount"] = float(data["amount"])
+                except (TypeError, ValueError):
+                    pass
+            if data.get("currency"):
+                e["currency"] = str(data["currency"]).upper().strip()
+            if data.get("date"):
+                e["date"] = str(data["date"])[:10]
+            save_store(store)
+            return e
+    return None
+
+
 def _expense_usd(e: Dict[str, Any]) -> float:
     from . import fx_store
     return fx_store.to_usd(e.get("amount", 0), e.get("currency", "USD"))
