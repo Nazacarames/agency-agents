@@ -414,7 +414,7 @@
 
       <!-- REUNIONES (preparación + agenda) -->
       <section id="tab-agenda" class="hidden">
-        <div class="card" style="margin-bottom:22px;border-color:rgba(37,99,235,.25);background:linear-gradient(180deg,#fff,#f7faff)">
+        <div class="card" style="margin-bottom:22px;border-color:rgba(91,140,247,.35);background:linear-gradient(180deg,rgba(43,91,232,.14),rgba(43,91,232,.05))">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="ic-circle">🧠</span><b class="syne" style="font-size:16px">Preparar una reunión</b></div>
           <div class="hint" style="margin-bottom:12px">Elegí un cliente y el agente <b>meeting_prep</b> arma el brief con TODA su memoria y contexto: dolores→solución, preguntas de discovery, agente de WhatsApp de test a medida, productos a mostrar, pricing, objeciones y cierre.</div>
           <div class="flexbtns">
@@ -1124,7 +1124,7 @@ async function addClientNote(id){
 // ── CEO (misiones) ──
 async function loadCeo(){
   try{ const d=CACHE.agents||await api('/api/agents'); CACHE.agents=d;
-    el('ceoAgents').innerHTML = d.agents.map(a=>`<label style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer">
+    el('ceoAgents').innerHTML = d.agents.map(a=>`<label style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:13px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer">
       <input type="checkbox" value="${esc(a.name)}" class="ceoChk"/> ${esc(a.name.replace(/_/g,' '))}</label>`).join('');
   }catch(e){}
   try{ const cd=CACHE.clients||await api('/api/clients'); CACHE.clients=cd;
