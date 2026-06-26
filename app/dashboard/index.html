@@ -319,6 +319,7 @@
 
       <!-- ADS -->
       <section id="tab-ads" class="hidden">
+        <div id="adsBanner" style="margin-bottom:16px"></div>
         <div class="kpi-row" id="adsKpis"></div>
         <div class="grid-2">
           <div class="panel"><h3>Gasto por plataforma</h3><div class="ph-sub">En USD.</div><div id="adsDonut"></div></div>
@@ -1011,6 +1012,9 @@ async function loadAds(){
     const [d, cli] = await Promise.all([ api('/api/ads'), api('/api/clients').catch(()=>({clients:[]})) ]);
     const s=d.summary, camps=d.campaigns||[];
     setNavCount('ads', s.active||null);
+    el('adsBanner').innerHTML = d.meta_connected
+      ? `<div class="card" style="padding:12px 16px"><span class="badge ok"><span class="dot"></span>Conectado a Meta Ads</span> <span class="muted" style="font-size:13px">· las campañas de Meta se sincronizan solas (gasto y resultados reales). Cargá manualmente las de otras plataformas.</span></div>`
+      : `<div class="card" style="padding:12px 16px;border-color:rgba(251,191,36,.35)"><span class="badge warn">Meta Ads no conectado</span> <span class="muted" style="font-size:13px">Falta META_AD_ACCOUNT_ID. Por ahora cargás las campañas a mano.</span></div>`;
     const roasCls = s.roas>=1?'up':(s.roas>0?'down':'');
     el('adsKpis').innerHTML =
       kpiBig('Gasto', fmtUsd(s.spend_usd), s.active+' activas / '+s.total, ICONS.ads,'accent') +
@@ -1025,15 +1029,15 @@ async function loadAds(){
     el('adClient').innerHTML='<option value="">— interno —</option>'+(cli.clients||[]).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
     // tabla
     el('adsBody').innerHTML = camps.length ? camps.map(c=>`<tr>
-      <td><b>${esc(c.name)}</b>${c.client_name?'<br><span class="faint" style="font-size:12px">'+esc(c.client_name)+'</span>':''}${c.objective?' <span class="faint" style="font-size:12px">· '+esc(c.objective)+'</span>':''}</td>
+      <td><b>${esc(c.name)}</b>${c.live?' <span class="badge ok" style="font-size:10px" title="Sincronizada desde Meta Ads">● vivo</span>':''}${c.client_name?'<br><span class="faint" style="font-size:12px">'+esc(c.client_name)+'</span>':''}${c.objective?' <span class="faint" style="font-size:12px">· '+esc(c.objective)+'</span>':''}</td>
       <td><span class="badge grey">${esc(c.platform)}</span></td>
       <td><span class="badge ${AD_STATUS_CLS[c.status]||'grey'}">${esc(c.status)}</span></td>
       <td style="text-align:right" class="money">${fmtUsd(c.spend_usd)}</td>
       <td style="text-align:right" class="money">${c.results||0}</td>
       <td style="text-align:right" class="money">${c.cpl_usd?fmtUsd(c.cpl_usd):'—'}</td>
       <td style="text-align:right"><span class="money ${c.roas>=1?'up':c.roas>0?'down':''}">${c.roas?c.roas.toFixed(2)+'×':'—'}</span></td>
-      <td><button class="btn-ghost btn-xs" onclick="delAd('${c.id}')">🗑</button></td></tr>`).join('')
-      : '<tr><td colspan="8" class="empty">Sin campañas. Cargá una arriba para trackear gasto y ROAS.</td></tr>';
+      <td>${c.live?'<span class="faint" style="font-size:11px">Meta</span>':`<button class="btn-ghost btn-xs" onclick="delAd('${c.id}')">🗑</button>`}</td></tr>`).join('')
+      : '<tr><td colspan="8" class="empty">Sin campañas. Conectá Meta Ads o cargá una manual arriba.</td></tr>';
   }catch(e){ el('adsKpis').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
 }
 el('adBtn').addEventListener('click', async ()=>{

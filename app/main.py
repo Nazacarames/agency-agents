@@ -1102,9 +1102,33 @@ async def api_system_health(request: Request):
 
 @app.get("/api/ads")
 async def api_ads_list(request: Request):
+    """Campañas: las reales de Meta Ads (read-only) + las manuales (otras plataformas)."""
     _verify_webhook_secret(request)
-    from .integrations import ads_store as ads
-    return {"campaigns": ads.list_campaigns(), "summary": ads.summary()}
+    from .integrations import ads_store as ads, meta_ads
+    manual = ads.list_campaigns()
+    msum = ads.summary()
+    live: List[Dict[str, Any]] = []
+    meta_connected = meta_ads.enabled()
+    if meta_connected:
+        live = await run_in_threadpool(meta_ads.live_campaigns)
+    campaigns = live + manual
+    spend = msum["spend_usd"] + sum(c["spend_usd"] for c in live)
+    rev = msum["revenue_usd"] + sum(c["revenue_usd"] for c in live)
+    results = msum["results"] + sum(c.get("results", 0) or 0 for c in live)
+    by_platform = dict(msum["by_platform"])
+    for c in live:
+        by_platform["Meta"] = by_platform.get("Meta", 0) + c["spend_usd"]
+    summary = {
+        "spend_usd": round(spend, 2), "revenue_usd": round(rev, 2), "results": results,
+        "roas": round(rev / spend, 2) if spend else 0.0,
+        "cpl_usd": round(spend / results, 2) if results else 0.0,
+        "active": msum["active"] + sum(1 for c in live if c.get("status") == "activa"),
+        "total": len(campaigns),
+        "by_platform": {k: round(v, 2) for k, v in by_platform.items()},
+        "platforms": msum["platforms"], "statuses": msum["statuses"],
+        "meta_connected": meta_connected,
+    }
+    return {"campaigns": campaigns, "summary": summary, "meta_connected": meta_connected}
 
 
 @app.post("/api/ads")

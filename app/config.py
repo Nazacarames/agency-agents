@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     meta_page_id: str = ""           # ID de la Página de Facebook
     meta_page_token: str = ""        # Page access token long-lived (SECRET)
     ig_business_id: str = ""         # ID de la cuenta de Instagram Business
+    # Meta Ads: cuenta de anuncios (ej. act_1001254446126619) y token con ads_read.
+    # El token cae a meta_page_token si no se setea uno específico.
+    meta_ad_account_id: str = ""
+    meta_ads_token: str = ""         # System User token con ads_read (SECRET)
     # URL pública del backend, para que la Graph API pueda DESCARGAR la imagen
     # (las imágenes viven en /media/<file>). Ej: https://...up.railway.app
     public_base_url: str = ""
