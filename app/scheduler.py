@@ -41,6 +41,7 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
     "outbound": "0 12 * * *",             # 12:00 — cold-email usando los dolores
     "creative_strategist": "0 13 * * *",  # 13:00 — ads usando los dolores
     "content_creator": "0 14 * * *",      # 14:00 — contenido
+    "tiktok_creator": "0 19 * * mon,wed,fri",  # lun/mié/vie 19:00 — guiones TikTok (Nazareno)
     "social_media": "0 15 * * *",         # 15:00 — calendario orgánico
     "seo_specialist": "0 16 * * *",       # 16:00 — auditoría SEO
     "media_auditor": "0 17 * * *",        # 17:00 — auditoría de ads

@@ -613,6 +613,7 @@ class PublishBody(BaseModel):
 _AGENT_DESCRIPTIONS = {
     "leadhunter": "Genera 10 leads/día con contacto verificado (FIT 4-6)",
     "content_creator": "Posts/contenido para redes de Automiq",
+    "tiktok_creator": "Guiones de TikTok en la voz de Nazareno (avatar de marca) + thumbnail",
     "growth_hacker": "Hipótesis de growth + quick wins",
     "creative_strategist": "Ads de marca + personalizados + headlines",
     "social_media": "Calendario semanal de redes",

@@ -28,6 +28,7 @@ def list_agents() -> List[BaseAgent]:
 # ── Importar todos los agentes (auto-registro por side-effect) ──
 from . import leadhunter       # noqa: F401, E402
 from . import content_creator  # noqa: F401, E402
+from . import tiktok_creator   # noqa: F401, E402
 from . import growth_hacker    # noqa: F401, E402
 from . import creative_strategist  # noqa: F401, E402
 from . import social_media     # noqa: F401, E402
