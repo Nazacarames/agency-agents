@@ -117,6 +117,8 @@
   .kpi-card.accent .delta{color:#fff;background:rgba(255,255,255,.22)}
   .panel,.card{transition:border-color .16s,box-shadow .16s}
   .panel:hover,.card:hover{border-color:rgba(255,255,255,.15)}
+  .post-card[onclick]{cursor:pointer;transition:.14s}
+  .post-card[onclick]:hover{border-color:rgba(91,140,247,.5);background:rgba(91,140,247,.06)}
   .hdot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none;margin-right:8px;vertical-align:middle}
   .hdot.green{background:var(--green);box-shadow:0 0 0 3px var(--green-tint)}
   .hdot.amber{background:var(--amber);box-shadow:0 0 0 3px var(--amber-tint)}
@@ -931,7 +933,7 @@ function overviewPostsHtml(pubq){
   const fail=(pubq.items||[]).filter(i=>i.status==='failed').slice(0,2);
   const rows=[...done,...fail];
   if(!rows.length) return `<div class="muted" style="font-size:13px;padding:6px 0">Sin publicaciones todavía · ${pubq.pending||0} en cola.</div>`;
-  return rows.map(it=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-soft)">
+  return rows.map(it=>`<div class="post-card" style="display:flex;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--line-soft);border-radius:8px"${postCardAttrs(it)}>
     <img src="${esc(it.image)}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none;border:1px solid var(--line)"/>
     <div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((it.caption||'').slice(0,60))}</div>
     <div style="margin-top:3px;display:flex;gap:5px">${it.status==='published'?postLinks(it):'<span class="badge red">Falló</span>'}</div></div>
@@ -1074,9 +1076,23 @@ async function gwDel(id){ try{ await api('/api/growth/'+id,{method:'DELETE'}); l
 // ── Publicaciones ──
 function postLinks(it){
   const r=it.result||{}; const out=[];
-  if(r.facebook){ out.push(r.facebook.ok ? `<a href="${esc(r.facebook.permalink||('https://www.facebook.com/'+(r.facebook.id||'')))}" target="_blank" class="badge ok">Facebook ↗</a>` : `<span class="badge red" title="${esc(r.facebook.error||'')}">FB ✕</span>`); }
-  if(r.instagram){ out.push(r.instagram.ok ? (r.instagram.permalink?`<a href="${esc(r.instagram.permalink)}" target="_blank" class="badge violet">Instagram ↗</a>`:`<span class="badge violet">Instagram ✓</span>`) : `<span class="badge red" title="${esc(r.instagram.error||'')}">IG ✕</span>`); }
+  if(r.facebook){ out.push(r.facebook.ok ? `<a href="${esc(r.facebook.permalink||('https://www.facebook.com/'+(r.facebook.id||'')))}" target="_blank" onclick="event.stopPropagation()" class="badge ok">Facebook ↗</a>` : `<span class="badge red" title="${esc(r.facebook.error||'')}">FB ✕</span>`); }
+  if(r.instagram){ out.push(r.instagram.ok ? (r.instagram.permalink?`<a href="${esc(r.instagram.permalink)}" target="_blank" onclick="event.stopPropagation()" class="badge violet">Instagram ↗</a>`:`<span class="badge violet">Instagram ✓</span>`) : `<span class="badge red" title="${esc(r.instagram.error||'')}">IG ✕</span>`); }
   return out.join(' ');
+}
+// Mejor permalink del post (prioriza Instagram, luego Facebook) para abrir el post real.
+function postUrl(it){
+  const r=(it&&it.result)||{};
+  if(r.instagram && r.instagram.ok && r.instagram.permalink) return r.instagram.permalink;
+  if(r.facebook && r.facebook.ok) return r.facebook.permalink || (r.facebook.id?('https://www.facebook.com/'+r.facebook.id):'');
+  return '';
+}
+function openPost(url){ if(url) window.open(url,'_blank','noopener'); }
+// Atributos para hacer una tarjeta de post clickeable (redirige al post real).
+// El cursor/hover lo da el CSS [onclick] de las cards de post.
+function postCardAttrs(it){
+  const u=postUrl(it);
+  return u ? ` title="Abrir el post ↗" onclick="openPost('${esc(u)}')"` : '';
 }
 function pubThumb(src){ return `<img src="${esc(src)}" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line)"/>`; }
 async function loadPublicaciones(){
@@ -1110,7 +1126,7 @@ async function loadPublicaciones(){
     cal+='</div>';
     el('pubCalendar').innerHTML = pend.length||q.published_today ? cal : '<div class="empty" style="padding:20px">Nada programado. Cuando los agentes generen contenido, se agenda 1 por día.</div>';
     // publicadas (galería)
-    el('pubDone').innerHTML = done.length ? done.map(it=>`<div class="card" style="padding:12px">
+    el('pubDone').innerHTML = done.length ? done.map(it=>`<div class="card post-card" style="padding:12px"${postCardAttrs(it)}>
       ${pubThumb(it.image)}
       <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${postLinks(it)}<span class="badge grey" style="margin-left:auto">${esc((it.published_at||'').slice(0,10))}</span></div>
       <div class="muted" style="font-size:12.5px;line-height:1.45;margin-top:8px;max-height:84px;overflow:hidden">${esc((it.caption||'').slice(0,180))}${(it.caption||'').length>180?'…':''}</div>
