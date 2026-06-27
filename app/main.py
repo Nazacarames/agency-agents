@@ -95,6 +95,7 @@ class BlockExternalRedirectsMiddleware(BaseHTTPMiddleware):
             loc = response.headers.get("location")
             if loc and not (loc.startswith("https://automiq-agents.onrender.co")
                             or loc.startswith("https://automiq-agents.onrender.com")
+                            or loc.startswith("https://www.tiktok.com/")  # OAuth de TikTok (Login Kit)
                             or loc.startswith("/")):
                 log.warning("blocked_external_redirect", location=loc, path=request.url.path)
                 return JSONResponse({"error": "blocked external redirect", "location": loc}, status_code=502)
