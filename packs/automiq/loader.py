@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List
 AGENT_NAMES: List[str] = [
     "leadhunter",
     "content_creator",
+    "tiktok_creator",
     "growth_hacker",
     "creative_strategist",
     "social_media",
