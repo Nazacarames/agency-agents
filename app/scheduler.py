@@ -61,6 +61,10 @@ METRICS_SNAPSHOT_CRON = "0 6 * * *"
 # Auto-archivado de prospectos fríos (>N días sin movimiento). 05:00 ART.
 CLIENT_ARCHIVE_CRON = "0 5 * * *"
 
+# Digest de aprendizaje: consolida qué rubros convierten (lecciones data-driven para
+# leadhunter/outbound). Semanal, domingo 07:00 ART. Determinístico, sin costo de cuota.
+LEARNING_DIGEST_CRON = "0 7 * * sun"
+
 
 class AgentScheduler:
     def __init__(self, settings: Settings):
@@ -85,6 +89,8 @@ class AgentScheduler:
                               _scheduled_metrics_snapshot)
         self._register_simple("clients:archive", CLIENT_ARCHIVE_CRON, DEFAULT_TIMEZONE,
                               _scheduled_client_archive)
+        self._register_simple("learning:digest", LEARNING_DIGEST_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_learning_digest)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -200,3 +206,14 @@ async def _scheduled_client_archive() -> None:
         log.info("client_archive_done", result=res)
     except Exception as e:
         log.error("client_archive_failed", error=str(e)[:200])
+
+
+async def _scheduled_learning_digest() -> None:
+    """Consolida lecciones data-driven (rubros que convierten) para los agentes."""
+    import asyncio
+    from .integrations import learning
+    try:
+        res = await asyncio.to_thread(learning.digest)
+        log.info("learning_digest_scheduled_done", result=res)
+    except Exception as e:
+        log.error("learning_digest_failed", error=str(e)[:200])

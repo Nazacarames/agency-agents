@@ -923,6 +923,16 @@ async def api_list_lessons(request: Request, agent: Optional[str] = None):
     return {"lessons": ms.list_lessons(agent=agent, active_only=False)}
 
 
+@app.post("/api/learning/digest")
+async def api_learning_digest(request: Request):
+    """Corre el digest de aprendizaje on-demand: consolida lecciones data-driven
+    (rubros que convierten) para leadhunter/outbound desde el pipeline real."""
+    _verify_webhook_secret(request)
+    from .integrations import learning
+    res = await run_in_threadpool(learning.digest)
+    return {"ok": True, "result": res}
+
+
 @app.post("/api/lessons")
 async def api_add_lesson(body: LessonBody, request: Request):
     _verify_webhook_secret(request)

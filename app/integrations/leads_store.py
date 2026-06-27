@@ -303,6 +303,11 @@ def _learn_from_reply(lead: Dict[str, Any]) -> None:
                   f"priorizá ese rubro y replicá el enfoque.")
         ms.record_outcome("outbound", lesson, weight=2)
         ms.record_outcome("creative_strategist", lesson, weight=2)
+        # El leadhunter también aprende: un perfil que RESPONDE es buena materia prima →
+        # buscar más empresas como esa (respuesta llega mucho antes que la venta).
+        lh = (f"Señal de demanda: una PyME de {industria} respondió al outreach. "
+              f"Buscá MÁS empresas de {industria} (mismo perfil/tamaño) — convierten mejor.")
+        ms.record_outcome("leadhunter", lh, weight=2)
     except Exception:
         pass
 
@@ -446,6 +451,42 @@ def summary_counts(store: Dict[str, Any]) -> Dict[str, int]:
         counts[lead.get("state", "?")] = counts.get(lead.get("state", "?"), 0) + 1
     counts["total"] = len(store.get("leads", {}))
     return counts
+
+
+_REPLIED_STATES = ("respondió", "reunión", "propuesta", "cerrado")
+
+
+def known_companies(store: Dict[str, Any], limit: int = 150) -> List[str]:
+    """Nombres de empresas que YA están en el pipeline (cualquier estado).
+    Sirve para que el leadhunter NO vuelva a traer las mismas → leads netos nuevos."""
+    seen, out = set(), []
+    for l in store.get("leads", {}).values():
+        c = (l.get("company") or "").strip()
+        k = c.lower()
+        if c and k not in seen:
+            seen.add(k)
+            out.append(c)
+    return sorted(out)[:limit]
+
+
+def outcomes_by_industry(store: Dict[str, Any]) -> Dict[str, Dict[str, int]]:
+    """Agregado por rubro: cuántos se contactaron, respondieron, ganaron, murieron.
+    Base del digest de aprendizaje (qué rubros convierten vs cuáles son tierra muerta)."""
+    agg: Dict[str, Dict[str, int]] = {}
+    for l in store.get("leads", {}).values():
+        ind = (l.get("industria") or "").strip().lower() or "(sin rubro)"
+        a = agg.setdefault(ind, {"contacted": 0, "replied": 0, "won": 0, "dead": 0, "total": 0})
+        a["total"] += 1
+        st = l.get("state", "")
+        if st != "nuevo" or (l.get("touches")):
+            a["contacted"] += 1
+        if st in _REPLIED_STATES:
+            a["replied"] += 1
+        if st == "cerrado":
+            a["won"] += 1
+        if st == "sin_respuesta":
+            a["dead"] += 1
+    return agg
 
 
 # ───────────────────────── ingest del reporte de leadhunter ─────────────────────────

@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import pytz
 
@@ -74,6 +74,25 @@ de nada, vas por buen camino.
 - ACEPTABLE: email comercial chico tipo `ventas@`/`info@`/`comercial@` de una PyME real
   (no de una corporación) + teléfono verificado.
 - NO ACEPTABLE como único contacto: buzón de soporte masivo (ver exclusiones).
+
+## ⭐ RÚBRICA DE fit_score (dura — sólo entran los mejores)
+Puntuá cada lead sumando (máx 6). **Sólo cuenta el lead si fit_score ≥ 4 Y contacto verificado.**
+Si no llega a 4 → DESCARTALO y buscá reemplazo. Mejor 6 leads de 5/6 que 10 mediocres.
+- **+2 Contactabilidad real:** decisor identificado + email directo o WhatsApp del decisor
+  (NO un buzón masivo). Sin un canal a un decisor, el lead no sirve.
+- **+2 Dolor concreto + evidencia:** hay un problema específico que Automiq resuelve
+  (cotización lenta, no contestan WhatsApp a tiempo, seguimiento manual, cobranza…) y una
+  señal pública que lo prueba. Dolor genérico = 0.
+- **+1 Fit de tamaño/perfil:** PyME 25–100 empleados, regional/desconocida (no grande).
+- **+1 Momento (timing):** posteo reciente, vacante de ventas/operaciones, stack
+  (Tokko/Odoo/Shopify), o crecimiento que indique que AHORA es buen momento.
+
+## 🧠 USÁ LO APRENDIDO (te lo paso en el mensaje del día)
+- Si te paso **rubros que más convierten** (datos reales del pipeline): traé MÁS empresas de
+  esos rubros — es donde mejor responde el mercado.
+- Si te paso una lista de **empresas YA contactadas**: NO las repitas. El valor está en
+  leads NETOS NUEVOS; repetir una empresa del pipeline es un lead desperdiciado.
+- Aplicá las "Lecciones aprendidas" del contexto: son patrones que ya funcionaron o fallaron.
 
 ## Por cada lead incluir los siguientes campos (obligatorios)
 1. empresa (razón social)
@@ -266,6 +285,35 @@ class LeadHunterAgent(BaseAgent):
     def system_prompt(self) -> str:
         return f"{get_context_block()}\n\n{LEADHUNTER_INSTRUCTIONS}"
 
+    def _learning_block(self, ctx: AgentContext) -> str:
+        """Inyecta lo aprendido del pipeline: empresas YA contactadas (no repetir) +
+        rubros que mejor convierten (priorizar). Hace al leadhunter mejor con el tiempo."""
+        parts: List[str] = []  # type: ignore[name-defined]
+        try:
+            from ..integrations import leads_store as ls
+            store = ls.load_store()
+            known = ls.known_companies(store, limit=120)
+            if known:
+                parts.append(
+                    "## ⛔ YA ESTÁN EN NUESTRO PIPELINE — NO LAS REPITAS (traé empresas NUEVAS)\n"
+                    + ", ".join(known)
+                )
+            agg = ls.outcomes_by_industry(store)
+            hot = sorted(
+                ((i, a) for i, a in agg.items()
+                 if i != "(sin rubro)" and a["contacted"] >= 3 and a["replied"] >= 1),
+                key=lambda x: x[1]["replied"] / max(x[1]["contacted"], 1), reverse=True,
+            )[:5]
+            if hot:
+                lines = [f"- {i}: respondió {a['replied']}/{a['contacted']}" for i, a in hot]
+                parts.append(
+                    "## 🔥 RUBROS QUE MÁS CONVIERTEN (datos reales — buscá MÁS de estos)\n"
+                    + "\n".join(lines)
+                )
+        except Exception:
+            pass
+        return ("\n\n" + "\n\n".join(parts)) if parts else ""
+
     def build_user_message(self, ctx: AgentContext) -> str:
         tz = pytz.timezone("America/Buenos_Aires")
         today = datetime.now(tz).strftime("%Y-%m-%d")
@@ -292,7 +340,8 @@ class LeadHunterAgent(BaseAgent):
             f"{override}"
             f"⚠️ TARGET DE HOY: generá EXACTAMENTE {target} leads (esto OVERRIDE el "
             f"'EXACTAMENTE 10' del system prompt). Priorizá calidad de contacto verificable "
-            f"sobre cantidad; con {target} leads sólidos alcanza.\n\n"
+            f"sobre cantidad; con {target} leads sólidos alcanza."
+            f"{self._learning_block(ctx)}\n\n"
             "Sos un agente de prospecting B2B corriendo en Claude Code. Cargá y seguí la "
             "skill `prospecting` (usá la tool Skill si está disponible).\n\n"
             "⚠️ NO tenés WebSearch (no funciona en este entorno). Descubrí empresas así:\n"

@@ -223,16 +223,33 @@ def add_lesson(agent: str, lesson: str, kind: str = "feedback", weight: int = 1)
     return item
 
 
+def bump_lesson_weight(lesson_id: Any, by: int = 1) -> bool:
+    """Suma `by` al peso de una lección (refuerzo). Mayor peso = sube en lessons_for."""
+    by = max(1, int(by or 1))
+    if db.enabled():
+        db.execute("UPDATE agent_lessons SET weight = weight + %s WHERE id=%s", (by, lesson_id))
+        return True
+    store = _json_load()
+    for l in store["agent_lessons"]:
+        if str(l["id"]) == str(lesson_id):
+            l["weight"] = int(l.get("weight", 1)) + by
+            _json_save(store)
+            return True
+    return False
+
+
 def record_outcome(agent: str, lesson: str, weight: int = 1) -> Optional[Dict[str, Any]]:
-    """Lección automática de tipo 'outcome' con dedup: no repite una idéntica activa.
-    Es el motor del aprendizaje automático: lo dispara el pipeline cuando observa un
-    resultado real (p.ej. un lead respondió)."""
+    """Lección automática de tipo 'outcome'. Es el motor del aprendizaje automático:
+    lo dispara el pipeline cuando observa un resultado real (p.ej. un lead respondió).
+    Si la lección ya existe (idéntica + activa), REFUERZA su peso en vez de duplicar —
+    así las señales que se repiten suben de prioridad y se inyectan primero."""
     lesson = (lesson or "").strip()
     if not lesson:
         return None
     for l in list_lessons(agent=agent, active_only=True):
         if l.get("lesson", "").strip() == lesson:
-            return l  # ya existe, no duplicar
+            bump_lesson_weight(l.get("id"), by=weight)   # refuerzo
+            return l
     return add_lesson(agent, lesson, kind="outcome", weight=weight)
 
 
