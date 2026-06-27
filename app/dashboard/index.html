@@ -462,7 +462,7 @@
         <div class="sec-head"><h2 class="muted" style="font-weight:600;font-size:13.5px">Cartera de clientes</h2>
           <button class="btn-ghost btn-sm" id="archiveBtn" title="Archiva prospectos no-activos sin movimiento hace 10+ días (libera su memoria)">🗄️ Archivar fríos (10 días)</button></div>
         <div class="tbl-wrap"><table><thead>
-          <tr><th>Cliente</th><th>País</th><th>Servicios</th><th style="text-align:right">Paga/mes</th><th style="min-width:130px">% del MRR</th><th>Estado</th><th>Etapa</th><th></th></tr>
+          <tr><th>Cliente</th><th>País</th><th>Servicios</th><th style="text-align:right">Paga/mes</th><th style="min-width:130px">% del MRR</th><th>Antigüedad / LTV</th><th>Estado</th><th>Etapa</th><th></th></tr>
         </thead><tbody id="clientsBody"></tbody></table></div>
       </section>
 
@@ -829,7 +829,7 @@ function svgSpark(values, color){
 async function loadOverview(){
   el('overviewKpis').innerHTML='<p class="muted">Cargando…</p>';
   try{
-    const [stats, ag, tk, pubq, health] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), api('/api/publish/queue').catch(()=>null), api('/api/system/health').catch(()=>null) ]);
+    const [stats, ag, tk, pubq, health, bill] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), api('/api/publish/queue').catch(()=>null), api('/api/system/health').catch(()=>null), api('/api/finance/summary').catch(()=>null) ]);
     CACHE.agents=ag; CACHE.tasks=tk; CACHE.stats=stats;
     const b=stats.billing, f=stats.finance, m=stats.metrics||{};
     const profitCls = f.profit_month_usd>=0?'up':'down';
@@ -852,7 +852,7 @@ async function loadOverview(){
     el('chartRevExp').innerHTML += `<div class="legend"><span class="lg"><span class="sw" style="background:${CH.blue}"></span>Ingresos</span><span class="lg"><span class="sw" style="background:${CH.amber}"></span>Gastos</span></div>`;
     el('chartFunnel').innerHTML = funnelFromPipeline(stats.pipeline);
     el('engineFlow').innerHTML = engineFlow(stats.engine);
-    el('overviewAlerts').innerHTML = alertsHtml(stats.alerts);
+    el('overviewAlerts').innerHTML = alertsHtml([...computeExtraAlerts(bill), ...(stats.alerts||[])]);
     el('overviewPosts').innerHTML = overviewPostsHtml(pubq);
     el('overviewHealth').innerHTML = overviewHealthHtml(health);
     setNavCount('publicaciones', pubq && pubq.pending ? pubq.pending : null);
@@ -899,6 +899,22 @@ function kpiDelta(series){
   const up=pct>0, n=Math.abs(pct);
   const show=n>=100?Math.round(n):n.toFixed(n<10?1:0);
   return `<span class="delta ${up?'up':'down'}" title="vs inicio del período registrado">${up?'▲':'▼'} ${show}%</span>`;
+}
+// Alertas proactivas calculadas en el front desde la facturación por cliente.
+function computeExtraAlerts(bill){
+  const out=[];
+  if(!bill || !bill.by_client || !bill.billing) return out;
+  const total=bill.billing.mrr_usd||0;
+  if(total>0){
+    const top=bill.by_client.filter(c=>c.monthly_fee_usd>0).sort((a,b)=>b.monthly_fee_usd-a.monthly_fee_usd)[0];
+    if(top){ const share=top.monthly_fee_usd/total*100;
+      if(share>=40) out.push({level:'amber', msg:`Concentración: ${top.name} representa el ${Math.round(share)}% del MRR — diversificá para bajar el riesgo.`}); }
+  }
+  const noFee=bill.by_client.filter(c=>c.status==='activo' && (!c.monthly_fee_usd||c.monthly_fee_usd<=0)).length;
+  if(noFee>0) out.push({level:'amber', msg:`${noFee} cliente${noFee>1?'s':''} activo${noFee>1?'s':''} sin facturación cargada — revisá cobro o cargá el fee.`});
+  if((bill.billing.active||0)===0 && (bill.billing.total||0)>0)
+    out.push({level:'amber', msg:'No hay clientes activos facturando. Reactivá la cartera.'});
+  return out;
 }
 function alertsHtml(alerts){
   if(!alerts || !alerts.length) return '';
@@ -1328,6 +1344,7 @@ async function loadClients(){
       <td>${svcs}</td>
       <td style="text-align:right"><span class="money">${(+c.monthly_fee||0).toLocaleString('es-AR')} ${esc(c.currency||'')}</span>${usd?'<br><span class="faint" style="font-size:11px">'+fmtUsd(usd)+'</span>':''}</td>
       <td>${shareCell}</td>
+      <td>${ageCell(c, usd)}</td>
       <td><span class="badge ${STATUS_CLS[st]||'grey'}">${esc(st)}</span></td>
       <td><select class="inp btn-sm" style="padding:5px 8px;min-width:120px" onchange="setStage('${c.id}',this.value)">${
         STAGES.map(s=>'<option value="'+esc(s)+'"'+(s===c.stage?' selected':'')+'>'+esc(labelStage(s))+'</option>').join('')}</select></td>
@@ -1335,8 +1352,25 @@ async function loadClients(){
         <button class="btn-ghost btn-xs" onclick="viewClientMemory('${c.id}')">Memoria</button>
         <button class="btn-ghost btn-xs" onclick="editClient('${c.id}')">Editar</button>
         <button class="btn-ghost btn-xs" onclick="delClient('${c.id}')">🗑</button></td></tr>`; }).join('')
-      : '<tr><td colspan="8" class="empty">Sin clientes todavía. Cargá uno arriba o convertí un lead desde el Pipeline.</td></tr>';
-  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="8" class="err">'+esc(e.message)+'</td></tr>'; }
+      : '<tr><td colspan="9" class="empty">Sin clientes todavía. Cargá uno arriba o convertí un lead desde el Pipeline.</td></tr>';
+  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="9" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+// Meses completos desde una fecha ISO (o null).
+function monthsSince(iso){
+  if(!iso) return null;
+  const d=new Date(iso); if(isNaN(d)) return null;
+  const now=new Date();
+  let m=(now.getFullYear()-d.getFullYear())*12+(now.getMonth()-d.getMonth());
+  if(now.getDate()<d.getDate()) m-=1;
+  return Math.max(0,m);
+}
+// Celda Antigüedad + LTV acumulado (≈ meses × fee USD).
+function ageCell(c, usd){
+  const m=monthsSince(c.start_date);
+  if(m==null) return '<span class="faint">—</span>';
+  if(m===0) return '<span class="money">nuevo</span><br><span class="faint" style="font-size:11px">&lt; 1 mes</span>';
+  const ltv = usd>0 ? m*usd : 0;
+  return `<span class="money">${m} ${m===1?'mes':'meses'}</span>${ltv>0?'<br><span class="faint" style="font-size:11px">≈ '+fmtUsd(ltv)+' total</span>':''}`;
 }
 // Semáforo de salud del cliente (verde/amber/rojo/gris) según estado + facturación.
 function clientHealth(c, usd){
@@ -1405,16 +1439,37 @@ function mapStateToStage(s){
   if(s.includes('perd')||s.includes('descart')) return 'descartado';
   return 'oferta';   // nuevo / contactado / respondió → primera etapa
 }
+// Probabilidad de cierre por etapa (para ponderar el valor del pipeline).
+const STAGE_PROB={nuevo:.05, contactado:.12, 'respondió':.30, 'reunión':.55, propuesta:.75, cerrado:1};
+function pipelineValue(counts, ticket){
+  let weighted=0, open=0;
+  Object.keys(STAGE_PROB).forEach(st=>{ const n=counts[st]||0; if(st!=='cerrado'){ open+=n; } weighted+=n*ticket*STAGE_PROB[st]; });
+  return { weighted, open, gross: open*ticket };
+}
+function pipeValueBreakdown(counts, ticket){
+  const order=['nuevo','contactado','respondió','reunión','propuesta'];
+  const stages=order.filter(st=>(counts[st]||0)>0);
+  if(!stages.length) return '';
+  const items=stages.map(st=>`<span class="lg"><span class="sw" style="background:${PALETTE[order.indexOf(st)%PALETTE.length]}"></span>${esc(st)} <b style="color:var(--navy);margin-left:2px">${fmtUsd((counts[st]||0)*ticket*STAGE_PROB[st])}</b></span>`).join('');
+  return `<div class="legend" style="margin-top:14px;font-size:12px"><span class="faint">Valor ponderado por etapa:</span> ${items}</div>`;
+}
 async function loadPipeline(){
   const body=el('pipeBody'); body.innerHTML='<tr><td colspan="7" class="muted">Cargando…</td></tr>';
   try{
-    const d=await api('/api/pipeline'); CACHE.pipeline=d;
+    const [d, bill]=await Promise.all([ api('/api/pipeline'), api('/api/finance/summary').catch(()=>null) ]);
+    CACHE.pipeline=d;
     setNavCount('pipeline', d.counts.total||null);
     const order=['nuevo','contactado','respondió','reunión','propuesta','cerrado','perdido','sin_respuesta'];
     const keys=Object.keys(d.counts).filter(k=>k!=='total');
     const ordered=['total',...order.filter(k=>keys.includes(k)),...keys.filter(k=>!order.includes(k))].filter((v,i,a)=>a.indexOf(v)===i);
-    el('pipeKpis').innerHTML = ordered.map((s,i)=>kpi(s, d.counts[s]||0, '', i===0?'accent':'')).join('');
-    el('pipeFunnel').innerHTML = funnelFromPipeline(d.counts);
+    const arpu=(bill&&bill.billing&&bill.billing.arpu_usd)||0;
+    const ticket=arpu>0?arpu:300;   // si no hay ARPU aún, ticket promedio estimado
+    const pv=pipelineValue(d.counts, ticket);
+    el('pipeKpis').innerHTML =
+      kpiBig('Valor estimado', fmtUsd(pv.weighted), 'ponderado por etapa · ticket '+fmtUsd(ticket), ICONS.finanzas, 'accent') +
+      kpiBig('Valor bruto', fmtUsd(pv.gross), pv.open+' leads abiertos × ticket', ICONS.growth, '') +
+      ordered.map((s)=>kpi(s, d.counts[s]||0, '')).join('');
+    el('pipeFunnel').innerHTML = funnelFromPipeline(d.counts) + pipeValueBreakdown(d.counts, ticket);
     window._leads = d.leads;
     body.innerHTML = d.leads.length ? d.leads.map((l,i)=>`<tr>
       <td><b>${esc(l.company||'—')}</b></td>
