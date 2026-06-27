@@ -13,7 +13,7 @@
 <style>
   :root{
     --blue:#2B5BE8; --blue-dark:#2348C0; --blue-bright:#5B8CF7; --blue-tint:rgba(59,130,246,.16);
-    --navy:#EAF1FF; --muted:#94A0BD; --faint:#6A7796;
+    --navy:#EAF1FF; --muted:#9AA6C2; --faint:#7C89A8;
     --bg:#0A1020; --paper:#121B36; --paper-2:#172346; --sidebar:#0C1428;
     --line:rgba(255,255,255,.085); --line-soft:rgba(255,255,255,.05);
     --green:#34D399; --green-tint:rgba(52,211,153,.15); --amber:#FBBF24; --amber-tint:rgba(251,191,36,.15);
@@ -106,6 +106,17 @@
   .kpi-card.accent{background:linear-gradient(150deg,#2B5BE8,#1E3FB0);border-color:transparent;color:#fff;box-shadow:0 8px 28px rgba(43,91,232,.4)}
   .kpi-card.accent .lbl,.kpi-card.accent .sub{color:rgba(255,255,255,.88)}
   .kpi-card.accent .ic{color:#fff;opacity:.75}
+  .kpi-card{transition:transform .16s,border-color .16s,box-shadow .16s}
+  .kpi-card:hover{transform:translateY(-2px);border-color:rgba(91,140,247,.45)}
+  .kpi-card.accent:hover{box-shadow:0 14px 38px rgba(43,91,232,.5)}
+  .kpi-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;font-variant-numeric:tabular-nums;line-height:1.5;white-space:nowrap}
+  .delta.up{color:var(--green);background:var(--green-tint)}
+  .delta.down{color:var(--red);background:var(--red-tint)}
+  .delta.flat{color:var(--muted);background:rgba(255,255,255,.07)}
+  .kpi-card.accent .delta{color:#fff;background:rgba(255,255,255,.22)}
+  .panel,.card{transition:border-color .16s,box-shadow .16s}
+  .panel:hover,.card:hover{border-color:rgba(255,255,255,.15)}
   .up{color:var(--green)} .down{color:var(--red)}
 
   /* tables */
@@ -812,10 +823,10 @@ async function loadOverview(){
     const b=stats.billing, f=stats.finance, m=stats.metrics||{};
     const profitCls = f.profit_month_usd>=0?'up':'down';
     el('overviewKpis').innerHTML = `
-      ${kpiBig('MRR', fmtUsd(b.mrr_usd), 'ingreso recurrente / mes', ICONS.finanzas, 'accent', svgSpark(m.mrr_usd,'#fff'))}
-      ${kpiBig('Ganancia (mes)', fmtUsd(f.profit_month_usd), 'ingresos − gastos', ICONS.growth, '', svgSpark(m.profit_month_usd, f.profit_month_usd>=0?CH.green:CH.red), profitCls)}
-      ${kpiBig('Clientes activos', b.active, b.total+' en total · ARPU '+fmtUsd(b.arpu_usd), ICONS.clientes, '', svgSpark(m.active_clients,CH.blue))}
-      ${kpiBig('Leads pipeline', stats.pipeline.total||0, 'en el motor de outbound', ICONS.pipeline, '', svgSpark(m.leads_total,CH.violet))}
+      ${kpiBig('MRR', fmtUsd(b.mrr_usd), 'ingreso recurrente / mes', ICONS.finanzas, 'accent', svgSpark(m.mrr_usd,'#fff'), '', kpiDelta(m.mrr_usd))}
+      ${kpiBig('Ganancia (mes)', fmtUsd(f.profit_month_usd), 'ingresos − gastos', ICONS.growth, '', svgSpark(m.profit_month_usd, f.profit_month_usd>=0?CH.green:CH.red), profitCls, kpiDelta(m.profit_month_usd))}
+      ${kpiBig('Clientes activos', b.active, b.total+' en total · ARPU '+fmtUsd(b.arpu_usd), ICONS.clientes, '', svgSpark(m.active_clients,CH.blue), '', kpiDelta(m.active_clients))}
+      ${kpiBig('Leads pipeline', stats.pipeline.total||0, 'en el motor de outbound', ICONS.pipeline, '', svgSpark(m.leads_total,CH.violet), '', kpiDelta(m.leads_total))}
       ${kpiBig('Growth abierto', stats.growth_open, stats.growth_total+' objetivos totales', ICONS.growth, '')}`;
     setNavCount('clientes', b.total||null); setNavCount('pipeline', stats.pipeline.total||null);
     setNavCount('growth', stats.growth_open||null); setNavCount('agentes', ag.agents.length);
@@ -858,10 +869,25 @@ function engineFlow(e){
     ${node('Growth', e.growth_open, 'objetivos abiertos')}
   </div>`;
 }
-function kpiBig(lbl,val,sub,icon,cls,spark,valCls){
+function kpiBig(lbl,val,sub,icon,cls,spark,valCls,delta){
   return `<div class="kpi-card ${cls||''}"><div class="ic">${icon||''}</div>
-    <div class="lbl">${esc(lbl)}</div><div class="kpi ${valCls||''}">${esc(val)}</div>
+    <div class="lbl">${esc(lbl)}</div>
+    <div class="kpi-top"><div class="kpi ${valCls||''}">${esc(val)}</div>${delta||''}</div>
     <div class="sub">${esc(sub||'')}</div>${spark||''}</div>`;
+}
+// Tendencia % del KPI vs el inicio del período registrado (series de métricas diarias).
+function kpiDelta(series){
+  const v=(series||[]).map(x=>+x||0);
+  if(v.length<2) return '';
+  const last=v[v.length-1];
+  const base=v.find(x=>x!==0);            // primer valor con dato (baseline)
+  if(base==null || base===0) return '';
+  const pct=((last-base)/Math.abs(base))*100;
+  if(!isFinite(pct)) return '';
+  if(Math.abs(pct)<0.5) return '<span class="delta flat" title="sin cambios en el período">estable</span>';
+  const up=pct>0, n=Math.abs(pct);
+  const show=n>=100?Math.round(n):n.toFixed(n<10?1:0);
+  return `<span class="delta ${up?'up':'down'}" title="vs inicio del período registrado">${up?'▲':'▼'} ${show}%</span>`;
 }
 function alertsHtml(alerts){
   if(!alerts || !alerts.length) return '';
