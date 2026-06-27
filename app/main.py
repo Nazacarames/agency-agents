@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse, RedirectResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
@@ -1527,6 +1527,191 @@ async def api_delete_mission(mission_id: str, request: Request):
     from .integrations import missions_store as mis
     mis.delete_mission(mission_id)
     return {"ok": True}
+
+
+# ── TikTok (Login Kit OAuth + Content Posting API) ──
+
+def _tiktok_state_path() -> Path:
+    return _data_dir() / "tiktok-oauth-state.json"
+
+
+def _tiktok_save_state(state: str, key: str) -> None:
+    import time as _t
+    p = _tiktok_state_path()
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except Exception:
+        data = {}
+    now = int(_t.time())
+    data = {s: v for s, v in data.items() if now - int(v.get("ts", 0)) < 3600}
+    data[state] = {"key": key, "ts": now}
+    try:
+        p.write_text(json.dumps(data), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _tiktok_pop_state(state: str) -> Dict[str, Any]:
+    p = _tiktok_state_path()
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except Exception:
+        data = {}
+    v = data.pop(state, None)
+    try:
+        p.write_text(json.dumps(data), encoding="utf-8")
+    except Exception:
+        pass
+    return v or {}
+
+
+@app.get("/auth/tiktok/login")
+async def tiktok_login(request: Request):
+    """Inicia el OAuth de TikTok. Requiere ?key=WEBHOOK_SECRET (acción de admin)."""
+    s = get_settings()
+    key = request.query_params.get("key", "")
+    if not s.webhook_secret or not hmac.compare_digest(key, s.webhook_secret):
+        raise HTTPException(status_code=401, detail="key inválida")
+    from .integrations.tiktok_client import get_tiktok_client
+    tc = get_tiktok_client(s)
+    if not tc.configured():
+        raise HTTPException(status_code=400,
+                            detail="TikTok no configurado (faltan TIKTOK_CLIENT_KEY/SECRET o redirect URI)")
+    state = uuid.uuid4().hex
+    _tiktok_save_state(state, key)
+    return RedirectResponse(tc.authorize_url(state))
+
+
+@app.get("/auth/tiktok/callback")
+async def tiktok_callback(request: Request):
+    """Callback de TikTok: intercambia el code por el token y lo guarda."""
+    s = get_settings()
+    qp = request.query_params
+    if qp.get("error"):
+        return HTMLResponse(
+            f"<h2>TikTok devolvió un error</h2><pre>{qp.get('error')}: {qp.get('error_description','')}</pre>",
+            status_code=400)
+    code = qp.get("code")
+    state = qp.get("state", "")
+    if not code:
+        return HTMLResponse("<h2>Falta el parámetro code</h2>", status_code=400)
+    v = _tiktok_pop_state(state)
+    from .integrations.tiktok_client import get_tiktok_client
+    tc = get_tiktok_client(s)
+    try:
+        await run_in_threadpool(tc.exchange_code, code)
+    except Exception as e:
+        return HTMLResponse(f"<h2>No se pudo conectar la cuenta</h2><pre>{str(e)[:500]}</pre>",
+                            status_code=502)
+    key = v.get("key", "")
+    return RedirectResponse(f"/tiktok?key={key}&connected=1" if key else "/tiktok")
+
+
+@app.get("/api/tiktok/status")
+async def api_tiktok_status(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations.tiktok_client import get_tiktok_client
+    return get_tiktok_client(get_settings()).status()
+
+
+@app.post("/api/tiktok/post-test")
+async def api_tiktok_post_test(request: Request):
+    """Postea un video de prueba (Direct Post, PULL_FROM_URL). En sandbox = privado."""
+    _verify_webhook_secret(request)
+    s = get_settings()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    video_url = (body or {}).get("video_url") or s.tiktok_test_video_url
+    caption = (body or {}).get("caption") or "Prueba de integración de Automiq 🤖 #automatizacion"
+    if not video_url:
+        raise HTTPException(status_code=400,
+                            detail="falta video_url (mp4 en un dominio verificado en la app de TikTok)")
+    from .integrations.tiktok_client import get_tiktok_client
+    tc = get_tiktok_client(s)
+    try:
+        info = await run_in_threadpool(tc.creator_info)
+        res = await run_in_threadpool(tc.post_video_from_url, video_url, caption)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)[:500])
+    return {"ok": True, "creator_info": info.get("data"), "post": res.get("data")}
+
+
+@app.post("/api/tiktok/disconnect")
+async def api_tiktok_disconnect(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations.tiktok_client import clear_token
+    clear_token()
+    return {"ok": True}
+
+
+@app.get("/tiktok", response_class=HTMLResponse)
+async def tiktok_connect_page(request: Request):
+    """Página de conexión/demo de TikTok. Requiere ?key=WEBHOOK_SECRET."""
+    s = get_settings()
+    key = request.query_params.get("key", "")
+    if not s.webhook_secret or not hmac.compare_digest(key, s.webhook_secret):
+        return HTMLResponse("<body style='font-family:system-ui;background:#0D1426;color:#EAF0FF;"
+                            "padding:3rem'><h2>No autorizado</h2><p>Agregá <code>?key=WEBHOOK_SECRET</code> "
+                            "a la URL.</p></body>", status_code=401)
+    from .integrations.tiktok_client import get_tiktok_client
+    st = get_tiktok_client(s).status()
+    connected = bool(st.get("connected"))
+    badge = ("<span style='color:#22c55e'>● Conectada</span>" if connected
+             else "<span style='color:#f59e0b'>● No conectada</span>")
+    openid = st.get("open_id") or "—"
+    sandbox = "Sí (posts privados)" if st.get("sandbox") else "No (producción)"
+    cfg = "OK" if st.get("configured") else "FALTAN credenciales"
+    connect_btn = (f"<a class='btn' href='/auth/tiktok/login?key={key}'>Conectar cuenta de TikTok</a>"
+                   if not connected else
+                   f"<a class='btn' href='/auth/tiktok/login?key={key}'>Reconectar</a>")
+    post_block = ""
+    if connected:
+        post_block = f"""
+        <h3>Publicar video de prueba (sandbox)</h3>
+        <input id='vurl' placeholder='URL del .mp4 (dominio verificado)' value='{s.tiktok_test_video_url}' />
+        <button class='btn' onclick='postTest()'>Publicar prueba</button>
+        <pre id='out'></pre>
+        <script>
+        async function postTest() {{
+          const out=document.getElementById('out'); out.textContent='Publicando...';
+          try {{
+            const r=await fetch('/api/tiktok/post-test',{{method:'POST',
+              headers:{{'Content-Type':'application/json','X-Webhook-Secret':'{key}'}},
+              body:JSON.stringify({{video_url:document.getElementById('vurl').value}})}});
+            out.textContent=JSON.stringify(await r.json(),null,2);
+          }} catch(e) {{ out.textContent='Error: '+e; }}
+        }}
+        </script>"""
+    html = f"""<!doctype html><html lang=es><head><meta charset=utf-8>
+    <meta name=viewport content='width=device-width,initial-scale=1'>
+    <title>Automiq · TikTok</title>
+    <style>
+      body{{font-family:system-ui,Segoe UI,sans-serif;background:#0D1426;color:#EAF0FF;
+        max-width:620px;margin:0 auto;padding:3rem 1.5rem;line-height:1.6}}
+      h1{{font-size:1.6rem}} h3{{margin-top:2rem}}
+      .card{{background:#142042;border:1px solid rgba(255,255,255,.08);border-radius:14px;
+        padding:1.2rem 1.4rem;margin:1.2rem 0}}
+      .btn{{display:inline-block;background:#2B5BE8;color:#fff;text-decoration:none;border:0;
+        padding:.7rem 1.2rem;border-radius:9999px;font-size:.95rem;cursor:pointer;margin-top:.6rem}}
+      .btn:hover{{background:#3B82F6}}
+      input{{width:100%;padding:.6rem .8rem;border-radius:8px;border:1px solid rgba(255,255,255,.15);
+        background:#0D1426;color:#EAF0FF;margin:.5rem 0}}
+      pre{{background:#0D1426;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:1rem;
+        overflow:auto;font-size:.8rem;white-space:pre-wrap}}
+      .muted{{color:#8C97B5;font-size:.9rem}} code{{color:#3B82F6}}
+    </style></head><body>
+    <h1>Automiq · Publicador de TikTok</h1>
+    <p class=muted>Integración con la Content Posting API para publicar contenido propio en la cuenta oficial de la marca.</p>
+    <div class=card>
+      <p>Estado: {badge}</p>
+      <p class=muted>open_id: <code>{openid}</code><br>Sandbox: {sandbox}<br>Credenciales: {cfg}</p>
+      {connect_btn}
+    </div>
+    <div class=card>{post_block or "<p class=muted>Conectá la cuenta para habilitar la publicación de prueba.</p>"}</div>
+    </body></html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

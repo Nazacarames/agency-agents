@@ -136,6 +136,19 @@ class Settings(BaseSettings):
     outbound_daily_cap: int = 10         # máximo de emails nuevos por corrida
     outbound_from_name: str = "Equipo Automiq"
 
+    # ── TikTok (Content Posting API + Login Kit) ──
+    # App "Automiq Publisher" (developers.tiktok.com). Postea contenido de video
+    # PROPIO a la cuenta oficial de la marca. Credenciales en env de Railway.
+    tiktok_client_key: str = ""
+    tiktok_client_secret: str = ""
+    tiktok_redirect_uri: str = ""        # default = public_base_url + /auth/tiktok/callback
+    tiktok_scopes: str = "user.info.basic,video.publish,video.upload"
+    # Sandbox hasta que TikTok apruebe la app (en sandbox sólo postea a la cuenta
+    # autorizada y como privado). Pasar a False recién con la app aprobada.
+    tiktok_sandbox: bool = True
+    # mp4 de prueba en un dominio VERIFICADO (la landing) para el demo de review.
+    tiktok_test_video_url: str = ""
+
     @field_validator("minimax_api_key", "discord_webhook_url", "webhook_secret", mode="before")
     @classmethod
     def _empty_string_to_default(cls, v):
@@ -164,6 +177,21 @@ class Settings(BaseSettings):
     @property
     def db_configured(self) -> bool:
         return bool(self.database_url)
+
+    @property
+    def tiktok_configured(self) -> bool:
+        return bool(self.tiktok_client_key and self.tiktok_client_secret)
+
+    @property
+    def tiktok_redirect_uri_effective(self) -> str:
+        if self.tiktok_redirect_uri:
+            return self.tiktok_redirect_uri
+        base = (self.public_base_url or "").rstrip("/")
+        return f"{base}/auth/tiktok/callback" if base else ""
+
+    @property
+    def tiktok_scopes_list(self) -> List[str]:
+        return [s.strip() for s in self.tiktok_scopes.split(",") if s.strip()]
 
     @property
     def discord_agent_webhooks_map(self) -> dict:
