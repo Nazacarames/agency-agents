@@ -189,6 +189,51 @@ class TikTokClient:
         log.info("tiktok_post_init", publish_id=pid, privacy=priv)
         return res
 
+    def post_video_file_upload(self, video_bytes: bytes, caption: str = "",
+                               privacy_level: Optional[str] = None) -> Dict[str, Any]:
+        """Direct Post subiendo los BYTES del video (FILE_UPLOAD). No requiere
+        verificación de dominio (a diferencia de PULL_FROM_URL). Sube en 1 chunk."""
+        priv = privacy_level or ("SELF_ONLY" if self.s.tiktok_sandbox else "PUBLIC_TO_EVERYONE")
+        size = len(video_bytes)
+        payload = {
+            "post_info": {
+                "title": (caption or "")[:2200],
+                "privacy_level": priv,
+                "disable_duet": False,
+                "disable_comment": False,
+                "disable_stitch": False,
+            },
+            "source_info": {
+                "source": "FILE_UPLOAD",
+                "video_size": size,
+                "chunk_size": size,
+                "total_chunk_count": 1,
+            },
+        }
+        res = self._post_json(_VIDEO_INIT_URL, payload)
+        data = res.get("data") or {}
+        upload_url = data.get("upload_url")
+        pid = data.get("publish_id")
+        if not upload_url:
+            raise TikTokError(f"init sin upload_url: {res}")
+        with httpx.Client(timeout=180) as c:
+            r = c.put(upload_url, content=video_bytes, headers={
+                "Content-Type": "video/mp4",
+                "Content-Length": str(size),
+                "Content-Range": f"bytes 0-{size - 1}/{size}",
+            })
+        if r.status_code not in (200, 201, 206):
+            raise TikTokError(f"upload PUT error {r.status_code}: {r.text[:200]}")
+        log.info("tiktok_post_file_upload", publish_id=pid, privacy=priv, bytes=size)
+        return res
+
+    @staticmethod
+    def fetch_bytes(url: str) -> bytes:
+        with httpx.Client(timeout=90, follow_redirects=True) as c:
+            r = c.get(url)
+            r.raise_for_status()
+            return r.content
+
     def publish_status(self, publish_id: str) -> Dict[str, Any]:
         return self._post_json(_STATUS_URL, {"publish_id": publish_id})
 

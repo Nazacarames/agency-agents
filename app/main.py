@@ -1633,7 +1633,10 @@ async def api_tiktok_post_test(request: Request):
     tc = get_tiktok_client(s)
     try:
         info = await run_in_threadpool(tc.creator_info)
-        res = await run_in_threadpool(tc.post_video_from_url, video_url, caption)
+        # FILE_UPLOAD: bajamos el mp4 y lo subimos por bytes (no requiere verificación
+        # de dominio, a diferencia de PULL_FROM_URL).
+        vid = await run_in_threadpool(tc.fetch_bytes, video_url)
+        res = await run_in_threadpool(tc.post_video_file_upload, vid, caption)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e)[:500])
     return {"ok": True, "creator_info": info.get("data"), "post": res.get("data")}
