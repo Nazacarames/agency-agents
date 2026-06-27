@@ -117,6 +117,17 @@
   .kpi-card.accent .delta{color:#fff;background:rgba(255,255,255,.22)}
   .panel,.card{transition:border-color .16s,box-shadow .16s}
   .panel:hover,.card:hover{border-color:rgba(255,255,255,.15)}
+  .hdot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none;margin-right:8px;vertical-align:middle}
+  .hdot.green{background:var(--green);box-shadow:0 0 0 3px var(--green-tint)}
+  .hdot.amber{background:var(--amber);box-shadow:0 0 0 3px var(--amber-tint)}
+  .hdot.red{background:var(--red);box-shadow:0 0 0 3px var(--red-tint)}
+  .hdot.grey{background:var(--faint)}
+  .share{display:flex;align-items:center;gap:8px}
+  .share .sbar{flex:1;max-width:64px;height:6px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden}
+  .share .sbar i{display:block;height:100%;background:var(--blue-bright);border-radius:6px}
+  .share .sval{font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px;min-width:34px}
+  .share.hot .sbar i{background:var(--amber)}
+  .share.hot .sval{color:var(--amber)}
   .up{color:var(--green)} .down{color:var(--red)}
 
   /* tables */
@@ -451,7 +462,7 @@
         <div class="sec-head"><h2 class="muted" style="font-weight:600;font-size:13.5px">Cartera de clientes</h2>
           <button class="btn-ghost btn-sm" id="archiveBtn" title="Archiva prospectos no-activos sin movimiento hace 10+ días (libera su memoria)">🗄️ Archivar fríos (10 días)</button></div>
         <div class="tbl-wrap"><table><thead>
-          <tr><th>Cliente</th><th>País</th><th>Servicios</th><th style="text-align:right">Paga/mes</th><th>Estado</th><th>Etapa</th><th></th></tr>
+          <tr><th>Cliente</th><th>País</th><th>Servicios</th><th style="text-align:right">Paga/mes</th><th style="min-width:130px">% del MRR</th><th>Estado</th><th>Etapa</th><th></th></tr>
         </thead><tbody id="clientsBody"></tbody></table></div>
       </section>
 
@@ -1300,15 +1311,23 @@ async function loadClients(){
       kpiBig('ARPU', fmtUsd(b.arpu_usd), 'ingreso por cliente', ICONS.growth,'') +
       kpi('Clientes (deal)', d.counts.cliente||0, ICONS.clientes);
     const byId={}; if(bill&&bill.by_client) bill.by_client.forEach(c=>byId[c.id]=c);
+    const totalMrr = (b.mrr_usd>0) ? b.mrr_usd : d.clients.reduce((a,c)=>a+((byId[c.id]||{}).monthly_fee_usd||0),0);
     const body=el('clientsBody');
     body.innerHTML = d.clients.length ? d.clients.map(c=>{
       const usd=(byId[c.id]||{}).monthly_fee_usd||0; const st=c.status||'activo';
+      const h=clientHealth(c, usd);
+      const share = (totalMrr>0 && usd>0) ? (usd/totalMrr*100) : 0;
+      const hot = share>=40;   // riesgo de concentración
+      const shareCell = share>0
+        ? `<div class="share${hot?' hot':''}" title="${hot?'⚠ Mucho del MRR depende de este cliente':'Aporte al MRR'}"><div class="sbar"><i style="width:${Math.min(share,100).toFixed(0)}%"></i></div><span class="sval">${share<10?share.toFixed(1):Math.round(share)}%</span>${hot?' ⚠️':''}</div>`
+        : '<span class="faint">—</span>';
       const svcs=(c.services||'').split(',').filter(x=>x.trim()).slice(0,3).map(x=>'<span class="chip">'+esc(x.trim())+'</span>').join('')||'<span class="faint">—</span>';
       return `<tr${isFrozen(c.stage)?' style="opacity:.62"':''}>
-      <td><b>${esc(c.name)}</b>${c.vertical?' <span class="faint" style="font-size:12px">· '+esc(c.vertical)+'</span>':''}${isFrozen(c.stage)?' <span class="badge grey" title="Memoria congelada">❄</span>':''}</td>
+      <td><span class="hdot ${h.c}" title="${esc(h.t)}"></span><b>${esc(c.name)}</b>${c.vertical?' <span class="faint" style="font-size:12px">· '+esc(c.vertical)+'</span>':''}${isFrozen(c.stage)?' <span class="badge grey" title="Memoria congelada">❄</span>':''}</td>
       <td style="font-size:13px">${esc(countryName(c.country))}</td>
       <td>${svcs}</td>
       <td style="text-align:right"><span class="money">${(+c.monthly_fee||0).toLocaleString('es-AR')} ${esc(c.currency||'')}</span>${usd?'<br><span class="faint" style="font-size:11px">'+fmtUsd(usd)+'</span>':''}</td>
+      <td>${shareCell}</td>
       <td><span class="badge ${STATUS_CLS[st]||'grey'}">${esc(st)}</span></td>
       <td><select class="inp btn-sm" style="padding:5px 8px;min-width:120px" onchange="setStage('${c.id}',this.value)">${
         STAGES.map(s=>'<option value="'+esc(s)+'"'+(s===c.stage?' selected':'')+'>'+esc(labelStage(s))+'</option>').join('')}</select></td>
@@ -1316,8 +1335,19 @@ async function loadClients(){
         <button class="btn-ghost btn-xs" onclick="viewClientMemory('${c.id}')">Memoria</button>
         <button class="btn-ghost btn-xs" onclick="editClient('${c.id}')">Editar</button>
         <button class="btn-ghost btn-xs" onclick="delClient('${c.id}')">🗑</button></td></tr>`; }).join('')
-      : '<tr><td colspan="7" class="empty">Sin clientes todavía. Cargá uno arriba o convertí un lead desde el Pipeline.</td></tr>';
-  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="7" class="err">'+esc(e.message)+'</td></tr>'; }
+      : '<tr><td colspan="8" class="empty">Sin clientes todavía. Cargá uno arriba o convertí un lead desde el Pipeline.</td></tr>';
+  }catch(e){ el('clientsBody').innerHTML='<tr><td colspan="8" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+// Semáforo de salud del cliente (verde/amber/rojo/gris) según estado + facturación.
+function clientHealth(c, usd){
+  const st=c.status||'activo';
+  if(isFrozen(c.stage)) return {c:'grey', t:'Memoria congelada / descartado'};
+  if(st==='baja') return {c:'red', t:'Baja'};
+  if(st==='pausado') return {c:'amber', t:'Pausado'};
+  if(st==='onboarding') return {c:'amber', t:'En onboarding'};
+  if(st==='activo' && usd<=0) return {c:'amber', t:'Activo pero sin facturación cargada'};
+  if(st==='activo') return {c:'green', t:'Activo y facturando'};
+  return {c:'grey', t:st};
 }
 function clientPayload(){
   return { name:el('cName').value, vertical:el('cVertical').value, country:el('cCountry').value, stage:el('cStage').value,
