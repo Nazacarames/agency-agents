@@ -135,6 +135,12 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
     store = load_store()
     if not force and published_today_count(store) >= 1:
         return {"ok": True, "skipped": "ya se publicó hoy"}
+    # Auto-reparación: completar permalinks que quedaron pendientes en publicaciones
+    # previas (IG a veces no devuelve el permalink justo al publicar; al otro día ya está).
+    try:
+        backfill_permalinks()
+    except Exception:
+        pass
     item = _oldest_pending(store)
     if not item:
         return {"ok": True, "skipped": "cola vacía"}
@@ -158,6 +164,53 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
     log.info("publish_queue_drained", id=item["id"], ok=res.get("ok"), source=item.get("source"))
     _notify_discord(item, res)
     return {"ok": res.get("ok"), "item": item["id"], "results": res.get("results")}
+
+
+def backfill_permalinks() -> Dict[str, Any]:
+    """Completa permalinks faltantes en posts YA publicados, consultando la Graph API
+    por el media/post id guardado. Idempotente: sólo toca los que no tienen permalink.
+    Arregla los posts viejos (publicados antes de guardar permalink) y los que el IG
+    no devolvió el link al instante."""
+    import httpx
+    from ..config import get_settings
+    s = get_settings()
+    token = s.meta_page_token
+    if not token:
+        return {"ok": False, "error": "sin meta_page_token", "updated": 0}
+    store = load_store()
+    updated = 0
+    graph = "https://graph.facebook.com/v21.0"
+    with httpx.Client(timeout=15) as c:
+        for it in store.get("items", []):
+            res = it.get("result")
+            if not isinstance(res, dict):
+                continue
+            changed = False
+            ig = res.get("instagram")
+            if isinstance(ig, dict) and ig.get("ok") and not ig.get("permalink") and ig.get("id"):
+                try:
+                    r = c.get(f"{graph}/{ig['id']}", params={"fields": "permalink", "access_token": token})
+                    pl = (r.json() or {}).get("permalink")
+                    if pl:
+                        ig["permalink"] = pl
+                        changed = True
+                except Exception:
+                    pass
+            fb = res.get("facebook")
+            if isinstance(fb, dict) and fb.get("ok") and not fb.get("permalink") and fb.get("id"):
+                try:
+                    r = c.get(f"{graph}/{fb['id']}", params={"fields": "permalink_url", "access_token": token})
+                    pl = (r.json() or {}).get("permalink_url")
+                    if pl:
+                        fb["permalink"] = pl
+                        changed = True
+                except Exception:
+                    pass
+            if changed:
+                updated += 1
+    if updated:
+        save_store(store)
+    return {"ok": True, "updated": updated}
 
 
 def _notify_discord(item: Dict[str, Any], res: Dict[str, Any]) -> None:

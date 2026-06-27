@@ -1036,6 +1036,16 @@ async def api_publish_drain(request: Request):
     return res
 
 
+@app.post("/api/publish/backfill-permalinks")
+async def api_publish_backfill(request: Request):
+    """Completa los permalinks faltantes de posts ya publicados (IG/FB) consultando
+    la Graph API. Arregla los posts viejos para que sean clickeables desde el panel."""
+    _verify_webhook_secret(request)
+    from .integrations import publish_queue as pq
+    res = await run_in_threadpool(pq.backfill_permalinks)
+    return res
+
+
 @app.delete("/api/publish/queue/{item_id}")
 async def api_publish_queue_delete(item_id: str, request: Request):
     _verify_webhook_secret(request)
