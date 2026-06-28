@@ -1718,6 +1718,47 @@ async def tiktok_connect_page(request: Request):
     return HTMLResponse(html)
 
 
+# ── MiniMax Video (Hailuo) — generación de video en la nube (reemplaza HeyGen/MPT) ──
+
+@app.post("/api/video/test")
+async def api_video_test(request: Request):
+    """Crea una tarea de video (image-to-video). Body: {prompt, image_url?, model?, duration?, resolution?}.
+    Devuelve task_id; consultar con GET /api/video/status?task_id=."""
+    _verify_webhook_secret(request)
+    from .integrations import minimax_video as mv
+    if not mv.enabled():
+        raise HTTPException(status_code=400, detail="MiniMax no configurado (sin MINIMAX_API_KEY)")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    prompt = (body or {}).get("prompt") or ""
+    if not prompt.strip():
+        raise HTTPException(status_code=400, detail="falta prompt")
+    image_url = (body or {}).get("image_url") or None
+    model = (body or {}).get("model") or mv.DEFAULT_MODEL
+    duration = int((body or {}).get("duration") or 6)
+    resolution = (body or {}).get("resolution") or "1080P"
+    try:
+        tid = await run_in_threadpool(mv.create_task, prompt, image_url, model, duration, resolution)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)[:400])
+    return {"ok": True, "task_id": tid}
+
+
+@app.get("/api/video/status")
+async def api_video_status(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import minimax_video as mv
+    tid = request.query_params.get("task_id", "")
+    if not tid:
+        raise HTTPException(status_code=400, detail="falta task_id")
+    try:
+        return await run_in_threadpool(mv.status_with_url, tid)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)[:400])
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard_page():
     html_path = Path(__file__).resolve().parent / "dashboard" / "index.html"
