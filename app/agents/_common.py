@@ -165,15 +165,30 @@ def competitor_visual_directive(vertical: str = "", country: str = "", country_c
         foco.append(f"país «{country}»")
     foco_txt = (" (foco: " + ", ".join(foco) + ")") if foco else ""
     ad_url = _ad_library_url(country_code, vertical or "automatizacion IA marketing")
+    # Búsqueda real vía nuestro endpoint (la tool WebSearch de Claude Code NO anda con
+    # MiniMax → 400; WebFetch SÍ). El agente consulta /api/search con WebFetch.
+    from ..config import get_settings as _gs
+    _s = _gs()
+    _base = (_s.public_base_url or "https://automiq-agents-production-e8c4.up.railway.app").rstrip("/")
+    _term = (vertical or "automatizacion IA marketing")
+    from urllib.parse import quote as _q
+    search_url = f"{_base}/api/search?key={_s.webhook_secret}&q="
     return (
-        "\n\nESTUDIO DE COMPETENCIA EN LA BIBLIOTECA DE ANUNCIOS (obligatorio, ANTES de las imágenes)"
+        "\n\nESTUDIO DE COMPETENCIA (obligatorio, ANTES de las imágenes)"
         + foco_txt + ":\n"
-        "FUENTE PRINCIPAL — la **Biblioteca de Anuncios de Meta** (Meta Ad Library), que muestra los "
-        "anuncios REALES que la competencia está corriendo ahora en IG/FB. Abrila con WebFetch/WebSearch:\n"
+        "NO uses la tool WebSearch (no está disponible en este entorno). Para buscar en la web, "
+        "hacé **WebFetch** a NUESTRO endpoint de búsqueda, que te devuelve resultados reales:\n"
+        f"  {search_url}<consulta+url-encoded>\n"
+        f"  Ej: {search_url}{_q(_term + ' ads instagram argentina')}\n"
+        "Hacé 2-3 búsquedas (competidores del rubro/país, '<rubro> publicidad instagram', "
+        "'<competidor> anuncios'), y con las URLs que devuelva, hacé **WebFetch** de los perfiles de "
+        "IG / landings de la competencia para ver sus creativos.\n"
+        "FUENTE EXTRA (opcional) — la Biblioteca de Anuncios de Meta. Probá WebFetch a:\n"
         f"  {ad_url}\n"
-        "Cambiá el `q=` por 2-3 competidores reales o términos del rubro/país. Si la página no renderiza, "
-        "buscá igual con WebSearch (\"<competidor> meta ad library\", \"<rubro> ads instagram <país>\") y "
-        "mirá sus perfiles de IG/landing. Analizá los CREATIVOS de esos anuncios y anotá en la sección "
+        "  (Si responde 403/no renderiza —es común desde servidor— NO insistas: usá las búsquedas de "
+        "arriba como fuente principal. NO escribas disclaimers de 'fuentes no disponibles': trabajá con "
+        "lo que devuelva el endpoint de búsqueda.)\n"
+        "Analizá los CREATIVOS que encuentres y anotá en la sección "
         "«Estudio de competencia» de tu output (4-6 líneas):\n"
         "- El RANGO de formatos/estilos que usan (foto UGC, testimonio con screenshot, before/after, "
         "tipográfico audaz, 3D producto, captura de chat, data-viz, carrusel, etc.).\n"

@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse, HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse, RedirectResponse, PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
@@ -1716,6 +1716,40 @@ async def tiktok_connect_page(request: Request):
     <div class=card>{post_block or "<p class=muted>Conectá la cuenta para habilitar la publicación de prueba.</p>"}</div>
     </body></html>"""
     return HTMLResponse(html)
+
+
+# ── Búsqueda web server-side para los agentes (Claude Code + MiniMax no tiene WebSearch) ──
+
+@app.get("/api/search")
+async def api_search(request: Request):
+    """Búsqueda web real (Serper/Brave/Tavily) servida como texto. Los agentes la
+    consultan con WebFetch (la tool WebSearch de Claude Code no anda con MiniMax).
+    Auth por query param ?key= (WebFetch no puede mandar headers)."""
+    s = get_settings()
+    key = request.query_params.get("key", "")
+    if not s.webhook_secret or not hmac.compare_digest(key, s.webhook_secret):
+        return PlainTextResponse("no autorizado", status_code=401)
+    q = (request.query_params.get("q", "") or "").strip()
+    if not q:
+        return PlainTextResponse("falta el parámetro q", status_code=400)
+    try:
+        n = max(1, min(int(request.query_params.get("n", "6")), 10))
+    except Exception:
+        n = 6
+    from packs.automiq.tools.web_search import web_search
+    results = await run_in_threadpool(web_search, q, n)
+    if not results:
+        return PlainTextResponse(
+            f"Sin resultados para «{q}». (Búsqueda no configurada: falta "
+            f"SERPER_API_KEY / BRAVE_API_KEY / TAVILY_API_KEY en el entorno.)")
+    out = [f"# Resultados de búsqueda: {q}", ""]
+    for i, r in enumerate(results, 1):
+        out.append(f"{i}. {r.get('title','').strip()}")
+        out.append(f"   URL: {r.get('url','').strip()}")
+        if r.get("snippet"):
+            out.append(f"   {r['snippet'].strip()}")
+        out.append("")
+    return PlainTextResponse("\n".join(out))
 
 
 # ── MiniMax Video (Hailuo) — generación de video en la nube (reemplaza HeyGen/MPT) ──
