@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         tzdata \
         curl \
         ca-certificates \
+        ffmpeg \
         tesseract-ocr \
         tesseract-ocr-spa \
         libtesseract-dev \

@@ -147,22 +147,48 @@ class TikTokCreatorAgent(BaseAgent):
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         text = response_text or ""
-        text = self._add_nazareno_clip(text)      # Veo 3.1 Fast (hook hablado)
-        text = self._add_chatbot_mockup(text)      # WhatsApp realista (prueba)
-        text = self._add_nazareno_still(text)      # thumbnail (fallback visual)
+        text, clip_path = self._add_nazareno_clip(text)    # Veo 3.1 Fast (hook hablado)
+        text, mock_path = self._add_chatbot_mockup(text)   # WhatsApp realista (prueba)
+        text = self._assemble_final(text, clip_path, mock_path)  # short armado (ffmpeg)
+        text = self._add_nazareno_still(text)              # thumbnail (fallback visual)
         return super().post_process(text, ctx)
 
+    def _media_to_path(self, media_url):
+        """/media/<file> -> path local en data/images."""
+        if not media_url:
+            return None
+        fname = str(media_url).rstrip("/").split("/")[-1]
+        p = Path(__file__).resolve().parent.parent.parent / "data" / "images" / fname
+        return str(p) if p.exists() else None
+
+    # ── Armado final del video (Veo + prueba → 1 mp4) ──
+    def _assemble_final(self, text: str, clip_path, mock_path) -> str:
+        try:
+            from ..integrations import video_assembler
+            if not clip_path:
+                return text
+            proofs = [mock_path] if mock_path else []
+            url = video_assembler.assemble_short(clip_path, proofs, proof_dur=5.0)
+            if not url:
+                return text
+            block = (f"\n\n---\n\n## 🎬 Video armado (listo para postear)\n\n"
+                     f"`{url}` — short vertical 9:16 (Nazareno + prueba), ensamblado automático.\n")
+            return text.rstrip() + block
+        except Exception:
+            return text
+
     # ── Clip de Nazareno con Veo 3.1 Fast ──
-    def _add_nazareno_clip(self, text: str) -> str:
+    def _add_nazareno_clip(self, text: str):
+        """Devuelve (texto, path_local_del_clip | None)."""
         try:
             from ..integrations import veo_video
             from ..config import get_settings
             if not text or not veo_video.enabled():
-                return text
+                return text, None
             mf = re.search(r"^[\s>*`\-]*VEO_FRASE\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
             me = re.search(r"^[\s>*`\-]*VEO_ESCENA\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
             if not mf:
-                return text
+                return text, None
             frase = mf.group(1).strip().strip('"').strip("“”")
             escena = (me.group(1).strip() if me else "en una oficina moderna luminosa")
             s = get_settings()
@@ -173,27 +199,29 @@ class TikTokCreatorAgent(BaseAgent):
                 aspect_ratio="9:16", negative_prompt=_VEO_NEG, timeout_s=300, poll=12)
             b64 = res.get("b64")
             if not b64:
-                return text
+                return text, None
             import base64
             d = Path(__file__).resolve().parent.parent.parent / "data" / "images"
             d.mkdir(parents=True, exist_ok=True)
             fname = f"naza_{uuid.uuid4().hex}.mp4"
-            (d / fname).write_bytes(base64.b64decode(b64))
+            fpath = d / fname
+            fpath.write_bytes(base64.b64decode(b64))
             block = (f"\n\n---\n\n## 🎥 Clip de Nazareno (Veo 3.1 Fast)\n\n"
                      f"Frase: *\"{frase}\"*\n\n`/media/{fname}` — clip 9:16 listo para el hook/cierre.\n")
-            return text.rstrip() + block
+            return text.rstrip() + block, str(fpath)
         except Exception:
-            return text
+            return text, None
 
     # ── Mockup de chatbot (WhatsApp realista) ──
-    def _add_chatbot_mockup(self, text: str) -> str:
+    def _add_chatbot_mockup(self, text: str):
+        """Devuelve (texto, path_local_del_mockup | None)."""
         try:
             from ..integrations import chat_mockup
             if not text:
-                return text
+                return text, None
             mn = re.search(r"^[\s>*`\-]*CHAT_NEGOCIO\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
             if not mn:
-                return text
+                return text, None
             negocio = mn.group(1).strip()
             msgs = []
             for m in re.finditer(r"^[\s>*`\-]*(them|bot)\s*\|\s*([0-9:]{3,5})\s*\|\s*(.+)$",
@@ -201,15 +229,15 @@ class TikTokCreatorAgent(BaseAgent):
                 msgs.append({"from": m.group(1).lower(), "time": m.group(2).strip(),
                              "text": m.group(3).strip()})
             if len(msgs) < 2:
-                return text
+                return text, None
             url = chat_mockup.render_whatsapp(negocio, msgs[:8])
             if not url:
-                return text
+                return text, None
             block = (f"\n\n---\n\n## 💬 Demo de chatbot — {negocio} (mockup realista)\n\n"
                      f"![chatbot {negocio}]({url})\n")
-            return text.rstrip() + block
+            return text.rstrip() + block, self._media_to_path(url)
         except Exception:
-            return text
+            return text, None
 
     # ── Thumbnail (still de Nazareno) ──
     def _add_nazareno_still(self, text: str) -> str:
