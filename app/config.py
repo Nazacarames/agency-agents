@@ -157,7 +157,7 @@ class Settings(BaseSettings):
     google_service_account_json: str = ""
     vertex_project: str = ""          # default = project_id del JSON de la SA
     vertex_location: str = "us-central1"
-    veo_model: str = "veo-3.1-fast-generate-preview"  # Veo 3.1 Fast (preview). Full: "veo-3.1-generate-preview"
+    veo_model: str = "veo-3.1-fast-generate-001"  # Veo 3.1 Fast GA (sin allowlist). Full: "veo-3.1-generate-001"
     google_api_key: str = ""          # legacy/fallback (org bloquea keys → normalmente vacío)
 
     @field_validator("minimax_api_key", "discord_webhook_url", "webhook_secret", mode="before")
