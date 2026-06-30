@@ -1828,9 +1828,12 @@ async def api_veo_status(request: Request):
     if not op:
         raise HTTPException(status_code=400, detail="falta operation")
     try:
-        return await run_in_threadpool(veo.query_task, op)
+        q = await run_in_threadpool(veo.query_task, op)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e)[:400])
+    # No devolver el base64 gigante del video; sólo resumen.
+    return {"done": q.get("done"), "has_video": bool(q.get("b64") or q.get("gcsUri")),
+            "gcsUri": q.get("gcsUri"), "error": q.get("error")}
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
