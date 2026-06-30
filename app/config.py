@@ -160,6 +160,13 @@ class Settings(BaseSettings):
     veo_model: str = "veo-3.1-fast-generate-001"  # Veo 3.1 Fast GA (sin allowlist). Full: "veo-3.1-generate-001"
     google_api_key: str = ""          # legacy/fallback (org bloquea keys → normalmente vacío)
 
+    # ── YouTube (Data API v3 — subir Shorts del canal de Nazareno) ──
+    # Reusa la credencial OAuth de Google re-autorizada con scope youtube.upload.
+    # youtube_oauth_json = opcional, credencial dedicada (si no, usa google_service_account_json).
+    youtube_oauth_json: str = ""
+    youtube_privacy: str = "private"   # privado hasta auditar el proyecto; luego "public"
+    youtube_autoupload: bool = False   # que tiktok_creator suba el short armado solo
+
     @field_validator("minimax_api_key", "discord_webhook_url", "webhook_secret", mode="before")
     @classmethod
     def _empty_string_to_default(cls, v):

@@ -166,7 +166,7 @@ class TikTokCreatorAgent(BaseAgent):
             "pilar 'construir en público'. Elegí 3 FORMATOS distintos. Cada guión 100% listo "
             "con la fórmula gancho→tensión→prueba→remate→CTA. Recordá: NADA puede parecer un "
             "anuncio — enseñás y mostrás, la herramienta es la prueba, no el pitch. Público: "
-            "dueños de PyME argentinas. Cerrá con los bloques VEO_FRASE/VEO_ESCENA (del guión "
+            "dueños de PyME argentinas. Cerrá con los bloques VEO_FRASE/VEO_LUGAR (del guión "
             "principal) y, si hay demo de chatbot, el bloque CHAT_NEGOCIO."
             + official_site_directive()
         )
@@ -199,6 +199,31 @@ class TikTokCreatorAgent(BaseAgent):
                 return text
             block = (f"\n\n---\n\n## 🎬 Video armado (listo para postear)\n\n"
                      f"`{url}` — short vertical 9:16 (Nazareno + prueba), ensamblado automático.\n")
+            text = text.rstrip() + block
+            text = self._maybe_upload_youtube(text, self._media_to_path(url))
+            return text
+        except Exception:
+            return text
+
+    def _maybe_upload_youtube(self, text: str, video_path) -> str:
+        """Sube el short a YouTube si youtube_autoupload está activo (default: privado)."""
+        try:
+            from ..config import get_settings
+            from ..integrations import youtube_client as yt
+            s = get_settings()
+            if not video_path or not getattr(s, "youtube_autoupload", False) or not yt.enabled():
+                return text
+            # título = primer Caption del guión, o fallback
+            mc = re.search(r"^[\s>*`\-]*Caption\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
+            base_title = (mc.group(1).strip() if mc else "Automiq · IA para tu negocio")
+            title = (base_title[:90] + " #Shorts")
+            desc = (f"{base_title}\n\nIA y automatización para PyMEs argentinas. "
+                    f"Seguime para más: @automiqia\n\n#Shorts #IA #automatizacion #pymes #argentina")
+            tags = ["IA", "automatizacion", "inteligencia artificial", "pymes", "argentina",
+                    "whatsapp", "negocios", "shorts"]
+            res = yt.upload_video(str(video_path), title, desc, tags)
+            block = (f"\n\n## 📺 Subido a YouTube ({res.get('privacy')})\n\n"
+                     f"{res.get('url')}\n")
             return text.rstrip() + block
         except Exception:
             return text

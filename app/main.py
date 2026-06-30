@@ -1844,6 +1844,48 @@ async def api_veo_status(request: Request):
             "gcsUri": q.get("gcsUri"), "error": q.get("error")}
 
 
+# ── YouTube — subir Shorts del canal de Nazareno ──
+
+@app.get("/api/youtube/status")
+async def api_youtube_status(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import youtube_client as yt
+    return await run_in_threadpool(yt.status)
+
+
+@app.post("/api/youtube/upload")
+async def api_youtube_upload(request: Request):
+    """Sube un video al canal. Body: {file|url, title, description?, tags?, privacy?}.
+    `file` = /media/<archivo>.mp4 (en el volume) o ruta local; `url` = se descarga."""
+    _verify_webhook_secret(request)
+    from .integrations import youtube_client as yt
+    if not yt.enabled():
+        raise HTTPException(status_code=400, detail="YouTube no configurado")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    title = (body or {}).get("title")
+    if not title:
+        raise HTTPException(status_code=400, detail="falta title")
+    fileref = (body or {}).get("file") or ""
+    path = None
+    if fileref:
+        name = Path(fileref).name
+        p = _data_dir() / "images" / name
+        if p.exists():
+            path = str(p)
+    if not path:
+        raise HTTPException(status_code=400, detail="archivo no encontrado (usá /media/<file>.mp4 del volume)")
+    try:
+        res = await run_in_threadpool(
+            yt.upload_video, path, title, (body or {}).get("description") or "",
+            (body or {}).get("tags") or [], (body or {}).get("privacy"))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)[:400])
+    return {"ok": True, **res}
+
+
 # ── Mockups de chat (WhatsApp realista, render por código) ──
 
 @app.post("/api/mockup/whatsapp")
