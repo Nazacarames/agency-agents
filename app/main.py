@@ -1268,7 +1268,15 @@ async def media_file(filename: str):
     path = _data_dir() / "images" / safe
     if not path.exists():
         raise HTTPException(status_code=404, detail="imagen no encontrada")
-    mt = "image/jpeg" if safe.lower().endswith((".jpg", ".jpeg")) else "image/png"
+    low = safe.lower()
+    if low.endswith((".jpg", ".jpeg")):
+        mt = "image/jpeg"
+    elif low.endswith(".mp4"):
+        mt = "video/mp4"
+    elif low.endswith(".webm"):
+        mt = "video/webm"
+    else:
+        mt = "image/png"
     return FileResponse(str(path), media_type=mt)
 
 
@@ -1834,6 +1842,28 @@ async def api_veo_status(request: Request):
     # No devolver el base64 gigante del video; sólo resumen.
     return {"done": q.get("done"), "has_video": bool(q.get("b64") or q.get("gcsUri")),
             "gcsUri": q.get("gcsUri"), "error": q.get("error")}
+
+
+# ── Mockups de chat (WhatsApp realista, render por código) ──
+
+@app.post("/api/mockup/whatsapp")
+async def api_mockup_whatsapp(request: Request):
+    """Renderiza un chat de WhatsApp realista. Body: {business, subtitle?, messages:[{from,time,text}]}."""
+    _verify_webhook_secret(request)
+    from .integrations import chat_mockup
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    business = (body or {}).get("business") or "Negocio"
+    subtitle = (body or {}).get("subtitle") or "en línea"
+    messages = (body or {}).get("messages") or []
+    if not messages:
+        raise HTTPException(status_code=400, detail="faltan messages")
+    url = await run_in_threadpool(chat_mockup.render_whatsapp, business, messages, subtitle)
+    if not url:
+        raise HTTPException(status_code=502, detail="no se pudo renderizar")
+    return {"ok": True, "url": url}
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
