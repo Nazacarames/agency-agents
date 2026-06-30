@@ -23,8 +23,27 @@ from .base import BaseAgent, AgentContext
 from ._common import get_context_block, official_site_directive
 
 
-# Foto de Nazareno (talking) en el volume, servida en /media. Veo la anima (image-to-video).
-NAZA_TALKING_PATH = "/media/de18bc9748b44b2397bef59b4c5a1e8b.jpg"
+# Fotos canónicas de Nazareno (en /media). Se pasan como REFERENCE IMAGES a Veo 3.1
+# (referenceType=asset) → misma cara en todas las escenas, sin importar el lugar.
+NAZA_REFERENCE_PATHS = [
+    "/media/de18bc9748b44b2397bef59b4c5a1e8b.jpg",  # hablando a cámara
+    "/media/e01a2f7651334c97a262e70f826ab9f6.jpg",  # headshot
+]
+NAZA_TALKING_PATH = NAZA_REFERENCE_PATHS[0]  # compat
+
+# Lugares HABITUALES de grabación (set fijo, se rotan; descripciones consistentes y
+# con fondo NÍTIDO para que no quede efecto retrato).
+NAZA_LUGARES = {
+    "oficina": ("en la oficina moderna de su agencia: pared azul navy, escritorio con un "
+                "monitor que muestra paneles, una planta, ventana con luz natural de día"),
+    "casa": ("en el living de su departamento en Buenos Aires: sofá, biblioteca con libros "
+             "y plantas, una lámpara cálida, luz natural de una ventana"),
+    "cafe": ("en un café porteño: mesa de madera, una taza de café, interior cálido con "
+             "madera y luz suave de la ventana"),
+    "escritorio": ("sentado en su escritorio con una laptop y un monitor con dashboards, "
+                   "estilo creador de contenido, luz natural"),
+}
+NAZA_LUGAR_DEFAULT = "oficina"
 
 # Ancla de identidad de Nazareno — se repite idéntica para mantener la misma cara (thumbnails).
 NAZARENO_IDENTITY = (
@@ -40,18 +59,25 @@ NAZARENO_IDENTITY = (
 )
 
 _VEO_NEG = ("subtitulos, texto en pantalla, acento neutro, acento mexicano, acento espanol "
-            "de Espana, frases repetidas, eco, manos deformes, dedos extra")
+            "de Espana, frases repetidas, eco, pronunciacion incorrecta, voz robotica, "
+            "fondo desenfocado, bokeh, profundidad de campo, efecto retrato, manos deformes, dedos extra")
 
 
-def nazareno_veo_prompt(frase: str, escena: str = "en una oficina moderna luminosa") -> str:
-    """Prompt de Veo para Nazareno hablando: acento porteño + frase única + anti-repetición."""
+def nazareno_veo_prompt(frase: str, lugar: str = NAZA_LUGAR_DEFAULT) -> str:
+    """Prompt de Veo: misma cara (referencia) + lugar fijo + fondo nítido + dicción clara.
+
+    `lugar` = clave de NAZA_LUGARES (oficina/casa/cafe/escritorio).
+    """
+    escena = NAZA_LUGARES.get(lugar, NAZA_LUGARES[NAZA_LUGAR_DEFAULT])
     return (
-        f"Primer plano de un joven argentino de Buenos Aires hablando a camara, carismatico y "
-        f"cercano, {escena}. Habla en espanol rioplatense con marcado ACENTO PORTENO ARGENTINO "
-        f"(tono canchero, cercano). Dice UNA SOLA VEZ, sin repetir, con naturalidad: "
-        f"\"{frase.strip()}\". Gesticula con una mano, sonrie, leve movimiento de camara tipo vlog. "
-        f"Video vertical 9:16 realista, estilo creador de contenido. "
-        f"Audio: solo esa frase una vez, sin loops ni frases repetidas."
+        f"Nazareno, un joven argentino de Buenos Aires, {escena}. "
+        f"FONDO NITIDO y bien enfocado, toda la escena en foco, SIN desenfoque ni efecto "
+        f"retrato, look realista de camara de celular. "
+        f"Habla a camara, PAUSADO y con DICCION CLARA, en espanol rioplatense con acento "
+        f"porteno argentino natural (no exagerado). Dice la frase completa UNA SOLA VEZ, sin "
+        f"repetir ni trabarse: \"{frase.strip()}\". Al terminar de hablar queda en silencio "
+        f"mirando a camara con una sonrisa (no agrega ni repite nada). "
+        f"Gesticula levemente con una mano, leve movimiento de camara. Video vertical 9:16 realista."
     )
 
 
@@ -99,8 +125,8 @@ aparece como **PRUEBA**, jamás como pitch. La venta es consecuencia de la autor
 ## Bloques especiales para los assets (los lee el sistema, ponelos EXACTO)
 Para el guión PRINCIPAL (el primero), agregá al final de TODO:
 
-`VEO_FRASE: <la frase EXACTA que dice Nazareno en el hook, corta, en español argentino>`
-`VEO_ESCENA: <escena en una línea: dónde está, qué hace, en español>`
+`VEO_FRASE: <la frase EXACTA que dice Nazareno, en español argentino, de ~20-25 palabras (que dure unos 8s hablada a ritmo normal; ni muy corta —repite— ni muy larga —se corta—). Sin siglas: escribí "inteligencia artificial", no "IA".>`
+`VEO_LUGAR: <uno de: oficina | casa | cafe | escritorio>`  ← lugar habitual de grabación, rotalos entre tandas
 
 Si el guión usa una demo de chatbot, agregá un bloque de chat así (el sistema lo
 renderiza como WhatsApp real). Mensajes del cliente = `them`, del bot = `bot`:
@@ -186,16 +212,18 @@ class TikTokCreatorAgent(BaseAgent):
             if not text or not veo_video.enabled():
                 return text, None
             mf = re.search(r"^[\s>*`\-]*VEO_FRASE\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
-            me = re.search(r"^[\s>*`\-]*VEO_ESCENA\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
+            ml = re.search(r"^[\s>*`\-]*VEO_LUGAR\s*[:：]\s*(\w+)", text, re.IGNORECASE | re.MULTILINE)
             if not mf:
                 return text, None
             frase = mf.group(1).strip().strip('"').strip("“”")
-            escena = (me.group(1).strip() if me else "en una oficina moderna luminosa")
+            lugar = (ml.group(1).strip().lower() if ml else NAZA_LUGAR_DEFAULT)
+            if lugar not in NAZA_LUGARES:
+                lugar = NAZA_LUGAR_DEFAULT
             s = get_settings()
             base = (s.public_base_url or "").rstrip("/")
-            img = f"{base}{NAZA_TALKING_PATH}" if base else None
+            refs = [f"{base}{p}" for p in NAZA_REFERENCE_PATHS] if base else None
             res = veo_video.generate_and_wait(
-                nazareno_veo_prompt(frase, escena), image_url=img,
+                nazareno_veo_prompt(frase, lugar), reference_image_urls=refs,
                 aspect_ratio="9:16", negative_prompt=_VEO_NEG, timeout_s=300, poll=12)
             b64 = res.get("b64")
             if not b64:

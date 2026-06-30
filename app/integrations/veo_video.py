@@ -114,12 +114,29 @@ def fetch_image_b64(url: str) -> Dict[str, str]:
 def create_task(prompt: str, image_url: Optional[str] = None,
                 image_b64: Optional[Dict[str, str]] = None,
                 aspect_ratio: str = "9:16",
-                negative_prompt: str = "") -> str:
-    """Lanza la generación. Devuelve el operation_name (para pollear)."""
+                negative_prompt: str = "",
+                reference_image_urls: Optional[list] = None) -> str:
+    """Lanza la generación. Devuelve el operation_name (para pollear).
+
+    - reference_image_urls: lista de URLs (hasta 3). Modo Veo 3.1 "reference image"
+      (referenceType=asset): mantiene el MISMO personaje (cara de Nazareno) en escenas
+      descritas por el prompt → consistencia + lugar/fondo controlables. Si se pasa,
+      tiene prioridad sobre image_url (que es first-frame/image-to-video).
+    """
     instance: Dict[str, Any] = {"prompt": (prompt or "").strip()[:2000]}
-    img = image_b64 or (fetch_image_b64(image_url) if image_url else None)
-    if img:
-        instance["image"] = img
+    if reference_image_urls:
+        refs = []
+        for u in reference_image_urls[:3]:
+            try:
+                refs.append({"image": fetch_image_b64(u), "referenceType": "asset"})
+            except Exception:
+                continue
+        if refs:
+            instance["referenceImages"] = refs
+    else:
+        img = image_b64 or (fetch_image_b64(image_url) if image_url else None)
+        if img:
+            instance["image"] = img
     params: Dict[str, Any] = {"aspectRatio": aspect_ratio, "sampleCount": 1}
     if negative_prompt:
         params["negativePrompt"] = negative_prompt
@@ -134,7 +151,8 @@ def create_task(prompt: str, image_url: Optional[str] = None,
     name = data.get("name")
     if not name:
         raise RuntimeError(f"veo sin operation name: {str(data)[:300]}")
-    log.info("veo_task_created", op=name, model=_model(), img=bool(img))
+    log.info("veo_task_created", op=name, model=_model(),
+             refs=len(instance.get("referenceImages", [])), firstframe="image" in instance)
     return name
 
 
@@ -183,9 +201,11 @@ def save_video(b64: str, path: str) -> str:
 def generate_and_wait(prompt: str, image_url: Optional[str] = None,
                       image_b64: Optional[Dict[str, str]] = None,
                       aspect_ratio: str = "9:16", negative_prompt: str = "",
-                      timeout_s: int = 600, poll: int = 12) -> Dict[str, Any]:
+                      timeout_s: int = 600, poll: int = 12,
+                      reference_image_urls: Optional[list] = None) -> Dict[str, Any]:
     """Crea la tarea y espera (bloqueante) hasta el video. Devuelve {operation, b64|gcsUri}."""
-    op = create_task(prompt, image_url, image_b64, aspect_ratio, negative_prompt)
+    op = create_task(prompt, image_url, image_b64, aspect_ratio, negative_prompt,
+                     reference_image_urls=reference_image_urls)
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         q = query_task(op)
