@@ -149,6 +149,13 @@ class Settings(BaseSettings):
     # mp4 de prueba en un dominio VERIFICADO (la landing) para el demo de review.
     tiktok_test_video_url: str = ""
 
+    # ── Google Veo (generación de video, créditos GCP) ──
+    # API key de Google AI Studio (aistudio.google.com) sobre el proyecto con los
+    # créditos GCP. Veo 3 image-to-video: anima la foto de Nazareno → clip 9:16.
+    # Consumo se descuenta de los créditos del proyecto (no corre en free tier).
+    google_api_key: str = ""
+    veo_model: str = "veo-3.0-fast-generate-001"  # Fast = más barato; "veo-3.0-generate-001" = calidad full
+
     @field_validator("minimax_api_key", "discord_webhook_url", "webhook_secret", mode="before")
     @classmethod
     def _empty_string_to_default(cls, v):
@@ -181,6 +188,10 @@ class Settings(BaseSettings):
     @property
     def tiktok_configured(self) -> bool:
         return bool(self.tiktok_client_key and self.tiktok_client_secret)
+
+    @property
+    def veo_configured(self) -> bool:
+        return bool(self.google_api_key)
 
     @property
     def tiktok_redirect_uri_effective(self) -> str:

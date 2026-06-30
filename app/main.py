@@ -1793,6 +1793,46 @@ async def api_video_status(request: Request):
         raise HTTPException(status_code=502, detail=str(e)[:400])
 
 
+# ── Google Veo 3 — generación de video con créditos GCP (path principal TikTok) ──
+
+@app.post("/api/veo/test")
+async def api_veo_test(request: Request):
+    """Crea una tarea de video Veo (image-to-video). Body: {prompt, image_url?, aspect_ratio?, negative_prompt?}.
+    Devuelve operation; consultar con GET /api/veo/status?operation=."""
+    _verify_webhook_secret(request)
+    from .integrations import veo_video as veo
+    if not veo.enabled():
+        raise HTTPException(status_code=400, detail="Veo no configurado (sin GOOGLE_API_KEY)")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    prompt = (body or {}).get("prompt") or ""
+    if not prompt.strip():
+        raise HTTPException(status_code=400, detail="falta prompt")
+    image_url = (body or {}).get("image_url") or None
+    aspect = (body or {}).get("aspect_ratio") or "9:16"
+    negative = (body or {}).get("negative_prompt") or ""
+    try:
+        op = await run_in_threadpool(veo.create_task, prompt, image_url, None, aspect, negative)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)[:400])
+    return {"ok": True, "operation": op}
+
+
+@app.get("/api/veo/status")
+async def api_veo_status(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import veo_video as veo
+    op = request.query_params.get("operation", "")
+    if not op:
+        raise HTTPException(status_code=400, detail="falta operation")
+    try:
+        return await run_in_threadpool(veo.query_task, op)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)[:400])
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard_page():
     html_path = Path(__file__).resolve().parent / "dashboard" / "index.html"
