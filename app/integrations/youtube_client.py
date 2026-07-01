@@ -44,7 +44,9 @@ def _credentials():
     info = json.loads(_raw_creds())
     if info.get("type") and info.get("type") != "authorized_user":
         raise RuntimeError("YouTube necesita credencial OAuth de usuario (authorized_user)")
-    creds = UserCreds.from_authorized_user_info(info, scopes=YT_SCOPES)
+    # NO pasar scopes: en el refresh de un authorized_user re-especificar scopes hace
+    # que Google devuelva invalid_scope. El token ya trae los scopes otorgados.
+    creds = UserCreds.from_authorized_user_info(info)
     if not creds.valid:
         creds.refresh(gar.Request())
     return creds
