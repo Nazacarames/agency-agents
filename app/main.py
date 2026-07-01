@@ -1844,6 +1844,26 @@ async def api_veo_status(request: Request):
             "gcsUri": q.get("gcsUri"), "error": q.get("error")}
 
 
+# ── Páginas legales / compliance (auditoría YouTube Data API) ──
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def page_privacy():
+    from . import legal
+    return HTMLResponse(legal.privacy_html())
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def page_terms():
+    from . import legal
+    return HTMLResponse(legal.terms_html())
+
+
+@app.get("/youtube", response_class=HTMLResponse)
+async def page_youtube():
+    from . import legal
+    return HTMLResponse(legal.info_html())
+
+
 # ── YouTube — subir Shorts del canal de Nazareno ──
 
 @app.get("/api/youtube/status")
