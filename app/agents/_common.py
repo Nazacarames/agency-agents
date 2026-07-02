@@ -231,6 +231,12 @@ def image_prompt_directive() -> str:
         "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | CAPTION: <caption COMPLETO del post, en español, con hook + cuerpo + CTA + hashtags>`\n"
         "El CAPTION es lo que se PUBLICA de verdad en Instagram/Facebook, así que tiene que ser el "
         "copy final listo para postear (no un resumen). Si no ponés CAPTION, se publica con el TEXTO + SUBTEXTO.\n"
+        "FORMATOS (para no saturar el feed): la 1ª IMAGEN sale como POST del feed y las "
+        "siguientes como HISTORIAS (pensá la 1ª como la pieza fuerte del día y las otras como "
+        "contenido efímero: behind-the-scenes, tip rápido, recordatorio). Además podés proponer "
+        "COMO MUCHO 1 CARRUSEL educativo (3-5 placas que desarrollan UNA idea paso a paso) con:\n"
+        "`CARRUSEL: <prompt placa 1> || <prompt placa 2> || <prompt placa 3> | CAPTION: <caption del carrusel>`\n"
+        "(cada placa con su propia escena, mismo estilo visual entre placas para que se lea como serie).\n"
         "ARTE (clave para que NO salgan genéricas): el <prompt> tiene que ser ESPECÍFICO y basado "
         "en tu estudio de competencia. Describí un SUJETO y una ESCENA concreta del vertical/país real "
         "(no abstracciones tipo 'businessman with laptop'), con estilo, composición, luz y mood "
@@ -299,16 +305,19 @@ def _publish_summary(res: dict) -> str:
 
 
 def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -> str:
-    """Busca líneas `IMAGEN: <prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | CAPTION: <post>`,
-    genera las imágenes (fondo MiniMax + texto compuesto con Pillow), anexa la sección y
-    —si `publish` y hay tokens Meta— ENCOLA cada imagen para publicarse en IG/FB.
-    NO publica inline: encola en publish_queue y un job diario drena 1 sola por día
-    (regla del usuario: como mucho 1 publicación por día). Best-effort."""
+    """Busca líneas `IMAGEN: <prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | CAPTION: <post>`
+    y `CARRUSEL: <prompt1> || <prompt2> || … | CAPTION: <post>`, genera las imágenes
+    (fondo MiniMax + texto compuesto con Pillow), anexa la sección y —si `publish` y hay
+    tokens Meta— ENCOLA cada pieza para publicarse en IG/FB.
+    División para no saturar las cuentas: la 1ª IMAGEN se encola como POST del feed,
+    las siguientes como HISTORIAS; el CARRUSEL va al feed como carrusel. Un job diario
+    drena 1 pieza de feed + hasta 2 historias. Best-effort."""
     import re
     # Tolera que el modelo escriba la línea envuelta en markdown:
     # `` `IMAGEN: ...` ``, ``- IMAGEN: ...``, ``**IMAGEN:** ...`` o ``> IMAGEN: ...``.
     pat = re.compile(r"^[\s>*`\-]*(?:IMAGEN|PROMPT DE IMAGEN|VISUAL SUGERIDO)\s*[:：]\s*(.+)$",
                      re.IGNORECASE | re.MULTILINE)
+    pat_car = re.compile(r"^[\s>*`\-]*CARRUSEL\s*[:：]\s*(.+)$", re.IGNORECASE | re.MULTILINE)
     try:
         from ..integrations import image_gen
         if not text or not image_gen.enabled():
@@ -320,12 +329,19 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             if len(prompt) >= 8:           # un prompt real, no un label vacío
                 parsed.append((prompt, texto, sub, caption))
         parsed = parsed[:max_images]
-        if not parsed:
+        carousel = None                    # (prompts[], caption) — máx 1 por corrida
+        for raw in pat_car.findall(text):
+            # `||` separa prompts; escaparlo para que _parse_image_line no corte ahí
+            first, texto, sub, caption = _parse_image_line(raw.strip().replace("||", "\x1f"))
+            prompts = [p.strip() for p in first.split("\x1f") if len(p.strip()) >= 8]
+            if len(prompts) >= 2:
+                carousel = (prompts[:10], caption or "\n\n".join(x for x in (texto, sub) if x))
+                break
+        if not parsed and not carousel:
             return text
         # ¿Encolamos para publicar? Sólo si nos lo piden Y hay tokens configurados.
         pq = None
         targets = []
-        source = ""
         if publish:
             try:
                 from ..integrations import social_publish as sp_mod, publish_queue as pq_mod
@@ -341,21 +357,43 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             if not urls:
                 continue
             cap = texto or prompt[:90]
+            # 1ª imagen → post del feed; las demás → historias (no saturan el feed)
+            kind = "post" if i == 1 else "story"
+            klabel = "post del feed" if kind == "post" else "historia"
             block = f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})"
             if pq:
                 post_caption = caption or "\n\n".join(x for x in (texto, sub) if x) or ""
                 try:
-                    item = pq.enqueue(urls[0], post_caption, targets, source="content")
+                    item = pq.enqueue(urls[0], post_caption, targets, source="content", kind=kind)
                     if item:
-                        block += "\n\n> 🗓️ Encolado para publicación (se publica máx 1 por día)."
+                        block += f"\n\n> 🗓️ Encolado como **{klabel}** (feed: 1/día · historias: 2/día)."
                     else:
                         block += "\n\n> ⚠️ Cola de publicación llena: no se encoló (revisá el panel)."
                 except Exception as e:
                     block += f"\n\n> ⚠️ No se pudo encolar: {str(e)[:140]}"
             blocks.append(block)
+        if carousel:
+            prompts, car_caption = carousel
+            car_urls = []
+            for p in prompts:
+                u = image_gen.generate_image(p, aspect_ratio="1:1", n=1)
+                if u:
+                    car_urls.append(u[0])
+            if len(car_urls) >= 2:
+                thumbs = " ".join(f"![c{j}]({u})" for j, u in enumerate(car_urls, 1))
+                block = f"**Carrusel** ({len(car_urls)} imágenes)\n\n{thumbs}"
+                if pq:
+                    try:
+                        item = pq.enqueue(car_urls[0], car_caption, targets, source="content",
+                                          kind="carousel", images=car_urls)
+                        block += ("\n\n> 🗓️ Encolado como **carrusel** para el feed."
+                                  if item else "\n\n> ⚠️ Cola llena: el carrusel no se encoló.")
+                    except Exception as e:
+                        block += f"\n\n> ⚠️ No se pudo encolar el carrusel: {str(e)[:140]}"
+                blocks.append(block)
         if not blocks:
             return text
-        titulo = "## 🎨 Imágenes generadas" + (" (encoladas para publicar 1/día)" if pq else "")
+        titulo = "## 🎨 Imágenes generadas" + (" (encoladas: feed 1/día + historias 2/día)" if pq else "")
         return text.rstrip() + "\n\n---\n\n" + titulo + "\n\n" + "\n\n".join(blocks) + "\n"
     except Exception:
         return text

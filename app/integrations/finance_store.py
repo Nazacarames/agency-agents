@@ -139,10 +139,21 @@ def _expense_usd(e: Dict[str, Any]) -> float:
     return fx_store.to_usd(e.get("amount", 0), e.get("currency", "USD"))
 
 
+def _counts_in_month(e: Dict[str, Any], month: str) -> bool:
+    """Un gasto normal cuenta solo en su mes; una SUSCRIPCIÓN (recurring) cuenta
+    todos los meses desde su alta hasta el mes actual inclusive."""
+    start = _month_of(e.get("date", ""))
+    if not start or not month:
+        return False
+    if e.get("recurring"):
+        return start <= month <= _month_of(_today())
+    return start == month
+
+
 def expenses_by_category(month: Optional[str] = None) -> Dict[str, float]:
     out: Dict[str, float] = {c: 0.0 for c in CATEGORIES}
     for e in load_store().get("expenses", []):
-        if month and _month_of(e.get("date", "")) != month:
+        if month and not _counts_in_month(e, month):
             continue
         out[e.get("category", "otros")] = out.get(e.get("category", "otros"), 0.0) + _expense_usd(e)
     return {k: round(v, 2) for k, v in out.items() if v or not month}
@@ -150,11 +161,19 @@ def expenses_by_category(month: Optional[str] = None) -> Dict[str, float]:
 
 def expenses_by_month(months: int = 12) -> Dict[str, float]:
     out: Dict[str, float] = {}
+    current = _month_of(_today())
     for e in load_store().get("expenses", []):
         m = _month_of(e.get("date", ""))
         if not m:
             continue
-        out[m] = out.get(m, 0.0) + _expense_usd(e)
+        usd = _expense_usd(e)
+        if e.get("recurring"):
+            # suscripción mensual: suma en cada mes desde el alta hasta hoy
+            for mm in _recent_months(months):
+                if m <= mm <= current:
+                    out[mm] = out.get(mm, 0.0) + usd
+        else:
+            out[m] = out.get(m, 0.0) + usd
     return {k: round(v, 2) for k, v in out.items()}
 
 

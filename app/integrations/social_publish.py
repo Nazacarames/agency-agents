@@ -71,6 +71,41 @@ def _err(data: dict, resp: httpx.Response) -> str:
     return e.get("message") or (resp.text or "")[:200] or f"HTTP {resp.status_code}"
 
 
+def _wait_container(c: httpx.Client, creation_id: str, token: str,
+                    tries: int = 12, sleep: float = 2.0) -> Optional[str]:
+    """Espera a que IG procese el contenedor (FINISHED). Devuelve error o None si ok.
+    Los videos (reels) tardan minutos → usar tries/sleep más largos."""
+    for _ in range(tries):
+        rs = c.get(_graph_url(creation_id),
+                   params={"fields": "status_code,status", "access_token": token})
+        ds = rs.json() if rs.content else {}
+        st = (ds.get("status_code") or "").upper()
+        if st == "FINISHED":
+            return None
+        if st == "ERROR":
+            return f"IG no pudo procesar el contenido: {ds.get('status') or 'ERROR'}"
+        time.sleep(sleep)
+    return "timeout esperando que IG procese el contenido"
+
+
+def _publish_container(c: httpx.Client, creation_id: str, token: str) -> Dict[str, Any]:
+    """media_publish + permalink best-effort. Devuelve el dict resultado."""
+    s = get_settings()
+    r2 = c.post(_graph_url(f"{s.ig_business_id}/media_publish"),
+                data={"creation_id": creation_id, "access_token": token})
+    d2 = r2.json() if r2.content else {}
+    if r2.status_code >= 400 or d2.get("error"):
+        return {"ok": False, "error": _err(d2, r2)}
+    media_id = d2.get("id")
+    link = ""
+    try:
+        rp = c.get(_graph_url(media_id), params={"fields": "permalink", "access_token": token})
+        link = (rp.json() or {}).get("permalink", "") if rp.content else ""
+    except Exception:
+        pass
+    return {"ok": True, "target": "instagram", "id": media_id, "permalink": link}
+
+
 def publish_facebook(image: str, caption: str = "") -> Dict[str, Any]:
     s = get_settings()
     if not fb_enabled():
@@ -142,18 +177,153 @@ def publish_instagram(image: str, caption: str = "") -> Dict[str, Any]:
         return {"ok": False, "error": str(e)[:200]}
 
 
-def publish(image: str, caption: str = "", targets: Optional[List[str]] = None) -> Dict[str, Any]:
-    """Publica en los `targets` pedidos (default: ambos). Devuelve resultado por red."""
-    targets = targets or ["instagram", "facebook"]
+def publish_instagram_story(image: str) -> Dict[str, Any]:
+    """Historia de IG (media_type=STORIES). Las historias no llevan caption."""
+    s = get_settings()
+    if not ig_enabled():
+        return {"ok": False, "error": "IG no configurado (IG_BUSINESS_ID / META_PAGE_TOKEN)"}
+    url = absolute_url(image)
+    if not url.startswith("http"):
+        return {"ok": False, "error": "PUBLIC_BASE_URL no seteada: la imagen no es accesible públicamente"}
+    try:
+        with httpx.Client(timeout=90) as c:
+            r = c.post(_graph_url(f"{s.ig_business_id}/media"),
+                       data={"image_url": url, "media_type": "STORIES", "access_token": s.meta_page_token})
+            d = r.json() if r.content else {}
+            if r.status_code >= 400 or d.get("error"):
+                return {"ok": False, "error": _err(d, r)}
+            err = _wait_container(c, d.get("id"), s.meta_page_token)
+            if err:
+                return {"ok": False, "error": err}
+            return _publish_container(c, d.get("id"), s.meta_page_token)
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+
+
+def publish_facebook_story(image: str) -> Dict[str, Any]:
+    """Historia de la Página de FB: foto sin publicar + /photo_stories."""
+    s = get_settings()
+    if not fb_enabled():
+        return {"ok": False, "error": "FB no configurado (META_PAGE_ID / META_PAGE_TOKEN)"}
+    url = absolute_url(image)
+    if not url.startswith("http"):
+        return {"ok": False, "error": "PUBLIC_BASE_URL no seteada: la imagen no es accesible públicamente"}
+    try:
+        with httpx.Client(timeout=60) as c:
+            r = c.post(_graph_url(f"{s.meta_page_id}/photos"),
+                       data={"url": url, "published": "false", "access_token": s.meta_page_token})
+            d = r.json() if r.content else {}
+            if r.status_code >= 400 or d.get("error"):
+                return {"ok": False, "error": _err(d, r)}
+            r2 = c.post(_graph_url(f"{s.meta_page_id}/photo_stories"),
+                        data={"photo_id": d.get("id"), "access_token": s.meta_page_token})
+            d2 = r2.json() if r2.content else {}
+            if r2.status_code >= 400 or d2.get("error"):
+                return {"ok": False, "error": _err(d2, r2)}
+            return {"ok": True, "target": "facebook", "id": d2.get("post_id") or d.get("id"), "permalink": ""}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+
+
+def publish_instagram_carousel(images: List[str], caption: str = "") -> Dict[str, Any]:
+    """Carrusel de IG (2-10 imágenes): un contenedor hijo por imagen + contenedor CAROUSEL."""
+    s = get_settings()
+    if not ig_enabled():
+        return {"ok": False, "error": "IG no configurado (IG_BUSINESS_ID / META_PAGE_TOKEN)"}
+    urls = [absolute_url(i) for i in (images or []) if i]
+    urls = [u for u in urls if u.startswith("http")][:10]
+    if len(urls) < 2:
+        return {"ok": False, "error": "un carrusel necesita al menos 2 imágenes públicas"}
+    try:
+        with httpx.Client(timeout=120) as c:
+            children = []
+            for u in urls:
+                r = c.post(_graph_url(f"{s.ig_business_id}/media"),
+                           data={"image_url": u, "is_carousel_item": "true",
+                                 "access_token": s.meta_page_token})
+                d = r.json() if r.content else {}
+                if r.status_code >= 400 or d.get("error"):
+                    return {"ok": False, "error": f"item del carrusel: {_err(d, r)}"}
+                err = _wait_container(c, d.get("id"), s.meta_page_token)
+                if err:
+                    return {"ok": False, "error": err}
+                children.append(d.get("id"))
+            r = c.post(_graph_url(f"{s.ig_business_id}/media"),
+                       data={"media_type": "CAROUSEL", "children": ",".join(children),
+                             "caption": caption or "", "access_token": s.meta_page_token})
+            d = r.json() if r.content else {}
+            if r.status_code >= 400 or d.get("error"):
+                return {"ok": False, "error": _err(d, r)}
+            err = _wait_container(c, d.get("id"), s.meta_page_token)
+            if err:
+                return {"ok": False, "error": err}
+            return _publish_container(c, d.get("id"), s.meta_page_token)
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+
+
+def publish_instagram_reel(video: str, caption: str = "") -> Dict[str, Any]:
+    """Reel de IG (media_type=REELS). El video (mp4 9:16) tiene que ser público;
+    IG lo procesa asíncrono y puede tardar minutos → poll largo."""
+    s = get_settings()
+    if not ig_enabled():
+        return {"ok": False, "error": "IG no configurado (IG_BUSINESS_ID / META_PAGE_TOKEN)"}
+    url = absolute_url(video)
+    if not url.startswith("http"):
+        return {"ok": False, "error": "PUBLIC_BASE_URL no seteada: el video no es accesible públicamente"}
+    try:
+        with httpx.Client(timeout=120) as c:
+            r = c.post(_graph_url(f"{s.ig_business_id}/media"),
+                       data={"media_type": "REELS", "video_url": url, "caption": caption or "",
+                             "share_to_feed": "true", "access_token": s.meta_page_token})
+            d = r.json() if r.content else {}
+            if r.status_code >= 400 or d.get("error"):
+                return {"ok": False, "error": _err(d, r)}
+            err = _wait_container(c, d.get("id"), s.meta_page_token, tries=48, sleep=5)
+            if err:
+                return {"ok": False, "error": err}
+            return _publish_container(c, d.get("id"), s.meta_page_token)
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+
+
+def publish(image: str, caption: str = "", targets: Optional[List[str]] = None,
+            kind: str = "post", images: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Publica en los `targets` pedidos (default: ambos) según `kind`:
+      post (default) → foto en feed IG + FB
+      story          → historia IG + historia FB (sin caption)
+      carousel       → carrusel en IG; en FB va la primera imagen como foto
+      reel           → reel en IG (`image` = video mp4); FB se saltea
+    Devuelve resultado por red."""
+    targets = [(t or "").lower() for t in (targets or ["instagram", "facebook"])]
+    kind = (kind or "post").lower()
     results: Dict[str, Any] = {}
     for t in targets:
-        t = (t or "").lower()
-        if t in ("ig", "instagram"):
-            results["instagram"] = publish_instagram(image, caption)
-        elif t in ("fb", "facebook"):
-            results["facebook"] = publish_facebook(image, caption)
+        ig = t in ("ig", "instagram")
+        fb = t in ("fb", "facebook")
+        if kind == "story":
+            if ig:
+                results["instagram"] = publish_instagram_story(image)
+            elif fb:
+                results["facebook"] = publish_facebook_story(image)
+        elif kind == "carousel":
+            if ig:
+                results["instagram"] = publish_instagram_carousel(images or [image], caption)
+            elif fb:
+                results["facebook"] = publish_facebook((images or [image])[0], caption)
+        elif kind == "reel":
+            if ig:
+                results["instagram"] = publish_instagram_reel(image, caption)
+            # FB no recibe reels por ahora (upload distinto)
+        else:
+            if ig:
+                results["instagram"] = publish_instagram(image, caption)
+            elif fb:
+                results["facebook"] = publish_facebook(image, caption)
+    if not results:
+        return {"ok": False, "results": {}, "error": f"sin targets aplicables para kind={kind}"}
     ok = any(v.get("ok") for v in results.values())
-    log.info("social_publish", ok=ok, results={k: v.get("ok") for k, v in results.items()})
+    log.info("social_publish", ok=ok, kind=kind, results={k: v.get("ok") for k, v in results.items()})
     return {"ok": ok, "results": results}
 
 

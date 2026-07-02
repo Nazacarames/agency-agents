@@ -1,10 +1,10 @@
 """
 publish_queue — cola de publicaciones para redes (IG/FB).
 
-Objetivo: que los agentes planifiquen/generen muchas piezas, pero se publique COMO
-MÁXIMO 1 por día. En vez de publicar inline, los agentes ENCOLAN cada imagen
-(image url + caption + targets) y un job diario (`scheduler._drain_publish_queue`)
-DRENA 1 sola por día.
+Objetivo: que los agentes planifiquen/generen muchas piezas sin saturar las cuentas.
+Los agentes ENCOLAN cada pieza con un `kind` y un job diario drena:
+  - 1 pieza de FEED por día (kind post | carousel | reel), rotando de tipo si se puede
+  - hasta MAX_STORIES_PER_DAY historias por día (kind story) — no cuentan para el feed
 
 Persistencia: JSON en el volume (data/publish-queue.json), igual que tasks_store.
 Estados: pending → published | failed.
@@ -23,6 +23,8 @@ import pytz
 
 MAX_ITEMS = 500          # historial total que se conserva
 MAX_PENDING = 30         # tope de cola pendiente (evita backlog infinito)
+MAX_STORIES_PER_DAY = 2  # historias diarias (aparte del post/carrusel/reel del feed)
+FEED_KINDS = ("post", "carousel", "reel")
 # Serializa leer→modificar→guardar (agentes encolan mientras el job drena).
 _LOCK = threading.Lock()
 _TZ = pytz.timezone("America/Buenos_Aires")
@@ -81,25 +83,53 @@ def pending_count(store: Optional[Dict[str, Any]] = None) -> int:
     return sum(1 for it in store["items"] if it.get("status") == "pending")
 
 
+def _is_ig_fb(it: Dict[str, Any]) -> bool:
+    return bool(set(it.get("targets") or ["instagram", "facebook"]) & {"instagram", "facebook"})
+
+
+def _kind(it: Dict[str, Any]) -> str:
+    return (it.get("kind") or "post").lower()
+
+
 def published_today_count(store: Optional[Dict[str, Any]] = None) -> int:
-    """Publicaciones de HOY en IG/FB (para el tope de 1/día del drain). Los Shorts
-    de YouTube/TikTok registrados con record_published NO cuentan para ese tope."""
+    """Piezas de FEED (post/carrusel/reel) publicadas HOY en IG/FB (tope 1/día).
+    Las historias y los Shorts registrados con record_published NO cuentan."""
     store = store or load_store()
     today = _today_art()
     return sum(
         1 for it in store["items"]
         if it.get("status") == "published"
         and _art_date(it.get("published_at", "")) == today
-        and set(it.get("targets") or ["instagram", "facebook"]) & {"instagram", "facebook"}
+        and _is_ig_fb(it) and _kind(it) in FEED_KINDS
+        and not it.get("recorded")          # record_published no cuenta
+    )
+
+
+def stories_published_today(store: Optional[Dict[str, Any]] = None) -> int:
+    store = store or load_store()
+    today = _today_art()
+    return sum(
+        1 for it in store["items"]
+        if it.get("status") == "published"
+        and _art_date(it.get("published_at", "")) == today
+        and _kind(it) == "story"
     )
 
 
 def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
-            source: str = "") -> Optional[Dict[str, Any]]:
-    """Encola una pieza. Devuelve el item, o None si la cola pendiente está llena."""
+            source: str = "", kind: str = "post",
+            images: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+    """Encola una pieza. `kind`: post | story | carousel | reel.
+    `images`: lista para carruseles (image = portada). Para reels, `image` es el mp4.
+    Devuelve el item, o None si la cola pendiente está llena."""
+    kind = (kind or "post").lower()
+    if kind not in FEED_KINDS + ("story",):
+        kind = "post"
     item = {
         "id": uuid.uuid4().hex[:12],
         "image": image,
+        "images": images or None,
+        "kind": kind,
         "caption": caption or "",
         "targets": targets or ["instagram", "facebook"],
         "source": source or "",
@@ -127,10 +157,12 @@ def record_published(image: str, caption: str, target: str, result: Dict[str, An
     item = {
         "id": uuid.uuid4().hex[:12],
         "image": image,
+        "kind": "post",
         "caption": caption or "",
         "targets": [target],
         "source": source or "",
         "status": "published",
+        "recorded": True,
         "created_at": _now(),
         "published_at": _now(),
         "result": {target: result},
@@ -151,38 +183,35 @@ def list_queue(status: Optional[str] = None, limit: int = 100) -> List[Dict[str,
     return items[:limit]
 
 
-def _oldest_pending(store: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    pend = [it for it in store["items"] if it.get("status") == "pending"]
+def _pick_feed_item(store: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Elige la próxima pieza de FEED: la pendiente más vieja, pero si su kind
+    repite el de la última publicación del feed y hay otro kind esperando,
+    prefiere variar (no salen dos reels/posts seguidos si hay alternativa)."""
+    pend = [it for it in store["items"]
+            if it.get("status") == "pending" and _kind(it) in FEED_KINDS]
     if not pend:
         return None
-    # los más viejos primero (created_at asc)
     pend.sort(key=lambda it: it.get("created_at", ""))
+    last_kind = ""
+    for it in store["items"]:  # items están ordenados nuevo→viejo
+        if it.get("status") == "published" and _is_ig_fb(it) and _kind(it) in FEED_KINDS \
+                and not it.get("recorded"):
+            last_kind = _kind(it)
+            break
+    if last_kind:
+        distinto = [it for it in pend if _kind(it) != last_kind]
+        if distinto:
+            return distinto[0]
     return pend[0]
 
 
-def drain_one(force: bool = False) -> Dict[str, Any]:
-    """Publica 1 pieza pendiente si todavía no se publicó ninguna hoy (salvo force).
-    Pensado para correr 1x/día. SÍNCRONO (llamarlo con asyncio.to_thread desde el
-    scheduler para no bloquear el event loop: la Graph API hace self-fetch de /media).
-    Devuelve un dict con el resultado."""
+def _publish_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Publica un item (según su kind) y persiste el resultado."""
     from ..log import get_logger
     log = get_logger("publish_queue")
-    store = load_store()
-    if not force and published_today_count(store) >= 1:
-        return {"ok": True, "skipped": "ya se publicó hoy"}
-    # Auto-reparación: completar permalinks que quedaron pendientes en publicaciones
-    # previas (IG a veces no devuelve el permalink justo al publicar; al otro día ya está).
-    try:
-        backfill_permalinks()
-    except Exception:
-        pass
-    item = _oldest_pending(store)
-    if not item:
-        return {"ok": True, "skipped": "cola vacía"}
     from . import social_publish as sp
-    if not sp.enabled():
-        return {"ok": False, "error": "publicación a redes no configurada"}
-    res = sp.publish(item["image"], item.get("caption", ""), item.get("targets"))
+    res = sp.publish(item["image"], item.get("caption", ""), item.get("targets"),
+                     kind=_kind(item), images=item.get("images"))
     # releer el store por si cambió mientras publicábamos
     with _LOCK:
         store = load_store()
@@ -197,9 +226,48 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
                     it["error"] = json.dumps(res.get("results") or res, ensure_ascii=False)[:500]
                 break
         save_store(store)
-    log.info("publish_queue_drained", id=item["id"], ok=res.get("ok"), source=item.get("source"))
+    log.info("publish_queue_drained", id=item["id"], kind=_kind(item), ok=res.get("ok"),
+             source=item.get("source"))
     _notify_discord(item, res)
-    return {"ok": res.get("ok"), "item": item["id"], "results": res.get("results")}
+    return {"ok": res.get("ok"), "item": item["id"], "kind": _kind(item),
+            "results": res.get("results")}
+
+
+def drain_one(force: bool = False) -> Dict[str, Any]:
+    """Publica 1 pieza de FEED pendiente si hoy no salió ninguna (salvo force),
+    y hasta MAX_STORIES_PER_DAY historias. Pensado para correr 1x/día. SÍNCRONO
+    (llamarlo con asyncio.to_thread desde el scheduler para no bloquear el event
+    loop: la Graph API hace self-fetch de /media). Devuelve un dict con el resultado."""
+    store = load_store()
+    from . import social_publish as sp
+    if not sp.enabled():
+        return {"ok": False, "error": "publicación a redes no configurada"}
+    # Auto-reparación: completar permalinks que quedaron pendientes en publicaciones
+    # previas (IG a veces no devuelve el permalink justo al publicar; al otro día ya está).
+    try:
+        backfill_permalinks()
+    except Exception:
+        pass
+    out: Dict[str, Any] = {"ok": True}
+    # 1) pieza de feed (post/carrusel/reel)
+    if not force and published_today_count(store) >= 1:
+        out["feed"] = {"skipped": "ya se publicó hoy"}
+    else:
+        item = _pick_feed_item(store)
+        out["feed"] = _publish_item(item) if item else {"skipped": "cola de feed vacía"}
+        out["ok"] = out["feed"].get("ok", True)
+    # 2) historias del día (no cuentan para el tope del feed)
+    stories: List[Dict[str, Any]] = []
+    store = load_store()
+    quota = MAX_STORIES_PER_DAY - stories_published_today(store)
+    pend_stories = sorted(
+        (it for it in store["items"] if it.get("status") == "pending" and _kind(it) == "story"),
+        key=lambda it: it.get("created_at", ""))
+    for it in pend_stories[:max(0, quota)]:
+        stories.append(_publish_item(it))
+    if stories:
+        out["stories"] = stories
+    return out
 
 
 def backfill_permalinks() -> Dict[str, Any]:
@@ -262,7 +330,8 @@ def _notify_discord(item: Dict[str, Any], res: Dict[str, Any]) -> None:
             lbl = "Instagram" if net == "instagram" else "Facebook"
             parts.append(f"✅ {lbl}: {r.get('permalink') or 'ok'}" if r.get("ok") else f"❌ {lbl}: {str(r.get('error',''))[:120]}")
         cap = (item.get("caption") or "")[:120]
-        msg = ("📣 **Publicación del día**\n" + "\n".join(parts) + (f"\n> {cap}…" if cap else ""))
+        klabel = {"story": "Historia", "carousel": "Carrusel", "reel": "Reel"}.get(_kind(item), "Publicación")
+        msg = (f"📣 **{klabel} del día**\n" + "\n".join(parts) + (f"\n> {cap}…" if cap else ""))
         dw = DiscordWebhook(s)
         dw.send(msg, url=getattr(s, "discord_images_webhook_url", "") or None)
         dw.close()
@@ -284,6 +353,8 @@ def summary() -> Dict[str, Any]:
     return {
         "pending": pending_count(store),
         "published_today": published_today_count(store),
+        "stories_today": stories_published_today(store),
+        "max_stories_per_day": MAX_STORIES_PER_DAY,
         "max_pending": MAX_PENDING,
         "items": store["items"][:50],
     }

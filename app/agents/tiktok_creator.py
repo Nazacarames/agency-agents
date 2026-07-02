@@ -208,9 +208,27 @@ class TikTokCreatorAgent(BaseAgent):
                      f"ensamblado automático.\n")
             text = text.rstrip() + block
             text = self._maybe_upload_youtube(text, self._media_to_path(url))
+            text = self._enqueue_ig_reel(text, url)
             return text
         except Exception as e:
             log.warning("tiktok_assemble_failed", error=str(e)[:300])
+            return text
+
+    def _enqueue_ig_reel(self, text: str, video_url: str) -> str:
+        """Encola el short como REEL de Instagram (el drain diario lo publica cuando
+        le toque el turno del feed, alternando con posts/carruseles)."""
+        try:
+            from ..integrations import social_publish as sp, publish_queue as pq
+            if not sp.ig_enabled():
+                return text
+            mc = re.search(r"^[\s>*`\-]*Caption\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
+            caption = (mc.group(1).strip() if mc else "IA y automatización para PyMEs 🇦🇷")
+            item = pq.enqueue(video_url, caption, ["instagram"], source="tiktok_creator", kind="reel")
+            if item:
+                return text.rstrip() + "\n\n> 🎞️ Encolado como **Reel de Instagram** (sale con el turno diario del feed).\n"
+            return text.rstrip() + "\n\n> ⚠️ Cola de publicación llena: el reel no se encoló.\n"
+        except Exception as e:
+            log.warning("tiktok_reel_enqueue_failed", error=str(e)[:200])
             return text
 
     def _maybe_upload_youtube(self, text: str, video_path) -> str:
