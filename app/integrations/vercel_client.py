@@ -71,6 +71,34 @@ class VercelClient:
             raise VercelError("no hay deploy de producción READY")
         return deps[0]
 
+    def latest_preview_deployment(self) -> Dict[str, Any]:
+        """Último deploy PREVIEW listo (el que genera web_optimizer para aprobar)."""
+        data = self._get(
+            "/v6/deployments",
+            {"projectId": self.project, "state": "READY", "limit": 10},
+        )
+        for d in data.get("deployments", []):
+            if (d.get("target") or "") != "production":
+                return d
+        raise VercelError("no hay deploy preview READY para promover")
+
+    def promote(self, deployment: str) -> str:
+        """Promueve un deploy (id o URL) a PRODUCCIÓN. Devuelve el output de la CLI."""
+        if not self.token:
+            raise VercelError("falta VERCEL_TOKEN")
+        cmd = ["vercel", "promote", deployment, "--yes", "--token", self.token]
+        if self.team:
+            cmd += ["--scope", self.team]
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        except subprocess.TimeoutExpired as e:
+            raise VercelError("timeout promoviendo el deploy") from e
+        out = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        if proc.returncode != 0:
+            raise VercelError(f"vercel promote falló (exit {proc.returncode}): {out[-300:]}")
+        log.info("vercel_promoted", deployment=deployment)
+        return out[-300:]
+
     # ── descarga de la fuente ──
     def download_source(self, deployment_id: str, dest: str) -> int:
         """Reconstruye la fuente del deploy en `dest`. Devuelve la cantidad de archivos.

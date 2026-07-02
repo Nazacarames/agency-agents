@@ -618,6 +618,7 @@ _AGENT_DESCRIPTIONS = {
     "web_auditor": "Auditoría de páginas web puntuada",
     "inbox_assistant": "Lee la bandeja + redacta borradores",
     "meeting_prep": "Prepara reuniones con la memoria del cliente (brief, agente de test, demo, objeciones)",
+    "web_optimizer": "Mejora la landing (CRO/SEO/diseño) y deploya un preview en Vercel; aprobás y publica",
 }
 
 
@@ -1857,6 +1858,59 @@ async def api_veo_status(request: Request):
     # No devolver el base64 gigante del video; sólo resumen.
     return {"done": q.get("done"), "has_video": bool(q.get("b64") or q.get("gcsUri")),
             "gcsUri": q.get("gcsUri"), "error": q.get("error")}
+
+
+# ── Web (landing): aprobar el preview del web_optimizer → producción ──
+
+@app.get("/api/web/deployments")
+async def api_web_deployments(request: Request):
+    """Último preview (para aprobar) + producción actual de la landing."""
+    _verify_webhook_secret(request)
+    s = get_settings()
+    if not s.web_optimizer_configured:
+        return {"configured": False}
+    from .integrations.vercel_client import get_vercel_client, VercelError
+    vc = get_vercel_client(s)
+    out: Dict[str, Any] = {"configured": True}
+    def _view(d):
+        return {"url": f"https://{d.get('url')}" if d.get("url") else "",
+                "created": d.get("created") or d.get("createdAt"), "uid": d.get("uid")}
+    try:
+        out["preview"] = _view(await run_in_threadpool(vc.latest_preview_deployment))
+    except (VercelError, Exception) as e:
+        out["preview"] = None
+        out["preview_error"] = str(e)[:200]
+    try:
+        out["production"] = _view(await run_in_threadpool(vc.latest_production_deployment))
+    except Exception:
+        out["production"] = None
+    return out
+
+
+@app.post("/api/web/promote")
+async def api_web_promote(request: Request):
+    """APRUEBA el preview del web_optimizer: lo promueve a PRODUCCIÓN.
+    Body opcional: {deployment: "<url o id>"}; sin body promueve el último preview."""
+    _verify_webhook_secret(request)
+    s = get_settings()
+    if not s.web_optimizer_configured:
+        raise HTTPException(status_code=400, detail="Vercel no configurado (VERCEL_TOKEN/PROJECT)")
+    from .integrations.vercel_client import get_vercel_client, VercelError
+    vc = get_vercel_client(s)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    dep = ((body or {}).get("deployment") or "").strip()
+    try:
+        if not dep:
+            d = await run_in_threadpool(vc.latest_preview_deployment)
+            dep = f"https://{d.get('url')}" if d.get("url") else d.get("uid", "")
+        out = await run_in_threadpool(vc.promote, dep)
+    except (VercelError, Exception) as e:
+        raise HTTPException(status_code=502, detail=str(e)[:300])
+    log.info("web_promoted", deployment=dep)
+    return {"ok": True, "promoted": dep, "output": out}
 
 
 @app.post("/api/video/assemble")

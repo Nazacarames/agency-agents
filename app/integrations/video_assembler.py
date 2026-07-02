@@ -83,12 +83,17 @@ def _normalize(seg: Dict, idx: int, work: Path, w: int, h: int) -> Optional[Path
                "-vf", _vf(w, h), "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
                *_X264_LOWMEM, "-c:a", "aac", "-shortest", str(out)]
         return out if _run(cmd) else None
-    # imagen: segmento de `dur` seg con leve zoom + silencio
+    # imagen: segmento de `dur` seg + silencio. Con zoom (Ken Burns) para stills
+    # sueltos; SIN zoom (seg["zoom"]=False) para frames de una animación (p.ej. el
+    # chat que va llegando mensaje a mensaje) — el zoom reiniciado por frame marea.
     dur = float(seg.get("dur") or 4.5)
-    frames = int(dur * FPS)
-    vf = (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
-          f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color={PAD},setsar=1,"
-          f"zoompan=z='min(zoom+0.0006,1.10)':d={frames}:s={w}x{h}:fps={FPS},format=yuv420p")
+    if seg.get("zoom", True):
+        frames = int(dur * FPS)
+        vf = (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+              f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color={PAD},setsar=1,"
+              f"zoompan=z='min(zoom+0.0006,1.10)':d={frames}:s={w}x{h}:fps={FPS},format=yuv420p")
+    else:
+        vf = _vf(w, h)
     cmd = [_ffmpeg(), "-y", "-loop", "1", "-t", f"{dur}", "-i", str(path),
            "-f", "lavfi", "-t", f"{dur}", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
            "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
@@ -160,4 +165,19 @@ def assemble_short(clip_path: str, proof_paths: List[str],
     segs: List[Dict] = [{"path": clip_path, "kind": "video"}]
     for p in (proof_paths or []):
         segs.append({"path": p, "kind": "image", "dur": proof_dur})
+    return assemble(segs, out_name=out_name)
+
+
+def assemble_short_animated(clip_path: str, frame_paths: List[str],
+                            out_name: Optional[str] = None) -> Optional[str]:
+    """Clip de Nazareno + demo de chat ANIMADA: cada frame es el chat con un
+    mensaje más (o el "escribiendo…"), cortados en secuencia → se ve el mensaje
+    enviándose y llegando. Sin zoom (los frames deben quedar clavados)."""
+    segs: List[Dict] = [{"path": clip_path, "kind": "video"}]
+    n = len(frame_paths or [])
+    for i, p in enumerate(frame_paths or []):
+        is_typing = "typing" in Path(p).stem
+        last = (i == n - 1)
+        dur = 0.8 if is_typing else (2.6 if last else 1.3)
+        segs.append({"path": p, "kind": "image", "dur": dur, "zoom": False})
     return assemble(segs, out_name=out_name)

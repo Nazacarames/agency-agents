@@ -176,10 +176,10 @@ class TikTokCreatorAgent(BaseAgent):
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         text = response_text or ""
-        text, clip_path = self._add_nazareno_clip(text)    # Veo 3.1 Fast (hook hablado)
-        text, mock_path = self._add_chatbot_mockup(text)   # WhatsApp realista (prueba)
-        text = self._assemble_final(text, clip_path, mock_path)  # short armado (ffmpeg)
-        text = self._add_nazareno_still(text)              # thumbnail (fallback visual)
+        text, clip_path = self._add_nazareno_clip(text)      # Veo 3.1 Fast (hook hablado)
+        text, mock_frames = self._add_chatbot_mockup(text)   # chat WhatsApp ANIMADO (frames)
+        text = self._assemble_final(text, clip_path, mock_frames)  # short armado (ffmpeg)
+        text = self._add_nazareno_still(text)                # thumbnail (fallback visual)
         return super().post_process(text, ctx)
 
     def _media_to_path(self, media_url):
@@ -190,18 +190,22 @@ class TikTokCreatorAgent(BaseAgent):
         p = Path(__file__).resolve().parent.parent.parent / "data" / "images" / fname
         return str(p) if p.exists() else None
 
-    # ── Armado final del video (Veo + prueba → 1 mp4) ──
-    def _assemble_final(self, text: str, clip_path, mock_path) -> str:
+    # ── Armado final del video (Veo + demo animada → 1 mp4) ──
+    def _assemble_final(self, text: str, clip_path, mock_frames) -> str:
         try:
             from ..integrations import video_assembler
             if not clip_path:
                 return text
-            proofs = [mock_path] if mock_path else []
-            url = video_assembler.assemble_short(clip_path, proofs, proof_dur=5.0)
+            frames = [p for p in (mock_frames or []) if p]
+            if frames:
+                url = video_assembler.assemble_short_animated(clip_path, frames)
+            else:
+                url = video_assembler.assemble_short(clip_path, [], proof_dur=5.0)
             if not url:
                 return text
             block = (f"\n\n---\n\n## 🎬 Video armado (listo para postear)\n\n"
-                     f"`{url}` — short vertical 9:16 (Nazareno + prueba), ensamblado automático.\n")
+                     f"`{url}` — short 9:16: Nazareno + chat animado (mensajes llegando), "
+                     f"ensamblado automático.\n")
             text = text.rstrip() + block
             text = self._maybe_upload_youtube(text, self._media_to_path(url))
             return text
@@ -282,9 +286,9 @@ class TikTokCreatorAgent(BaseAgent):
             log.warning("tiktok_veo_clip_failed", error=str(e)[:300])
             return text, None
 
-    # ── Mockup de chatbot (WhatsApp realista) ──
+    # ── Demo de chatbot (WhatsApp ANIMADO: mensajes que van llegando) ──
     def _add_chatbot_mockup(self, text: str):
-        """Devuelve (texto, path_local_del_mockup | None)."""
+        """Devuelve (texto, [paths_locales_de_los_frames] | None)."""
         try:
             from ..integrations import chat_mockup
             if not text:
@@ -300,12 +304,19 @@ class TikTokCreatorAgent(BaseAgent):
                              "text": m.group(3).strip()})
             if len(msgs) < 2:
                 return text, None
-            url = chat_mockup.render_whatsapp(negocio, msgs[:8])
-            if not url:
-                return text, None
-            block = (f"\n\n---\n\n## 💬 Demo de chatbot — {negocio} (mockup realista)\n\n"
-                     f"![chatbot {negocio}]({url})\n")
-            return text.rstrip() + block, self._media_to_path(url)
+            # Frames de la animación (mensaje a mensaje + "escribiendo…").
+            frame_urls = chat_mockup.render_whatsapp_frames(negocio, msgs[:8])
+            if not frame_urls:
+                # fallback: mockup estático
+                url = chat_mockup.render_whatsapp(negocio, msgs[:8])
+                if not url:
+                    return text, None
+                frame_urls = [url]
+            last = frame_urls[-1]
+            block = (f"\n\n---\n\n## 💬 Demo de chatbot — {negocio} (animada, {len(frame_urls)} frames)\n\n"
+                     f"![chatbot {negocio}]({last})\n")
+            paths = [p for p in (self._media_to_path(u) for u in frame_urls) if p]
+            return text.rstrip() + block, paths or None
         except Exception as e:
             log.warning("tiktok_mockup_failed", error=str(e)[:300])
             return text, None

@@ -115,13 +115,16 @@ def create_task(prompt: str, image_url: Optional[str] = None,
                 image_b64: Optional[Dict[str, str]] = None,
                 aspect_ratio: str = "9:16",
                 negative_prompt: str = "",
-                reference_image_urls: Optional[list] = None) -> str:
+                reference_image_urls: Optional[list] = None,
+                resolution: Optional[str] = "1080p") -> str:
     """Lanza la generación. Devuelve el operation_name (para pollear).
 
     - reference_image_urls: lista de URLs (hasta 3). Modo Veo 3.1 "reference image"
       (referenceType=asset): mantiene el MISMO personaje (cara de Nazareno) en escenas
       descritas por el prompt → consistencia + lugar/fondo controlables. Si se pasa,
       tiene prioridad sobre image_url (que es first-frame/image-to-video).
+    - resolution: "1080p" (default) | "720p" | None. Si el modelo rechaza el
+      parámetro para este aspect ratio, se reintenta sin él (default del modelo).
     """
     instance: Dict[str, Any] = {"prompt": (prompt or "").strip()[:2000]}
     if reference_image_urls:
@@ -138,20 +141,32 @@ def create_task(prompt: str, image_url: Optional[str] = None,
         if img:
             instance["image"] = img
     params: Dict[str, Any] = {"aspectRatio": aspect_ratio, "sampleCount": 1}
+    if resolution:
+        params["resolution"] = resolution
     if negative_prompt:
         params["negativePrompt"] = negative_prompt
-    body = {"instances": [instance], "parameters": params}
 
-    with httpx.Client(timeout=90) as c:
-        r = c.post(f"{_base()}:predictLongRunning", json=body, headers=_headers())
-    data = r.json() if r.content else {}
-    if r.status_code >= 400 or "error" in data:
-        err = data.get("error") or {"status": r.status_code, "text": r.text[:300]}
+    def _post(body: Dict[str, Any]) -> Dict[str, Any]:
+        with httpx.Client(timeout=90) as c:
+            r = c.post(f"{_base()}:predictLongRunning", json=body, headers=_headers())
+        return {"status": r.status_code, "data": r.json() if r.content else {},
+                "text": r.text[:300]}
+
+    res = _post({"instances": [instance], "parameters": params})
+    if (res["status"] >= 400 or "error" in res["data"]) and resolution:
+        # p.ej. modelo/aspect que no soporta el parámetro resolution → sin él
+        log.warning("veo_resolution_retry", resolution=resolution,
+                    error=str(res["data"].get("error") or res["text"])[:200])
+        params.pop("resolution", None)
+        res = _post({"instances": [instance], "parameters": params})
+    data = res["data"]
+    if res["status"] >= 400 or "error" in data:
+        err = data.get("error") or {"status": res["status"], "text": res["text"]}
         raise RuntimeError(f"veo create error: {err}")
     name = data.get("name")
     if not name:
         raise RuntimeError(f"veo sin operation name: {str(data)[:300]}")
-    log.info("veo_task_created", op=name, model=_model(),
+    log.info("veo_task_created", op=name, model=_model(), resolution=params.get("resolution"),
              refs=len(instance.get("referenceImages", [])), firstframe="image" in instance)
     return name
 
@@ -202,10 +217,11 @@ def generate_and_wait(prompt: str, image_url: Optional[str] = None,
                       image_b64: Optional[Dict[str, str]] = None,
                       aspect_ratio: str = "9:16", negative_prompt: str = "",
                       timeout_s: int = 600, poll: int = 12,
-                      reference_image_urls: Optional[list] = None) -> Dict[str, Any]:
+                      reference_image_urls: Optional[list] = None,
+                      resolution: Optional[str] = "1080p") -> Dict[str, Any]:
     """Crea la tarea y espera (bloqueante) hasta el video. Devuelve {operation, b64|gcsUri}."""
     op = create_task(prompt, image_url, image_b64, aspect_ratio, negative_prompt,
-                     reference_image_urls=reference_image_urls)
+                     reference_image_urls=reference_image_urls, resolution=resolution)
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         q = query_task(op)

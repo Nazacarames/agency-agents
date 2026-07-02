@@ -91,7 +91,20 @@ class WebOptimizerAgent(BaseAgent):
         return f"{get_context_block()}\n\n{WEB_OPTIMIZER_SYSTEM}"
 
     def build_user_message(self, ctx: AgentContext) -> str:
-        return WEB_OPTIMIZER_TASK
+        # Directivas del operador (tarea del panel): qué mantener, qué cambiar, qué
+        # no tocar. Van PRIMERO y mandan sobre el checklist genérico.
+        task = ""
+        try:
+            if isinstance(ctx.args, dict) and ctx.args.get("task_prompt"):
+                task = (
+                    "## DIRECTIVAS DEL OPERADOR (PRIORITARIAS — mandan sobre todo lo demás)\n"
+                    f"{ctx.args['task_prompt'].strip()}\n"
+                    "Respetá esto a rajatabla: lo que pida MANTENER no se toca; lo que pida "
+                    "cambiar/quitar se hace tal cual.\n\n"
+                )
+        except Exception:
+            pass
+        return task + WEB_OPTIMIZER_TASK
 
     # Override completo: descarga determinística + edición CC + deploy determinístico.
     def run(self, ctx: AgentContext) -> str:

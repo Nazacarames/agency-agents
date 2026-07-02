@@ -98,73 +98,7 @@ def render_whatsapp(business_name: str, messages: List[Dict[str, str]],
                     subtitle: str = "en línea", out_name: Optional[str] = None) -> Optional[str]:
     """Renderiza un chat de WhatsApp realista (1080x1920) y devuelve la URL /media local."""
     try:
-        from PIL import Image, ImageDraw
-        W, H = 1080, 1920
-        img = Image.new("RGB", (W, H), _BG)
-        draw = ImageDraw.Draw(img)
-
-        # ── Header ──
-        head_h = 150
-        draw.rectangle([0, 0, W, head_h], fill=_HEADER)
-        # flecha atrás
-        draw.line([(46, head_h//2), (78, head_h//2 - 22)], fill=(255,255,255), width=6)
-        draw.line([(46, head_h//2), (78, head_h//2 + 22)], fill=(255,255,255), width=6)
-        # avatar circular con inicial
-        av_d = 90
-        av_x, av_y = 100, (head_h - av_d)//2
-        draw.ellipse([av_x, av_y, av_x+av_d, av_y+av_d], fill=(180, 200, 196))
-        initial = (business_name.strip()[:1] or "A").upper()
-        f_av = _font(46)
-        iw = draw.textlength(initial, font=f_av)
-        draw.text((av_x + (av_d-iw)/2, av_y + 18), initial, font=f_av, fill=(255,255,255))
-        # nombre + estado
-        f_name = _font(40); f_sub = _font(28)
-        draw.text((av_x+av_d+28, 38), business_name[:26], font=f_name, fill=(255,255,255))
-        draw.text((av_x+av_d+28, 90), subtitle, font=f_sub, fill=(220, 240, 235))
-
-        # ── Mensajes ──
-        f_msg = _font(36); f_time = _font(24)
-        pad = 36
-        max_bubble = int(W * 0.74)
-        y = head_h + 40
-        line_h = 46
-
-        for m in messages:
-            is_bot = m.get("from") == "bot"
-            text = _clean(m.get("text") or "")
-            time = (m.get("time") or "").strip()
-            inner_w = max_bubble - 2*pad
-            lines = []
-            for para in text.split("\n"):
-                lines += _wrap(draw, para, f_msg, inner_w) if para else [""]
-            text_w = max((draw.textlength(ln, font=f_msg) for ln in lines), default=0)
-            bw = int(min(max_bubble, max(text_w + 2*pad, 140)))
-            bh = len(lines) * line_h + pad + 30   # + espacio para hora
-            bx = (W - bw - 30) if is_bot else 30
-            by = y
-            fill = _BUBBLE_BOT if is_bot else _BUBBLE_THEM
-            draw.rounded_rectangle([bx, by, bx+bw, by+bh], radius=28, fill=fill)
-            ty = by + pad - 6
-            for ln in lines:
-                draw.text((bx+pad, ty), ln, font=f_msg, fill=_TEXT)
-                ty += line_h
-            # hora + tildes
-            tw = draw.textlength(time, font=f_time)
-            draw.text((bx+bw-pad-tw-(34 if is_bot else 0), by+bh-40), time, font=f_time, fill=_META)
-            if is_bot:
-                _draw_checks(draw, int(bx+bw-pad-26), by+bh-36, 1.4)
-            y = by + bh + 24
-
-        # ── Input bar ──
-        ib_h = 110
-        iy = H - ib_h
-        draw.rectangle([0, iy, W, H], fill=_BG)
-        draw.rounded_rectangle([28, iy+18, W-150, H-18], radius=40, fill=_INPUT_BG)
-        draw.text((58, iy+44), "Escribí un mensaje", font=_font(34), fill=(150,160,165))
-        # botón mic verde
-        mb = 78
-        draw.ellipse([W-110, iy+(ib_h-mb)//2, W-110+mb, iy+(ib_h-mb)//2+mb], fill=_HEADER)
-
+        img = _render_chat(business_name, messages, subtitle)
         out = io.BytesIO()
         img.save(out, format="JPEG", quality=92)
         fname = out_name or f"chat_{uuid.uuid4().hex}.jpg"
@@ -174,3 +108,117 @@ def render_whatsapp(business_name: str, messages: List[Dict[str, str]],
     except Exception as e:
         log.warning("chat_mockup_failed", error=str(e)[:200])
         return None
+
+
+def render_whatsapp_frames(business_name: str, messages: List[Dict[str, str]],
+                           subtitle: str = "en línea") -> List[str]:
+    """Secuencia de frames para ANIMAR el chat en el video: los mensajes van
+    apareciendo uno a uno, con un frame de "escribiendo…" antes de cada respuesta
+    del bot (como se ve un chat real llegando). Devuelve URLs /media en orden.
+    Best-effort: [] si falla."""
+    try:
+        prefix = f"chatf_{uuid.uuid4().hex[:10]}"
+        urls: List[str] = []
+
+        def _save(img, tag: str) -> None:
+            out = io.BytesIO()
+            img.save(out, format="JPEG", quality=92)
+            fname = f"{prefix}_{len(urls):02d}_{tag}.jpg"
+            (_images_dir() / fname).write_bytes(out.getvalue())
+            urls.append(f"/media/{fname}")
+
+        for i, m in enumerate(messages):
+            shown = messages[:i]
+            if m.get("from") == "bot":
+                # el negocio "está escribiendo…" antes de que llegue su respuesta
+                _save(_render_chat(business_name, shown, "escribiendo…", typing=True), "typing")
+            _save(_render_chat(business_name, messages[:i + 1], subtitle), "msg")
+        log.info("chat_mockup_frames_ok", frames=len(urls), msgs=len(messages))
+        return urls
+    except Exception as e:
+        log.warning("chat_mockup_frames_failed", error=str(e)[:200])
+        return []
+
+
+def _render_chat(business_name: str, messages: List[Dict[str, str]],
+                 subtitle: str = "en línea", typing: bool = False):
+    """Dibuja el chat (1080x1920) y devuelve la PIL.Image. `typing`=True agrega la
+    burbuja de puntitos de "escribiendo" al final."""
+    from PIL import Image, ImageDraw
+    W, H = 1080, 1920
+    img = Image.new("RGB", (W, H), _BG)
+    draw = ImageDraw.Draw(img)
+
+    # ── Header ──
+    head_h = 150
+    draw.rectangle([0, 0, W, head_h], fill=_HEADER)
+    # flecha atrás
+    draw.line([(46, head_h//2), (78, head_h//2 - 22)], fill=(255,255,255), width=6)
+    draw.line([(46, head_h//2), (78, head_h//2 + 22)], fill=(255,255,255), width=6)
+    # avatar circular con inicial
+    av_d = 90
+    av_x, av_y = 100, (head_h - av_d)//2
+    draw.ellipse([av_x, av_y, av_x+av_d, av_y+av_d], fill=(180, 200, 196))
+    initial = (business_name.strip()[:1] or "A").upper()
+    f_av = _font(46)
+    iw = draw.textlength(initial, font=f_av)
+    draw.text((av_x + (av_d-iw)/2, av_y + 18), initial, font=f_av, fill=(255,255,255))
+    # nombre + estado
+    f_name = _font(40); f_sub = _font(28)
+    draw.text((av_x+av_d+28, 38), business_name[:26], font=f_name, fill=(255,255,255))
+    draw.text((av_x+av_d+28, 90), subtitle, font=f_sub, fill=(220, 240, 235))
+
+    # ── Mensajes ──
+    f_msg = _font(36); f_time = _font(24)
+    pad = 36
+    max_bubble = int(W * 0.74)
+    y = head_h + 40
+    line_h = 46
+
+    for m in messages:
+        is_bot = m.get("from") == "bot"
+        text = _clean(m.get("text") or "")
+        time = (m.get("time") or "").strip()
+        inner_w = max_bubble - 2*pad
+        lines = []
+        for para in text.split("\n"):
+            lines += _wrap(draw, para, f_msg, inner_w) if para else [""]
+        text_w = max((draw.textlength(ln, font=f_msg) for ln in lines), default=0)
+        bw = int(min(max_bubble, max(text_w + 2*pad, 140)))
+        bh = len(lines) * line_h + pad + 30   # + espacio para hora
+        bx = (W - bw - 30) if is_bot else 30
+        by = y
+        fill = _BUBBLE_BOT if is_bot else _BUBBLE_THEM
+        draw.rounded_rectangle([bx, by, bx+bw, by+bh], radius=28, fill=fill)
+        ty = by + pad - 6
+        for ln in lines:
+            draw.text((bx+pad, ty), ln, font=f_msg, fill=_TEXT)
+            ty += line_h
+        # hora + tildes
+        tw = draw.textlength(time, font=f_time)
+        draw.text((bx+bw-pad-tw-(34 if is_bot else 0), by+bh-40), time, font=f_time, fill=_META)
+        if is_bot:
+            _draw_checks(draw, int(bx+bw-pad-26), by+bh-36, 1.4)
+        y = by + bh + 24
+
+    # burbuja de "escribiendo…" (tres puntitos) del negocio
+    if typing:
+        bw, bh = 170, 96
+        bx, by = (W - bw - 30), y
+        draw.rounded_rectangle([bx, by, bx+bw, by+bh], radius=28, fill=_BUBBLE_BOT)
+        for k in range(3):
+            d = 16
+            cx = bx + 44 + k*36
+            cy = by + bh//2 - d//2
+            draw.ellipse([cx, cy, cx+d, cy+d], fill=(130, 145, 140))
+
+    # ── Input bar ──
+    ib_h = 110
+    iy = H - ib_h
+    draw.rectangle([0, iy, W, H], fill=_BG)
+    draw.rounded_rectangle([28, iy+18, W-150, H-18], radius=40, fill=_INPUT_BG)
+    draw.text((58, iy+44), "Escribí un mensaje", font=_font(34), fill=(150,160,165))
+    # botón mic verde
+    mb = 78
+    draw.ellipse([W-110, iy+(ib_h-mb)//2, W-110+mb, iy+(ib_h-mb)//2+mb], fill=_HEADER)
+    return img
