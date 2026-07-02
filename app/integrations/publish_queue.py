@@ -82,10 +82,16 @@ def pending_count(store: Optional[Dict[str, Any]] = None) -> int:
 
 
 def published_today_count(store: Optional[Dict[str, Any]] = None) -> int:
+    """Publicaciones de HOY en IG/FB (para el tope de 1/día del drain). Los Shorts
+    de YouTube/TikTok registrados con record_published NO cuentan para ese tope."""
     store = store or load_store()
     today = _today_art()
-    return sum(1 for it in store["items"]
-               if it.get("status") == "published" and _art_date(it.get("published_at", "")) == today)
+    return sum(
+        1 for it in store["items"]
+        if it.get("status") == "published"
+        and _art_date(it.get("published_at", "")) == today
+        and set(it.get("targets") or ["instagram", "facebook"]) & {"instagram", "facebook"}
+    )
 
 
 def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
@@ -107,6 +113,31 @@ def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
         store = load_store()
         if pending_count(store) >= MAX_PENDING:
             return None
+        store["items"].insert(0, item)
+        store["items"] = store["items"][:MAX_ITEMS]
+        save_store(store)
+    return item
+
+
+def record_published(image: str, caption: str, target: str, result: Dict[str, Any],
+                     source: str = "") -> Dict[str, Any]:
+    """Registra una publicación YA hecha por fuera de la cola (Shorts de YouTube,
+    posts de TikTok) para que aparezca en la sección Publicaciones del panel.
+    No pasa por pending ni cuenta para el tope diario de IG/FB."""
+    item = {
+        "id": uuid.uuid4().hex[:12],
+        "image": image,
+        "caption": caption or "",
+        "targets": [target],
+        "source": source or "",
+        "status": "published",
+        "created_at": _now(),
+        "published_at": _now(),
+        "result": {target: result},
+        "error": None,
+    }
+    with _LOCK:
+        store = load_store()
         store["items"].insert(0, item)
         store["items"] = store["items"][:MAX_ITEMS]
         save_store(store)

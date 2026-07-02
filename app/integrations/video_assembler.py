@@ -26,8 +26,16 @@ log = get_logger("video_assembler")
 W, H, FPS = 1080, 1920, 30
 PAD = "0x0D1426"  # navy de marca para las bandas si algo no llena el 9:16
 
-_VF_BASE = (f"scale={W}:{H}:force_original_aspect_ratio=decrease,"
-            f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:color={PAD},setsar=1,fps={FPS},format=yuv420p")
+# El container de Railway tiene poca RAM: x264 a 1080x1920 con defaults muere
+# OOM-killed (síntoma: stderr cortado con frame=0 repetido, sin error). Encoder
+# frugal (threads/lookahead/refs mínimos) y, si 1080p igual falla, fallback a 720p.
+_X264_LOWMEM = ["-threads", "2", "-x264-params", "rc-lookahead=12:ref=1:threads=2"]
+_SIZES = [(1080, 1920), (720, 1280)]
+
+
+def _vf(w: int, h: int) -> str:
+    return (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color={PAD},setsar=1,fps={FPS},format=yuv420p")
 
 
 def _ffmpeg() -> str:
@@ -44,7 +52,9 @@ def _run(cmd: List[str]) -> bool:
     try:
         r = subprocess.run(cmd, capture_output=True, timeout=300)
         if r.returncode != 0:
-            log.warning("ffmpeg_fail", err=r.stderr.decode("utf-8", "ignore")[-400:])
+            # returncode -9 = SIGKILL (OOM del container) → probar tamaño menor
+            log.warning("ffmpeg_fail", returncode=r.returncode,
+                        err=r.stderr.decode("utf-8", "ignore")[-400:])
             return False
         return True
     except Exception as e:
@@ -52,36 +62,37 @@ def _run(cmd: List[str]) -> bool:
         return False
 
 
-def _normalize(seg: Dict, idx: int, work: Path) -> Optional[Path]:
-    """Normaliza un segmento (video o imagen) a un mp4 estándar."""
-    out = work / f"seg_{idx}.mp4"
+def _normalize(seg: Dict, idx: int, work: Path, w: int, h: int) -> Optional[Path]:
+    """Normaliza un segmento (video o imagen) a un mp4 estándar de w x h.
+    El tamaño lo decide `assemble` para TODO el lote (mezclar resoluciones
+    rompería el concat con -c copy)."""
     path = seg["path"]
     kind = seg.get("kind") or ("video" if str(path).lower().endswith((".mp4", ".webm", ".mov")) else "image")
+    out = work / f"seg_{idx}_{h}.mp4"
     if kind == "video":
         cmd = [_ffmpeg(), "-y", "-i", str(path),
-               "-vf", _VF_BASE,
-               "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+               "-vf", _vf(w, h),
+               "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", *_X264_LOWMEM,
                "-c:a", "aac", "-ar", "44100", "-ac", "2",
                "-af", "aresample=44100", str(out)]
+        if _run(cmd):
+            return out
         # si el video no tuviera audio, agregamos uno silencioso
-        if not _run(cmd):
-            cmd = [_ffmpeg(), "-y", "-i", str(path),
-                   "-f", "lavfi", "-t", "8", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
-                   "-vf", _VF_BASE, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-                   "-c:a", "aac", "-shortest", str(out)]
-            if not _run(cmd):
-                return None
-        return out
+        cmd = [_ffmpeg(), "-y", "-i", str(path),
+               "-f", "lavfi", "-t", "8", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+               "-vf", _vf(w, h), "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+               *_X264_LOWMEM, "-c:a", "aac", "-shortest", str(out)]
+        return out if _run(cmd) else None
     # imagen: segmento de `dur` seg con leve zoom + silencio
     dur = float(seg.get("dur") or 4.5)
     frames = int(dur * FPS)
-    vf = (f"scale={W}:{H}:force_original_aspect_ratio=decrease,"
-          f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:color={PAD},setsar=1,"
-          f"zoompan=z='min(zoom+0.0006,1.10)':d={frames}:s={W}x{H}:fps={FPS},format=yuv420p")
+    vf = (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+          f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color={PAD},setsar=1,"
+          f"zoompan=z='min(zoom+0.0006,1.10)':d={frames}:s={w}x{h}:fps={FPS},format=yuv420p")
     cmd = [_ffmpeg(), "-y", "-loop", "1", "-t", f"{dur}", "-i", str(path),
            "-f", "lavfi", "-t", f"{dur}", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
            "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-           "-c:a", "aac", "-ar", "44100", "-ac", "2", "-shortest", str(out)]
+           *_X264_LOWMEM, "-c:a", "aac", "-ar", "44100", "-ac", "2", "-shortest", str(out)]
     return out if _run(cmd) else None
 
 
@@ -97,12 +108,22 @@ def assemble(segments: List[Dict], music: Optional[str] = None,
     work = _images_dir() / f"_work_{uuid.uuid4().hex[:8]}"
     work.mkdir(parents=True, exist_ok=True)
     try:
+        # Tamaño por LOTE: si algún segmento no encodea a 1080p (RAM), se rehace
+        # TODO a 720p (mezclar resoluciones rompe el concat con -c copy).
         norm: List[Path] = []
-        for i, s in enumerate(segs):
-            p = _normalize(s, i, work)
-            if p:
+        for w, h in _SIZES:
+            norm = []
+            for i, s in enumerate(segs):
+                p = _normalize(s, i, work, w, h)
+                if not p:
+                    log.warning("assemble_size_failed", size=f"{w}x{h}", seg=i)
+                    norm = []
+                    break
                 norm.append(p)
+            if norm:
+                break
         if not norm:
+            log.warning("assemble_no_segments", tried=[f"{w}x{h}" for w, h in _SIZES])
             return None
         # concat por demuxer
         listfile = work / "list.txt"

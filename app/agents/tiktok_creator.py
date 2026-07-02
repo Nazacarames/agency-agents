@@ -226,6 +226,17 @@ class TikTokCreatorAgent(BaseAgent):
             tags = ["IA", "automatizacion", "inteligencia artificial", "pymes", "argentina",
                     "whatsapp", "negocios", "shorts"]
             res = yt.upload_video(str(video_path), title, desc, tags)
+            # Registrar en Publicaciones del panel (sin tocar el tope 1/día de IG/FB).
+            try:
+                from ..integrations import publish_queue as pq
+                pq.record_published(
+                    image=f"/media/{Path(str(video_path)).name}", caption=title,
+                    target="youtube",
+                    result={"ok": True, "id": res.get("id"), "permalink": res.get("url"),
+                            "privacy": res.get("privacy")},
+                    source="tiktok_creator")
+            except Exception as e:
+                log.warning("tiktok_publog_failed", error=str(e)[:200])
             block = (f"\n\n## 📺 Subido a YouTube ({res.get('privacy')})\n\n"
                      f"{res.get('url')}\n")
             return text.rstrip() + block

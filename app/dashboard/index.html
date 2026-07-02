@@ -671,7 +671,7 @@ const NAV = [
   {id:'finanzas', label:'Finanzas', sub:'Ingresos, gastos y ganancia. Tipos de cambio y facturación por cliente.'},
   {id:'clientes', label:'Clientes', sub:'Facturación, servicios, estado y memoria de cada cliente.'},
   {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound. Convertí a cliente.'},
-  {id:'publicaciones', label:'Publicaciones', sub:'Posts publicados en IG/FB, cola del día y resultados.'},
+  {id:'publicaciones', label:'Publicaciones', sub:'Posts en IG/FB + Shorts en YouTube/TikTok: publicados, cola del día y resultados.'},
   {id:'ads', label:'Ads', sub:'Campañas de ads por cliente: gasto, resultados y ROAS.'},
   {id:'growth', label:'Growth', sub:'Objetivos y tareas de crecimiento de la empresa.'},
   {id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
@@ -1078,13 +1078,16 @@ function postLinks(it){
   const r=it.result||{}; const out=[];
   if(r.facebook){ out.push(r.facebook.ok ? `<a href="${esc(r.facebook.permalink||('https://www.facebook.com/'+(r.facebook.id||'')))}" target="_blank" onclick="event.stopPropagation()" class="badge ok">Facebook ↗</a>` : `<span class="badge red" title="${esc(r.facebook.error||'')}">FB ✕</span>`); }
   if(r.instagram){ out.push(r.instagram.ok ? (r.instagram.permalink?`<a href="${esc(r.instagram.permalink)}" target="_blank" onclick="event.stopPropagation()" class="badge violet">Instagram ↗</a>`:`<span class="badge violet">Instagram ✓</span>`) : `<span class="badge red" title="${esc(r.instagram.error||'')}">IG ✕</span>`); }
+  if(r.youtube){ const priv=r.youtube.privacy==='private'?' (privado)':''; out.push(r.youtube.ok ? `<a href="${esc(r.youtube.permalink||'')}" target="_blank" onclick="event.stopPropagation()" class="badge red" style="background:rgba(248,113,113,.14)">▶ YouTube${priv} ↗</a>` : `<span class="badge red" title="${esc(r.youtube.error||'')}">YT ✕</span>`); }
+  if(r.tiktok){ const priv=r.tiktok.privacy==='SELF_ONLY'?' (privado)':''; out.push(r.tiktok.ok ? `<span class="badge grey" title="publish_id: ${esc(r.tiktok.id||'')}">🎵 TikTok${priv} ✓</span>` : `<span class="badge red" title="${esc(r.tiktok.error||'')}">TT ✕</span>`); }
   return out.join(' ');
 }
-// Mejor permalink del post (prioriza Instagram, luego Facebook) para abrir el post real.
+// Mejor permalink del post (prioriza Instagram, luego Facebook, luego YouTube).
 function postUrl(it){
   const r=(it&&it.result)||{};
   if(r.instagram && r.instagram.ok && r.instagram.permalink) return r.instagram.permalink;
   if(r.facebook && r.facebook.ok) return r.facebook.permalink || (r.facebook.id?('https://www.facebook.com/'+r.facebook.id):'');
+  if(r.youtube && r.youtube.ok && r.youtube.permalink) return r.youtube.permalink;
   return '';
 }
 function openPost(url){ if(url) window.open(url,'_blank','noopener'); }
@@ -1094,7 +1097,12 @@ function postCardAttrs(it){
   const u=postUrl(it);
   return u ? ` title="Abrir el post ↗" onclick="openPost('${esc(u)}')"` : '';
 }
-function pubThumb(src){ return `<img src="${esc(src)}" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line)"/>`; }
+function pubThumb(src){
+  const st='width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line)';
+  if(/\.(mp4|webm)(\?|#|$)/i.test(src||'')) return `<video src="${esc(src)}#t=0.5" muted playsinline preload="metadata" style="${st};background:#0D1426"></video>`;
+  if(!src) return `<div style="${st};background:#0D1426;display:flex;align-items:center;justify-content:center;font-size:26px">🎬</div>`;
+  return `<img src="${esc(src)}" loading="lazy" style="${st}"/>`;
+}
 async function loadPublicaciones(){
   el('pubKpis').innerHTML='<p class="muted">Cargando…</p>';
   try{
@@ -1102,14 +1110,17 @@ async function loadPublicaciones(){
     const items=q.items||[]; const done=items.filter(i=>i.status==='published'); const pend=items.filter(i=>i.status==='pending'); const fail=items.filter(i=>i.status==='failed');
     setNavCount('publicaciones', pend.length||null);
     const cfg=h&&h.publish; const cfgTxt = cfg ? (cfg.facebook&&cfg.instagram?'IG + FB conectados':cfg.facebook?'Solo Facebook':cfg.instagram?'Solo Instagram':'sin conectar') : '—';
+    const yt=h&&h.youtube; const ytBadge = yt&&yt.configured
+      ? `<span class="badge red" style="background:rgba(248,113,113,.14)">▶ YouTube ${yt.autoupload?('auto'+(yt.privacy==='private'?' · privado':'')):'conectado'}</span>` : '';
     el('pubBanner').innerHTML = cfg&&cfg.configured
-      ? `<div class="card" style="padding:12px 16px"><span class="badge ok"><span class="dot"></span>${esc(cfgTxt)}</span> <span class="muted" style="font-size:13px">· se publica 1 post por día automáticamente.</span></div>`
-      : `<div class="card" style="padding:12px 16px;border-color:rgba(248,113,113,.4)"><span class="badge red">Redes no conectadas</span> <span class="muted" style="font-size:13px">Faltan los tokens de Meta.</span></div>`;
+      ? `<div class="card" style="padding:12px 16px"><span class="badge ok"><span class="dot"></span>${esc(cfgTxt)}</span> ${ytBadge} <span class="muted" style="font-size:13px">· 1 post por día en IG/FB · Shorts lun/mié/vie 19h.</span></div>`
+      : `<div class="card" style="padding:12px 16px;border-color:rgba(248,113,113,.4)"><span class="badge red">Redes no conectadas</span> ${ytBadge} <span class="muted" style="font-size:13px">Faltan los tokens de Meta.</span></div>`;
     // próxima fecha
     const startOffset = (q.published_today>0)?1:0;
     const nextDate = pend.length ? (()=>{ const d=new Date(); d.setDate(d.getDate()+startOffset); return d.toLocaleDateString('es-AR',{day:'2-digit',month:'short'}); })() : '—';
+    const shorts=done.filter(i=>{const r=i.result||{};return r.youtube||r.tiktok;}).length;
     el('pubKpis').innerHTML =
-      kpiBig('Publicadas', done.length, 'en IG/FB', ICONS.publicaciones,'accent') +
+      kpiBig('Publicadas', done.length, shorts?('IG/FB + '+shorts+' short'+(shorts>1?'s':'')):'en IG/FB', ICONS.publicaciones,'accent') +
       kpiBig('En cola', pend.length, 'esperando turno', ICONS.publicaciones,'') +
       kpiBig('Próxima', nextDate, pend.length?'1 por día':'cola vacía', ICONS.agenda,'') +
       kpiBig('Fallidas', fail.length, fail.length?'revisar abajo':'todo ok', ICONS.publicaciones, fail.length?'':'');

@@ -1187,16 +1187,22 @@ async def api_system_health(request: Request):
     """Estado del sistema para el panel: DB, publicación IG/FB, imágenes, cola."""
     _verify_webhook_secret(request)
     from .integrations import social_publish as sp, image_gen, publish_queue as pq, db
+    from .integrations import youtube_client as yt
     try:
         dbh = db.healthcheck()
         db_ok = bool(dbh.get("ok")) if isinstance(dbh, dict) else bool(dbh)
     except Exception:
         db_ok = False
     qs = pq.summary()
+    s = get_settings()
     return {
         "db": db_ok,
         "publish": sp.status(),
         "images_enabled": image_gen.enabled(),
+        # sólo config local (sin llamar a la API de YouTube: esto es un healthcheck)
+        "youtube": {"configured": yt.enabled(),
+                    "autoupload": bool(s.youtube_autoupload),
+                    "privacy": s.youtube_privacy},
         "queue": {"pending": qs.get("pending", 0), "published_today": qs.get("published_today", 0)},
     }
 
@@ -1644,6 +1650,17 @@ async def api_tiktok_post_test(request: Request):
         res = await run_in_threadpool(tc.post_video_file_upload, vid, caption)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e)[:500])
+    # Registrar en la sección Publicaciones del panel.
+    try:
+        from .integrations import publish_queue as pq
+        pid = (res.get("data") or {}).get("publish_id")
+        pq.record_published(
+            image=video_url, caption=caption, target="tiktok",
+            result={"ok": True, "id": pid,
+                    "privacy": "SELF_ONLY" if s.tiktok_sandbox else "PUBLIC"},
+            source="api")
+    except Exception:
+        pass
     return {"ok": True, "creator_info": info.get("data"), "post": res.get("data")}
 
 
@@ -1842,6 +1859,49 @@ async def api_veo_status(request: Request):
             "gcsUri": q.get("gcsUri"), "error": q.get("error")}
 
 
+@app.post("/api/video/assemble")
+async def api_video_assemble(request: Request):
+    """Arma un short (ffmpeg) desde archivos del volume. Body: {clip: "/media/x.mp4",
+    proofs: ["/media/y.jpg"], proof_dur?, upload_youtube?, title?}.
+    Sirve para rearmar a mano un short cuya corrida falló."""
+    _verify_webhook_secret(request)
+    from .integrations import video_assembler as va
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    def _local(ref: str) -> Optional[str]:
+        if not ref:
+            return None
+        p = _data_dir() / "images" / Path(ref).name
+        return str(p) if p.exists() else None
+    clip = _local((body or {}).get("clip") or "")
+    if not clip:
+        raise HTTPException(status_code=400, detail="falta clip (usá /media/<file>.mp4 del volume)")
+    proofs = [p for p in (_local(x) for x in (body or {}).get("proofs") or []) if p]
+    dur = float((body or {}).get("proof_dur") or 5.0)
+    url = await run_in_threadpool(va.assemble_short, clip, proofs, dur)
+    if not url:
+        raise HTTPException(status_code=502, detail="ffmpeg no pudo armar el video (ver logs)")
+    out: Dict[str, Any] = {"ok": True, "url": url}
+    if (body or {}).get("upload_youtube"):
+        from .integrations import youtube_client as yt, publish_queue as pq
+        title = ((body or {}).get("title") or "Automiq · IA para tu negocio")[:90] + " #Shorts"
+        try:
+            res = await run_in_threadpool(
+                yt.upload_video, _local(url), title,
+                f"{title}\n\n#Shorts #IA #automatizacion #pymes #argentina",
+                ["IA", "automatizacion", "pymes", "argentina", "shorts"])
+            pq.record_published(image=url, caption=title, target="youtube",
+                                result={"ok": True, "id": res.get("id"),
+                                        "permalink": res.get("url"),
+                                        "privacy": res.get("privacy")}, source="api")
+            out["youtube"] = res
+        except Exception as e:
+            out["youtube_error"] = str(e)[:300]
+    return out
+
+
 # ── Páginas legales / compliance (auditoría YouTube Data API) ──
 
 @app.get("/privacy", response_class=HTMLResponse)
@@ -1919,6 +1979,16 @@ async def api_youtube_upload(request: Request):
             (body or {}).get("tags") or [], (body or {}).get("privacy"))
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e)[:400])
+    # Registrar en la sección Publicaciones del panel.
+    try:
+        from .integrations import publish_queue as pq
+        pq.record_published(
+            image=f"/media/{Path(path).name}", caption=title, target="youtube",
+            result={"ok": True, "id": res.get("id"), "permalink": res.get("url"),
+                    "privacy": res.get("privacy")},
+            source="api")
+    except Exception:
+        pass
     return {"ok": True, **res}
 
 
