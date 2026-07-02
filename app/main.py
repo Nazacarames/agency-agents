@@ -103,6 +103,18 @@ class BlockExternalRedirectsMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(BlockExternalRedirectsMiddleware)
 
+# CORS: solo para que la landing (automiq.agency / previews de Vercel) pueda
+# hablar con el agente demo público. El resto de la API usa el webhook secret.
+from starlette.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://automiq.agency", "https://www.automiq.agency"],
+    allow_origin_regex=r"https://automiq-landing-astro-[a-z0-9]+-nazacarames-projects\.vercel\.app",
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=["content-type"],
+)
+
 
 # ── Schemas ──
 
@@ -1181,6 +1193,76 @@ async def api_dashboard_stats(request: Request):
             "growth_open": len(growth_open),
         },
     }
+
+
+# ── Agente demo público de la landing ────────────────────────────────────────
+# Endpoint SIN secret (lo usa el widget de chat de automiq.agency). Protegido por
+# CORS + rate limit por IP + tope global diario. No toca datos internos.
+
+_DEMO_SYSTEM = (
+    "Sos el agente de demostración de Automiq (automiq.agency), una agencia argentina de "
+    "agentes de IA y automatización para PyMEs de 25-100 empleados (manufactureras, "
+    "distribuidoras, logísticas e inmobiliarias). El visitante te está PROBANDO para ver "
+    "cómo respondería un agente así en su propia empresa: demostrá con el ejemplo.\n"
+    "Servicios: agente de ventas por WhatsApp (califica leads 24/7, responde en <2 min), "
+    "agente de cobranza (recordatorios inteligentes, +30% de recuperación), dashboards en "
+    "tiempo real conectados al ERP, agente de atención al cliente, automatizaciones "
+    "n8n/Make a medida (+20 hs/semana liberadas). Modelo: diagnóstico GRATIS de 30 minutos "
+    "con 2-3 quick wins; trabajo mes a mes sin permanencia.\n"
+    "Reglas: respondé en español rioplatense, cálido y profesional, MÁXIMO 3-4 oraciones. "
+    "NUNCA inventes precios (decí que se definen tras el diagnóstico). Si preguntan algo "
+    "fuera de tema, contestá breve y traé la charla de vuelta a cómo la IA ayuda a su "
+    "empresa. Cuando haya interés real, ofrecé agendar el diagnóstico por WhatsApp "
+    "+54 9 11 2771 3231 o info@automiq.agency."
+)
+_demo_usage: Dict[str, Any] = {"day": "", "total": 0, "ips": {}}
+_DEMO_IP_LIMIT = 20
+_DEMO_GLOBAL_LIMIT = 400
+
+
+class DemoChatBody(BaseModel):
+    message: str
+    history: Optional[List[Dict[str, str]]] = None
+
+
+@app.post("/api/demo/chat")
+async def api_demo_chat(body: DemoChatBody, request: Request):
+    from datetime import datetime as _dt
+    msg = (body.message or "").strip()[:500]
+    if not msg:
+        raise HTTPException(status_code=400, detail="mensaje vacío")
+    # rate limit por día (in-memory: se resetea en cada deploy, suficiente para demo)
+    today = _dt.utcnow().strftime("%Y-%m-%d")
+    if _demo_usage["day"] != today:
+        _demo_usage.update({"day": today, "total": 0, "ips": {}})
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+    if _demo_usage["total"] >= _DEMO_GLOBAL_LIMIT:
+        raise HTTPException(status_code=429, detail="El agente demo alcanzó su límite diario. ¡Escribinos por WhatsApp!")
+    if _demo_usage["ips"].get(ip, 0) >= _DEMO_IP_LIMIT:
+        raise HTTPException(status_code=429, detail="Llegaste al límite de la demo por hoy. Agendá tu diagnóstico gratis 😉")
+    _demo_usage["total"] += 1
+    _demo_usage["ips"][ip] = _demo_usage["ips"].get(ip, 0) + 1
+
+    history = []
+    for h in (body.history or [])[-8:]:
+        role = "assistant" if h.get("role") == "assistant" else "user"
+        content = str(h.get("content", ""))[:500]
+        if content:
+            history.append({"role": role, "content": content})
+    history.append({"role": "user", "content": msg})
+
+    def _run() -> str:
+        from .clients.minimax import MiniMaxClient
+        with MiniMaxClient(get_settings()) as mc:
+            r = mc.complete(_DEMO_SYSTEM, history, max_tokens=350, temperature=0.7)
+            return (r.text or "").strip()
+
+    try:
+        reply = await run_in_threadpool(_run)
+    except Exception as e:
+        log.warning("demo_chat_failed", error=str(e)[:200])
+        raise HTTPException(status_code=503, detail="El agente está ocupado, probá en un ratito 🙏")
+    return {"ok": True, "reply": reply or "¿En qué te puedo ayudar con tu empresa?"}
 
 
 @app.get("/api/system/health")
