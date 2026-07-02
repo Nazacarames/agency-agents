@@ -60,6 +60,18 @@ def _json_save(store: Dict[str, Any]) -> None:
     os.replace(tmp, p)
 
 
+def _next_id(items: List[Dict[str, Any]]) -> int:
+    """ID incremental para el fallback JSON. max+1 (no len+1: tras un borrado,
+    len+1 colisiona con un ID vivo y update/delete pegan en el registro equivocado)."""
+    mx = 0
+    for it in items:
+        try:
+            mx = max(mx, int(it.get("id", 0)))
+        except (TypeError, ValueError):
+            continue
+    return mx + 1
+
+
 # ───────────────────────── company_memory (KB general) ─────────────────────────
 
 def upsert_company_memory(section: str, title: str, content: str,
@@ -82,7 +94,7 @@ def upsert_company_memory(section: str, title: str, content: str,
             m.update({"content": content, "source": source, "tags": tags, "updated_at": _now()})
             _json_save(store)
             return m
-    item = {"id": len(store["company_memory"]) + 1, "section": section, "title": title,
+    item = {"id": _next_id(store["company_memory"]), "section": section, "title": title,
             "content": content, "source": source, "tags": tags,
             "created_at": _now(), "updated_at": _now()}
     store["company_memory"].append(item)
@@ -165,7 +177,7 @@ def add_growth(sector: str, objective: str, metric: str = "", target: str = "",
             (sector or "general", objective, metric, target, status, notes))
         return {**row, "created_at": _iso(row["created_at"]), "updated_at": _iso(row["updated_at"])} if row else {}
     store = _json_load()
-    item = {"id": len(store["growth_objectives"]) + 1, "sector": sector or "general",
+    item = {"id": _next_id(store["growth_objectives"]), "sector": sector or "general",
             "objective": objective, "metric": metric, "target": target, "status": status,
             "notes": notes, "created_at": _now(), "updated_at": _now()}
     store["growth_objectives"].append(item)
@@ -216,7 +228,7 @@ def add_lesson(agent: str, lesson: str, kind: str = "feedback", weight: int = 1)
             (agent, kind, lesson, weight))
         return {**row, "created_at": _iso(row["created_at"])} if row else {}
     store = _json_load()
-    item = {"id": len(store["agent_lessons"]) + 1, "agent": agent, "kind": kind,
+    item = {"id": _next_id(store["agent_lessons"]), "agent": agent, "kind": kind,
             "lesson": lesson, "weight": weight, "active": True, "created_at": _now()}
     store["agent_lessons"].append(item)
     _json_save(store)

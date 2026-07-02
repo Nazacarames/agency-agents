@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,8 @@ import pytz
 
 MAX_ITEMS = 500          # historial total que se conserva
 MAX_PENDING = 30         # tope de cola pendiente (evita backlog infinito)
+# Serializa leer→modificar→guardar (agentes encolan mientras el job drena).
+_LOCK = threading.Lock()
 _TZ = pytz.timezone("America/Buenos_Aires")
 
 
@@ -88,9 +91,6 @@ def published_today_count(store: Optional[Dict[str, Any]] = None) -> int:
 def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
             source: str = "") -> Optional[Dict[str, Any]]:
     """Encola una pieza. Devuelve el item, o None si la cola pendiente está llena."""
-    store = load_store()
-    if pending_count(store) >= MAX_PENDING:
-        return None
     item = {
         "id": uuid.uuid4().hex[:12],
         "image": image,
@@ -103,9 +103,13 @@ def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
         "result": None,
         "error": None,
     }
-    store["items"].insert(0, item)
-    store["items"] = store["items"][:MAX_ITEMS]
-    save_store(store)
+    with _LOCK:
+        store = load_store()
+        if pending_count(store) >= MAX_PENDING:
+            return None
+        store["items"].insert(0, item)
+        store["items"] = store["items"][:MAX_ITEMS]
+        save_store(store)
     return item
 
 
@@ -149,18 +153,19 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
         return {"ok": False, "error": "publicación a redes no configurada"}
     res = sp.publish(item["image"], item.get("caption", ""), item.get("targets"))
     # releer el store por si cambió mientras publicábamos
-    store = load_store()
-    for it in store["items"]:
-        if it["id"] == item["id"]:
-            if res.get("ok"):
-                it["status"] = "published"
-                it["published_at"] = _now()
-                it["result"] = res.get("results")
-            else:
-                it["status"] = "failed"
-                it["error"] = json.dumps(res.get("results") or res, ensure_ascii=False)[:500]
-            break
-    save_store(store)
+    with _LOCK:
+        store = load_store()
+        for it in store["items"]:
+            if it["id"] == item["id"]:
+                if res.get("ok"):
+                    it["status"] = "published"
+                    it["published_at"] = _now()
+                    it["result"] = res.get("results")
+                else:
+                    it["status"] = "failed"
+                    it["error"] = json.dumps(res.get("results") or res, ensure_ascii=False)[:500]
+                break
+        save_store(store)
     log.info("publish_queue_drained", id=item["id"], ok=res.get("ok"), source=item.get("source"))
     _notify_discord(item, res)
     return {"ok": res.get("ok"), "item": item["id"], "results": res.get("results")}
@@ -179,7 +184,7 @@ def backfill_permalinks() -> Dict[str, Any]:
         return {"ok": False, "error": "sin meta_page_token", "updated": 0}
     store = load_store()
     updated = 0
-    graph = "https://graph.facebook.com/v21.0"
+    graph = f"https://graph.facebook.com/{s.meta_graph_version or 'v21.0'}"
     with httpx.Client(timeout=15) as c:
         for it in store.get("items", []):
             res = it.get("result")
@@ -235,11 +240,12 @@ def _notify_discord(item: Dict[str, Any], res: Dict[str, Any]) -> None:
 
 
 def delete_item(item_id: str) -> bool:
-    store = load_store()
-    before = len(store["items"])
-    store["items"] = [it for it in store["items"] if it.get("id") != item_id]
-    save_store(store)
-    return len(store["items"]) < before
+    with _LOCK:
+        store = load_store()
+        before = len(store["items"])
+        store["items"] = [it for it in store["items"] if it.get("id") != item_id]
+        save_store(store)
+        return len(store["items"]) < before
 
 
 def summary() -> Dict[str, Any]:

@@ -151,6 +151,7 @@ def run_claude_code(
     timeout: int = 600,
     cwd: Optional[str] = None,
     extra_env: Optional[dict] = None,
+    mcp_servers: Optional[dict] = None,
 ) -> str:
     """Corre `claude -p <prompt>` headless con backend MiniMax y devuelve el texto final.
 
@@ -160,6 +161,8 @@ def run_claude_code(
     `cwd`: si se pasa, Claude Code corre EN ese directorio (en vez de un temp aislado)
     → permite que un agente edite un repo/proyecto ya clonado en disco (web_optimizer).
     `extra_env`: variables extra para el subproceso (p.ej. tokens de deploy).
+    `mcp_servers`: dict estilo {"adspirer": {"type": "http", "url": ..., "headers": ...}}
+    → se pasa vía --mcp-config; el caller debe permitir sus tools (`mcp__<nombre>`).
     """
     if not claude_available():
         raise ClaudeCodeError("CLI `claude` no encontrado en PATH")
@@ -198,6 +201,11 @@ def run_claude_code(
 
     # Directorio de I/O (siempre temporal) para los .bin de stdout/stderr.
     io_dir = tempfile.mkdtemp(prefix="cc_io_")
+    if mcp_servers:
+        mcp_path = os.path.join(io_dir, "_mcp.json")
+        with open(mcp_path, "w", encoding="utf-8") as f:
+            json.dump({"mcpServers": mcp_servers}, f)
+        cmd += ["--mcp-config", mcp_path]
     # Directorio de ejecución: si el caller pasó `cwd`, corremos AHÍ (repo/proyecto
     # real a editar); si no, un temp aislado por run (comportamiento default).
     own_workdir = cwd is None

@@ -93,10 +93,10 @@ class BlockExternalRedirectsMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         if response.status_code in (301, 302, 307, 308):
             loc = response.headers.get("location")
-            if loc and not (loc.startswith("https://automiq-agents.onrender.co")
-                            or loc.startswith("https://automiq-agents.onrender.com")
-                            or loc.startswith("https://www.tiktok.com/")  # OAuth de TikTok (Login Kit)
-                            or loc.startswith("/")):
+            own_base = (get_settings().public_base_url or "").rstrip("/")
+            if loc and not (loc.startswith("/")
+                            or (own_base and loc.startswith(own_base))
+                            or loc.startswith("https://www.tiktok.com/")):  # OAuth de TikTok (Login Kit)
                 log.warning("blocked_external_redirect", location=loc, path=request.url.path)
                 return JSONResponse({"error": "blocked external redirect", "location": loc}, status_code=502)
         return response
@@ -292,14 +292,8 @@ async def _run_pack_agent(name: str, args: Dict[str, Any], run_id: Optional[str]
 async def lead_webhook(payload: LeadWebhookPayload, request: Request,
                        background: BackgroundTasks):
     _verify_webhook_secret(request)
-    container = get_container()
     log.info("lead_received", name=payload.name, email=payload.email,
              company=payload.company, source=payload.source)
-    if container.discord:
-        try:
-            container.discord.send("", embed=None)
-        except Exception:
-            pass
     run_id = str(uuid.uuid4())
     enrichment_args = {
         "vertical": payload.extra.get("vertical", "general") if payload.extra else "general",
@@ -902,7 +896,8 @@ async def api_add_growth(body: GrowthBody, request: Request):
 async def api_update_growth(obj_id: str, body: GrowthBody, request: Request):
     _verify_webhook_secret(request)
     from .integrations import memory_store as ms
-    o = ms.update_growth(obj_id, body.model_dump())
+    # exclude_unset: un update parcial NO debe pisar sector/status/notes con defaults.
+    o = ms.update_growth(obj_id, body.model_dump(exclude_unset=True))
     if not o:
         raise HTTPException(status_code=404, detail="objetivo no encontrado")
     return {"ok": True, "objective": o}
@@ -1077,7 +1072,9 @@ async def api_finance_add(body: ExpenseBody, request: Request):
 async def api_finance_update(expense_id: str, body: ExpenseBody, request: Request):
     _verify_webhook_secret(request)
     from .integrations import finance_store as fs
-    e = fs.update_expense(expense_id, body.model_dump())
+    # exclude_unset: un update parcial NO debe resetear amount/currency/category
+    # a los defaults del modelo.
+    e = fs.update_expense(expense_id, body.model_dump(exclude_unset=True))
     if not e:
         raise HTTPException(status_code=404, detail="gasto no encontrado")
     return {"ok": True, "expense": e}
@@ -1810,7 +1807,8 @@ async def api_veo_test(request: Request):
     _verify_webhook_secret(request)
     from .integrations import veo_video as veo
     if not veo.enabled():
-        raise HTTPException(status_code=400, detail="Veo no configurado (sin GOOGLE_API_KEY)")
+        raise HTTPException(status_code=400,
+                            detail="Veo no configurado (falta GOOGLE_SERVICE_ACCOUNT_JSON / credencial de Vertex)")
     try:
         body = await request.json()
     except Exception:
@@ -1889,14 +1887,32 @@ async def api_youtube_upload(request: Request):
     if not title:
         raise HTTPException(status_code=400, detail="falta title")
     fileref = (body or {}).get("file") or ""
+    url = (body or {}).get("url") or ""
     path = None
     if fileref:
         name = Path(fileref).name
         p = _data_dir() / "images" / name
         if p.exists():
             path = str(p)
+    if not path and url:
+        # descargar el mp4 al volume y subir desde ahí
+        import httpx
+        try:
+            def _download() -> str:
+                with httpx.Client(timeout=180, follow_redirects=True) as c:
+                    r = c.get(url)
+                    r.raise_for_status()
+                d = _data_dir() / "images"
+                d.mkdir(parents=True, exist_ok=True)
+                p2 = d / f"yt_{uuid.uuid4().hex}.mp4"
+                p2.write_bytes(r.content)
+                return str(p2)
+            path = await run_in_threadpool(_download)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"no pude descargar el video: {str(e)[:200]}")
     if not path:
-        raise HTTPException(status_code=400, detail="archivo no encontrado (usá /media/<file>.mp4 del volume)")
+        raise HTTPException(status_code=400,
+                            detail="archivo no encontrado (usá file=/media/<file>.mp4 del volume, o url=)")
     try:
         res = await run_in_threadpool(
             yt.upload_video, path, title, (body or {}).get("description") or "",

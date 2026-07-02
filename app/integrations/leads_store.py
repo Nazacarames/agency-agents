@@ -24,13 +24,19 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date, datetime, timedelta
+import threading
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..log import get_logger
 
 log = get_logger("leads_store")
+
+# Serializa las mutaciones cortas (update/delete desde el panel). Los flujos largos
+# (outbound/inbox sostienen el store durante toda la corrida) no se pueden envolver
+# acá; su ventana de carrera se asume (tráfico bajo, 1 worker).
+_LOCK = threading.Lock()
 
 _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 _STORE_FILE = _DATA_DIR / "leads-store.json"
@@ -121,7 +127,7 @@ def load_store() -> Dict[str, Any]:
 def save_store(store: Dict[str, Any]) -> None:
     try:
         _DATA_DIR.mkdir(exist_ok=True)
-        store["updated_at"] = datetime.utcnow().isoformat()
+        store["updated_at"] = datetime.now(timezone.utc).isoformat()
         # Escritura atómica: tmp + replace (evita store corrupto si el proceso muere).
         tmp = _STORE_FILE.with_suffix(".json.tmp")
         tmp.write_text(json.dumps(store, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -232,16 +238,18 @@ def record_touch(
     channel: str = "email",
     msg_id: str = "",
     subject: str = "",
+    thread_id: str = "",
     today: Optional[str] = None,
 ) -> None:
-    """Registra un toque enviado y AVANZA la secuencia (agenda el siguiente, o la cierra)."""
+    """Registra un toque enviado y AVANZA la secuencia (agenda el siguiente, o la cierra).
+    `thread_id`: hilo de Gmail del toque — los follow-ups se mandan DENTRO de ese hilo."""
     today = _today_str(today)
     lead = store.get("leads", {}).get(key)
     if not lead:
         return
     lead.setdefault("touches", []).append({
         "step": step, "date": today, "channel": channel,
-        "msg_id": msg_id, "subject": subject,
+        "msg_id": msg_id, "subject": subject, "thread_id": thread_id,
     })
     nxt = step + 1
     lead["next_step"] = nxt
@@ -259,7 +267,7 @@ def mark_replied(
 ) -> Optional[Dict[str, Any]]:
     """Marca al lead (por email o teléfono) como que RESPONDIÓ → frena la secuencia.
     Devuelve el lead (caliente) o None si el remitente no era un lead nuestro."""
-    when = when or datetime.utcnow().isoformat()
+    when = when or datetime.now(timezone.utc).isoformat()
     e = normalize_email(email)
     p = normalize_phone(phone)
     leads = store.get("leads", {})
@@ -378,25 +386,27 @@ def reset_store() -> Dict[str, Any]:
 
 
 def delete_lead(key: str) -> bool:
-    store = load_store()
-    leads = store.get("leads", {})
-    if key in leads:
-        del leads[key]
-        save_store(store)
-        return True
+    with _LOCK:
+        store = load_store()
+        leads = store.get("leads", {})
+        if key in leads:
+            del leads[key]
+            save_store(store)
+            return True
     return False
 
 
 def update_lead(key: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    store = load_store()
-    lead = store.get("leads", {}).get(key)
-    if not lead:
-        return None
-    for k in ("company", "email", "phone", "channel", "state", "next_step"):
-        if k in fields and fields[k] is not None:
-            lead[k] = fields[k]
-    save_store(store)
-    return lead_view(lead)
+    with _LOCK:
+        store = load_store()
+        lead = store.get("leads", {}).get(key)
+        if not lead:
+            return None
+        for k in ("company", "email", "phone", "channel", "state", "next_step"):
+            if k in fields and fields[k] is not None:
+                lead[k] = fields[k]
+        save_store(store)
+        return lead_view(lead)
 
 
 def lead_view(lead: Dict[str, Any]) -> Dict[str, Any]:

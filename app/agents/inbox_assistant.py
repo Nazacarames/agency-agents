@@ -24,6 +24,7 @@ from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 from ..integrations.gmail_client import get_gmail_client, GmailError
 from ..integrations.calendar_client import get_calendar_client, CalendarError
+from ..integrations import inbox_state
 from ..integrations import leads_store as ls
 from ..integrations import meetings_store as ms
 from ..log import get_logger
@@ -159,7 +160,11 @@ class InboxAssistantAgent(BaseAgent):
         max_threads = int(ctx.args.get("max_threads", ctx.settings.inbox_max_threads)) if isinstance(ctx.args, dict) else ctx.settings.inbox_max_threads
         try:
             client = get_gmail_client(ctx.settings)
-            threads = client.list_unread_threads(max_threads=max_threads)
+            # LEÍDOS O NO: si el operador abre un mail en el teléfono, el hilo deja de
+            # estar unread pero la respuesta sigue sin atender. El dedup de "ya lo
+            # procesé" lo lleva inbox_state, no el estado de lectura de Gmail.
+            all_threads = client.list_recent_threads(max_threads=max_threads * 3)
+            own_email = client.profile_email()
         except GmailError as e:
             ctx.args["_inbox_status"] = "gmail_error"
             ctx.args["_inbox_error"] = str(e)
@@ -167,6 +172,21 @@ class InboxAssistantAgent(BaseAgent):
                 f"No pude leer la bandeja (error de Gmail: {e}). Respondé EXACTAMENTE: "
                 f"'⚠️ Inbox Assistant: error de acceso a Gmail — {e}'"
             )
+
+        threads = []
+        for th in all_threads:
+            last = th.last_message
+            # Guard determinístico anti-doble-respuesta: si el último mensaje del hilo
+            # es NUESTRO (ya respondimos, o lo mandamos nosotros), no hay nada que
+            # atender. Antes esto dependía de que el LLM "se diera cuenta".
+            if own_email and (last.sender_email or "").lower() == own_email:
+                inbox_state.mark_processed(th.thread_id, last.msg_id, action="own_last")
+                continue
+            # Ya atendido en una corrida previa y sin mensajes nuevos → skip.
+            if inbox_state.already_processed(th.thread_id, last.msg_id):
+                continue
+            threads.append(th)
+        threads = threads[:max_threads]
 
         # Guardar lookup determinístico por thread para post_process (to/subject confiables)
         lookup: Dict[str, Dict[str, Any]] = {}
@@ -190,17 +210,22 @@ class InboxAssistantAgent(BaseAgent):
         # ── Cierre del loop de ventas: ¿alguno que respondió es un lead nuestro? ──
         # Si el remitente matchea un lead en seguimiento, lo marcamos "respondió"
         # (frena la secuencia de outbound) y lo levantamos como LEAD CALIENTE.
+        # Sólo entra al aviso 🔥 si su estado CAMBIÓ en esta corrida (si ya estaba
+        # "respondió" no se re-alerta cada 3 horas).
         hot: List[Dict[str, Any]] = []
+        _quiet_states = ("respondió", "reunión", "propuesta", "cerrado")
         try:
             store = ls.load_store()
             seen_keys = set()
             for th in threads:
                 emails = {th.last_from_email, *(th.participants or [])}
                 for em in emails:
-                    if not em:
+                    if not em or (own_email and em.lower() == own_email):
                         continue
+                    prev = next((l.get("state") for l in store.get("leads", {}).values()
+                                 if ls.normalize_email(l.get("email", "")) == ls.normalize_email(em)), None)
                     lead = ls.mark_replied(store, email=em)
-                    if lead and lead.get("key") not in seen_keys:
+                    if lead and lead.get("key") not in seen_keys and prev not in _quiet_states:
                         seen_keys.add(lead.get("key"))
                         hot.append({
                             "company": lead.get("company", "?"),
@@ -223,12 +248,12 @@ class InboxAssistantAgent(BaseAgent):
         if not threads:
             ctx.args["_inbox_status"] = "empty"
             return (
-                "No hay hilos no leídos en la bandeja en este momento. Respondé EXACTAMENTE: "
-                "'📭 Bandeja al día — sin emails no leídos para responder.'"
+                "No hay hilos nuevos por atender en la bandeja en este momento. Respondé EXACTAMENTE: "
+                "'📭 Bandeja al día — sin emails nuevos para responder.'"
             )
 
         header = (
-            f"Tenés {len(threads)} hilo(s) de email NO leídos en la bandeja de Automiq. "
+            f"Tenés {len(threads)} hilo(s) de email con mensajes NUEVOS en la bandeja de Automiq. "
             "Por cada hilo decidí si corresponde responder y, si sí, redactá la respuesta "
             "lista para enviar, SIEMPRE empujando a agendar una reunión. "
             "Devolvé el array JSON especificado (un objeto por hilo, mismo orden)."
@@ -347,6 +372,8 @@ class InboxAssistantAgent(BaseAgent):
 
             if not should or not reply:
                 skipped.append(f"• **{subj}** → no responder ({reason or 's/d'})")
+                if meta:
+                    inbox_state.mark_processed(tid, meta.get("last_msg_id", ""), action="skipped")
                 continue
             if not meta:
                 errors.append(f"• thread_id desconocido `{tid}` — {verb} NO creada")
@@ -380,6 +407,7 @@ class InboxAssistantAgent(BaseAgent):
                         in_reply_to_msg_id=meta.get("last_msg_id"),
                     )
                     created.append(f"• **{subj}** → 📝 borrador `{draft_id}` para {to}")
+                    inbox_state.mark_processed(tid, meta.get("last_msg_id", ""), action="draft")
                 except Exception as e:
                     log.error("inbox_draft_failed", thread_id=tid, error=str(e))
                     errors.append(f"• **{subj}** → ❌ falló crear borrador: {e}")
@@ -390,6 +418,7 @@ class InboxAssistantAgent(BaseAgent):
                     from_name=ctx.settings.outbound_from_name,
                 )
                 created.append(f"• **{subj}** → ✅ respondido a {to} (`{msg_id[:10]}`)")
+                inbox_state.mark_processed(tid, meta.get("last_msg_id", ""), action="replied")
             except Exception as e:
                 log.error("inbox_send_failed", thread_id=tid, error=str(e))
                 errors.append(f"• **{subj}** → ❌ falló enviar: {e}")
@@ -401,7 +430,7 @@ class InboxAssistantAgent(BaseAgent):
         hot = ctx.args.get("_inbox_hot", []) if isinstance(ctx.args, dict) else []
         booked = ctx.args.get("_inbox_booked", []) if isinstance(ctx.args, dict) else []
         parts = [
-            f"# 📬 Inbox Assistant — {ctx.args.get('_inbox_count', 0)} hilo(s) no leídos",
+            f"# 📬 Inbox Assistant — {ctx.args.get('_inbox_count', 0)} hilo(s) con mensajes nuevos",
             "",
         ]
         if booked:

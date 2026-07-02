@@ -9,8 +9,11 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from pathlib import Path
 from typing import Any, Dict
+
+_LOCK = threading.Lock()  # serializa leer→modificar→guardar
 
 # Defaults aproximados (el usuario los ajusta en el panel). 1 unidad = X USD.
 DEFAULT_RATES: Dict[str, float] = {
@@ -67,23 +70,25 @@ def set_rate(currency: str, usd_rate: float) -> Dict[str, float]:
     cur = (currency or "").upper().strip()
     if not cur:
         return get_rates()
-    rates = get_rates()
-    try:
-        rates[cur] = float(usd_rate)
-    except (TypeError, ValueError):
-        return rates
-    _save(rates)
+    with _LOCK:
+        rates = get_rates()
+        try:
+            rates[cur] = float(usd_rate)
+        except (TypeError, ValueError):
+            return rates
+        _save(rates)
     return rates
 
 
 def set_rates(updates: Dict[str, Any]) -> Dict[str, float]:
-    rates = get_rates()
-    for k, v in (updates or {}).items():
-        try:
-            rates[str(k).upper().strip()] = float(v)
-        except (TypeError, ValueError):
-            continue
-    _save(rates)
+    with _LOCK:
+        rates = get_rates()
+        for k, v in (updates or {}).items():
+            try:
+                rates[str(k).upper().strip()] = float(v)
+            except (TypeError, ValueError):
+                continue
+        _save(rates)
     return rates
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,8 @@ import pytz
 CATEGORIES = ["sueldos", "herramientas", "infra", "ads", "impuestos", "otros"]
 MAX_ITEMS = 2000
 _TZ = pytz.timezone("America/Buenos_Aires")
+# Serializa las mutaciones leer→modificar→guardar (endpoints + scheduler comparten proceso).
+_LOCK = threading.Lock()
 
 
 def _data_dir() -> Path:
@@ -66,7 +69,6 @@ def save_store(store: Dict[str, Any]) -> None:
 
 def add_expense(category: str, label: str, amount: Any, currency: str = "USD",
                 date: str = "", recurring: bool = False) -> Dict[str, Any]:
-    store = load_store()
     cat = (category or "otros").lower().strip()
     if cat not in CATEGORIES:
         cat = "otros"
@@ -84,9 +86,11 @@ def add_expense(category: str, label: str, amount: Any, currency: str = "USD",
         "recurring": bool(recurring),
         "created_at": _now(),
     }
-    store["expenses"].insert(0, item)
-    store["expenses"] = store["expenses"][:MAX_ITEMS]
-    save_store(store)
+    with _LOCK:
+        store = load_store()
+        store["expenses"].insert(0, item)
+        store["expenses"] = store["expenses"][:MAX_ITEMS]
+        save_store(store)
     return item
 
 
@@ -97,32 +101,36 @@ def list_expenses(limit: int = 500) -> List[Dict[str, Any]]:
 
 
 def delete_expense(expense_id: str) -> bool:
-    store = load_store()
-    before = len(store["expenses"])
-    store["expenses"] = [e for e in store["expenses"] if e.get("id") != expense_id]
-    save_store(store)
-    return len(store["expenses"]) < before
+    with _LOCK:
+        store = load_store()
+        before = len(store["expenses"])
+        store["expenses"] = [e for e in store["expenses"] if e.get("id") != expense_id]
+        save_store(store)
+        return len(store["expenses"]) < before
 
 
 def update_expense(expense_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    store = load_store()
-    for e in store["expenses"]:
-        if e.get("id") == expense_id:
-            if data.get("category") in CATEGORIES:
-                e["category"] = data["category"]
-            if data.get("label") is not None:
-                e["label"] = str(data["label"]).strip() or e["label"]
-            if data.get("amount") not in (None, ""):
-                try:
-                    e["amount"] = float(data["amount"])
-                except (TypeError, ValueError):
-                    pass
-            if data.get("currency"):
-                e["currency"] = str(data["currency"]).upper().strip()
-            if data.get("date"):
-                e["date"] = str(data["date"])[:10]
-            save_store(store)
-            return e
+    with _LOCK:
+        store = load_store()
+        for e in store["expenses"]:
+            if e.get("id") == expense_id:
+                if data.get("category") in CATEGORIES:
+                    e["category"] = data["category"]
+                if data.get("label") is not None:
+                    e["label"] = str(data["label"]).strip() or e["label"]
+                if data.get("amount") not in (None, ""):
+                    try:
+                        e["amount"] = float(data["amount"])
+                    except (TypeError, ValueError):
+                        pass
+                if data.get("currency"):
+                    e["currency"] = str(data["currency"]).upper().strip()
+                if data.get("date"):
+                    e["date"] = str(data["date"])[:10]
+                if "recurring" in data and data["recurring"] is not None:
+                    e["recurring"] = bool(data["recurring"])
+                save_store(store)
+                return e
     return None
 
 

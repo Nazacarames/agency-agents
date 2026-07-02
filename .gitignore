@@ -26,11 +26,17 @@ data/*.txt
 data/samples/
 data/prompts/
 
-# Secretos OAuth de Gmail (Inbox Assistant) — NUNCA commitear
+# Secretos OAuth de Google (Gmail / YouTube) — NUNCA commitear
 scripts/client_secret.json
 scripts/gmail_token.json
+scripts/youtube_token.json
 **/client_secret*.json
 **/gmail_token*.json
+**/youtube_token*.json
+
+# Tokens y estado OAuth de TikTok — NUNCA commitear
+data/tiktok-token.json
+data/tiktok-oauth-state.json
 
 # Webhooks de Discord (URLs = secreto del canal) — NUNCA commitear
 scripts/_discord_*.json
@@ -49,7 +55,17 @@ data/agency-memory.json
 data/meetings-store.json
 data/missions-store.json
 data/tasks-store.json
+data/finance-store.json
+data/fx-store.json
+data/metrics-store.json
+data/publish-queue.json
+data/ads-store.json
+data/inbox-processed.json
+data/*.json.tmp
 data/images/
+
+# Scratch local (logs bajados de Railway, etc.)
+_lg.json
 
 # Editor
 .vscode/

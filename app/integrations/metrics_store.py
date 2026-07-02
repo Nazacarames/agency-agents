@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
@@ -16,6 +17,7 @@ from typing import Any, Dict, List
 import pytz
 
 MAX_POINTS = 400  # ~13 meses de snapshots diarios
+_LOCK = threading.Lock()  # serializa leer→modificar→guardar (job diario + lecturas del panel)
 _TZ = pytz.timezone("America/Buenos_Aires")
 
 
@@ -79,13 +81,14 @@ def _compute_today() -> Dict[str, Any]:
 
 def snapshot(force: bool = False) -> Dict[str, Any]:
     """Guarda (o refresca) el snapshot de hoy y lo devuelve."""
-    store = load_store()
     pt = _compute_today()
-    points = [p for p in store["points"] if p.get("date") != pt["date"]]
-    points.append(pt)
-    points.sort(key=lambda p: p.get("date", ""))
-    store["points"] = points[-MAX_POINTS:]
-    save_store(store)
+    with _LOCK:
+        store = load_store()
+        points = [p for p in store["points"] if p.get("date") != pt["date"]]
+        points.append(pt)
+        points.sort(key=lambda p: p.get("date", ""))
+        store["points"] = points[-MAX_POINTS:]
+        save_store(store)
     return pt
 
 

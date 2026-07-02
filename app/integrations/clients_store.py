@@ -34,8 +34,11 @@ _COLS = ["id", "name", "vertical", "country", "contact_name", "contact_phone",
          "created_at", "updated_at"]
 
 # Estado de la RELACIÓN comercial / facturación (distinto del `stage` del funnel).
+# Default "onboarding": un registro nuevo suele ser un PROSPECTO, no un cliente
+# facturando. "activo" se setea a mano cuando empieza a pagar (si no, los prospectos
+# inflaban `active_count`/ARPU y el auto-archive nunca los tocaba).
 BILLING_STATUSES = ["activo", "onboarding", "pausado", "baja"]
-DEFAULT_BILLING_STATUS = "activo"
+DEFAULT_BILLING_STATUS = "onboarding"
 
 
 # ───────────────────────── helpers ─────────────────────────
@@ -313,7 +316,8 @@ def summary_counts() -> Dict[str, int]:
     counts = {s: 0 for s in STAGES}
     if db.enabled():
         for r in db.fetchall("SELECT stage, count(*) AS n FROM clients GROUP BY stage"):
-            counts[r["stage"]] = r["n"]
+            # stages legacy fuera de STAGES no deben tirar KeyError → 500 en /api/clients
+            counts[r.get("stage") or "?"] = r["n"]
         total = db.fetchone("SELECT count(*) AS n FROM clients")
         counts["total"] = total["n"] if total else 0
         return counts
@@ -334,7 +338,10 @@ def _start_month(c: Dict[str, Any]) -> str:
 
 
 def active_count() -> int:
-    return sum(1 for c in list_clients() if c.get("status") == "activo")
+    """Clientes FACTURANDO: status activo Y fee cargado (un prospecto con status
+    'activo' heredado y fee 0 no es un cliente activo del panel)."""
+    return sum(1 for c in list_clients()
+               if c.get("status") == "activo" and _num(c.get("monthly_fee")) > 0)
 
 
 def mrr_usd() -> float:
@@ -387,7 +394,9 @@ def auto_archive(days: int = 10) -> Dict[str, Any]:
     for c in list_clients():
         if c.get("stage") in ("cliente", "descartado"):
             continue
-        if c.get("status") == "activo":
+        # Sólo protege a los que FACTURAN. Antes se salteaba a todo status "activo",
+        # y como ese era el default de cualquier prospecto, el job no archivaba nada.
+        if c.get("status") == "activo" and _num(c.get("monthly_fee")) > 0:
             continue
         ts = c.get("updated_at") or c.get("created_at") or ""
         try:

@@ -141,8 +141,10 @@ def _latest_leadhunter_report() -> str:
 
 class OutboundAgent(BaseAgent):
     name = "outbound"
-    description = "Secuencia de cold-email automático a los leads (día 0/+2/+5/+9, dedup, tope)"
-    schedule = "0 12 * * *"
+    description = "Secuencia de cold-email automático a los leads (día 0/+2/+4/+7, dedup, tope)"
+    # Sólo días hábiles: un cold-email B2B un sábado/domingo rinde peor y huele a bot
+    # (se estaban mandando 19-20 mails también los fines de semana).
+    schedule = "0 12 * * mon-fri"
     timezone = "America/Buenos_Aires"
     max_tokens = 8000
     temperature = 0.6
@@ -276,10 +278,21 @@ class OutboundAgent(BaseAgent):
                 preview.append(f"• **{company}** <{email}> — _{label}_: {subject}")
                 continue
             try:
+                # Follow-ups (step>0) van DENTRO del hilo del primer toque: el prospecto
+                # ve la conversación completa (y no un "Re:" suelto que parece spam).
+                thread_id = ""
+                if step > 0 and lead.get("touches"):
+                    last_touch = lead["touches"][-1]
+                    thread_id = last_touch.get("thread_id") or ""
+                    if not thread_id and last_touch.get("msg_id"):
+                        thread_id = client.thread_id_of(last_touch["msg_id"])
                 mid = client.send_message(to=email, subject=subject, body=body,
-                                          from_name=ctx.settings.outbound_from_name)
+                                          from_name=ctx.settings.outbound_from_name,
+                                          thread_id=thread_id or None)
+                if not thread_id:
+                    thread_id = client.thread_id_of(mid)
                 ls.record_touch(store, key, step=step, channel="email",
-                                msg_id=mid, subject=subject, today=today)
+                                msg_id=mid, subject=subject, thread_id=thread_id, today=today)
                 sent_map[email] = {"company": company, "date": today, "subject": subject,
                                    "step": step, "msg_id": mid, "run_id": ctx.run_id}
                 sent.append(f"• **{company}** <{email}> → ✅ {label} enviado (`{mid[:10]}`)")

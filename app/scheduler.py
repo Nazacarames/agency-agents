@@ -38,7 +38,7 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
     "leadhunter": "0 8 * * *",            # 08:00 — prospección (10 leads), ancla del pipeline
     "inbox_assistant": "0 9 * * *",       # 09:00 — lee bandeja, redacta borradores (liviano)
     "web_auditor": "0 10 * * *",          # 10:00 — audita prospecto → dolores
-    "outbound": "0 12 * * *",             # 12:00 — cold-email usando los dolores
+    "outbound": "0 12 * * mon-fri",       # 12:00 hábiles — cold-email (finde no: rinde peor)
     "creative_strategist": "0 13 * * *",  # 13:00 — ads usando los dolores
     "content_creator": "0 14 * * *",      # 14:00 — contenido
     "tiktok_creator": "0 19 * * mon,wed,fri",  # lun/mié/vie 19:00 — guiones TikTok (Nazareno)

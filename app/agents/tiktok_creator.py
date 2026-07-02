@@ -21,6 +21,9 @@ from pathlib import Path
 
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block, official_site_directive
+from ..log import get_logger
+
+log = get_logger("tiktok_creator")
 
 
 # Fotos canónicas de Nazareno (en /media). Se pasan como REFERENCE IMAGES a Veo 3.1
@@ -202,7 +205,8 @@ class TikTokCreatorAgent(BaseAgent):
             text = text.rstrip() + block
             text = self._maybe_upload_youtube(text, self._media_to_path(url))
             return text
-        except Exception:
+        except Exception as e:
+            log.warning("tiktok_assemble_failed", error=str(e)[:300])
             return text
 
     def _maybe_upload_youtube(self, text: str, video_path) -> str:
@@ -225,7 +229,8 @@ class TikTokCreatorAgent(BaseAgent):
             block = (f"\n\n## 📺 Subido a YouTube ({res.get('privacy')})\n\n"
                      f"{res.get('url')}\n")
             return text.rstrip() + block
-        except Exception:
+        except Exception as e:
+            log.warning("tiktok_youtube_upload_failed", error=str(e)[:300])
             return text
 
     # ── Clip de Nazareno con Veo 3.1 Fast ──
@@ -262,7 +267,8 @@ class TikTokCreatorAgent(BaseAgent):
             block = (f"\n\n---\n\n## 🎥 Clip de Nazareno (Veo 3.1 Fast)\n\n"
                      f"Frase: *\"{frase}\"*\n\n`/media/{fname}` — clip 9:16 listo para el hook/cierre.\n")
             return text.rstrip() + block, str(fpath)
-        except Exception:
+        except Exception as e:
+            log.warning("tiktok_veo_clip_failed", error=str(e)[:300])
             return text, None
 
     # ── Mockup de chatbot (WhatsApp realista) ──
@@ -289,7 +295,8 @@ class TikTokCreatorAgent(BaseAgent):
             block = (f"\n\n---\n\n## 💬 Demo de chatbot — {negocio} (mockup realista)\n\n"
                      f"![chatbot {negocio}]({url})\n")
             return text.rstrip() + block, self._media_to_path(url)
-        except Exception:
+        except Exception as e:
+            log.warning("tiktok_mockup_failed", error=str(e)[:300])
             return text, None
 
     # ── Thumbnail (still de Nazareno) ──
@@ -307,5 +314,6 @@ class TikTokCreatorAgent(BaseAgent):
                 return text
             block = (f"\n\n---\n\n## 🖼️ Thumbnail (Nazareno)\n\n![thumbnail nazareno]({urls[0]})\n")
             return text.rstrip() + block
-        except Exception:
+        except Exception as e:
+            log.warning("tiktok_thumbnail_failed", error=str(e)[:300])
             return text

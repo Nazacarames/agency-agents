@@ -58,7 +58,15 @@ class BaseAgent(ABC):
     use_claude_code: bool = False
     claude_code_tools: Optional[List[str]] = None  # None → DEFAULT_ALLOWED_TOOLS
     claude_code_timeout: int = 600
-    claude_code_skill: Optional[str] = None  # nombre de skill a cargar (tool Skill)
+    # Skill(s) a cargar con la tool Skill. Acepta varias separadas por coma
+    # (p.ej. "marketing-ads,ad-campaign-management").
+    claude_code_skill: Optional[str] = None
+
+    def claude_code_mcp_servers(self, settings) -> Optional[Dict[str, Any]]:
+        """Servidores MCP para el run de Claude Code (None = ninguno). Las subclases
+        que usan un MCP (p.ej. media_auditor + Adspirer) lo devuelven acá; sus tools
+        se permiten automáticamente como `mcp__<nombre>`."""
+        return None
 
     # ── Tool use (online mode, path MiniMax directo) ──
     # Subclases que quieran correr "online" definen `tools` (schemas Anthropic
@@ -211,18 +219,31 @@ class BaseAgent(ABC):
                 try:
                     cc_prompt = user_msg
                     if self.claude_code_skill:
+                        skills = [s.strip() for s in self.claude_code_skill.split(",") if s.strip()]
+                        skills_txt = " y ".join(f"`{s}`" for s in skills)
                         cc_prompt = (
-                            f"IMPORTANTE: cargá y seguí la skill `{self.claude_code_skill}` "
+                            f"IMPORTANTE: cargá y seguí la(s) skill(s) {skills_txt} "
                             f"(usá la tool Skill) para resolver esta tarea.\n\n{user_msg}\n\n"
                             "Al terminar, IMPRIMÍ el entregable COMPLETO como tu respuesta final "
                             "(no lo dejes solo en archivos de disco)."
                         )
+                    mcp_servers = None
+                    cc_tools = self.claude_code_tools
+                    try:
+                        mcp_servers = self.claude_code_mcp_servers(ctx.settings)
+                        if mcp_servers:
+                            from ..clients.claude_code import DEFAULT_ALLOWED_TOOLS
+                            cc_tools = list(cc_tools or DEFAULT_ALLOWED_TOOLS)
+                            cc_tools += [f"mcp__{name}" for name in mcp_servers]
+                    except Exception as e:
+                        log.warning("claude_code_mcp_setup_failed", agent=self.name, error=str(e))
                     cc_text = run_claude_code(
                         prompt=cc_prompt,
                         settings=ctx.settings,
                         system_append=local_system,
-                        allowed_tools=self.claude_code_tools,
+                        allowed_tools=cc_tools,
                         timeout=self.claude_code_timeout,
+                        mcp_servers=mcp_servers,
                     )
                     response = MiniMaxResponse(
                         text=cc_text,

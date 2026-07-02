@@ -17,7 +17,7 @@ def test_discord_webhook_requires_url():
     from app.clients.discord import DiscordError, DiscordWebhook
 
     s = Settings(discord_webhook_url="")
-    with pytest.raises(DiscordError, match="DISCORD_WEBHOOK_URL"):
+    with pytest.raises(DiscordError, match="webhook de Discord"):
         DiscordWebhook(s)
 
 

@@ -172,16 +172,57 @@ class GmailClient:
         return self._service
 
     # ── lectura ──
+    def profile_email(self) -> str:
+        """Dirección de la cuenta autenticada (cacheada). '' si falla."""
+        if getattr(self, "_profile_email", None):
+            return self._profile_email
+        try:
+            svc = self._build_service()
+            self._profile_email = (
+                svc.users().getProfile(userId=self.user_id).execute().get("emailAddress", "")
+            ).lower()
+        except Exception as e:
+            log.warning("gmail_profile_failed", error=str(e))
+            self._profile_email = ""
+        return self._profile_email
+
+    def thread_id_of(self, msg_id: str) -> str:
+        """threadId de un mensaje enviado (para threadear follow-ups). '' si falla."""
+        if not msg_id:
+            return ""
+        try:
+            svc = self._build_service()
+            m = svc.users().messages().get(
+                userId=self.user_id, id=msg_id, format="minimal").execute()
+            return m.get("threadId", "")
+        except Exception as e:
+            log.warning("gmail_thread_of_failed", msg_id=msg_id, error=str(e))
+            return ""
+
     def list_unread_threads(
         self, max_threads: Optional[int] = None, lookback_days: Optional[int] = None
     ) -> List[GmailThread]:
         """Lista los hilos con mensajes no leídos en la bandeja (excluye spam/promociones)."""
+        return self._list_threads("is:unread in:inbox", max_threads, lookback_days)
+
+    def list_recent_threads(
+        self, max_threads: Optional[int] = None, lookback_days: Optional[int] = None
+    ) -> List[GmailThread]:
+        """Lista los hilos recientes de la bandeja, LEÍDOS O NO.
+
+        Clave para el inbox_assistant: si el operador abre un mail desde el teléfono,
+        el hilo deja de estar unread pero la respuesta sigue sin atender. El dedup
+        de "ya lo procesé" lo lleva el agente (inbox-processed store), no el estado
+        de lectura de Gmail."""
+        return self._list_threads("in:inbox", max_threads, lookback_days)
+
+    def _list_threads(
+        self, base_query: str, max_threads: Optional[int], lookback_days: Optional[int]
+    ) -> List[GmailThread]:
         svc = self._build_service()
         max_threads = max_threads or self.s.inbox_max_threads
         lookback_days = lookback_days or self.s.inbox_lookback_days
-
-        # is:unread en INBOX, no categorías promo/social, ventana reciente
-        query = f"is:unread in:inbox newer_than:{lookback_days}d -category:promotions -category:social"
+        query = f"{base_query} newer_than:{lookback_days}d -category:promotions -category:social"
         resp = (
             svc.users()
             .threads()
@@ -195,7 +236,7 @@ class GmailClient:
                 out.append(self.get_thread(tm["id"]))
             except Exception as e:
                 log.warning("gmail_thread_fetch_failed", thread_id=tm.get("id"), error=str(e))
-        log.info("gmail_listed_unread", count=len(out), query=query)
+        log.info("gmail_listed_threads", count=len(out), query=query)
         return out
 
     def get_thread(self, thread_id: str) -> GmailThread:
@@ -238,10 +279,14 @@ class GmailClient:
             messages=messages,
         )
 
-    # ── escritura (SOLO borradores) ──
-    def send_message(self, to: str, subject: str, body: str, from_name: Optional[str] = None) -> str:
+    # ── escritura ──
+    def send_message(self, to: str, subject: str, body: str, from_name: Optional[str] = None,
+                     thread_id: Optional[str] = None) -> str:
         """Envía un email nuevo (outbound). Devuelve el message id.
-        Usado por el agente outbound para cold-email automático (10/día, dedup)."""
+        Usado por el agente outbound para cold-email automático (tope diario, dedup).
+        `thread_id`: si se pasa, el mensaje se envía DENTRO de ese hilo — así los
+        follow-ups quedan colgados del primer toque (mejor UX y deliverability que
+        un mail suelto con asunto "Re:" falso)."""
         svc = self._build_service()
         mime = MIMEText(body, "plain", "utf-8")
         mime["To"] = to
@@ -255,9 +300,13 @@ class GmailClient:
             except Exception:
                 pass
         raw = base64.urlsafe_b64encode(mime.as_bytes()).decode("utf-8")
-        sent = svc.users().messages().send(userId=self.user_id, body={"raw": raw}).execute()
+        payload = {"raw": raw}
+        if thread_id:
+            payload["threadId"] = thread_id
+        sent = svc.users().messages().send(userId=self.user_id, body=payload).execute()
         msg_id = sent.get("id", "")
-        log.info("gmail_message_sent", to=to, msg_id=msg_id, subject=subject[:60])
+        log.info("gmail_message_sent", to=to, msg_id=msg_id, subject=subject[:60],
+                 threaded=bool(thread_id))
         return msg_id
 
     def send_reply(

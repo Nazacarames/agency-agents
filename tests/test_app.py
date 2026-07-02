@@ -103,7 +103,6 @@ def test_fastapi_endpoints_present():
         "/",
         "/agents",
         "/agents/{name}",
-        "/scheduler/jobs",
         "/run/{name}",
         "/webhook/lead",
         "/docs",

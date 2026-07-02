@@ -8,12 +8,15 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 MAX_TASKS = 200  # se conservan las últimas N
+# Serializa leer→modificar→guardar (varios agentes pueden terminar a la vez).
+_LOCK = threading.Lock()
 
 
 def _data_dir() -> Path:
@@ -52,7 +55,6 @@ def save_store(store: Dict[str, Any]) -> None:
 
 
 def add_task(agent: str, prompt: str, run_id: str) -> Dict[str, Any]:
-    store = load_store()
     task = {
         "id": uuid.uuid4().hex[:12],
         "agent": agent,
@@ -63,22 +65,25 @@ def add_task(agent: str, prompt: str, run_id: str) -> Dict[str, Any]:
         "created_at": _now(),
         "updated_at": _now(),
     }
-    store["tasks"].insert(0, task)
-    store["tasks"] = store["tasks"][:MAX_TASKS]
-    save_store(store)
+    with _LOCK:
+        store = load_store()
+        store["tasks"].insert(0, task)
+        store["tasks"] = store["tasks"][:MAX_TASKS]
+        save_store(store)
     return task
 
 
 def update_task(run_id: str, status: str, result_excerpt: str = "") -> Optional[Dict[str, Any]]:
-    store = load_store()
-    for t in store["tasks"]:
-        if t.get("run_id") == run_id:
-            t["status"] = status
-            if result_excerpt:
-                t["result_excerpt"] = result_excerpt[:600]
-            t["updated_at"] = _now()
-            save_store(store)
-            return t
+    with _LOCK:
+        store = load_store()
+        for t in store["tasks"]:
+            if t.get("run_id") == run_id:
+                t["status"] = status
+                if result_excerpt:
+                    t["result_excerpt"] = result_excerpt[:600]
+                t["updated_at"] = _now()
+                save_store(store)
+                return t
     return None
 
 
@@ -87,10 +92,11 @@ def list_tasks(limit: int = 50) -> List[Dict[str, Any]]:
 
 
 def delete_task(task_id: str) -> bool:
-    store = load_store()
-    before = len(store["tasks"])
-    store["tasks"] = [t for t in store["tasks"] if t.get("id") != task_id and t.get("run_id") != task_id]
-    if len(store["tasks"]) != before:
-        save_store(store)
-        return True
+    with _LOCK:
+        store = load_store()
+        before = len(store["tasks"])
+        store["tasks"] = [t for t in store["tasks"] if t.get("id") != task_id and t.get("run_id") != task_id]
+        if len(store["tasks"]) != before:
+            save_store(store)
+            return True
     return False

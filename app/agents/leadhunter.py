@@ -297,6 +297,9 @@ class LeadHunterAgent(BaseAgent):
                 parts.append(
                     "## ⛔ YA ESTÁN EN NUESTRO PIPELINE — NO LAS REPITAS (traé empresas NUEVAS)\n"
                     + ", ".join(known)
+                    + "\n(También cuenta como repetida cualquier VARIANTE de estas: misma marca "
+                    "con otra razón social, otra sucursal, o el nombre con/sin 'S.A./SRL'. "
+                    "En duda, descartala y buscá otra.)"
                 )
             agg = ls.outcomes_by_industry(store)
             hot = sorted(
@@ -354,8 +357,11 @@ class LeadHunterAgent(BaseAgent):
             "2. CALIFICACIÓN: con WebFetch abrí el sitio de cada candidata y confirmá rubro, "
             "tamaño aproximado (25–100 empleados) y decisor.\n"
             "3. VERIFICACIÓN de contacto: buscá en el sitio (home, /contacto, /quienes-somos, "
-            "pie de página) DOS cosas: el teléfono argentino (+54) Y el email REAL de la empresa "
-            "(info@/ventas@/contacto@…). El EMAIL es clave: habilita el envío automático del "
+            "pie de página) DOS cosas: el teléfono argentino (+54) Y el email REAL de la empresa. "
+            "⭐ PRIORIDAD DE EMAIL: 1º el email DIRECTO del dueño/decisor (fijate en "
+            "/quienes-somos, 'nuestro equipo', notas de prensa: nombre@empresa suele responder "
+            "5-10x más que un buzón genérico); 2º recién si no hay, el genérico "
+            "(info@/ventas@/contacto@). El EMAIL es clave: habilita el envío automático del "
             "outbound — buscalo siempre. Si no encontrás NINGÚN contacto verificable, descartá la "
             "empresa y buscá otra. Podés usar Bash (curl) si WebFetch falla en un sitio.\n"
             f"4. Iterá hasta juntar {target} leads con contacto verificado en una fuente pública. "
