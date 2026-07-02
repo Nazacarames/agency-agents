@@ -84,7 +84,7 @@ class SeoSpecialistAgent(BaseAgent):
     def build_user_message(self, ctx: AgentContext) -> str:
         return (
             "Generá el plan SEO completo de esta semana para "
-            "automiq-landing-astro.vercel.app (landing oficial de Automiq). "
+            "automiq.agency (landing oficial de Automiq). "
             "Priorizá el vertical DISTRIBUCIÓN pero incluí también manufacturing, "
             "logística e inmobiliarias. "
             "Devolvé el plan COMPLETO (los 6 puntos del output esperado) en una "

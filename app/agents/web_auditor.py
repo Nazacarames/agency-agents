@@ -56,7 +56,7 @@ class WebAuditorAgent(BaseAgent):
         return f"{get_context_block()}\n\n{WEB_AUDITOR_INSTRUCTIONS}"
 
     def build_user_message(self, ctx: AgentContext) -> str:
-        url = "https://automiq-landing-astro.vercel.app"
+        url = "https://automiq.agency"
         target_hint = ""
         leads_handoff = ""
         try:

@@ -27,7 +27,7 @@ Automiq es una agencia de automatización con IA enfocada en:
 - Servicios: agentes de IA (WhatsApp/voice), automatizaciones n8n, landing pages, Meta Ads, CRM
 
 ## Web oficial
-Sitio: https://automiq-landing-astro.vercel.app — es la referencia de marca, mensajes y
+Sitio: https://automiq.agency — es la referencia de marca, mensajes y
 servicios. Usala como fuente y enlazala cuando un output necesite un link a Automiq.
 
 ## Big Domino (nuestra frase de oferta)
@@ -132,7 +132,7 @@ def get_context_block() -> str:
 # Web oficial de Automiq — los agentes que producen copy/estrategia DEBEN basarse
 # en el sitio real, no en supuestos. (web_auditor y seo_specialist ya la fetchean
 # de forma explícita; este directive es para los demás de marketing.)
-OFFICIAL_SITE_URL = "https://automiq-landing-astro.vercel.app"
+OFFICIAL_SITE_URL = "https://automiq.agency"
 
 
 def official_site_directive() -> str:
