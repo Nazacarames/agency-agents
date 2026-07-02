@@ -431,10 +431,12 @@
           <button class="btn btn-sm" id="pubDrainBtn">📣 Publicar la próxima ahora</button>
           <span class="hint" style="margin:0">Se publica 1 por día automático a las 11:00. Acá podés forzar la próxima.</span>
         </div>
-        <div class="panel" style="margin-bottom:18px"><h3>Calendario de contenido</h3><div class="ph-sub">Próximos 14 días · 1 post por día.</div><div id="pubCalendar"></div></div>
-        <div class="sec-head"><h2>Publicadas</h2><span class="faint" style="font-size:12px">Posts que salieron a IG/FB.</span></div>
+        <div class="panel" style="margin-bottom:18px"><h3>Calendario de contenido</h3><div class="ph-sub">Próximos 14 días · 1 pieza de feed + 2 historias por día.</div><div id="pubCalendar"></div></div>
+        <div class="sec-head"><h2>📸 Instagram &amp; Facebook</h2><span class="faint" style="font-size:12px">Posts, historias y carruseles que salieron al feed.</span></div>
         <div class="grid" id="pubDone"></div>
-        <div class="sec-head"><h2>En cola</h2><span class="faint" style="font-size:12px">Esperando su turno (1 por día).</span></div>
+        <div class="sec-head"><h2>🎬 Videos — Shorts · Reels · TikTok</h2><span class="faint" style="font-size:12px">Cada video con todas sus plataformas juntas.</span></div>
+        <div class="grid" id="pubVideos"></div>
+        <div class="sec-head"><h2>En cola</h2><span class="faint" style="font-size:12px">Esperando su turno (1 feed + 2 historias por día).</span></div>
         <div id="pubQueue"></div>
         <div class="sec-head"><h2>Fallidas</h2></div>
         <div id="pubFailed"></div>
@@ -1246,11 +1248,26 @@ async function loadPublicaciones(){
     // próxima fecha
     const startOffset = (q.published_today>0)?1:0;
     const nextDate = pend.length ? (()=>{ const d=new Date(); d.setDate(d.getDate()+startOffset); return d.toLocaleDateString('es-AR',{day:'2-digit',month:'short'}); })() : '—';
-    const shorts=done.filter(i=>{const r=i.result||{};return r.youtube||r.tiktok;}).length;
+    // separar FEED IG/FB de VIDEOS (shorts/reels/tiktok) y agrupar por archivo
+    const isVideo = it => { const r=it.result||{}; return !!(r.youtube||r.tiktok) || (it.kind==='reel') || /\.(mp4|webm)(\?|#|$)/i.test(it.image||''); };
+    const doneFeed = done.filter(it=>!isVideo(it));
+    const vmap = new Map();
+    for(const it of done.filter(isVideo)){
+      const key = it.image || it.id;
+      if(!vmap.has(key)){ vmap.set(key, {...it, result:{...(it.result||{})}}); }
+      else {
+        const v = vmap.get(key);
+        Object.assign(v.result, it.result||{});
+        if((it.published_at||'') < (v.published_at||'')) v.published_at = it.published_at;
+        if(!v.caption && it.caption) v.caption = it.caption;
+      }
+    }
+    const doneVideos = [...vmap.values()];
     el('pubKpis').innerHTML =
-      kpiBig('Publicadas', done.length, shorts?('IG/FB + '+shorts+' short'+(shorts>1?'s':'')):'en IG/FB', ICONS.publicaciones,'accent') +
+      kpiBig('Feed IG/FB', doneFeed.length, 'posts · historias · carruseles', ICONS.publicaciones,'accent') +
+      kpiBig('Videos', doneVideos.length, 'shorts · reels · tiktok', ICONS.publicaciones,'') +
       kpiBig('En cola', pend.length, 'esperando turno', ICONS.publicaciones,'') +
-      kpiBig('Próxima', nextDate, pend.length?'1 por día':'cola vacía', ICONS.agenda,'') +
+      kpiBig('Próxima', nextDate, pend.length?'1 feed + 2 historias/día':'cola vacía', ICONS.agenda,'') +
       kpiBig('Fallidas', fail.length, fail.length?'revisar abajo':'todo ok', ICONS.publicaciones, fail.length?'':'');
     // calendario (próximos 14 días)
     const DOW=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -1264,12 +1281,16 @@ async function loadPublicaciones(){
       </div>`; }
     cal+='</div>';
     el('pubCalendar').innerHTML = pend.length||q.published_today ? cal : '<div class="empty" style="padding:20px">Nada programado. Cuando los agentes generen contenido, se agenda 1 por día.</div>';
-    // publicadas (galería)
-    el('pubDone').innerHTML = done.length ? done.map(it=>`<div class="card post-card" style="padding:12px"${postCardAttrs(it)}>
+    // publicadas: galería del feed + galería de videos (agrupados arriba)
+    const postCard = it => `<div class="card post-card" style="padding:12px"${postCardAttrs(it)}>
       ${pubThumb(it.image)}
       <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${kindBadge(it)}${postLinks(it)}<span class="badge grey" style="margin-left:auto">${esc((it.published_at||'').slice(0,10))}</span></div>
       <div class="muted" style="font-size:12.5px;line-height:1.45;margin-top:8px;max-height:84px;overflow:hidden">${esc((it.caption||'').slice(0,180))}${(it.caption||'').length>180?'…':''}</div>
-    </div>`).join('') : '<div class="card empty">Todavía no se publicó ningún post. Los agentes encolan y se publica 1 por día.</div>';
+    </div>`;
+    el('pubDone').innerHTML = doneFeed.length ? doneFeed.map(postCard).join('')
+      : '<div class="card empty">Todavía no salió nada al feed. Los agentes encolan y sale 1 pieza + 2 historias por día.</div>';
+    el('pubVideos').innerHTML = doneVideos.length ? doneVideos.map(postCard).join('')
+      : '<div class="card empty">Todavía no hay videos. Los shorts salen lun/mié/vie 19h a YouTube + Reel (+ TikTok cuando esté aprobado).</div>';
     // cola
     el('pubQueue').innerHTML = pend.length ? '<div class="grid">'+pend.map((it,i)=>{ const d=new Date(); d.setDate(d.getDate()+startOffset+i);
       return `<div class="card" style="padding:12px;display:flex;gap:12px">
