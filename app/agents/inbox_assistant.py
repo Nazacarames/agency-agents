@@ -147,6 +147,40 @@ class InboxAssistantAgent(BaseAgent):
             "(ej. 'mañana 11h o pasado 16h ART') y pedí que confirmen cuál les sirve.\n"
         )
 
+    def _link_replies(self, ctx: AgentContext, threads, own_email: str) -> List[Dict[str, Any]]:
+        """Marca "respondió" a todo lead que haya escrito en alguno de estos hilos
+        (frena su secuencia de outbound) y devuelve los LEADS CALIENTES nuevos.
+        Sólo entra al aviso 🔥 si su estado CAMBIÓ en esta corrida (si ya estaba
+        "respondió" no se re-alerta cada 3 horas)."""
+        hot: List[Dict[str, Any]] = []
+        _quiet_states = ("respondió", "reunión", "propuesta", "cerrado")
+        try:
+            store = ls.load_store()
+            seen_keys = set()
+            for th in threads:
+                emails = {th.last_from_email, *(th.participants or [])}
+                for em in emails:
+                    if not em or (own_email and em.lower() == own_email):
+                        continue
+                    prev = next((l.get("state") for l in store.get("leads", {}).values()
+                                 if ls.normalize_email(l.get("email", "")) == ls.normalize_email(em)), None)
+                    lead = ls.mark_replied(store, email=em)
+                    if lead and lead.get("key") not in seen_keys and prev not in _quiet_states:
+                        seen_keys.add(lead.get("key"))
+                        hot.append({
+                            "company": lead.get("company", "?"),
+                            "email": lead.get("email", em),
+                            "decisor": lead.get("decisor", ""),
+                            "subject": th.subject,
+                            "thread_id": th.thread_id,
+                        })
+            if hot:
+                ls.save_store(store)
+                log.info("inbox_hot_leads", run_id=ctx.run_id, count=len(hot))
+        except Exception as e:
+            log.warning("inbox_lead_linking_failed", error=str(e))
+        return hot
+
     def build_user_message(self, ctx: AgentContext) -> str:
         if not ctx.settings.gmail_configured:
             ctx.args["_inbox_status"] = "not_configured"
@@ -172,6 +206,14 @@ class InboxAssistantAgent(BaseAgent):
                 f"No pude leer la bandeja (error de Gmail: {e}). Respondé EXACTAMENTE: "
                 f"'⚠️ Inbox Assistant: error de acceso a Gmail — {e}'"
             )
+
+        # ── Cierre del loop de ventas SOBRE TODOS LOS HILOS (antes de filtrar) ──
+        # Si un lead nuestro escribió EN CUALQUIER mensaje del hilo, marcarlo
+        # "respondió" (frena su secuencia) aunque el último mensaje sea nuestro.
+        # Caso real: la respuesta no se detectó a tiempo y outbound le mandó otro
+        # follow-up al mismo hilo → el hilo termina en nosotros, pero el lead
+        # RESPONDIÓ y su secuencia tiene que frenar igual.
+        hot = self._link_replies(ctx, all_threads, own_email)
 
         threads = []
         for th in all_threads:
@@ -207,40 +249,7 @@ class InboxAssistantAgent(BaseAgent):
                 f"- Conversación:\n{th.transcript(max_chars=3500)}"
             )
 
-        # ── Cierre del loop de ventas: ¿alguno que respondió es un lead nuestro? ──
-        # Si el remitente matchea un lead en seguimiento, lo marcamos "respondió"
-        # (frena la secuencia de outbound) y lo levantamos como LEAD CALIENTE.
-        # Sólo entra al aviso 🔥 si su estado CAMBIÓ en esta corrida (si ya estaba
-        # "respondió" no se re-alerta cada 3 horas).
-        hot: List[Dict[str, Any]] = []
-        _quiet_states = ("respondió", "reunión", "propuesta", "cerrado")
-        try:
-            store = ls.load_store()
-            seen_keys = set()
-            for th in threads:
-                emails = {th.last_from_email, *(th.participants or [])}
-                for em in emails:
-                    if not em or (own_email and em.lower() == own_email):
-                        continue
-                    prev = next((l.get("state") for l in store.get("leads", {}).values()
-                                 if ls.normalize_email(l.get("email", "")) == ls.normalize_email(em)), None)
-                    lead = ls.mark_replied(store, email=em)
-                    if lead and lead.get("key") not in seen_keys and prev not in _quiet_states:
-                        seen_keys.add(lead.get("key"))
-                        hot.append({
-                            "company": lead.get("company", "?"),
-                            "email": lead.get("email", em),
-                            "decisor": lead.get("decisor", ""),
-                            "subject": th.subject,
-                            "thread_id": th.thread_id,
-                        })
-            if hot:
-                ls.save_store(store)
-                log.info("inbox_hot_leads", run_id=ctx.run_id, count=len(hot))
-        except Exception as e:
-            log.warning("inbox_lead_linking_failed", error=str(e))
         ctx.args["_inbox_hot"] = hot
-
         ctx.args["_inbox_status"] = "ok"
         ctx.args["_inbox_threads"] = lookup
         ctx.args["_inbox_count"] = len(threads)
