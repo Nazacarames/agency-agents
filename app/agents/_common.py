@@ -231,9 +231,10 @@ def image_prompt_directive() -> str:
         "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | CAPTION: <caption COMPLETO del post, en español, con hook + cuerpo + CTA + hashtags>`\n"
         "El CAPTION es lo que se PUBLICA de verdad en Instagram/Facebook, así que tiene que ser el "
         "copy final listo para postear (no un resumen). Si no ponés CAPTION, se publica con el TEXTO + SUBTEXTO.\n"
-        "FORMATOS (para no saturar el feed): la 1ª IMAGEN sale como POST del feed y las "
-        "siguientes como HISTORIAS (pensá la 1ª como la pieza fuerte del día y las otras como "
-        "contenido efímero: behind-the-scenes, tip rápido, recordatorio). Además podés proponer "
+        "FORMATOS (para no saturar el feed): 1 de cada 3 IMÁGENES sale como POST del feed "
+        "(la 1ª, la 4ª, la 7ª…) y las otras dos como HISTORIAS. Ordenalas así a propósito: "
+        "primero la pieza fuerte (post), después las efímeras que la acompañan (behind-the-scenes, "
+        "tip rápido, recordatorio, pregunta a la audiencia). Además podés proponer "
         "COMO MUCHO 1 CARRUSEL educativo (3-5 placas que desarrollan UNA idea paso a paso) con:\n"
         "`CARRUSEL: <prompt placa 1> || <prompt placa 2> || <prompt placa 3> | CAPTION: <caption del carrusel>`\n"
         "(cada placa con su propia escena, mismo estilo visual entre placas para que se lea como serie).\n"
@@ -357,8 +358,9 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             if not urls:
                 continue
             cap = texto or prompt[:90]
-            # 1ª imagen → post del feed; las demás → historias (no saturan el feed)
-            kind = "post" if i == 1 else "story"
+            # 1 post cada 3 imágenes (1:2 con historias) = el ritmo del drain diario
+            # (1 pieza de feed + 2 historias): imágenes 1,4,7… → post; el resto → historia.
+            kind = "post" if i % 3 == 1 else "story"
             klabel = "post del feed" if kind == "post" else "historia"
             block = f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})"
             if pq:
