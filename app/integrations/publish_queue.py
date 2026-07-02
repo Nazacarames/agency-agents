@@ -150,14 +150,14 @@ def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
 
 
 def record_published(image: str, caption: str, target: str, result: Dict[str, Any],
-                     source: str = "") -> Dict[str, Any]:
+                     source: str = "", kind: str = "post") -> Dict[str, Any]:
     """Registra una publicación YA hecha por fuera de la cola (Shorts de YouTube,
-    posts de TikTok) para que aparezca en la sección Publicaciones del panel.
+    posts de TikTok, reels inline) para que aparezca en la sección Publicaciones.
     No pasa por pending ni cuenta para el tope diario de IG/FB."""
     item = {
         "id": uuid.uuid4().hex[:12],
         "image": image,
-        "kind": "post",
+        "kind": (kind or "post").lower(),
         "caption": caption or "",
         "targets": [target],
         "source": source or "",

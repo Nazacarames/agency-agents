@@ -215,18 +215,24 @@ class TikTokCreatorAgent(BaseAgent):
             return text
 
     def _enqueue_ig_reel(self, text: str, video_url: str) -> str:
-        """Encola el short como REEL de Instagram (el drain diario lo publica cuando
-        le toque el turno del feed, alternando con posts/carruseles)."""
+        """Publica el short como REEL de Instagram EN EL MOMENTO (junto con la subida
+        a YouTube/TikTok — decisión del usuario: los videos salen todos juntos y no
+        esperan el turno diario del feed). Se registra en Publicaciones sin tocar el
+        tope 1/día de posts."""
         try:
             from ..integrations import social_publish as sp, publish_queue as pq
             if not sp.ig_enabled():
                 return text
             mc = re.search(r"^[\s>*`\-]*Caption\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
             caption = (mc.group(1).strip() if mc else "IA y automatización para PyMEs 🇦🇷")
-            item = pq.enqueue(video_url, caption, ["instagram"], source="tiktok_creator", kind="reel")
-            if item:
-                return text.rstrip() + "\n\n> 🎞️ Encolado como **Reel de Instagram** (sale con el turno diario del feed).\n"
-            return text.rstrip() + "\n\n> ⚠️ Cola de publicación llena: el reel no se encoló.\n"
+            res = sp.publish_instagram_reel(video_url, caption)
+            pq.record_published(image=video_url, caption=caption, target="instagram",
+                                result=res, source="tiktok_creator", kind="reel")
+            if res.get("ok"):
+                link = res.get("permalink") or ""
+                return text.rstrip() + f"\n\n## 🎞️ Publicado como Reel de Instagram\n\n{link}\n"
+            log.warning("tiktok_reel_publish_failed", error=str(res.get('error',''))[:200])
+            return text.rstrip() + f"\n\n> ⚠️ El reel de IG falló: {str(res.get('error',''))[:140]}\n"
         except Exception as e:
             log.warning("tiktok_reel_enqueue_failed", error=str(e)[:200])
             return text
