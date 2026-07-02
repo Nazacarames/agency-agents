@@ -117,22 +117,44 @@ class WebOptimizerAgent(BaseAgent):
 
         vc = get_vercel_client(ctx.settings)
         workdir = None
+        # Base de trabajo: por default el último deploy de PRODUCCIÓN. Si la corrida
+        # viene de una REVIEW del operador (args.base_deployment = uid del preview
+        # reviewado), se itera SOBRE ESE preview — los cambios previos no se pierden.
+        base_dep = ""
         try:
-            dep = vc.latest_production_deployment()
+            if isinstance(ctx.args, dict):
+                base_dep = str(ctx.args.get("base_deployment") or "").strip()
+        except Exception:
+            base_dep = ""
+        try:
+            dep_id = base_dep or vc.latest_production_deployment()["uid"]
             workdir = tempfile.mkdtemp(prefix="webopt_")
-            nfiles = vc.download_source(dep["uid"], workdir)
+            nfiles = vc.download_source(dep_id, workdir)
             root = vc.find_project_root(workdir)
-            log.info("webopt_source_ready", run_id=ctx.run_id, files=nfiles, root=root)
+            log.info("webopt_source_ready", run_id=ctx.run_id, files=nfiles, root=root,
+                     base="preview" if base_dep else "production")
         except (VercelError, Exception) as e:
             log.error("webopt_download_failed", run_id=ctx.run_id, error=str(e))
             self._cleanup(workdir)
             return self._deliver(ctx, f"⚠️ **Web Optimizer:** no pude bajar la fuente de la landing — {e}")
 
+        # Preferencias acumuladas: cada review del operador queda como lección
+        # persistente → TODAS las corridas futuras la respetan (qué mantener/qué no).
+        prompt = self.build_user_message(ctx)
+        try:
+            from ..integrations import memory_store as ms
+            lessons = ms.lessons_for(self.name)
+            if lessons:
+                prompt = ("## PREFERENCIAS ACUMULADAS DEL OPERADOR (reviews previas — "
+                          f"respetarlas SIEMPRE)\n{lessons}\n\n{prompt}")
+        except Exception:
+            pass
+
         # Mejora con Claude Code dentro del directorio del proyecto.
         cc_text = ""
         try:
             cc_text = run_claude_code(
-                prompt=self.build_user_message(ctx),
+                prompt=prompt,
                 settings=ctx.settings,
                 system_append=self.system_prompt,
                 allowed_tools=self.claude_code_tools,

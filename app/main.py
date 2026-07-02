@@ -1887,6 +1887,52 @@ async def api_web_deployments(request: Request):
     return out
 
 
+class WebReviewBody(BaseModel):
+    review: str
+    deployment: Optional[str] = None    # uid del preview reviewado (itera sobre él)
+    regenerate: Optional[bool] = True   # False = sólo guardar la preferencia
+
+
+@app.post("/api/web/review")
+async def api_web_review(body: WebReviewBody, request: Request, background: BackgroundTasks):
+    """Review del operador sobre un preview de la landing. Hace dos cosas:
+    1. Guarda la review como preferencia PERMANENTE del web_optimizer (lección).
+    2. (default) Regenera el preview aplicando la review SOBRE esa misma versión."""
+    _verify_webhook_secret(request)
+    review = (body.review or "").strip()
+    if not review:
+        raise HTTPException(status_code=400, detail="review vacía")
+    from .integrations import memory_store as ms, tasks_store as ts
+    try:
+        ms.add_lesson("web_optimizer", review, kind="feedback", weight=2)
+    except Exception as e:
+        log.warning("web_review_lesson_failed", error=str(e)[:200])
+    if not body.regenerate:
+        return {"ok": True, "saved": True, "regenerating": False}
+
+    run_id = str(uuid.uuid4())
+    prompt = ("REVIEW del operador sobre el preview actual de la landing:\n"
+              f"{review}\n\n"
+              "Estás trabajando SOBRE la versión de ese preview (no de cero): aplicá la "
+              "review tal cual — lo que pida mantener NO se toca, lo que pida cambiar/"
+              "sacar se hace exactamente así.")
+    ts.add_task("web_optimizer", f"Review de la landing: {review[:120]}", run_id)
+    args: Dict[str, Any] = {"task_prompt": prompt, "force_global": True}
+    if body.deployment:
+        args["base_deployment"] = body.deployment.strip()
+
+    async def _rev():
+        from .integrations import tasks_store as ts2
+        try:
+            result = await _run_pack_agent("web_optimizer", args, run_id, "dashboard:review")
+            ts2.update_task(run_id, "done", str(result)[:600] if result else "")
+        except Exception as e:
+            ts2.update_task(run_id, "error", str(e)[:600])
+
+    background.add_task(_rev)
+    return {"ok": True, "saved": True, "regenerating": True, "run_id": run_id}
+
+
 @app.post("/api/web/promote")
 async def api_web_promote(request: Request):
     """APRUEBA el preview del web_optimizer: lo promueve a PRODUCCIÓN.

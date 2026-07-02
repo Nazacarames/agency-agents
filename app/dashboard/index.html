@@ -1278,8 +1278,12 @@ async function webPreview(btn){
       <div class="card" style="padding:14px;margin-bottom:10px">
         <div class="badge blue" style="margin-bottom:8px">Preview pendiente de aprobación</div>
         ${prev&&prev.url?`<div style="word-break:break-all"><a href="${esc(prev.url)}" target="_blank">${esc(prev.url)} ↗</a></div>
-          <p class="muted" style="font-size:12.5px;margin:8px 0 10px">Abrilo, revisalo, y si te gusta apretá publicar. Si no, mandale una tarea al agente con lo que hay que cambiar/mantener.</p>
-          <button class="btn btn-sm" onclick="webPromote(this,'${esc(prev.url)}')">🚀 Aprobar y publicar a producción</button>`
+          <p class="muted" style="font-size:12.5px;margin:8px 0 10px">Abrilo y revisalo. Si te gusta, publicalo. Si no, dejale tu review acá abajo: se guarda como preferencia permanente y regenera el preview aplicándola sobre esta misma versión.</p>
+          <button class="btn btn-sm" onclick="webPromote(this,'${esc(prev.url)}')">🚀 Aprobar y publicar a producción</button>
+          <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+            <textarea id="webReviewTxt" rows="3" placeholder="Tu review: qué mantener, qué cambiar, qué no te gustó… (ej: 'el hero dejalo como está, sacá el bloque de precios y el CTA que diga Agendá tu demo')" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:9px;color:var(--tx,#EAF0FF);padding:9px 11px;font:inherit;font-size:13px;resize:vertical"></textarea>
+            <button class="btn-ghost btn-sm" style="margin-top:8px" onclick="webReview(this,'${esc(prev.uid||'')}')">📝 Mandar review y regenerar preview</button>
+          </div>`
           :`<p class="muted">No hay preview pendiente${d.preview_error?(' — '+esc(d.preview_error)):''}. Disparó el agente (o mandale una tarea) para generar uno.</p>`}
       </div>
       <div class="card" style="padding:14px">
@@ -1288,6 +1292,14 @@ async function webPreview(btn){
       </div>`);
   }catch(e){ toast('Error: '+e.message); }
   finally{ if(btn){btn.disabled=false;} }
+}
+async function webReview(btn, uid){
+  const txt=(el('webReviewTxt')&&el('webReviewTxt').value||'').trim();
+  if(!txt){ toast('Escribí la review primero'); return; }
+  if(btn){btn.disabled=true;btn.textContent='Mandando…';}
+  try{ await api('/api/web/review',{method:'POST',body:JSON.stringify({review:txt,deployment:uid||null})});
+    toast('📝 Review guardada — regenerando preview (~10-20 min). Seguilo en Tareas.'); closeModal(); }
+  catch(e){ toast('Error: '+e.message); if(btn){btn.disabled=false;btn.textContent='📝 Mandar review y regenerar preview';} }
 }
 async function webPromote(btn, url){
   if(!confirm('¿Publicar este preview a PRODUCCIÓN? Reemplaza la landing actual.')) return;
