@@ -228,13 +228,18 @@ def image_prompt_directive() -> str:
         "\n\nIMÁGENES (obligatorio): la cantidad la decidís VOS según tu planificación "
         "(1 por idea / 1 por post clave). No te limites a un número fijo. "
         "Por cada pieza agregá una línea que empiece EXACTO con `IMAGEN:` así:\n"
-        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | CAPTION: <caption COMPLETO del post, en español, con hook + cuerpo + CTA + hashtags>`\n"
-        "El CAPTION es lo que se PUBLICA de verdad en Instagram/Facebook, así que tiene que ser el "
-        "copy final listo para postear (no un resumen). Si no ponés CAPTION, se publica con el TEXTO + SUBTEXTO.\n"
-        "FORMATOS (para no saturar el feed): 1 de cada 3 IMÁGENES sale como POST del feed "
-        "(la 1ª, la 4ª, la 7ª…) y las otras dos como HISTORIAS. Ordenalas así a propósito: "
-        "primero la pieza fuerte (post), después las efímeras que la acompañan (behind-the-scenes, "
-        "tip rápido, recordatorio, pregunta a la audiencia). Además podés proponer "
+        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | CAPTION: <caption COMPLETO del post>`\n"
+        "⚠️ TODA la línea (incluido el CAPTION completo) va en UNA SOLA LÍNEA física: donde "
+        "quieras un salto de línea dentro del caption escribí la secuencia literal \\n (barra "
+        "invertida + n) — el sistema la convierte en salto real al publicar. NUNCA cortes la "
+        "línea con Enter: el parser lee hasta el fin de línea y el caption quedaría trunco.\n"
+        "El CAPTION es lo que se PUBLICA de verdad en Instagram/Facebook: copy final listo "
+        "(hook + cuerpo + CTA + hashtags), no un resumen. En los FORMATO: post es OBLIGATORIO "
+        "y largo; en las historias podés omitirlo. Si no ponés CAPTION se usa TEXTO + SUBTEXTO.\n"
+        "FORMATO (para no saturar el feed): marcá explícitamente `FORMATO: post` en las piezas "
+        "fuertes y `FORMATO: historia` en las efímeras (behind-the-scenes, tip rápido, "
+        "recordatorio, encuesta). Proporción sana: 1 post por cada 2-3 historias. "
+        "Si no marcás FORMATO, el sistema asigna 1 post cada 3 imágenes. Además podés proponer "
         "COMO MUCHO 1 CARRUSEL educativo (3-5 placas que desarrollan UNA idea paso a paso) con:\n"
         "`CARRUSEL: <prompt placa 1> || <prompt placa 2> || <prompt placa 3> | CAPTION: <caption del carrusel>`\n"
         "(cada placa con su propia escena, mismo estilo visual entre placas para que se lea como serie).\n"
@@ -269,8 +274,8 @@ def _clean_fragment(s: str):
 
 
 def _parse_image_line(line: str):
-    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | CAPTION: <post>` →
-    (prompt, texto, subtexto, caption). Los campos labelados pueden venir en
+    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | FORMATO: <post|historia> | CAPTION: <post>`
+    → (prompt, texto, subtexto, caption, formato). Los campos labelados pueden venir en
     cualquier orden; el prompt es todo lo que va antes del primer `|`.
     Tolera que el modelo envuelva la línea en backticks/asteriscos de markdown."""
     import re
@@ -278,15 +283,17 @@ def _parse_image_line(line: str):
     def _grab(label: str):
         # captura el valor del campo hasta el próximo campo conocido o el fin de línea
         m = re.search(
-            rf"\|\s*{label}\s*[:：]\s*(.+?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION)\s*[:：]|$)",
+            rf"\|\s*{label}\s*[:：]\s*(.+?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION|FORMATO)\s*[:：]|$)",
             line, re.IGNORECASE | re.DOTALL)
         return _clean_fragment(m.group(1)) or None if m else None
 
     texto = _grab("TEXTO")
     sub = _grab("SUBTEXTO")
     caption = _grab("CAPTION")
+    fmt = (_grab("FORMATO") or "").lower()
+    formato = {"post": "post", "historia": "story", "story": "story"}.get(fmt, "")
     prompt = line.split("|", 1)[0]
-    return _clean_fragment(prompt), texto, sub, caption
+    return _clean_fragment(prompt), texto, sub, caption, formato
 
 
 def _publish_summary(res: dict) -> str:
@@ -326,14 +333,14 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         # Parsear todas y descartar las vacías (p.ej. el label suelto `**IMAGEN:**`)
         parsed = []
         for raw in pat.findall(text):
-            prompt, texto, sub, caption = _parse_image_line(raw.strip())
+            prompt, texto, sub, caption, formato = _parse_image_line(raw.strip())
             if len(prompt) >= 8:           # un prompt real, no un label vacío
-                parsed.append((prompt, texto, sub, caption))
+                parsed.append((prompt, texto, sub, caption, formato))
         parsed = parsed[:max_images]
         carousel = None                    # (prompts[], caption) — máx 1 por corrida
         for raw in pat_car.findall(text):
             # `||` separa prompts; escaparlo para que _parse_image_line no corte ahí
-            first, texto, sub, caption = _parse_image_line(raw.strip().replace("||", "\x1f"))
+            first, texto, sub, caption, _f = _parse_image_line(raw.strip().replace("||", "\x1f"))
             prompts = [p.strip() for p in first.split("\x1f") if len(p.strip()) >= 8]
             if len(prompts) >= 2:
                 carousel = (prompts[:10], caption or "\n\n".join(x for x in (texto, sub) if x))
@@ -353,14 +360,14 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             except Exception:
                 pq = None
         blocks = []
-        for i, (prompt, texto, sub, caption) in enumerate(parsed, 1):
+        for i, (prompt, texto, sub, caption, formato) in enumerate(parsed, 1):
             urls = image_gen.generate_image(prompt, aspect_ratio="1:1", n=1, text=texto, subtitle=sub)
             if not urls:
                 continue
             cap = texto or prompt[:90]
-            # 1 post cada 3 imágenes (1:2 con historias) = el ritmo del drain diario
-            # (1 pieza de feed + 2 historias): imágenes 1,4,7… → post; el resto → historia.
-            kind = "post" if i % 3 == 1 else "story"
+            # FORMATO explícito del agente; si falta, 1 post cada 3 imágenes (1:2 con
+            # historias = el ritmo del drain diario: 1 pieza de feed + 2 historias).
+            kind = formato or ("post" if i % 3 == 1 else "story")
             klabel = "post del feed" if kind == "post" else "historia"
             block = f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})"
             if pq:
