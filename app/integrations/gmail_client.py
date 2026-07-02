@@ -292,9 +292,11 @@ class GmailClient:
         mime["To"] = to
         mime["Subject"] = subject
         if from_name:
-            # El address lo fija Gmail (la cuenta del token); sólo personalizamos el display name.
+            # Con OUTBOUND_FROM_EMAIL usamos ese alias (debe estar verificado como "send as"
+            # en Gmail; si no lo está, Gmail lo pisa con la cuenta primaria — inofensivo).
             try:
-                addr = svc.users().getProfile(userId=self.user_id).execute().get("emailAddress", "")
+                addr = (self.s.outbound_from_email
+                        or svc.users().getProfile(userId=self.user_id).execute().get("emailAddress", ""))
                 if addr:
                     mime["From"] = f"{from_name} <{addr}>"
             except Exception:
@@ -321,7 +323,8 @@ class GmailClient:
         mime["Subject"] = subject if subject.lower().startswith("re:") else f"Re: {subject}"
         if from_name:
             try:
-                addr = svc.users().getProfile(userId=self.user_id).execute().get("emailAddress", "")
+                addr = (self.s.outbound_from_email
+                        or svc.users().getProfile(userId=self.user_id).execute().get("emailAddress", ""))
                 if addr:
                     mime["From"] = f"{from_name} <{addr}>"
             except Exception:
