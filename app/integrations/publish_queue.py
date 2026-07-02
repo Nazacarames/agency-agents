@@ -83,6 +83,11 @@ def pending_count(store: Optional[Dict[str, Any]] = None) -> int:
     return sum(1 for it in store["items"] if it.get("status") == "pending")
 
 
+def _clean_caption(caption: str) -> str:
+    """El modelo a veces escribe `\\n` literal en vez de saltos de línea reales."""
+    return (caption or "").replace("\\n", "\n").strip()
+
+
 def _is_ig_fb(it: Dict[str, Any]) -> bool:
     return bool(set(it.get("targets") or ["instagram", "facebook"]) & {"instagram", "facebook"})
 
@@ -130,7 +135,7 @@ def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
         "image": image,
         "images": images or None,
         "kind": kind,
-        "caption": caption or "",
+        "caption": _clean_caption(caption),
         "targets": targets or ["instagram", "facebook"],
         "source": source or "",
         "status": "pending",
@@ -210,7 +215,7 @@ def _publish_item(item: Dict[str, Any]) -> Dict[str, Any]:
     from ..log import get_logger
     log = get_logger("publish_queue")
     from . import social_publish as sp
-    res = sp.publish(item["image"], item.get("caption", ""), item.get("targets"),
+    res = sp.publish(item["image"], _clean_caption(item.get("caption", "")), item.get("targets"),
                      kind=_kind(item), images=item.get("images"))
     # releer el store por si cambió mientras publicábamos
     with _LOCK:
