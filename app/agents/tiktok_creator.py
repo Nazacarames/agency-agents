@@ -209,6 +209,7 @@ class TikTokCreatorAgent(BaseAgent):
             text = text.rstrip() + block
             text = self._maybe_upload_youtube(text, self._media_to_path(url))
             text = self._enqueue_ig_reel(text, url)
+            text = self._maybe_post_tiktok(text, self._media_to_path(url), url)
             return text
         except Exception as e:
             log.warning("tiktok_assemble_failed", error=str(e)[:300])
@@ -236,6 +237,36 @@ class TikTokCreatorAgent(BaseAgent):
         except Exception as e:
             log.warning("tiktok_reel_enqueue_failed", error=str(e)[:200])
             return text
+
+    def _maybe_post_tiktok(self, text: str, video_path, video_url: str) -> str:
+        """Sube el short a TikTok vía FILE_UPLOAD (no necesita dominio verificado).
+        En sandbox queda PRIVADO (SELF_ONLY) hasta que la app pase la revisión."""
+        try:
+            from ..config import get_settings
+            from ..integrations.tiktok_client import get_tiktok_client
+            s = get_settings()
+            if not video_path or not getattr(s, "tiktok_configured", False):
+                return text
+            tc = get_tiktok_client(s)
+            if not tc.status().get("connected"):
+                return text
+            mc = re.search(r"^[\s>*`\-]*Caption\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
+            caption = (mc.group(1).strip() if mc else "IA y automatización para PyMEs 🇦🇷")
+            res = tc.post_video_file_upload(Path(str(video_path)).read_bytes(), caption)
+            pid = (res.get("data") or {}).get("publish_id")
+            priv = "SELF_ONLY" if s.tiktok_sandbox else "PUBLIC_TO_EVERYONE"
+            try:
+                from ..integrations import publish_queue as pq
+                pq.record_published(image=video_url, caption=caption, target="tiktok",
+                                    result={"ok": True, "id": pid, "privacy": priv},
+                                    source="tiktok_creator", kind="reel")
+            except Exception as e:
+                log.warning("tiktok_publog_failed", error=str(e)[:200])
+            extra = " (PRIVADO — sandbox, hasta pasar la revisión de la app)" if s.tiktok_sandbox else ""
+            return text.rstrip() + f"\n\n## 🎵 Subido a TikTok{extra}\n\npublish_id: `{pid}`\n"
+        except Exception as e:
+            log.warning("tiktok_post_failed", error=str(e)[:300])
+            return text.rstrip() + f"\n\n> ⚠️ TikTok falló: {str(e)[:140]}\n"
 
     def _maybe_upload_youtube(self, text: str, video_path) -> str:
         """Sube el short a YouTube si youtube_autoupload está activo (default: privado)."""
