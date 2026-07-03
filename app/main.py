@@ -501,6 +501,7 @@ class LeadBody(BaseModel):
     channel: Optional[str] = None
     state: Optional[str] = None
     next_step: Optional[int] = None
+    reengaged_at: Optional[str] = None
 
 
 class LessonEditBody(BaseModel):

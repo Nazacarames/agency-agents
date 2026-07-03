@@ -58,6 +58,11 @@ STEP_LABEL = {
 
 ACTIVE_STATES = ("nuevo", "contactado")  # estados que siguen en secuencia
 
+# Reenganche de dormidos: un lead que RESPONDIÓ y después se quedó callado queda
+# congelado (la secuencia no lo toca, a propósito). Tras este silencio le mandamos
+# UN solo reenganche automático y después queda quieto (marca `reengaged_at`).
+REENGAGE_AFTER_DAYS = 5
+
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 # Teléfono argentino: +54 ... (tolerante a espacios/guiones/paréntesis).
 _PHONE_RE = re.compile(r"\+54[\s\-()]?[\d\s\-()]{8,}")
@@ -262,6 +267,29 @@ def record_touch(
         lead["state"] = "sin_respuesta"
 
 
+def record_reengage(
+    store: Dict[str, Any],
+    key: str,
+    *,
+    msg_id: str = "",
+    subject: str = "",
+    thread_id: str = "",
+    today: Optional[str] = None,
+) -> None:
+    """Registra el toque de reenganche a un lead dormido y lo marca (`reengaged_at`)
+    para que NO se lo vuelva a tocar. NO cambia el estado: sigue "respondió" (caliente
+    para el humano), sólo dejamos de reengancharlo automáticamente."""
+    today = _today_str(today)
+    lead = store.get("leads", {}).get(key)
+    if not lead:
+        return
+    lead.setdefault("touches", []).append({
+        "step": "reengage", "date": today, "channel": "email",
+        "msg_id": msg_id, "subject": subject, "thread_id": thread_id,
+    })
+    lead["reengaged_at"] = today
+
+
 def mark_replied(
     store: Dict[str, Any], email: str = "", phone: str = "", when: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
@@ -402,7 +430,8 @@ def update_lead(key: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         lead = store.get("leads", {}).get(key)
         if not lead:
             return None
-        for k in ("company", "email", "phone", "channel", "state", "next_step"):
+        for k in ("company", "email", "phone", "channel", "state", "next_step",
+                  "reengaged_at"):
             if k in fields and fields[k] is not None:
                 lead[k] = fields[k]
         save_store(store)
@@ -422,6 +451,8 @@ def lead_view(lead: Dict[str, Any]) -> Dict[str, Any]:
         "next_touch_at": lead.get("next_touch_at"),
         "touches": len(lead.get("touches", [])),
         "first_seen": lead.get("first_seen"),
+        "last_reply_at": lead.get("last_reply_at"),
+        "reengaged_at": lead.get("reengaged_at"),
     }
 
 
@@ -444,6 +475,37 @@ def due_for_touch(
             out.append(lead)
     # Primero los más nuevos en la secuencia (primer toque) para priorizar volumen fresco.
     out.sort(key=lambda l: (l.get("next_step", 0), l.get("first_seen", "")))
+    return out
+
+
+def due_for_reengage(
+    store: Dict[str, Any], today: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Leads que respondieron una vez y se quedaron callados ≥ REENGAGE_AFTER_DAYS,
+    con email y sin reenganche previo → toca el ÚNICO reenganche automático."""
+    today = _today_str(today)
+    try:
+        today_d = date.fromisoformat(today)
+    except ValueError:
+        return []
+    out: List[Dict[str, Any]] = []
+    for lead in store.get("leads", {}).values():
+        if lead.get("state") != "respondió":
+            continue
+        if lead.get("reengaged_at"):
+            continue
+        if not lead.get("email"):
+            continue
+        lr = lead.get("last_reply_at")
+        if not lr:
+            continue
+        try:
+            reply_d = date.fromisoformat(str(lr)[:10])
+        except ValueError:
+            continue
+        if (today_d - reply_d).days >= REENGAGE_AFTER_DAYS:
+            out.append(lead)
+    out.sort(key=lambda l: str(l.get("last_reply_at", "")))
     return out
 
 

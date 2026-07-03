@@ -83,6 +83,32 @@ objeto por lead, COPIANDO la `key` tal cual te la pasé:
 """.strip()
 
 
+def _reengage_body(lead: Dict[str, Any]) -> str:
+    """Mensaje único de reenganche a un lead dormido (plantilla determinística, sin LLM).
+    Tono de los reenganches que funcionaron: cálido, sin presión, con salida cordial."""
+    ind = (lead.get("industria") or "").strip()
+    sobre = f" sobre automatizar {ind}" if ind else ""
+    return (
+        f"Hola, ¿cómo va? Te escribo de Automiq para retomar la conversación que "
+        f"habíamos arrancado{sobre}.\n\n"
+        "Sé que el día a día te come y esto queda para después, sin problema. Si te "
+        "sirve, armo un diagnóstico corto de cómo un agente de IA te resolvería la "
+        "atención de consultas y pedidos, sin costo y sin compromiso.\n\n"
+        "¿Te copa que coordinemos 15 minutos esta semana? Si preferís que lo deje por "
+        "acá, avisame y listo.\n\n"
+        "Abrazo,\nEquipo Automiq"
+    )
+
+
+def _reengage_subject(lead: Dict[str, Any]) -> str:
+    """Continúa el hilo: 'Re: <último asunto>' si lo hay; si no, un asunto suave."""
+    last = lead["touches"][-1] if lead.get("touches") else {}
+    subj = (last.get("subject") or "").strip()
+    if not subj:
+        return "Retomamos?"
+    return subj if subj.lower().startswith("re:") else f"Re: {subj}"
+
+
 def _parse_json_array(text: str) -> List[Dict[str, Any]]:
     if not text:
         return []
@@ -223,27 +249,64 @@ class OutboundAgent(BaseAgent):
             f"{pains}"
         )
 
+    def _reengage(self, store, client, live, sent_log, today, cap, run_id):
+        """Carril de reenganche: manda UN toque a los leads que respondieron y se
+        callaron ≥ REENGAGE_AFTER_DAYS. Muta el store y el sent_log. Devuelve
+        (líneas_reporte, líneas_error, n_enviados)."""
+        due = ls.due_for_reengage(store, today=today)[:cap]
+        lines: List[str] = []
+        errors: List[str] = []
+        n_sent = 0
+        if not due:
+            return lines, errors, n_sent
+        sent_map = sent_log.setdefault("emails", {})
+        for lead in due:
+            key = lead.get("key", "")
+            company = lead.get("company", "?")
+            email = (lead.get("email") or "").strip()
+            if not _EMAIL_RE.match(email.lower()):
+                continue
+            if not live:
+                lines.append(f"• **{company}** <{email}> — reenganche (dormido "
+                             f"≥{ls.REENGAGE_AFTER_DAYS}d desde que respondió)")
+                continue
+            subject = _reengage_subject(lead)
+            body = _reengage_body(lead)
+            thread_id = ""
+            if lead.get("touches"):
+                lt = lead["touches"][-1]
+                thread_id = lt.get("thread_id") or ""
+                if not thread_id and lt.get("msg_id"):
+                    thread_id = client.thread_id_of(lt["msg_id"])
+            try:
+                mid = client.send_message(to=email, subject=subject, body=body,
+                                          from_name=self._reengage_from_name(),
+                                          thread_id=thread_id or None)
+                if not thread_id:
+                    thread_id = client.thread_id_of(mid)
+                ls.record_reengage(store, key, msg_id=mid, subject=subject,
+                                   thread_id=thread_id, today=today)
+                sent_map[email] = {"company": company, "date": today, "subject": subject,
+                                   "step": "reengage", "msg_id": mid, "run_id": run_id}
+                n_sent += 1
+                lines.append(f"• **{company}** <{email}> → ✅ reenganche enviado (`{mid[:10]}`)")
+            except Exception as e:
+                log.error("outbound_reengage_failed", email=email, error=str(e))
+                errors.append(f"• {company} <{email}> → ❌ {e}")
+        return lines, errors, n_sent
+
+    def _reengage_from_name(self) -> str:
+        return getattr(self, "_from_name", "Equipo Automiq")
+
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         status = ctx.args.get("_ob_status") if isinstance(ctx.args, dict) else None
-        if status == "nothing_due":
-            # Igual mostramos un resumen útil (ingest + cola WhatsApp) en vez del texto pelado.
-            return super().post_process(self._summary_when_idle(ctx), ctx)
-
         today = self._today()
         store = ls.load_store()
-        due_keys = set(ctx.args.get("_ob_due_keys", []))
-
-        items = _parse_json_array(response_text)
-        # Mapear por key (autoritativo); descartar lo que el modelo inventó fuera del batch.
-        by_key: Dict[str, Dict[str, Any]] = {}
-        for it in items:
-            k = (it.get("key") or "").strip()
-            if k in due_keys and k not in by_key:
-                by_key[k] = it
 
         dry_run = bool(ctx.args.get("dry_run")) if isinstance(ctx.args, dict) else False
         auto = bool(ctx.settings.outbound_auto_send)
         live = auto and not dry_run
+        self._from_name = ctx.settings.outbound_from_name
 
         client = None
         if live:
@@ -255,6 +318,29 @@ class OutboundAgent(BaseAgent):
 
         sent_log = _load_sent_log()
         sent_map = sent_log.setdefault("emails", {})
+
+        cap = int(ctx.settings.outbound_daily_cap)
+        reeng_lines, reeng_errors, reeng_sent = self._reengage(
+            store, client, live, sent_log, today, cap, ctx.run_id)
+        ctx.args["_ob_reeng"] = reeng_lines
+        ctx.args["_ob_reeng_err"] = reeng_errors
+
+        if status == "nothing_due":
+            if live and reeng_sent:
+                ls.save_store(store)
+                _save_sent_log(sent_log)
+            # Igual mostramos un resumen útil (ingest + cola WhatsApp) en vez del texto pelado.
+            return super().post_process(self._summary_when_idle(ctx), ctx)
+
+        due_keys = set(ctx.args.get("_ob_due_keys", []))
+
+        items = _parse_json_array(response_text)
+        # Mapear por key (autoritativo); descartar lo que el modelo inventó fuera del batch.
+        by_key: Dict[str, Dict[str, Any]] = {}
+        for it in items:
+            k = (it.get("key") or "").strip()
+            if k in due_keys and k not in by_key:
+                by_key[k] = it
 
         sent, preview, errors, missing = [], [], [], []
         for key in ctx.args.get("_ob_due_keys", []):
@@ -302,7 +388,7 @@ class OutboundAgent(BaseAgent):
 
         if live:
             ls.save_store(store)
-            if sent:
+            if sent or reeng_sent:
                 _save_sent_log(sent_log)
 
         log.info("outbound_done", run_id=ctx.run_id, sent=len(sent),
@@ -311,6 +397,16 @@ class OutboundAgent(BaseAgent):
         return super().post_process(self._render_report(ctx, live, auto, sent, preview, errors, missing), ctx)
 
     # ── render del reporte para Discord ──
+
+    def _reengage_section(self, ctx) -> List[str]:
+        lines = ctx.args.get("_ob_reeng", []) or []
+        errs = ctx.args.get("_ob_reeng_err", []) or []
+        out: List[str] = []
+        if lines:
+            out += ["## 🔄 Reenganche de dormidos", *lines, ""]
+        if errs:
+            out += ["## ⚠️ Errores de reenganche", *errs, ""]
+        return out
 
     def _summary_when_idle(self, ctx: AgentContext) -> str:
         ing = ctx.args.get("_ob_ingest", {}) or {}
@@ -322,7 +418,9 @@ class OutboundAgent(BaseAgent):
             f"(ya conocidos: {ing.get('existentes', 0)}).",
             "",
             "_La secuencia no tiene emails vencidos para hoy (día 0/+2/+5/+9)._",
+            "",
         ]
+        parts += self._reengage_section(ctx)
         if wa:
             parts += ["", "## 📱 Cola WhatsApp (sin email — clic y escribí)"]
             parts += [_wa_line(w) for w in wa]
@@ -350,6 +448,7 @@ class OutboundAgent(BaseAgent):
             parts += ["## ⚠️ Sin redactar (revisar)", *missing, ""]
         if errors:
             parts += ["## ⚠️ Errores", *errors, ""]
+        parts += self._reengage_section(ctx)
         if wa:
             parts += ["## 📱 Cola WhatsApp (sin email — clic y escribí)"]
             parts += [_wa_line(w) for w in wa]
