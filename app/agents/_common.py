@@ -263,7 +263,10 @@ def image_prompt_directive() -> str:
         "Ej específico: `IMAGEN: editorial photo, close-up of a warehouse manager in Monterrey checking "
         "a phone, warm morning light, shallow depth of field, navy and royal blue accents, cinematic, "
         "no text no letters no UI | TEXTO: Pedidos que se cierran solos | SUBTEXTO: WhatsApp + IA`. "
-        "El sistema genera la imagen y le compone el texto exacto."
+        "El sistema genera la imagen y le compone el texto exacto.\n"
+        "SUBAGENTES (tool Task): para afinar los prompts de imagen delegá al subagente "
+        "`image-prompt-engineer` (experto en prompts fotográficos); para chequear consistencia "
+        "de marca, `brand-guardian`; para estrategia de grilla/historias de IG, `instagram-curator`."
     )
 
 
