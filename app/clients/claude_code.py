@@ -161,7 +161,7 @@ def run_claude_code(
     `cwd`: si se pasa, Claude Code corre EN ese directorio (en vez de un temp aislado)
     → permite que un agente edite un repo/proyecto ya clonado en disco (web_optimizer).
     `extra_env`: variables extra para el subproceso (p.ej. tokens de deploy).
-    `mcp_servers`: dict estilo {"adspirer": {"type": "http", "url": ..., "headers": ...}}
+    `mcp_servers`: dict estilo {"nombre": {"type": "http", "url": ..., "headers": ...}}
     → se pasa vía --mcp-config; el caller debe permitir sus tools (`mcp__<nombre>`).
     """
     if not claude_available():

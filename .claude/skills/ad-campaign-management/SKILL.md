@@ -1,9 +1,11 @@
 ---
 name: ad-campaign-management
-description: Manage ad campaigns across Google Ads, Meta Ads, LinkedIn Ads, and TikTok Ads. Use when the user wants to analyze campaign performance, research keywords, create campaigns, optimize budgets, or manage ad accounts via the Adspirer MCP server.
+description: Methodology for analyzing and optimizing ad campaigns across Google Ads, Meta Ads, LinkedIn Ads, and TikTok Ads — performance thresholds, wasted-spend detection, campaign research, bidding, creative fatigue, PMax limits, reporting. Use when analyzing performance, researching before a campaign, optimizing budgets, or auditing ad accounts.
 ---
 
-Manage advertising campaigns across Google Ads, Meta Ads, LinkedIn Ads, and TikTok Ads using the Adspirer MCP server (175+ tools across Google Search/PMax/Display/Demand Gen/YouTube, Meta image/video/carousel/lead-gen, LinkedIn sponsored content/carousel/lead-gen with campaign groups, and TikTok in-feed/Spark/Carousel/App Promotion).
+Methodology for managing advertising campaigns across Google Ads, Meta Ads, LinkedIn Ads, and TikTok Ads: how to analyze performance, detect wasted spend, research before launching, structure campaigns, and optimize budgets and creatives.
+
+**IMPORTANT — no ad-platform tools are connected.** Tool names mentioned below (`get_campaign_performance`, `analyze_wasted_spend`, etc.) describe the *conceptual step* of each workflow, not callable tools. Get data from: (1) real campaign data provided in the prompt (e.g. the `CAMPAÑAS REALES DE META` block), (2) `WebSearch`/`WebFetch` for research, (3) clearly-labeled `[BENCHMARK]` estimates when no real data exists. Never pretend a tool call happened.
 
 ## When to Use This Skill
 
@@ -20,22 +22,21 @@ Activate when the user:
 
 **Follow these steps in order. Do not skip steps.**
 
-### Step 1: Check Connected Platforms
+### Step 1: Check Available Data
 
 Always start here before any ad operation:
 
-- Call `get_connections_status`
-- Shows connected platforms, primary/secondary accounts, account IDs
-- If the target platform is not connected, direct the user to https://adspirer.ai/connections
+- Real campaign data in the prompt (e.g. `CAMPAÑAS REALES DE META`) → use it as-is, it is ground truth
+- No real data → work with `[BENCHMARK]` estimates and say so explicitly
 
 ### Step 2: Identify the Task
 
-| User goal | Workflow | Key tools |
+| User goal | Workflow | Conceptual steps |
 |-----------|----------|-----------|
 | View campaign metrics | Performance Analysis | `get_campaign_performance`, `get_meta_campaign_performance`, `get_linkedin_campaign_performance` |
 | Cross-platform overview | Cross-Platform Dashboard | See Cross-Platform section below |
 | Find keywords | Keyword Research | `research_keywords` |
-| Research before new campaign | Campaign Research | `WebSearch`, `WebFetch` + Adspirer tools (see Campaign Research section) |
+| Research before new campaign | Campaign Research | `WebSearch`, `WebFetch` + existing campaign data (see Campaign Research section) |
 | Research competitors | Competitive Intelligence | `WebSearch`, `WebFetch`, `analyze_search_terms`, `research_keywords` |
 | Create a campaign | Campaign Creation | Campaign Research first, then platform-specific flows below |
 | Reduce wasted spend | Budget Optimization | `optimize_budget_allocation`, `analyze_wasted_spend`, `analyze_search_terms` |
@@ -53,9 +54,9 @@ Always start here before any ad operation:
 | Set up alerts | Monitoring | `create_monitor`, `list_monitors` |
 | Schedule reports | Reporting | `schedule_brief`, `generate_report_now` |
 
-### Step 3: Execute Tools
+### Step 3: Apply the Workflow
 
-Follow the workflow patterns below. Always read first (performance, status), then act (create, optimize).
+Follow the workflow patterns below with the data you have. Always analyze first (performance, status), then recommend (create, optimize).
 
 ### Step 4: Summarize and Recommend
 
@@ -104,7 +105,7 @@ When the user asks for overall performance, a weekly review, or cross-platform c
 
 ## Campaign Research (run before creating ANY new campaign)
 
-Before creating a campaign on any platform, research the brand's market position and competitive landscape. This combines web research (native tools) with ad platform data (Adspirer MCP) to inform every campaign decision — targeting, messaging, differentiation, and bidding.
+Before creating a campaign on any platform, research the brand's market position and competitive landscape. This combines web research (native tools) with whatever campaign data is available to inform every campaign decision — targeting, messaging, differentiation, and bidding.
 
 ### Step 0: Load Strategy Directives
 Read STRATEGY.md — `## Active Directives` and skim `## Decision Log`. If directives exist, note them
@@ -147,7 +148,7 @@ Combine brand website + competitor research to answer:
 - Where are the gaps? (underserved audiences, unaddressed pain points)
 - What should ad copy emphasize to stand out?
 
-### Step 4: Pull existing ad intelligence from Adspirer
+### Step 4: Review existing ad intelligence (if campaign data is available)
 - `get_campaign_performance` — what's already running and how it performs
 - `analyze_search_terms` — what real users search for (Google Ads)
 - `get_campaign_structure` — current ad copy and targeting
@@ -627,7 +628,7 @@ Audience signals tell Google which audience segments are most likely to convert.
 
 ## Conversion Tracking Limitation
 
-Adspirer MCP currently does not configure Google Ads conversion action settings (primary vs secondary) directly.
+Conversion action settings in Google Ads (primary vs secondary) must be configured in the Google Ads UI.
 
 When campaign goals depend on conversion action priority:
 1. create campaigns in PAUSED status
@@ -771,63 +772,6 @@ These tools create REAL campaigns that spend REAL money.
 4. All campaigns created in **PAUSED status** when possible
 5. When in doubt about any spend-affecting action, **ask the user first**
 
-## Critical: Input Format Requirements
-
-Follow these rules EXACTLY when calling Adspirer tools to avoid validation errors:
-
-### IDs Must Be Strings
-All IDs (campaign_id, ad_account_id, video_id, image_hash, ad_group_id, keyword_id, organization_id, creative_id) MUST be passed as quoted strings, never as bare integers.
-
-- ✅ `"existing_video_id": "1333064875515942"`
-- ❌ `"existing_video_id": 1333064875515942`
-
-### Never Modify IDs
-Copy IDs exactly as returned by list/discover tools. Do not round, truncate, or change any digits. If `list_campaigns` returns `campaign_id: "120240129373510507"`, use that exact value.
-
-### Always Call List/Discover Before Create/Update
-Many tools require IDs from prior tool calls:
-- `list_campaigns` → get `campaign_id` before update/pause/structure
-- `get_campaign_structure` → get `ad_group_id` before keyword operations
-- `discover_existing_assets` → get `image_hash`, `video_id` before campaign creation
-- `get_linkedin_organizations` → get `organization_id` and `account_id`
-
-### Text Length Limits
-Respect character limits — the server will reject text that's too long:
-- Google Ads headline: max 30 characters
-- Google Ads description: max 90 characters
-- Google Ads sitelink text: max 25 characters
-- Google Ads callout: max 25 characters
-- Meta primary_text: max 125 characters (supports emojis, line breaks, bullet points)
-- Meta headline: max 40 characters
-
-### Meta Ad Copy Formatting
-Meta primary_text supports rich formatting for higher engagement:
-- Use emojis strategically: 🔥 ✅ 🎯 💰 ⚡ 🚀 👉 ⭐
-- Use line breaks (\n) and bullet points (•, ✅, ▸) for readability
-- Example: "🔥 Limited Time Offer!\n\n✅ Free Shipping\n✅ 30-Day Returns\n\n👉 Shop now!"
-- Bold/italic/HTML are NOT supported — plain text with emojis only
-
-### Enum Values Are Case-Insensitive
-The server auto-normalizes casing, but these are the expected values:
-- **status:** ENABLED, PAUSED, ACTIVE, ARCHIVED
-- **objective:** OUTCOME_TRAFFIC, OUTCOME_SALES, OUTCOME_LEADS, etc.
-- **match_type:** EXACT, PHRASE, BROAD
-- **call_to_action:** LEARN_MORE, SHOP_NOW, SIGN_UP, etc.
-- **date_range:** last_7_days, last_30_days, last_90_days, etc.
-- **campaign_type:** search, pmax, image, video, carousel, etc.
-
-### Budgets Are Numbers
-Pass budget fields (`budget_daily`, `budget_amount`, `target_cpa`) as numbers, not strings:
-- ✅ `"budget_daily": 50`
-- ❌ `"budget_daily": "50"`
-
-Budget is in the account's local currency (not cents). Meta minimum varies by currency.
-
-### Keywords Format
-For `add_negative_keywords`, each keyword must be an object:
-- ✅ `"keywords": [{"text": "free", "match_type": "BROAD"}]`
-- ❌ `"keywords": ["free", "cheap"]`
-
 ## Platform Guidance
 
 | Platform | Min Daily | Recommended | Best for |
@@ -841,236 +785,6 @@ For `add_negative_keywords`, each keyword must be an object:
 | LinkedIn Ads | $10 | $50+ | B2B targeting (job titles, industries); image, video, carousel, lead-gen |
 | TikTok Ads | $20 | $50+ | In-feed video, Spark Ads (boost organic), Carousel, App Promotion |
 
-## Available Tools — Complete Reference
-
-### Google Ads Tools
-
-**Performance & Analytics:**
-- `get_campaign_performance` — campaign metrics (impressions, clicks, CTR, spend, conversions, ROAS). Params: `lookback_days` (default 30), optional `customer_id`
-- `analyze_wasted_spend` — find underperforming keywords and ad groups burning budget
-- `optimize_budget_allocation` — suggest budget reallocations across campaigns
-- `analyze_search_terms` — review search terms, identify negative keyword opportunities
-- `explain_performance_anomaly` — explain sudden changes in campaign metrics
-- `get_benchmark_context` — industry benchmarks for the vertical
-
-**Campaign Creation:**
-- `select_google_campaign_type` — interactive campaign type selection wizard
-- `research_keywords` — keyword research with search volumes, CPC, competition. Params: `business_description` or `seed_keywords`, optional `website_url`, `target_location`
-- `discover_existing_assets` — check existing images, videos, logos in the account
-- `validate_and_prepare_assets` — validate creative assets before campaign creation
-- `validate_video` — validate YouTube video IDs for PMax/YouTube campaigns
-- `create_search_campaign` — create Google Search campaign (PAUSED)
-- `create_pmax_campaign` — create Performance Max campaign
-- `create_demandgen_campaign` — create Demand Gen campaign (YouTube, Gmail, Discover)
-- `create_youtube_campaign` — create YouTube video campaign
-- `add_demandgen_ad_group` — add ad group to existing Demand Gen campaign
-- `create_display_campaign` — create Google Display campaign (Standard or Smart Display); created PAUSED by default
-- `add_display_ad_group` — add ad group to Display campaign (with optional schedule + frequency caps)
-- `add_display_ad` — add Responsive Display Ad (RDA) to a Display ad group
-- `remove_display_criteria` — unified removal for audiences / topics / placements / keywords / demographics
-- `update_ad_creative` / `update_ad_headlines` / `update_ad_descriptions` — router auto-dispatches RSA vs RDA based on ad type
-- `resolve_google_locations` — resolve geo inputs (rejects ambiguous strings)
-- `list_google_languages` — list supported language codes
-
-**Campaign Management:**
-- `list_campaigns` — list all campaigns with status, budget, performance summary
-- `get_campaign_structure` — detailed campaign structure (ad groups, keywords, ads, extensions)
-- `update_campaign` — update campaign settings
-- `pause_campaign` — pause a campaign
-- `resume_campaign` — resume a paused campaign
-- `update_bid_strategy` — change bidding strategy (Maximize Clicks, Target CPA, Target ROAS, etc.)
-
-**Keyword Management:**
-- `add_keywords` — add keywords to ad group. Params: `campaign_id`, `ad_group_id`, `keywords` (array of `{"text": "...", "match_type": "EXACT|PHRASE|BROAD"}`)
-- `remove_keywords` — remove keywords from ad group
-- `update_keyword` — update keyword bid, match type, or status
-- `add_negative_keywords` — add negative keywords. Params: `campaign_id`, `keywords` (array of `{"text": "...", "match_type": "BROAD|PHRASE|EXACT"}`)
-- `remove_negative_keywords` — remove negative keywords
-
-**Ad Management:**
-- `suggest_ad_content` — AI-generated headline/description suggestions from real data
-- `create_ad` — create new responsive search ad
-- `update_ad_headlines` — update RSA headlines
-- `update_ad_descriptions` — update RSA descriptions
-- `update_ad_content` — update ad content (headlines + descriptions)
-- `pause_ad` — pause an ad
-- `resume_ad` — resume a paused ad
-
-**Ad Extensions:**
-- `add_sitelinks` — add sitelink extensions (target 10+). Params: `campaign_id`, `sitelinks` (array of `{"link_text": "...", "final_url": "...", "description1": "...", "description2": "..."}`)
-- `add_callout_extensions` — add callout extensions (target 8+). Params: `campaign_id`, `callouts` (array of strings, max 25 chars each)
-- `add_structured_snippets` — add structured snippet extensions. Params: `campaign_id`, `snippets` (array of `{"header": "...", "values": ["...", "..."]}`)
-- `list_campaign_extensions` — verify extensions on a campaign
-
-**PMax Search Themes & Audience Signals:**
-- `add_pmax_search_themes` — add search themes (max 50 per asset group). Params: `campaign_id`, `search_themes` (array of strings)
-- `get_pmax_search_themes` — list existing search themes
-- `remove_pmax_search_themes` — remove search themes by resource name
-- `add_pmax_audience_signal` — add audience signal with segment IDs
-- `get_pmax_audience_signals` — list existing audience signals
-- `remove_pmax_audience_signal` — remove audience signal by resource name
-- `search_audiences` — search for in-market, affinity, and custom audiences by keyword
-
-**Business Profile:**
-- `get_business_profile` — saved brand profile
-- `infer_business_profile` — AI-inferred profile from ad data
-- `save_business_profile` — save/update brand profile
-- `help_user_upload` — help user upload creative assets
-
-### LinkedIn Ads Tools
-
-**Performance & Analytics:**
-- `get_linkedin_campaign_performance` — campaign metrics. Params: `lookback_days` (default 30)
-- `get_linkedin_engagement_metrics` — engagement metrics (likes, shares, comments, follows)
-- `get_linkedin_audience_insights` — audience demographics and segment performance
-- `analyze_linkedin_wasted_spend` — find underperforming campaigns burning budget
-- `optimize_linkedin_budget` — budget reallocation recommendations
-- `explain_linkedin_anomaly` — explain sudden metric changes
-- `analyze_linkedin_creative_performance` — per-creative performance metrics
-
-**Campaign Creation:**
-- `select_linkedin_campaign_type` — interactive campaign type selection wizard
-- `get_linkedin_organizations` — get linked company pages and account IDs (**CALL FIRST** before any LinkedIn operation)
-- `discover_linkedin_assets` — check existing images/videos in the account. Params: `account_id` (from `get_linkedin_organizations`)
-- `validate_and_prepare_linkedin_assets` — validate/upload assets before campaign creation
-- `create_linkedin_image_campaign` — create image ad campaign. Params: `campaign_name`, `daily_budget` (min $10), `organization_id`, `introductory_text` (max 600 chars), `landing_page_url` (HTTPS), `locations` (array of location URNs), plus optional targeting (`industries`, `seniorities`, `job_titles`, `company_sizes`)
-- `create_linkedin_video_campaign` — create video ad campaign
-- `create_linkedin_carousel_campaign` — create carousel ad campaign
-- `create_linkedin_text_campaign` — create text ad campaign
-- `explain_linkedin_objectives` — explain available campaign objectives and when to use each
-
-**Campaign Management:**
-- `list_linkedin_campaigns` — list all campaigns with status and metrics
-- `get_linkedin_campaign_structure` — detailed campaign structure (creatives, targeting, settings). Params: `campaign_id`
-- `pause_linkedin_campaign` — pause a campaign. Params: `campaign_id`
-- `resume_linkedin_campaign` — resume a paused campaign. Params: `campaign_id`
-- `update_linkedin_campaign` — update campaign settings (name, status, objective, etc.)
-- `update_linkedin_campaign_budget` — update daily/total budget. Params: `campaign_id`, `daily_budget` and/or `total_budget`
-- `update_linkedin_campaign_schedule` — update start/end dates. Params: `campaign_id`, `start_date`, `end_date`
-- `update_linkedin_campaign_targeting` — update targeting criteria. Params: `campaign_id`, plus targeting facets (`locations`, `industries`, `seniorities`, `job_titles`, `company_sizes`, etc.)
-- `clone_linkedin_campaign` — clone a campaign with optional modifications. Params: `campaign_id`, optional overrides
-- `batch_update_linkedin_campaigns` — bulk update multiple campaigns at once
-
-**Creative Management:**
-- `list_linkedin_creatives` — list all creatives for a campaign. Params: `campaign_id`
-- `add_linkedin_creative` — add image creative to campaign
-- `add_linkedin_text_creative` — add text creative to campaign
-- `add_linkedin_video_creative` — add video creative to campaign
-- `update_linkedin_creative` — update creative content. Params: `creative_id`
-- `delete_linkedin_creative` — delete a creative. Params: `creative_id`
-- `pause_linkedin_creative` — pause a creative. Params: `creative_id`
-- `resume_linkedin_creative` — resume a paused creative. Params: `creative_id`
-- `generate_linkedin_ad_creatives` — AI-generated ad creative variations
-
-**Targeting & Audiences:**
-- `get_linkedin_campaign_targeting` — get current targeting for a campaign. Params: `campaign_id`
-- `search_linkedin_targeting` — search for targeting facets. Params: `query`, `facet_type` (e.g., `"job_titles"`, `"industries"`, `"seniorities"`, `"company_sizes"`, `"skills"`)
-- `research_business_for_linkedin_targeting` — AI-recommended targeting based on business website
-
-**Campaign Groups & Conversions:**
-- `list_linkedin_campaign_groups` — list campaign groups (folders). Params: `account_id`
-- `update_linkedin_campaign_group` — update campaign group settings
-- `list_linkedin_conversions` — list conversion tracking rules. Params: `account_id`
-- `associate_linkedin_conversion` — link conversion to campaign. Params: `campaign_id`, `conversion_id`
-- `manage_linkedin_conversions` — create/update/delete conversion tracking rules
-
-### Meta Ads Tools
-
-**Performance & Analytics:**
-- `get_meta_campaign_performance` — campaign metrics. Params: `lookback_days` (default 30), optional `ad_account_id`
-- `analyze_meta_ad_performance` — ad-level performance breakdown
-- `get_meta_audience_insights` — audience demographics and segment performance
-- `analyze_meta_wasted_spend` — find underperforming ads/ad sets burning budget
-- `optimize_meta_budget` — budget reallocation recommendations
-- `detect_meta_creative_fatigue` — identify ads losing effectiveness over time
-- `optimize_meta_placements` — placement-level performance analysis (Feed, Stories, Reels, etc.)
-- `explain_meta_anomaly` — explain sudden metric changes
-- `analyze_meta_audiences` — audience segment performance analysis
-
-**Campaign Creation:**
-- `select_meta_campaign_type` — interactive campaign type selection wizard
-- `discover_meta_assets` — check existing images/videos in the account
-- `validate_and_prepare_meta_assets` — validate/upload assets before campaign creation
-- `create_meta_image_campaign` — create image ad campaign
-- `create_meta_video_campaign` — create video ad campaign
-- `create_meta_carousel_campaign` — create carousel ad campaign
-- `add_meta_ad_set` — add ad set to existing campaign
-
-**Campaign Management:**
-- `list_meta_campaigns` — list all campaigns with status and metrics
-- `get_meta_campaign_details` — detailed campaign structure
-- `update_meta_campaign` — update campaign settings
-- `pause_meta_campaign` — pause a campaign
-- `resume_meta_campaign` — resume a paused campaign
-- `duplicate_meta_campaign` — duplicate a campaign with optional modifications
-- `list_meta_ad_sets` — list ad sets in a campaign
-- `update_meta_ad_set` — update ad set targeting, budget, schedule
-- `list_meta_ads` — list ads in an ad set
-- `update_meta_ad` — update ad creative/content
-- `add_meta_ad` — add new ad to ad set
-- `get_meta_ad_creatives` — get creative details for ads
-
-**Targeting & Audiences:**
-- `search_meta_targeting` — search for targeting options (interests, behaviors, demographics). Params: `query`, optional `target_type`
-- `browse_meta_targeting` — browse targeting categories
-- `list_meta_instagram_accounts` — list connected Instagram accounts
-- `list_meta_pixels` — list Meta pixels for conversion tracking
-
-**Lead Forms:**
-- `list_meta_lead_forms` — list lead gen forms
-- `get_meta_lead_form_submissions` — get lead form submissions
-
-### TikTok Ads Tools
-
-**Performance & Analytics:**
-- `get_tiktok_campaign_performance` — campaign metrics. Params: `lookback_days` (default 30)
-- `get_tiktok_ad_performance` — ad-level performance breakdown
-- `analyze_tiktok_wasted_spend` — find underperforming campaigns burning budget
-- `optimize_tiktok_budget` — budget reallocation recommendations
-- `detect_tiktok_creative_fatigue` — identify ads losing effectiveness over time
-- `explain_tiktok_anomaly` — explain sudden metric changes
-- `get_tiktok_audience_insights` — audience composition and CPA breakdowns
-- `analyze_tiktok_geo_performance` — geo-level performance breakdown
-
-**Campaign Creation:**
-- `discover_tiktok_assets` — check existing video / image assets
-- `validate_and_prepare_tiktok_assets` — validate creative assets
-- `upload_tiktok_images` — upload static image assets
-- `search_tiktok_targeting` — find interests, behaviors, geo
-- `create_tiktok_campaign` — flexible objective (TRAFFIC, CONVERSIONS, APP_PROMOTION, etc.); pass `tiktok_item_id` or `card_id` for Spark Ads
-- `create_tiktok_video_campaign` — in-feed video
-- `create_tiktok_carousel_card` — build carousel cards before adding via `add_tiktok_ad`
-
-**Campaign Lifecycle:**
-- `list_tiktok_campaigns` — list all campaigns
-- `get_tiktok_campaign` — campaign details
-- `pause_tiktok_campaign` / `resume_tiktok_campaign` — toggle live state
-- `update_tiktok_campaign` — update campaign settings (CBO via `budget_optimize_on`, etc.)
-- `add_tiktok_ad_group` — add ad groups (with placement, audience, budget)
-- `update_tiktok_ad_group` / `pause_tiktok_ad_group` / `resume_tiktok_ad_group` — ad group lifecycle
-- `add_tiktok_ad` / `update_tiktok_ad` / `pause_tiktok_ad` / `resume_tiktok_ad` — ad lifecycle
-
-### Account & Utility Tools
-- `get_connections_status` — show connected platforms, account IDs
-- `switch_primary_account` — change active ad account
-- `get_usage_status` — check tool call quota and subscription tier
-- `echo_test` — test MCP connectivity
-
-### Monitoring & Reporting Tools
-- `create_monitor` — set up metric alerts (ROAS, CPA, CTR thresholds)
-- `list_monitors` — list active monitors
-- `schedule_brief` — schedule recurring performance reports
-- `generate_report_now` — generate one-time performance report
-- `list_scheduled_tasks` — list all scheduled tasks
-- `manage_scheduled_task` — update/delete scheduled tasks
-- `start_research` — start async research task
-- `get_research_status` — check research task status
-- `audit_conversion_tracking` — audit conversion tracking setup
-
-### Research (native)
-- `WebSearch` — search the web for competitors, market data, trends
-- `WebFetch` — crawl websites for pricing, messaging, sitelink URLs, value props
-
 ## Output Formatting
 
 - **Performance:** Table with impressions, clicks, CTR, spend, conversions, CPC, ROAS. Order by spend descending.
@@ -1079,30 +793,3 @@ For `add_negative_keywords`, each keyword must be an object:
 - **Cross-platform:** Side-by-side comparison table.
 - **Errors:** Report full error message. Never retry creation tools automatically.
 
-## Troubleshooting
-
-### Connection Issues (Nothing Works)
-
-If **no tools work at all** — even `get_connections_status` or `echo_test` fails — guide the user through these steps in order:
-
-1. **Check tool permissions:** The user's AI client may be blocking Adspirer tools. Read tools (performance, research, status) should be set to **Always allow**. Write tools (campaign creation, budget changes) should be set to **Custom** (ask each time). If tools are blocked or set to "Never allow," nothing will execute.
-
-2. **Disconnect and reconnect the Adspirer connector:**
-   - **Claude (web/desktop):** Customize → Connectors → Disconnect Ads MCP → Connect again → Complete OAuth
-   - **ChatGPT:** Settings → Connectors → Remove Adspirer-MCP → Re-add with URL `https://mcp.adspirer.com/mcp` → Complete OAuth
-   - **Claude Code:** `claude mcp remove adspirer` → `claude mcp add --transport http adspirer https://mcp.adspirer.com/mcp` → Restart → `/mcp` to authenticate
-   - **Cursor:** Re-connect via MCP settings
-
-3. **Refresh Adspirer session:** If reconnecting doesn't fix it, the user's login session may have expired. Direct them to go to https://adspirer.ai, log out, log back in, then return to their AI client and try again.
-
-**Claude and ChatGPT web connectors** may disconnect every 1–2 weeks. This is normal behavior — users just need to re-enable and re-authenticate when it happens.
-
-**Important:** These steps apply only when *nothing* works. If some ad platforms work but one doesn't (e.g., Google works but LinkedIn fails), that is NOT a connection issue — the MCP server is reachable. In that case, have the user reconnect just that platform at https://adspirer.ai/connections.
-
-### Other Issues
-
-- **Auth errors:** Reconnect via your AI assistant's connector settings
-- **No data:** Verify ad platform is connected at https://adspirer.ai/connections. Try longer lookback (60/90 days).
-- **Raw data needed:** Pass `raw_data: true` to any performance / analytics tool — returns compact JSON of metrics only (impressions, spend, conversions, CPA, CPC, CTR, CVR, ROAS by campaign/date) without recommendations or commentary. Useful for own attribution, dashboards, or token-efficient pipelines.
-- **Wrong account:** Use `switch_primary_account` to change active account
-- **Rate limits:** Adspirer enforces tool call quotas by tier (Free: 15/mo, Plus: 150/mo, Pro: 600/mo, Max: 3,000/mo)

@@ -162,13 +162,6 @@ class Settings(BaseSettings):
     veo_model: str = "veo-3.1-fast-generate-001"  # Veo 3.1 Fast GA (sin allowlist). Full: "veo-3.1-generate-001"
     google_api_key: str = ""          # legacy/fallback (org bloquea keys → normalmente vacío)
 
-    # ── Adspirer (MCP de ads: Google/Meta/LinkedIn/TikTok, 175+ tools) ──
-    # El media_auditor carga la skill `ad-campaign-management` siempre. Si además
-    # se setea la API key (dashboard de adspirer.ai; Streamable HTTP admite API key),
-    # el agente se conecta al MCP y opera con datos/tools REALES de las cuentas.
-    adspirer_api_key: str = ""
-    adspirer_mcp_url: str = "https://mcp.adspirer.com/mcp"
-
     # ── YouTube (Data API v3 — subir Shorts del canal de Nazareno) ──
     # Reusa la credencial OAuth de Google re-autorizada con scope youtube.upload.
     # youtube_oauth_json = opcional, credencial dedicada (si no, usa google_service_account_json).
@@ -212,10 +205,6 @@ class Settings(BaseSettings):
     @property
     def veo_configured(self) -> bool:
         return bool(self.google_service_account_json or self.google_api_key)
-
-    @property
-    def adspirer_configured(self) -> bool:
-        return bool(self.adspirer_api_key and self.adspirer_mcp_url)
 
     @property
     def tiktok_redirect_uri_effective(self) -> str:

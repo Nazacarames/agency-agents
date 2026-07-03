@@ -64,8 +64,8 @@ class BaseAgent(ABC):
 
     def claude_code_mcp_servers(self, settings) -> Optional[Dict[str, Any]]:
         """Servidores MCP para el run de Claude Code (None = ninguno). Las subclases
-        que usan un MCP (p.ej. media_auditor + Adspirer) lo devuelven acá; sus tools
-        se permiten automáticamente como `mcp__<nombre>`."""
+        que usen un MCP lo devuelven acá; sus tools se permiten automáticamente
+        como `mcp__<nombre>`."""
         return None
 
     # ── Tool use (online mode, path MiniMax directo) ──

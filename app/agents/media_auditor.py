@@ -1,15 +1,11 @@
 """
 Media Auditor — audit de cuentas de ads (Meta + Google).
-v3 (2026-07-01) — Integración Adspirer:
-- Carga la skill `ad-campaign-management` (workflows de Adspirer: performance,
-  wasted spend, creación/optimización cross-platform) además de `marketing-ads`.
-- Si hay ADSPIRER_API_KEY, se conecta al MCP de Adspirer (tools reales de
-  Google/Meta/LinkedIn/TikTok Ads).
+v4 (2026-07-03) — Sin Adspirer como servicio: se quitó el MCP; queda la skill
+`ad-campaign-management` como METODOLOGÍA pura (umbrales, workflows de
+performance/wasted spend/optimización) además de `marketing-ads`.
 - Inyecta las campañas REALES de Meta (Graph API, integración meta_ads) en el
   prompt: el reporte sale con números de verdad; [BENCHMARK] queda como fallback.
 """
-from typing import Any, Dict, Optional
-
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 
@@ -26,11 +22,11 @@ Hacer un audit (semanal) de las cuentas de ads (Meta + Google) y detectar:
 - Riesgos de seguridad (tokens, RBAC, encriptación, compliance)
 
 ## Fuentes de datos (en orden de prioridad)
-1. **Tools MCP de Adspirer** (si están disponibles: `get_connections_status`,
-   `get_meta_campaign_performance`, etc. — seguí la skill `ad-campaign-management`).
-2. **Datos reales de Meta** que vienen en el mensaje (bloque `CAMPAÑAS REALES DE META`):
+La skill `ad-campaign-management` es tu METODOLOGÍA (umbrales, workflows, qué
+mirar) — NO tiene tools conectadas; no intentes llamar tools de ads.
+1. **Datos reales de Meta** que vienen en el mensaje (bloque `CAMPAÑAS REALES DE META`):
    usalos tal cual, son de la Graph API de la cuenta.
-3. **[BENCHMARK]** — SOLO si no hay ni tools ni datos reales: generá el reporte
+2. **[BENCHMARK]** — SOLO si no hay datos reales: generá el reporte
    COMPLETO con benchmarks típicos de PyME argentina (presupuesto USD 1k-3k/mes:
    CPL USD 8-20, CTR 1-2%, ROAS 1.5-3, CPM USD 5-12), marcados como `[BENCHMARK]`.
    **NO devuelvas "no puedo"** ni un template vacío.
@@ -54,7 +50,7 @@ Reporte con secciones:
 
 class MediaAuditorAgent(BaseAgent):
     name = "media_auditor"
-    description = "Audit semanal de ads (Meta real + Adspirer MCP + fallback [BENCHMARK])"
+    description = "Audit semanal de ads (Meta real + metodología ad-campaign-management + fallback [BENCHMARK])"
     schedule = "0 9 * * 1"   # lunes 09:00
     timezone = "America/Buenos_Aires"
     max_tokens = 10000
@@ -65,18 +61,6 @@ class MediaAuditorAgent(BaseAgent):
     @property
     def system_prompt(self) -> str:
         return f"{get_context_block()}\n\n{MEDIA_AUDITOR_INSTRUCTIONS}"
-
-    def claude_code_mcp_servers(self, settings) -> Optional[Dict[str, Any]]:
-        """Conecta el MCP de Adspirer si hay API key (tools reales de ads)."""
-        if not getattr(settings, "adspirer_configured", False):
-            return None
-        return {
-            "adspirer": {
-                "type": "http",
-                "url": settings.adspirer_mcp_url,
-                "headers": {"Authorization": f"Bearer {settings.adspirer_api_key}"},
-            }
-        }
 
     def _meta_block(self) -> str:
         """Campañas reales de Meta (Graph API) para el prompt. '' si no hay conexión."""
@@ -106,10 +90,7 @@ class MediaAuditorAgent(BaseAgent):
         tz = pytz.timezone("America/Buenos_Aires")
         now = datetime.now(tz)
         meta = self._meta_block()
-        adspirer = getattr(ctx.settings, "adspirer_configured", False)
         fuentes = []
-        if adspirer:
-            fuentes.append("las tools MCP de Adspirer (empezá por get_connections_status)")
         if meta:
             fuentes.append("el bloque CAMPAÑAS REALES DE META de abajo")
         if not fuentes:
