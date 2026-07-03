@@ -1277,10 +1277,66 @@ class WebLeadBody(BaseModel):
     message: Optional[str] = ""
 
 
+def _lead_auto_reply(name: str, email: str, company: str, message: str) -> None:
+    """Primer contacto AUTOMÁTICO al lead de la web: mail personalizado según su
+    solicitud (MiniMax redacta; template si falla), desde info@automiq.agency.
+    Corre en background para no demorar la respuesta del formulario."""
+    from .integrations.gmail_client import GmailClient
+    s = get_settings()
+    if not email or not s.gmail_configured:
+        return
+    first = (name.split()[0] if name.strip() else "").capitalize()
+    body_txt = ""
+    try:
+        from .clients.minimax import MiniMaxClient
+        sys_prompt = (
+            "Sos el equipo de Automiq (automiq.agency), agencia argentina de agentes de IA y "
+            "automatización para PyMEs. Un prospecto dejó sus datos en la web pidiendo que lo "
+            "contactemos. Escribí SOLO el cuerpo del email de primera respuesta (sin asunto, "
+            "sin firma — la firma la agrega el sistema): español rioplatense, cálido y concreto, "
+            "3-5 oraciones. Arrancá saludándolo por el nombre, retomá ESPECÍFICAMENTE lo que "
+            "pidió (si dejó mensaje) mostrando que lo leímos, contale en una línea cómo lo "
+            "resolvemos, y proponé coordinar el diagnóstico gratis de 30 minutos respondiendo "
+            "este mail o por WhatsApp +54 9 11 2771 3231. NUNCA inventes precios ni promesas."
+        )
+        user_msg = (f"Nombre: {name}\nEmpresa: {company or 'no dijo'}\n"
+                    f"Solicitud: {message or 'no dejó mensaje, solo pidió contacto'}")
+        with MiniMaxClient(s) as mc:
+            r = mc.complete(sys_prompt, [{"role": "user", "content": user_msg}],
+                            max_tokens=400, temperature=0.6)
+            body_txt = (r.text or "").strip()
+    except Exception as e:
+        log.warning("lead_reply_llm_failed", error=str(e)[:200])
+    if not body_txt:
+        body_txt = (f"¡Hola{' ' + first if first else ''}! Gracias por escribirnos desde automiq.agency.\n\n"
+                    "Recibimos tu consulta y en menos de 2 horas hábiles te contactamos para "
+                    "coordinar tu diagnóstico gratis de 30 minutos. Si querés adelantar, "
+                    "respondé este mail contándonos un poco más de tu operación, o escribinos "
+                    "por WhatsApp al +54 9 11 2771 3231.")
+    body_txt += "\n\n—\nEquipo Automiq · automiq.agency\ninfo@automiq.agency · WhatsApp +54 9 11 2771 3231"
+    try:
+        gc = GmailClient(s)
+        msg_id = gc.send_message(email, "Recibimos tu consulta — Automiq",
+                                 body_txt, from_name=s.outbound_from_name)
+        # dejar rastro en el lead
+        from .integrations import leads_store as ls
+        store = ls.load_store()
+        key = ls.lead_key(email=email, company=company or name)
+        lead = store.get("leads", {}).get(key)
+        if lead is not None:
+            lead.setdefault("notes", []).append(
+                f"[auto] Primera respuesta enviada por mail (msg {msg_id}) según su solicitud.")
+            ls.save_store(store)
+        log.info("lead_auto_reply_sent", to=email, msg_id=msg_id)
+    except Exception as e:
+        log.warning("lead_auto_reply_failed", error=str(e)[:200])
+
+
 @app.post("/api/web/lead")
-async def api_web_lead(body: WebLeadBody, request: Request):
+async def api_web_lead(body: WebLeadBody, request: Request, background: BackgroundTasks):
     """Público (CORS de la landing). El visitante pide que lo contactemos:
-    entra al pipeline como lead INBOUND caliente + aviso a Discord."""
+    entra al pipeline como lead INBOUND caliente + aviso a Discord (#agencia)
+    + primera respuesta automática por mail basada en su solicitud."""
     from datetime import datetime as _dt
     name = (body.name or "").strip()[:120]
     email = (body.email or "").strip()[:160]
@@ -1312,7 +1368,7 @@ async def api_web_lead(body: WebLeadBody, request: Request):
         return key
 
     key = await run_in_threadpool(_save)
-    # aviso a Discord (best-effort)
+    # aviso a Discord: canal #agencia (fallback: webhook default)
     try:
         from .clients.discord import DiscordWebhook
         s = get_settings()
@@ -1322,10 +1378,15 @@ async def api_web_lead(body: WebLeadBody, request: Request):
                     (f" · {company}" if company else "") +
                     (f"\n📧 {email}" if email else "") + (f"\n📱 {phone}" if phone else "") +
                     (f"\n> {message[:200]}" if message else "") +
-                    "\n→ Contactarlo en menos de 2 hs.")
+                    ("\n→ Ya le mandamos la primera respuesta automática por mail."
+                     if email else "\n→ Sin mail: contactarlo por WhatsApp."),
+                    url=s.discord_agencia_webhook_url or None)
             dw.close()
     except Exception:
         pass
+    # primera respuesta automática por mail, según su solicitud (background)
+    if email:
+        background.add_task(_lead_auto_reply, name, email, company, message)
     log.info("web_lead_received", key=key, has_email=bool(email), has_phone=bool(phone))
     return {"ok": True}
 

@@ -136,6 +136,7 @@ class Settings(BaseSettings):
     outbound_daily_cap: int = 10         # máximo de emails nuevos por corrida
     outbound_from_name: str = "Equipo Automiq"
     outbound_from_email: str = ""        # alias "send as" verificado en Gmail (ej: hola@automiq.agency)
+    discord_agencia_webhook_url: str = ""  # webhook del canal #agencia (leads de la web)
 
     # ── TikTok (Content Posting API + Login Kit) ──
     # App "Automiq Publisher" (developers.tiktok.com). Postea contenido de video
