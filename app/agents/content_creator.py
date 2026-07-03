@@ -61,7 +61,7 @@ class ContentCreatorAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 12000  # 2026-06-12: subido de 5000 (truncamiento observado en producción)
     use_claude_code = True
-    claude_code_skill = "marketing-redes,hook-generator,post-formatter,content-matrix,image"
+    claude_code_skill = "marketing-redes,hook-generator,post-formatter,content-matrix,image,copywriting,stop-slop"
     claude_code_timeout = 700
 
     @property

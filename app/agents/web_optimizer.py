@@ -57,7 +57,10 @@ automatización, sistemas a medida, consultoría).
 
 
 WEB_OPTIMIZER_TASK = """
-Cargá y seguí la skill `marketing-landing` (usá la tool Skill) para guiar el análisis CRO.
+Cargá y seguí las skills `marketing-landing` y `cro` (usá la tool Skill) para guiar el
+análisis CRO, `ui-ux-pro-max` para decisiones visuales/UX y `stop-slop` para que el copy
+no suene a IA. Nota: no tenés Bash — los scripts de búsqueda de `ui-ux-pro-max` no corren;
+buscá directo en sus `data/*.csv` con Grep.
 
 Estás dentro del directorio del proyecto de la landing (Astro). Hacé esto:
 1. Explorá la estructura (Glob/Read): encontrá las páginas/componentes (probablemente
@@ -81,7 +84,7 @@ class WebOptimizerAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     deliver_to_discord = True
     use_claude_code = True
-    claude_code_skill = "marketing-landing"
+    claude_code_skill = "marketing-landing,cro,ui-ux-pro-max,stop-slop"
     claude_code_timeout = 1800
     # Solo tools de edición: que NO pueda deployar/romper por su cuenta (de eso me ocupo en Python).
     claude_code_tools = ["Read", "Write", "Edit", "Glob", "Grep", "Skill", "WebFetch"]

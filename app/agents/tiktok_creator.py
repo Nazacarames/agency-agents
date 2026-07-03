@@ -159,7 +159,7 @@ class TikTokCreatorAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 12000
     use_claude_code = True
-    claude_code_skill = "marketing-redes,reels-scripting,hook-generator"
+    claude_code_skill = "marketing-redes,reels-scripting,hook-generator,stop-slop"
     claude_code_timeout = 700
 
     @property

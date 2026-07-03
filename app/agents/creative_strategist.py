@@ -63,7 +63,7 @@ class CreativeStrategistAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 5000
     use_claude_code = True
-    claude_code_skill = "marketing-ads"
+    claude_code_skill = "marketing-ads,ad-creative"
     claude_code_timeout = 700
 
     @property

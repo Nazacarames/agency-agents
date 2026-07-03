@@ -48,7 +48,7 @@ class WebAuditorAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 8000
     use_claude_code = True
-    claude_code_skill = "marketing-auditoria"
+    claude_code_skill = "marketing-auditoria,seo-audit"
     claude_code_timeout = 1200  # 5 subagentes en paralelo + WebFetch de varias páginas
 
     @property
