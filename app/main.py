@@ -1265,6 +1265,71 @@ async def api_demo_chat(body: DemoChatBody, request: Request):
     return {"ok": True, "reply": reply or "¿En qué te puedo ayudar con tu empresa?"}
 
 
+# ── Formulario de contacto de la landing (lead inbound) ─────────────────────
+_lead_usage: Dict[str, Any] = {"day": "", "total": 0, "ips": {}}
+
+
+class WebLeadBody(BaseModel):
+    name: str
+    email: Optional[str] = ""
+    phone: Optional[str] = ""
+    company: Optional[str] = ""
+    message: Optional[str] = ""
+
+
+@app.post("/api/web/lead")
+async def api_web_lead(body: WebLeadBody, request: Request):
+    """Público (CORS de la landing). El visitante pide que lo contactemos:
+    entra al pipeline como lead INBOUND caliente + aviso a Discord."""
+    from datetime import datetime as _dt
+    name = (body.name or "").strip()[:120]
+    email = (body.email or "").strip()[:160]
+    phone = (body.phone or "").strip()[:40]
+    company = (body.company or "").strip()[:120]
+    message = (body.message or "").strip()[:600]
+    if not name or not (email or phone):
+        raise HTTPException(status_code=400, detail="Faltan datos: nombre y un mail o teléfono")
+    today = _dt.utcnow().strftime("%Y-%m-%d")
+    if _lead_usage["day"] != today:
+        _lead_usage.update({"day": today, "total": 0, "ips": {}})
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+    if _lead_usage["total"] >= 60 or _lead_usage["ips"].get(ip, 0) >= 5:
+        raise HTTPException(status_code=429, detail="Demasiados envíos por hoy — escribinos por WhatsApp")
+    _lead_usage["total"] += 1
+    _lead_usage["ips"][ip] = _lead_usage["ips"].get(ip, 0) + 1
+
+    def _save():
+        from .integrations import leads_store as ls
+        store = ls.load_store()
+        key = ls.upsert_lead(store, company=company or name, email=email, phone=phone, decisor=name)
+        if key:
+            lead = store["leads"][key]
+            lead["state"] = "respondió"          # inbound caliente: el outbound NO lo toca
+            lead["next_touch_at"] = None
+            lead.setdefault("notes", []).append(
+                f"[{today}] 🔥 INBOUND desde la landing (formulario): {message or 'pidió que lo contactemos'}")
+            ls.save_store(store)
+        return key
+
+    key = await run_in_threadpool(_save)
+    # aviso a Discord (best-effort)
+    try:
+        from .clients.discord import DiscordWebhook
+        s = get_settings()
+        if getattr(s, "discord_configured", False):
+            dw = DiscordWebhook(s)
+            dw.send(f"🔥 **LEAD INBOUND desde la web**\n**{name}**" +
+                    (f" · {company}" if company else "") +
+                    (f"\n📧 {email}" if email else "") + (f"\n📱 {phone}" if phone else "") +
+                    (f"\n> {message[:200]}" if message else "") +
+                    "\n→ Contactarlo en menos de 2 hs.")
+            dw.close()
+    except Exception:
+        pass
+    log.info("web_lead_received", key=key, has_email=bool(email), has_phone=bool(phone))
+    return {"ok": True}
+
+
 @app.get("/api/system/health")
 async def api_system_health(request: Request):
     """Estado del sistema para el panel: DB, publicación IG/FB, imágenes, cola."""
