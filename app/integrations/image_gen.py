@@ -131,8 +131,9 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
     # SIEMPRE prohibir texto: los modelos dibujan letras/números deformes e ilegibles.
     # El texto real lo compone Pillow por encima. Negativo fuerte y repetido.
     full_prompt += (". IMPORTANT: photographic/illustrated scene only, absolutely NO text, "
-                    "no letters, no words, no numbers, no captions, no watermark, no logos, "
-                    "no UI, no chat bubbles, no screenshots, no charts. Pure imagery.")
+                    "no letters, no words, no numbers, no captions, no watermark, "
+                    "no brand logos or trademarks on clothing, no UI, no chat bubbles, "
+                    "no screenshots, no charts. Plain work clothing. Pure imagery.")
     if text:
         # además dejar espacio limpio abajo para la banda de texto compuesta
         full_prompt += " Leave clean empty space at the bottom for a text banner."
@@ -214,16 +215,25 @@ def _fit_font(draw, text: str, font_path: Path, max_w: int, max_h: int,
     return font, textwrap.wrap(text, width=max(6, int(max_w / max(draw.textlength('M', font=font), 1)))) or [text], min_size * 1.12
 
 
-def _grad_band(img, W: int, band_h: int, top: bool = False) -> None:
+def _grad_band(img, W: int, band_h: int, top: bool = False,
+               max_a: int = 225, gamma: float = 0.8) -> None:
     """Degradé navy → transparente para legibilidad (abajo, o arriba si top)."""
     from PIL import Image, ImageDraw
     band = Image.new("RGBA", (W, band_h), (0, 0, 0, 0))
     bd = ImageDraw.Draw(band)
     for y in range(band_h):
         t = (1 - y / band_h) if top else (y / band_h)
-        a = int(225 * t ** 0.8)
+        a = int(max_a * t ** gamma)
         bd.line([(0, y), (W, y)], fill=(_NAVY[0], _NAVY[1], _NAVY[2], a))
     img.alpha_composite(band, (0, 0 if top else img.size[1] - band_h))
+
+
+def _draw_tracked(draw, text: str, font, x: int, y: int, color, track: int = 4) -> None:
+    """Dibuja texto con letter-spacing (para el kicker de marca)."""
+    cx = x
+    for ch in text:
+        draw.text((cx, y), ch, font=font, fill=color)
+        cx += draw.textlength(ch, font=font) + track
 
 
 def _draw_lines(draw, lines, font, line_h, y, W, pad, align="center", color=None):
@@ -238,96 +248,63 @@ def _draw_lines(draw, lines, font, line_h, y, W, pad, align="center", color=None
 
 
 def _overlay_text(img_bytes: bytes, text: str, subtitle: Optional[str] = None) -> Optional[bytes]:
-    """Compone el titular sobre la imagen con 1 de 4 layouts (elegido por hash del
-    texto → determinístico pero VARIADO entre piezas, para que el feed no sea
-    siempre la misma banda inferior centrada): banda | esquina | tarjeta | franja."""
+    """Compone el titular con tratamiento EDITORIAL en un borde (abajo, o arriba según
+    hash) — NUNCA sobre el centro, donde suele estar el sujeto. Gradiente denso para
+    legibilidad, barra de acento azul fina, kicker de marca, titular Anton y bajada,
+    alineado a la izquierda. Sin recuadros ni bordes (eso se veía a plantilla)."""
     try:
         import zlib
-        from PIL import Image, ImageDraw
+        from PIL import Image, ImageDraw, ImageFont
         img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
         W, H = img.size
         draw = ImageDraw.Draw(img, "RGBA")
 
-        pad = int(W * 0.06)
         head = (text or "").strip().upper()
-        variant = ("banda", "esquina", "tarjeta", "franja")[zlib.crc32(head.encode("utf-8")) % 4]
-        sub_color = (_BLUE[0] + 60, 150, 255, 255)
+        sub = (subtitle or "").strip()
+        pad = int(W * 0.075)
+        bar_w = max(int(W * 0.009), 6)
+        x = pad + bar_w + int(W * 0.03)          # el texto arranca a la derecha de la barra
+        max_w = W - x - pad
+        at_bottom = (zlib.crc32(head.encode("utf-8")) % 2 == 0)
 
-        if variant == "banda":
-            # clásico: banda inferior, titular centrado
-            max_w = W - 2 * pad
-            band_h = int(H * (0.42 if subtitle else 0.34))
-            _grad_band(img, W, band_h)
-            font, lines, line_h = _fit_font(draw, head, _HEADLINE_FONT, max_w,
-                                            int(band_h * (0.55 if subtitle else 0.72)))
-            sub_h = int(H * 0.05) if subtitle else 0
-            y = H - band_h + (band_h - line_h * len(lines) - sub_h) / 2 + (band_h * 0.08)
-            y = _draw_lines(draw, lines, font, line_h, y, W, pad)
-            if subtitle:
-                sf, sl, slh = _fit_font(draw, subtitle.strip(), _BODY_FONT, max_w,
-                                        sub_h * 1.6, start=46, min_size=20)
-                _draw_lines(draw, sl[:2], sf, slh, y, W, pad, color=sub_color)
+        # gradiente denso en el borde elegido (legibilidad sin sombras duras)
+        _grad_band(img, W, int(H * 0.55), top=not at_bottom, max_a=238, gamma=0.9)
 
-        elif variant == "esquina":
-            # titular alineado abajo-izquierda con barra vertical azul
-            max_w = int(W * 0.78)
-            band_h = int(H * (0.46 if subtitle else 0.38))
-            _grad_band(img, W, band_h)
-            font, lines, line_h = _fit_font(draw, head, _HEADLINE_FONT, max_w - pad,
-                                            int(band_h * 0.55), start=100)
-            sub_h = int(H * 0.05) if subtitle else 0
-            total = line_h * len(lines) + sub_h
-            y0 = H - pad - total
-            draw.rectangle([pad - int(W * 0.02), y0, pad - int(W * 0.008), y0 + total],
-                           fill=(_BLUE[0], _BLUE[1], _BLUE[2], 255))
-            y = _draw_lines(draw, lines, font, line_h, y0, W, pad + int(W * 0.01), align="left")
-            if subtitle:
-                sf, sl, slh = _fit_font(draw, subtitle.strip(), _BODY_FONT, max_w - pad,
-                                        sub_h * 1.5, start=42, min_size=20)
-                _draw_lines(draw, sl[:2], sf, slh, y, W, pad + int(W * 0.01),
-                            align="left", color=sub_color)
+        # tipografía: titular Anton; kicker y bajada en DM Sans
+        font, lines, line_h = _fit_font(draw, head, _HEADLINE_FONT, max_w,
+                                        int(H * 0.30), start=124, min_size=52)
+        kf = ImageFont.truetype(str(_BODY_FONT), max(int(W * 0.028), 24))
+        sf, sub_lines, slh = None, [], 0
+        if sub:
+            sf, sub_lines, slh = _fit_font(draw, sub, _BODY_FONT, max_w,
+                                           int(H * 0.10), start=48, min_size=28)
+            sub_lines = sub_lines[:2]
 
-        elif variant == "tarjeta":
-            # tarjeta navy translúcida centrada con borde azul (estilo quote)
-            card_w = int(W * 0.86)
-            font, lines, line_h = _fit_font(draw, head, _HEADLINE_FONT,
-                                            card_w - 2 * pad, int(H * 0.30), start=100)
-            sub_h = int(H * 0.05) if subtitle else 0
-            card_h = int(line_h * len(lines) + sub_h + pad * 1.8)
-            x0, y0 = (W - card_w) // 2, (H - card_h) // 2
-            card = Image.new("RGBA", (card_w, card_h), (_NAVY[0], _NAVY[1], _NAVY[2], 205))
-            img.alpha_composite(card, (x0, y0))
-            draw.rectangle([x0, y0, x0 + card_w, y0 + card_h], outline=(_BLUE[0], _BLUE[1], _BLUE[2], 255), width=3)
-            y = y0 + pad * 0.9
-            y = _draw_lines(draw, lines, font, line_h, y, W, pad)
-            if subtitle:
-                sf, sl, slh = _fit_font(draw, subtitle.strip(), _BODY_FONT, card_w - 2 * pad,
-                                        sub_h * 1.5, start=42, min_size=20)
-                _draw_lines(draw, sl[:2], sf, slh, y, W, pad, color=sub_color)
+        kicker = "AUTOMIQ"
+        kh = kf.size + int(H * 0.028)
+        title_h = int(line_h * len(lines))
+        sub_gap = int(H * 0.02) if sub_lines else 0
+        block_h = kh + title_h + int(slh * len(sub_lines)) + sub_gap
 
-        else:  # franja: titular ARRIBA a la izquierda con subrayado azul
-            max_w = W - 2 * pad
-            band_h = int(H * (0.42 if subtitle else 0.34))
-            _grad_band(img, W, band_h, top=True)
-            font, lines, line_h = _fit_font(draw, head, _HEADLINE_FONT, max_w,
-                                            int(band_h * 0.55), start=100)
-            y = _draw_lines(draw, lines, font, line_h, pad * 1.1, W, pad, align="left")
-            underline_w = min(int(draw.textlength(lines[-1], font=font)), max_w)
-            draw.rectangle([pad, y + 6, pad + max(underline_w, int(W * 0.2)), y + 6 + int(H * 0.008)],
-                           fill=(_BLUE[0], _BLUE[1], _BLUE[2], 255))
-            if subtitle:
-                sf, sl, slh = _fit_font(draw, subtitle.strip(), _BODY_FONT, max_w,
-                                        int(H * 0.08), start=42, min_size=20)
-                _draw_lines(draw, sl[:2], sf, slh, y + int(H * 0.03), W, pad,
-                            align="left", color=sub_color)
-
-        # franja de marca arriba (salvo layout franja, que ya tiene peso arriba)
-        if variant != "franja":
-            draw.rectangle([0, 0, W, int(H * 0.012)], fill=(_BLUE[0], _BLUE[1], _BLUE[2], 255))
+        y0 = (H - pad - block_h) if at_bottom else pad
+        # barra de acento vertical azul (fina, elegante)
+        draw.rectangle([pad, y0 + int(kh * 0.12), pad + bar_w, y0 + block_h],
+                       fill=(_BLUE[0], _BLUE[1], _BLUE[2], 255))
+        y = y0
+        _draw_tracked(draw, kicker, kf, x, y, (150, 190, 255, 255), track=max(int(W * 0.006), 4))
+        y += kh
+        for ln in lines:
+            draw.text((x, y), ln, font=font, fill=_WHITE)
+            y += line_h
+        if sub_lines:
+            y += sub_gap
+            for ln in sub_lines:
+                draw.text((x, y), ln, font=sf, fill=(205, 222, 255, 255))
+                y += slh
 
         out = io.BytesIO()
         # JPEG: Instagram no acepta PNG en su API de publicación.
-        img.convert("RGB").save(out, format="JPEG", quality=90)
+        img.convert("RGB").save(out, format="JPEG", quality=92)
         return out.getvalue()
     except Exception as e:
         log.warning("overlay_text_failed", error=str(e)[:200])
