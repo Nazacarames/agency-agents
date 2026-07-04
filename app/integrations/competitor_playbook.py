@@ -93,6 +93,69 @@ _Fuente: research 2026-07-03. Se refresca semanalmente._
 """
 
 
+# Dossier de competidores (análisis manual profundo 2026-07-04, varios ángulos).
+# Es contexto FIJO (no lo toca el refresh) que se inyecta junto al playbook.
+COMPETITOR_DEEP_DIVE = """
+=== DOSSIER DE COMPETIDORES (análisis profundo — imágenes y video) ===
+
+## Zolutium (@zolutium.es · 37,5K en TikTok · España/LATAM)
+- Ángulo: "app #1 de IA, empleado virtual 24/7 que vende, atiende y agenda solo".
+  Números en el hero: **+50% ventas, +85% menos leads no calificados**.
+- Prueba social AGRESIVA: logos Forbes/Yahoo/WSJ, "30.000 usuarios", "11.000 negocios",
+  15+ testimonios (nombre + ubicación + antes/después).
+- Ángulos emocionales: **tranquilidad/alivio** ("vas a estar tranquilo"), "trabajá
+  mientras dormís", FOMO, garantía 100% sin contratos.
+- VIDEO (TikTok): hook fijo "Descubrí cómo Zolutium revoluciona tu negocio → agendá
+  una DEMO EN VIVO". IMÁGENES: screenshots de chats del bot, testimonios con avatar+
+  ubicación, mapas geográficos, métricas grandes. Estética gradiente azul/púrpura.
+- ROBAR: testimonio en screenshot con antes/después; número grande en el frame;
+  ángulo "tranquilidad". EVITAR: su gradiente corporativo genérico → nosotros humano/local.
+
+## Kommo (CRM de WhatsApp · YouTube fuerte)
+- Ángulo: "el CRM #1 basado en mensajería". Su formato estrella es **click-to-WhatsApp ads**.
+- Contenido educativo, partner de Meta, tutoriales del Salesbot paso a paso; free trial 2 semanas.
+- ROBAR: la **demo del bot paso a paso**; el ángulo click-to-WhatsApp (nuestro producto ES eso).
+
+## Landbot (no-code chatbot · rey del contenido)
+- Formato **"case study modular"**: misma estructura fija (objetivo, disparador, qué
+  pregunta, lógica, handoff, métrica) con rubro variado (gobierno, salud, energía, ONGs).
+- VIDEO: **clips cortos SIN AUDIO mostrando el bot en tiempo real** (loop), visual dominante,
+  poco texto. IMÁGENES: GIFs/loops del bot funcionando.
+- ROBAR: los clips loop del bot en acción (ideales para reels) + el caso modular (mismo
+  esqueleto, rubro distinto cada semana → escala de contenido).
+
+## Aivo (IA conversacional enterprise · ARGENTINA, Córdoba)
+- Ángulo: casos con **NÚMEROS DUROS**. Banco Comafi 98% resolución + $2M primer mes;
+  Bancor 80.000 consultas/mes, 85% resolución 1ra interacción; Efecty 2,5M consultas,
+  -48% llamadas; Banco Bolivariano 98% automatizado en WhatsApp.
+- Formato: titular narrativo + resultado cuantitativo (cards "Load More").
+- ROBAR: el formato "Empresa + número duro + resultado" (el más creíble) — nosotros con
+  distribuidoras locales. Aivo es argentina y global → prueba de que el mercado local escala.
+
+## Tácticas para NUESTRAS IMÁGENES (Imagen 4)
+- Testimonio en screenshot (estilo Zolutium) pero con distribuidoras ARGENTINAS reales.
+- Número grande como protagonista (lo compone el sistema con Pillow, no el modelo).
+- Foto editorial de la ESCENA real (depósito, repartidor) — NO gradientes corporativos.
+- Mockup de chat de WhatsApp del bot funcionando (no imagen generada de UI).
+
+## Tácticas para NUESTROS VIDEOS/SHORTS (Veo + Nazareno)
+- Clip corto del bot contestando EN VIVO (estilo Landbot, loop) intercalado con Nazareno.
+- Hook "demo en vivo" (Zolutium) pero SIN ser anuncio: "mirá lo que hace este agente en
+  una distribuidora" (enseñás, no vendés).
+- Caso con número duro (Aivo): "le puse un agente a una distribuidora, esto pasó en 7 días".
+- Formato modular (Landbot): mismo esqueleto, rubro distinto cada video → volumen.
+
+## Rangos de referencia del sector (NO son promesas nuestras — marcarlos como referencia)
+- Resolución 85-98% · reducción de llamadas 20-50% · +50% ventas · atención 24/7.
+
+## La ventaja Automiq (lo que NINGUNO tiene)
+Cara humana (Nazareno) + voz porteña + casos LOCALES reales (distribuidoras) + producción
+superior (Veo/Imagen 4). El mercado argentino está MENOS desarrollado → entramos con una
+calidad que la competencia local todavía no usa.
+=== fin dossier ===
+""".strip()
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -119,11 +182,14 @@ def save_playbook(text: str) -> None:
 
 
 def playbook_block() -> str:
-    """Bloque para inyectar en los prompts de los agentes de contenido."""
+    """Bloque para inyectar en los prompts de los agentes de contenido: el playbook
+    dinámico (se refresca solo) + el dossier de competidores (contexto fijo profundo)."""
     return (
         "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo) ===\n"
         + load_playbook().strip()
         + "\n=== fin playbook ===\n"
-        "Aplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
-        "plataforma, y evitá los clichés visuales listados."
+        + COMPETITOR_DEEP_DIVE
+        + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
+        "plataforma, robá las tácticas del dossier adaptadas a distribuidoras argentinas, "
+        "y evitá los clichés visuales listados."
     )
