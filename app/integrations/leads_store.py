@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import re
 import threading
+import unicodedata
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -539,6 +540,64 @@ def known_companies(store: Dict[str, Any], limit: int = 150) -> List[str]:
             seen.add(k)
             out.append(c)
     return sorted(out)[:limit]
+
+
+# ── Clasificación a los 4 verticales macro de la estrategia (Vision-2026) ──
+# La `industria` que trae el leadhunter es hiper-específica ("Distribución bebidas
+# Tandil") → 100+ rubros distintos, ninguno acumula señal. Estos 4 buckets macro
+# sí acumulan → el digest puede decir qué VERTICAL convierte. Orden = prioridad de
+# match (logística antes que distribución; distribución antes que manufactura para
+# que "distribuidora de alimentos" caiga en distribución, no en manufactura).
+VERTICAL_KEYWORDS = [
+    ("logística", ["logist", "transport", "flota", "ultima milla", "courier",
+                   "encomienda", "mudanza", "almacenaje", "cadena de frio", "deposito fiscal"]),
+    ("distribución", ["distribu", "mayorista", "repuesto", "insumo", "ferreteria",
+                      "corralon", "bebida", "autoservicio", "comercializ", "importador",
+                      "proveedor", "abastec"]),
+    ("inmobiliarias", ["inmobil", "brokerage", "propiedad", "real estate",
+                       "bienes raices", "desarrollo urban", "loteo", "alquiler"]),
+    ("manufacturing", ["manufactura", "fabrica", "industria", "metalurg", "metal",
+                       "plastic", "textil", "autopart", "produccion", "aliment",
+                       "quimic", "maquinaria", "envases", "carpinteria", "curtiembre",
+                       "fundicion", "agroveterinaria"]),
+]
+
+
+def _strip_accents(s: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFD", (s or "").lower())
+        if unicodedata.category(c) != "Mn"
+    )
+
+
+def classify_vertical(industria: str = "", company: str = "") -> str:
+    """Mapea la industria fina (+ nombre de empresa) a uno de los 4 verticales macro,
+    o 'otros' si no matchea ninguno."""
+    t = _strip_accents(industria) + " " + _strip_accents(company)
+    for vert, kws in VERTICAL_KEYWORDS:
+        if any(k in t for k in kws):
+            return vert
+    return "otros"
+
+
+def outcomes_by_vertical(store: Dict[str, Any]) -> Dict[str, Dict[str, int]]:
+    """Igual que outcomes_by_industry pero agrupado por los 4 verticales macro.
+    Da señal agregada que el rubro hiper-específico no puede dar."""
+    agg: Dict[str, Dict[str, int]] = {}
+    for l in store.get("leads", {}).values():
+        vert = classify_vertical(l.get("industria", ""), l.get("company", ""))
+        a = agg.setdefault(vert, {"contacted": 0, "replied": 0, "won": 0, "dead": 0, "total": 0})
+        a["total"] += 1
+        st = l.get("state", "")
+        if st != "nuevo" or l.get("touches"):
+            a["contacted"] += 1
+        if st in _REPLIED_STATES:
+            a["replied"] += 1
+        if st == "cerrado":
+            a["won"] += 1
+        if st == "sin_respuesta":
+            a["dead"] += 1
+    return agg
 
 
 def outcomes_by_industry(store: Dict[str, Any]) -> Dict[str, Dict[str, int]]:

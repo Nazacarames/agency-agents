@@ -20,6 +20,7 @@ log = get_logger("learning")
 MIN_CONTACTED = 3      # evidencia mínima para sacar conclusión de un rubro
 GOOD_REPLY_RATE = 0.25  # >=25% respuestas = rubro caliente
 DEAD_CONTACTED = 4      # contactados sin ninguna respuesta = rubro a despriorizar
+VERTICAL_MIN_CONTACTED = 5  # evidencia mínima por vertical macro para rankearlo
 
 
 def digest() -> Dict[str, Any]:
@@ -62,7 +63,30 @@ def digest() -> Dict[str, Any]:
             ms.record_outcome("leadhunter", lesson, weight=2)
             written["dead"].append({"industria": ind, "n": a["contacted"]})
 
+    # Ranking por VERTICAL macro (los 4 de la estrategia). La industria fina no
+    # acumula señal; el vertical sí → determina cuál convierte para decidir el foco.
+    vagg = ls.outcomes_by_vertical(store)
+    vranked = []
+    for vert, a in vagg.items():
+        if vert == "otros" or a["contacted"] < VERTICAL_MIN_CONTACTED:
+            continue
+        rate = a["replied"] / a["contacted"] if a["contacted"] else 0
+        vranked.append({"vertical": vert, "reply_rate": round(rate * 100),
+                        "replied": a["replied"], "contacted": a["contacted"]})
+    vranked.sort(key=lambda x: (x["reply_rate"], x["replied"]), reverse=True)
+    written["verticals"] = vranked
+    if vranked:
+        resumen = " · ".join(
+            f"{v['vertical']} {v['reply_rate']}% ({v['replied']}/{v['contacted']})"
+            for v in vranked)
+        top = vranked[0]
+        lesson = (f"Ranking de verticales por respuesta (datos reales del pipeline): "
+                  f"{resumen}. El vertical que más convierte es {top['vertical']} — "
+                  f"priorizalo en la prospección.")
+        ms.record_outcome("leadhunter", lesson, weight=3)
+        ms.record_outcome("outbound", lesson, weight=2)
+
     log.info("learning_digest_done",
              hot=len(written["hot"]), dead=len(written["dead"]),
-             industries=written["total_industries"])
+             industries=written["total_industries"], verticals=len(vranked))
     return written

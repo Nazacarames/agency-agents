@@ -313,6 +313,23 @@ class LeadHunterAgent(BaseAgent):
                     "## 🔥 RUBROS QUE MÁS CONVIERTEN (datos reales — buscá MÁS de estos)\n"
                     + "\n".join(lines)
                 )
+            # Vista MACRO por vertical (el foco Q3 es DISTRIBUCIÓN): acumula señal que
+            # el rubro fino no da → prioriza el vertical que realmente convierte.
+            vagg = ls.outcomes_by_vertical(store)
+            vhot = sorted(
+                ((v, a) for v, a in vagg.items() if v != "otros" and a["contacted"] >= 5),
+                key=lambda x: x[1]["replied"] / max(x[1]["contacted"], 1), reverse=True,
+            )
+            if vhot:
+                vlines = [
+                    f"- {v}: {a['replied']}/{a['contacted']} "
+                    f"({round(a['replied'] / max(a['contacted'], 1) * 100)}%)"
+                    for v, a in vhot
+                ]
+                parts.append(
+                    "## 🎯 VERTICALES POR CONVERSIÓN (macro — el foco Q3 es DISTRIBUCIÓN)\n"
+                    + "\n".join(vlines)
+                )
         except Exception:
             pass
         return ("\n\n" + "\n\n".join(parts)) if parts else ""

@@ -40,6 +40,21 @@ Detrás de este Big Domino hay un **mercado mínimo viable** (1 vertical) y un
 **producto mínimo viable** (1 agente de IA que resuelve 1 problema concreto).
 Cada agente que produces debe ayudar a vender / entregar / mejorar este Big Domino.
 
+## 🎯 VERTICAL PRIORITARIO Q3 2026 — DISTRIBUCIÓN (decidido 2026-07-03)
+El foco de prospección y contenido es **distribuidoras y mayoristas argentinas**
+(bebidas, alimentos, repuestos, insumos, ferretería/corralón). Es el vertical con el
+dolor más claro y repetible y el que ya empuja nuestro contenido. Pitch de 4 líneas:
+1. **Quién**: distribuidoras y mayoristas argentinas de 25-100 empleados.
+2. **Problema**: pierden ventas y horas del equipo respondiendo pedidos y consultas de
+   stock por WhatsApp a mano; cuando entran muchos a la vez, no llegan a contestar.
+3. **Resultado**: recuperan esas ventas y ~20-40% del tiempo perdido.
+4. **Cómo/CTA**: un agente de IA atiende pedidos y stock 24/7, los carga al sistema y
+   escala solo lo excepcional → "te lo muestro en 15 min armado para tu distribuidora".
+
+Los otros 3 verticales (manufacturing, logística, inmobiliarias) siguen siendo
+válidos, pero cuando haya que PRIORIZAR (a quién prospectar, sobre qué crear contenido),
+elegí DISTRIBUCIÓN. Anclá el opening del outreach y el Big Domino en este dolor.
+
 ## Cliente target
 PyMEs familiares argentinas, 25-100 empleados, dueñas de manufacturing / distribución
 / logística / inmobiliarias, que están digitalizadas parcialmente y necesitan escalar.
