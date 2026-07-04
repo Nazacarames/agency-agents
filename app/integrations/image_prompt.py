@@ -62,6 +62,51 @@ _SYSTEM = (
 )
 
 
+# Presets de dominio (know-how minado del skill banana-claude: una RECETA por tipo de
+# toma en vez de forzar siempre "persona en acción", que volvía todo el feed monótono).
+# El _SYSTEM sigue mandando las reglas duras; el modo sólo enfoca la escena.
+_MODES = {
+    "producto": (
+        "MODO PRODUCTO (bodegón): esta toma es de MERCADERÍA/producto, SIN persona. "
+        "Ignorá la regla de 'persona en acción'. Producto real de distribuidora "
+        "(cajas, botellas, bolsas, insumos) sobre una superficie real del rubro "
+        "(mostrador de madera, pallet, mesada de acero). Product / still-life "
+        "photography, macro o plano medio, luz de ventana suave, foco nítido, el "
+        "depósito desenfocado detrás. Acento navy/royal como detalle del packaging."
+    ),
+    "lugar": (
+        "MODO LUGAR (establishing): el PROTAGONISTA es el espacio, no una persona. "
+        "Plano ABIERTO del depósito/galpón/local con estanterías, pasillos de pallets "
+        "y mercadería apilada. Puede haber una persona chica al fondo dando escala, o "
+        "ninguna. Wide 24-35mm, profundidad, luz natural entrando por los portones. "
+        "Documental, real, argentino."
+    ),
+    "calle": (
+        "MODO CALLE (reparto): repartidor o camioneta de reparto EN LA CALLE argentina "
+        "haciendo una entrega (bajando cajones, cargando el vehículo, tocando timbre). "
+        "Vereda, comercio de barrio, luz de día real. Documental urbano, plano entero."
+    ),
+    # default "persona": lo maneja el _SYSTEM tal cual (persona en acción en el entorno).
+}
+
+_MODE_HINTS = {
+    "producto": ("producto", "bodeg", "packaging", "cajón de", "botell",
+                 "bolsa de", "insumo", "primer plano de", "close up de", "close-up de"),
+    "lugar": ("deposito", "depósito", "galpon", "galpón", "estanter", "pasillo",
+              "almacen", "almacén", "vista del", "plano abierto", "interior del local"),
+    "calle": ("calle", "reparto", "repartidor", "camioneta", "entrega", "vereda",
+              "delivery", "en moto"),
+}
+
+
+def _detect_mode(raw: str) -> str:
+    low = (raw or "").lower()
+    for mode, hints in _MODE_HINTS.items():
+        if any(h in low for h in hints):
+            return mode
+    return "persona"
+
+
 def _clean(t: str) -> str:
     t = (t or "").strip()
     # sacar prefijos tipo "Prompt:" / markdown / comillas envolventes
@@ -78,8 +123,11 @@ def refine(raw_prompt: str, formato: str = "post") -> str:
     s = get_settings()
     if len(raw) < 8 or not getattr(s, "image_prompt_refine", True):
         return raw_prompt
+    mode = _detect_mode(raw)
+    mode_block = _MODES.get(mode, "")
     user = (f"Idea cruda ({formato}) para una imagen de Automiq:\n{raw}\n\n"
-            "Devolvé el prompt fotográfico final en inglés (un párrafo).")
+            + (mode_block + "\n\n" if mode_block else "")
+            + "Devolvé el prompt fotográfico final en inglés (un párrafo).")
 
     # 1) GLM vía NVIDIA (mejor redactor, gratis)
     if getattr(s, "nvidia_api_key", ""):
@@ -90,7 +138,7 @@ def refine(raw_prompt: str, formato: str = "post") -> str:
                                provider="glm", max_tokens=400, temperature=0.7)
             out = _clean(r.text)
             if len(out) >= 40:
-                log.info("image_prompt_refined", provider="glm", chars=len(out))
+                log.info("image_prompt_refined", provider="glm", mode=mode, chars=len(out))
                 return out
         except Exception as e:
             log.warning("refine_glm_failed", error=str(e)[:150])
@@ -103,7 +151,7 @@ def refine(raw_prompt: str, formato: str = "post") -> str:
                             max_tokens=400, temperature=0.7)
         out = _clean(r.text)
         if len(out) >= 40:
-            log.info("image_prompt_refined", provider="minimax", chars=len(out))
+            log.info("image_prompt_refined", provider="minimax", mode=mode, chars=len(out))
             return out
     except Exception as e:
         log.warning("refine_minimax_failed", error=str(e)[:150])
