@@ -56,9 +56,14 @@ class Settings(BaseSettings):
     database_url: str = ""
     db_schema: str = "agency"
 
-    # ── Generación de imágenes (MiniMax /v1/image_generation) ──
+    # ── Generación de imágenes ──
+    # Provider: "vertex" (Google Imagen 4 vía Vertex AI — misma credencial que Veo,
+    # calidad muy superior) con fallback automático a "minimax" (image-01) si falla
+    # o no está configurado. "minimax" fuerza el viejo motor.
     images_enabled: bool = True
-    image_model: str = "image-01"
+    image_provider: str = "vertex"
+    vertex_image_model: str = "imagen-4.0-generate-001"
+    image_model: str = "image-01"    # fallback MiniMax
     image_aspect: str = "1:1"
     # Tope de seguridad: el agente decide CUÁNTAS imágenes generar según su
     # planificación (1 por idea/post). Esto sólo evita que un plan enorme dispare

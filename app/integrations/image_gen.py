@@ -1,14 +1,17 @@
 """
 image_gen — generación de imágenes para el contenido.
 
-Pipeline: MiniMax (`/v1/image_generation`, model `image-01`) genera el FONDO
-(ilustración), y si se pide un texto, lo COMPONEMOS encima con Pillow usando una
-fuente real (Anton) → texto exacto y legible. Esto es clave porque MiniMax
-deforma el texto ("24/7" → "2417"): el modelo pone la imagen, el código pone las
-letras.
+Pipeline: un MODELO de imagen genera el FONDO (ilustración/foto), y si se pide un
+texto, lo COMPONEMOS encima con Pillow usando una fuente real (Anton) → texto
+exacto y legible (el modelo pone la imagen, el código pone las letras; los modelos
+deforman "24/7" → "2417").
+
+Provider primario: **Google Imagen 4 vía Vertex AI** (misma credencial que Veo,
+calidad muy superior a MiniMax). Fallback automático a **MiniMax image-01** si
+Vertex no está configurado o falla. Se controla con `image_provider` en config.
 
 La imagen final se guarda en el volume (`data/images/`) y se devuelve una URL
-local estable (`/media/<archivo>.png`) servida por la app.
+local estable (`/media/<archivo>.jpg`) servida por la app.
 
 Best-effort: si algo falla devuelve [] y el contenido sale sin imagen.
 """
@@ -54,14 +57,78 @@ def enabled() -> bool:
     return bool(s.minimax_api_key and getattr(s, "images_enabled", True))
 
 
+def _vertex_imagen(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
+    """Genera imágenes con Google Imagen 4 (Vertex AI). Devuelve bytes crudos.
+    Reusa la auth de service account de veo_video (mismo token cloud-platform)."""
+    from . import veo_video
+    s = get_settings()
+    if not s.google_service_account_json:
+        return []
+    token = veo_video._token()
+    project = veo_video._project()
+    location = veo_video._location()
+    model = getattr(s, "vertex_image_model", "imagen-4.0-generate-001")
+    url = (f"https://{location}-aiplatform.googleapis.com/v1/projects/{project}"
+           f"/locations/{location}/publishers/google/models/{model}:predict")
+    body = {
+        "instances": [{"prompt": prompt[:1900]}],
+        "parameters": {
+            "sampleCount": max(1, min(n, 4)),
+            "aspectRatio": aspect_ratio or "1:1",
+            "personGeneration": "allow_adult",
+        },
+    }
+    with httpx.Client(timeout=180) as c:
+        r = c.post(url, json=body, headers={"Authorization": f"Bearer {token}"})
+        r.raise_for_status()
+        preds = (r.json().get("predictions") or [])
+        out = []
+        for p in preds:
+            b64 = p.get("bytesBase64Encoded")
+            if b64:
+                import base64
+                out.append(base64.b64decode(b64))
+        return out
+
+
+def _minimax_image(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
+    """Genera imágenes con MiniMax image-01 (fallback). Devuelve bytes crudos."""
+    s = get_settings()
+    body = {
+        "model": getattr(s, "image_model", "image-01"),
+        "prompt": prompt[:1500],
+        "aspect_ratio": aspect_ratio or "1:1",
+        "response_format": "url",
+        "n": max(1, min(n, 4)),
+    }
+    with httpx.Client(timeout=180) as c:
+        r = c.post(_endpoint(), json=body,
+                   headers={"Authorization": f"Bearer {s.minimax_api_key}"})
+        r.raise_for_status()
+        data = r.json()
+        br = data.get("base_resp") or {}
+        if br.get("status_code") not in (0, None):
+            log.warning("image_gen_api_error", status=br.get("status_code"), msg=br.get("status_msg"))
+            return []
+        urls = (data.get("data") or {}).get("image_urls") or []
+        out = []
+        for u in urls:
+            try:
+                out.append(c.get(u, timeout=90).content)
+            except Exception as e:
+                log.warning("image_download_failed", error=str(e)[:150])
+        return out
+
+
 def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
                    text: Optional[str] = None, subtitle: Optional[str] = None) -> List[str]:
-    """Genera n imágenes (con texto compuesto si se pide) y devuelve URLs locales."""
+    """Genera n imágenes (con texto compuesto si se pide) y devuelve URLs locales.
+    Provider primario Vertex Imagen 4; fallback automático a MiniMax."""
     s = get_settings()
     if not enabled() or not (prompt or "").strip():
         return []
     full_prompt = prompt.strip()
-    # SIEMPRE prohibir texto: MiniMax dibuja letras/números deformes e ilegibles.
+    # SIEMPRE prohibir texto: los modelos dibujan letras/números deformes e ilegibles.
     # El texto real lo compone Pillow por encima. Negativo fuerte y repetido.
     full_prompt += (". IMPORTANT: photographic/illustrated scene only, absolutely NO text, "
                     "no letters, no words, no numbers, no captions, no watermark, no logos, "
@@ -69,46 +136,38 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
     if text:
         # además dejar espacio limpio abajo para la banda de texto compuesta
         full_prompt += " Leave clean empty space at the bottom for a text banner."
-    body = {
-        "model": getattr(s, "image_model", "image-01"),
-        "prompt": full_prompt[:1500],
-        "aspect_ratio": aspect_ratio or "1:1",
-        "response_format": "url",
-        "n": max(1, min(n, 4)),
-    }
-    try:
-        with httpx.Client(timeout=180) as c:
-            r = c.post(_endpoint(), json=body,
-                       headers={"Authorization": f"Bearer {s.minimax_api_key}"})
-            r.raise_for_status()
-            data = r.json()
-            br = data.get("base_resp") or {}
-            if br.get("status_code") not in (0, None):
-                log.warning("image_gen_api_error", status=br.get("status_code"), msg=br.get("status_msg"))
-                return []
-            urls = (data.get("data") or {}).get("image_urls") or []
-            out: List[str] = []
-            for u in urls:
-                try:
-                    raw = c.get(u, timeout=90).content
-                except Exception as e:
-                    log.warning("image_download_failed", error=str(e)[:150]); continue
-                if text:
-                    raw = _overlay_text(raw, text, subtitle) or raw
-                else:
-                    # Instagram SÓLO acepta JPEG (PNG → "Only photo or video can be
-                    # accepted as media type"). Normalizamos todo a JPEG.
-                    raw = _to_jpeg(raw) or raw
-                fname = f"{uuid.uuid4().hex}.jpg"
-                (_images_dir() / fname).write_bytes(raw)
-                local_url = f"/media/{fname}"
-                out.append(local_url)
-                _notify_discord(local_url, text, subtitle)
-        log.info("image_gen_ok", generated=len(out), with_text=bool(text))
-        return out
-    except Exception as e:
-        log.warning("image_gen_failed", error=str(e)[:200])
-        return []
+
+    provider = getattr(s, "image_provider", "vertex")
+    raws: List[bytes] = []
+    used = provider
+    if provider == "vertex":
+        try:
+            raws = _vertex_imagen(full_prompt, aspect_ratio or "1:1", n)
+        except Exception as e:
+            log.warning("vertex_imagen_failed", error=str(e)[:200])
+    if not raws:  # fallback (o provider=minimax)
+        used = "minimax"
+        try:
+            raws = _minimax_image(full_prompt, aspect_ratio or "1:1", n)
+        except Exception as e:
+            log.warning("minimax_image_failed", error=str(e)[:200])
+            return []
+
+    out: List[str] = []
+    for raw in raws:
+        if text:
+            raw = _overlay_text(raw, text, subtitle) or raw
+        else:
+            # Instagram SÓLO acepta JPEG (PNG → "Only photo or video can be
+            # accepted as media type"). Normalizamos todo a JPEG.
+            raw = _to_jpeg(raw) or raw
+        fname = f"{uuid.uuid4().hex}.jpg"
+        (_images_dir() / fname).write_bytes(raw)
+        local_url = f"/media/{fname}"
+        out.append(local_url)
+        _notify_discord(local_url, text, subtitle)
+    log.info("image_gen_ok", generated=len(out), with_text=bool(text), provider=used)
+    return out
 
 
 def _notify_discord(local_url: str, text: Optional[str], subtitle: Optional[str]) -> None:
