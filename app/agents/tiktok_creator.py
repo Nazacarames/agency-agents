@@ -124,6 +124,16 @@ aparece como **PRUEBA**, jamás como pitch. La venta es consecuencia de la autor
 5. **Tutorial 1 micro-skill** ("Un truco para que la IA te conteste los DMs solo").
 6. **Top 3** ("3 tareas que tu negocio debería automatizar YA").
 
+## Formato de video (IMPORTANTE — split en vivo, como los que la rompen)
+El video se arma en SPLIT: vos (Nazareno) hablás ARRIBA y, AL MISMO TIEMPO, abajo se ve
+el chat del bot **funcionando** (los mensajes llegando). No es en secuencia: hablás
+MIENTRAS se muestra la demo. Por eso:
+- El hablado tiene que REFERIRSE a lo que se ve abajo: "mirá lo que le contesta a este
+  cliente", "fijate cómo le toma el pedido solo", "esto que ves acá abajo lo hace en 2 seg".
+- El bloque `CHAT_NEGOCIO` (abajo) es la PRUEBA que corre mientras hablás → hacelo real,
+  concreto y del rubro (una distribuidora pidiendo stock, un cliente preguntando precio).
+- Guión pensado para que la demo y tu palabra vayan de la mano (mostrás y contás a la vez).
+
 ## La fórmula de cada guión
 `GANCHO (0-3s, frena el scroll) → TENSIÓN (mostrá el problema/el cómo) → PRUEBA (demo real / número) → REMATE → CTA suave`
 
@@ -211,7 +221,10 @@ class TikTokCreatorAgent(BaseAgent):
                 return text
             frames = [p for p in (mock_frames or []) if p]
             if frames:
-                url = video_assembler.assemble_short_animated(clip_path, frames)
+                # PRO: Nazareno hablando ARRIBA + el bot funcionando ABAJO, a la vez.
+                # Si el ffmpeg compuesto falla (RAM), cae al secuencial (Naza → chat).
+                url = (video_assembler.assemble_split(clip_path, frames)
+                       or video_assembler.assemble_short_animated(clip_path, frames))
             else:
                 url = video_assembler.assemble_short(clip_path, [], proof_dur=5.0)
             if not url:

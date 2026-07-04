@@ -181,3 +181,78 @@ def assemble_short_animated(clip_path: str, frame_paths: List[str],
         dur = 0.8 if is_typing else (2.6 if last else 1.3)
         segs.append({"path": p, "kind": "image", "dur": dur, "zoom": False})
     return assemble(segs, out_name=out_name)
+
+
+def _split_filter(w: int, h: int) -> str:
+    """filter_complex del layout SPLIT: Nazareno arriba (con su voz) + demo del bot
+    abajo, ambos a la vez. La base temporal es el clip de Nazareno (dura su audio);
+    la demo se congela en el último frame (tpad clone) hasta que él termina."""
+    top_h = (int(h * 0.545) // 2) * 2      # ~55% para Nazareno
+    bot_h = h - top_h
+    navy = f"0x{PAD[2:]}" if PAD.startswith("0x") else PAD
+    return (
+        # Nazareno: crop centrado a proporción w:top_h, escalado arriba; navy debajo.
+        f"[0:v]crop=1080:1040:0:(ih-1040)/2,scale={w}:{top_h},setsar=1,"
+        f"pad={w}:{h}:0:0:color={navy}[base];"
+        # Bot: crop de la zona header+mensajes del chat, escalado a la banda inferior,
+        # y congelado (clone) para cubrir toda la duración de Nazareno.
+        f"[1:v]crop=1080:1120:0:0,scale={w}:{bot_h}:force_original_aspect_ratio=decrease,"
+        f"pad={w}:{bot_h}:(ow-iw)/2:(oh-ih)/2:color={navy},setsar=1,"
+        f"tpad=stop_mode=clone:stop_duration=30[bot];"
+        f"[base][bot]overlay=0:{top_h}:shortest=1,format=yuv420p[v]"
+    )
+
+
+def assemble_split(clip_path: str, frame_paths: List[str],
+                   out_name: Optional[str] = None) -> Optional[str]:
+    """Short PRO estilo tech-TikTok: Nazareno hablando ARRIBA + la demo del bot
+    funcionando ABAJO, AL MISMO TIEMPO (no en secuencia). Devuelve /media/<file>.mp4
+    o None (el caller cae al modo secuencial)."""
+    frames = [p for p in (frame_paths or []) if p and Path(p).exists()]
+    if not clip_path or not Path(clip_path).exists() or not frames:
+        return None
+    work = _images_dir() / f"_split_{uuid.uuid4().hex[:8]}"
+    work.mkdir(parents=True, exist_ok=True)
+    try:
+        # 1) demo del chat como mini-video (los frames con su timing de animación).
+        demo = assemble_short_animated(clip_path="", frame_paths=[]) if False else None
+        segs = []
+        n = len(frames)
+        for i, p in enumerate(frames):
+            is_typing = "typing" in Path(p).stem
+            dur = 0.8 if is_typing else (2.4 if i == n - 1 else 1.3)
+            segs.append({"path": p, "kind": "image", "dur": dur, "zoom": False})
+        demo_url = assemble(segs, out_name=f"_demo_{uuid.uuid4().hex[:8]}.mp4")
+        demo = _images_dir() / Path(demo_url).name if demo_url else None
+        if not demo or not demo.exists():
+            return None
+        # 2) composición split, probando 1080p → 720p (RAM del container).
+        fname = out_name or f"short_{uuid.uuid4().hex}.mp4"
+        final = _images_dir() / fname
+        ok = False
+        for w, h in _SIZES:
+            cmd = [_ffmpeg(), "-y", "-i", str(clip_path), "-i", str(demo),
+                   "-filter_complex", _split_filter(w, h),
+                   "-map", "[v]", "-map", "0:a?",
+                   "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", *_X264_LOWMEM,
+                   "-c:a", "aac", "-ar", "44100", "-ac", "2",
+                   "-movflags", "+faststart", "-shortest", str(final)]
+            if _run(cmd):
+                ok = True
+                break
+            log.warning("split_size_failed", size=f"{w}x{h}")
+        try:
+            demo.unlink()
+        except Exception:
+            pass
+        if not ok:
+            return None
+        log.info("video_split_assembled", file=fname)
+        return f"/media/{fname}"
+    finally:
+        try:
+            for f in work.glob("*"):
+                f.unlink()
+            work.rmdir()
+        except Exception:
+            pass
