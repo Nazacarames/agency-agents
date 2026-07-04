@@ -27,6 +27,7 @@ _FILE = _DATA_DIR / "trends-block.md"
 NICHE_KEYWORDS = [
     "inteligencia artificial", "automatización", "agente de ia",
     "chatbot whatsapp", "chatgpt", "whatsapp business",
+    "crm", "ventas por whatsapp", "automatiza tu negocio",
 ]
 
 
