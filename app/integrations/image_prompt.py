@@ -43,7 +43,12 @@ _SYSTEM = (
     "4. La paleta navy + royal blue de Automiq va como ACENTO dentro de la escena real "
     "(una remera, un detalle, la luz), NO como fondo plano de color.\n"
     "5. Gente argentina real y creíble para el rubro (no modelos de stock genéricos), con "
-    "ROPA DE TRABAJO LISA y SIN logos de marcas ajenas (nada de North Face, Nike, etc.).\n\n"
+    "ROPA DE TRABAJO LISA y SIN logos de marcas ajenas (nada de North Face, Nike, etc.).\n"
+    "6. LA PERSONA SIEMPRE HACIENDO UNA ACCIÓN FÍSICA concreta del trabajo (cargando cajones "
+    "en la camioneta, apilando mercadería, manejando el autoelevador, revisando stock con una "
+    "tablet entre las estanterías, empujando un carro). PROHIBIDAS las poses pasivas de retrato "
+    "(sonreír a cámara, estar parado quieto, mirar el celular sin hacer nada): esas hacen que el "
+    "modelo se vaya a un headshot de estudio. La acción es lo que mantiene el entorno real.\n\n"
     "Devolvé SOLO el prompt final en inglés, en UN párrafo, sin comillas, sin títulos, sin "
     "explicaciones ni la palabra 'Prompt:'."
 )
