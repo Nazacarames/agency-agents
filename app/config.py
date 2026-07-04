@@ -167,6 +167,15 @@ class Settings(BaseSettings):
     veo_model: str = "veo-3.1-fast-generate-001"  # Veo 3.1 Fast GA (sin allowlist). Full: "veo-3.1-generate-001"
     google_api_key: str = ""          # legacy/fallback (org bloquea keys → normalmente vacío)
 
+    # ── NVIDIA (backend LLM alternativo: GLM 5.2 / DeepSeek V4 Pro) ──
+    # Endpoint gratuito OpenAI-compatible. Ciertos agentes lo usan como backend
+    # (bake-off 2026-07-04: mejor calidad que MiniMax-M3 en copy/razonamiento).
+    # Si la key está vacía, el flag llm_provider de los agentes se ignora → MiniMax.
+    nvidia_api_key: str = ""
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
+    glm_model: str = "z-ai/glm-5.2"
+    deepseek_model: str = "deepseek-ai/deepseek-v4-pro"
+
     # ── YouTube (Data API v3 — subir Shorts del canal de Nazareno) ──
     # Reusa la credencial OAuth de Google re-autorizada con scope youtube.upload.
     # youtube_oauth_json = opcional, credencial dedicada (si no, usa google_service_account_json).

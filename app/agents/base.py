@@ -61,6 +61,10 @@ class BaseAgent(ABC):
     # Skill(s) a cargar con la tool Skill. Acepta varias separadas por coma
     # (p.ej. "marketing-ads,ad-campaign-management").
     claude_code_skill: Optional[str] = None
+    # Backend LLM alternativo (NVIDIA): "glm" | "deepseek" | "" (default MiniMax/CC).
+    # Si está seteado y hay NVIDIA_API_KEY, el agente corre por completion directa con
+    # ese modelo (salteando Claude Code); si NVIDIA falla, cae al flujo normal.
+    llm_provider: str = ""
 
     def claude_code_mcp_servers(self, settings) -> Optional[Dict[str, Any]]:
         """Servidores MCP para el run de Claude Code (None = ninguno). Las subclases
@@ -214,8 +218,24 @@ class BaseAgent(ABC):
 
             response: Optional[MiniMaxResponse] = None
 
+            # 0) Backend LLM alternativo (NVIDIA: GLM/DeepSeek) — completion directa.
+            #    Tiene prioridad sobre Claude Code para los agentes que lo declaran;
+            #    si falla, response queda None y cae al flujo normal (CC/MiniMax).
+            if self.llm_provider and getattr(ctx.settings, "nvidia_api_key", ""):
+                try:
+                    from ..clients.nvidia import complete_with_provider
+                    response = complete_with_provider(
+                        self.llm_provider, ctx.settings, local_system, user_msg,
+                        self.max_tokens, self.temperature)
+                    log.info("agent_via_nvidia", agent=self.name, run_id=ctx.run_id,
+                             provider=self.llm_provider)
+                except Exception as e:
+                    log.warning("nvidia_unavailable_fallback", agent=self.name,
+                                run_id=ctx.run_id, error=str(e)[:200])
+                    response = None
+
             # 1) Camino preferente: Claude Code headless con backend MiniMax.
-            if self.use_claude_code:
+            if self.use_claude_code and response is None:
                 try:
                     cc_prompt = user_msg
                     if self.claude_code_skill:

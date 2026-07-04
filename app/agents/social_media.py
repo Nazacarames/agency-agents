@@ -64,6 +64,7 @@ class SocialMediaAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-redes,hook-generator,post-formatter,social,copywriting,stop-slop"
     claude_code_timeout = 700
+    llm_provider = "glm"   # GLM 5.2: copy más vivo; fallback CC/MiniMax
 
     @property
     def system_prompt(self) -> str:

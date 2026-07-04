@@ -71,6 +71,7 @@ class ContentCreatorAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-redes,hook-generator,post-formatter,content-matrix,image,copywriting,stop-slop"
     claude_code_timeout = 700
+    llm_provider = "glm"   # GLM 5.2: copy más vivo (bake-off 2026-07-04); fallback CC/MiniMax
 
     @property
     def system_prompt(self) -> str:

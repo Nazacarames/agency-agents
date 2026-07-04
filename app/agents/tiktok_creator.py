@@ -169,6 +169,7 @@ class TikTokCreatorAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-redes,reels-scripting,hook-generator,stop-slop"
     claude_code_timeout = 700
+    llm_provider = "glm"   # GLM 5.2: guiones más vivos; fallback CC/MiniMax
 
     @property
     def system_prompt(self) -> str:
