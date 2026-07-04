@@ -130,13 +130,13 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
     full_prompt = prompt.strip()
     # SIEMPRE prohibir texto: los modelos dibujan letras/números deformes e ilegibles.
     # El texto real lo compone Pillow por encima. Negativo fuerte y repetido.
-    full_prompt += (". IMPORTANT: photographic/illustrated scene only, absolutely NO text, "
-                    "no letters, no words, no numbers, no captions, no watermark, "
-                    "no brand logos or trademarks on clothing, no UI, no chat bubbles, "
-                    "no screenshots, no charts. Plain work clothing. Pure imagery.")
-    if text:
-        # además dejar espacio limpio abajo para la banda de texto compuesta
-        full_prompt += " Leave clean empty space at the bottom for a text banner."
+    full_prompt += (". IMPORTANT: real ENVIRONMENTAL photography — the actual location "
+                    "(warehouse, depot, storefront, street) must fill the frame and be clearly "
+                    "visible around the person. This is NOT a studio portrait: no seamless "
+                    "backdrop, no plain gray/white studio background, no fashion catalog look. "
+                    "Absolutely NO text, letters, words, numbers, captions, watermark, no brand "
+                    "logos on clothing, no UI, no chat bubbles, no screenshots, no charts. "
+                    "Plain work clothing. Pure photographic imagery.")
 
     provider = getattr(s, "image_provider", "vertex")
     raws: List[bytes] = []
