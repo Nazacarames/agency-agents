@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     # calidad muy superior) con fallback automático a "minimax" (image-01) si falla
     # o no está configurado. "minimax" fuerza el viejo motor.
     images_enabled: bool = True
+    image_prompt_refine: bool = True   # refinar el prompt con el image-prompt-engineer
     image_provider: str = "vertex"
     vertex_image_model: str = "imagen-4.0-generate-001"
     image_model: str = "image-01"    # fallback MiniMax

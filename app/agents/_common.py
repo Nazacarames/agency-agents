@@ -279,9 +279,9 @@ def image_prompt_directive() -> str:
         "a phone, warm morning light, shallow depth of field, navy and royal blue accents, cinematic, "
         "no text no letters no UI | TEXTO: Pedidos que se cierran solos | SUBTEXTO: WhatsApp + IA`. "
         "El sistema genera la imagen y le compone el texto exacto.\n"
-        "SUBAGENTES (tool Task): para afinar los prompts de imagen delegá al subagente "
-        "`image-prompt-engineer` (experto en prompts fotográficos); para chequear consistencia "
-        "de marca, `brand-guardian`; para estrategia de grilla/historias de IG, `instagram-curator`."
+        "No hace falta que perfecciones el prompt fotográfico: un paso automático "
+        "(image-prompt-engineer) lo reescribe a nivel pro antes de generar. Vos dale la "
+        "ESCENA concreta y el rubro; el refinador pone luz, lente, composición y estilo."
     )
 
 
@@ -377,8 +377,10 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
                     targets = get_settings().social_targets_list() or ["instagram", "facebook"]
             except Exception:
                 pq = None
+        from ..integrations import image_prompt
         blocks = []
         for i, (prompt, texto, sub, caption, formato) in enumerate(parsed, 1):
+            prompt = image_prompt.refine(prompt, formato or "post")
             urls = image_gen.generate_image(prompt, aspect_ratio="1:1", n=1, text=texto, subtitle=sub)
             if not urls:
                 continue
@@ -403,7 +405,7 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             prompts, car_caption = carousel
             car_urls = []
             for p in prompts:
-                u = image_gen.generate_image(p, aspect_ratio="1:1", n=1)
+                u = image_gen.generate_image(image_prompt.refine(p, "post"), aspect_ratio="1:1", n=1)
                 if u:
                     car_urls.append(u[0])
             if len(car_urls) >= 2:
