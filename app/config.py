@@ -62,7 +62,10 @@ class Settings(BaseSettings):
     # o no está configurado. "minimax" fuerza el viejo motor.
     images_enabled: bool = True
     image_prompt_refine: bool = True   # refinar el prompt con el image-prompt-engineer
-    image_provider: str = "vertex"
+    # Provider: "nano" (Nano Banana Pro / Gemini 3 Pro Image — mejor fidelidad al prompt)
+    # → fallback "vertex" (Imagen 4) → "minimax" (image-01). Todo con la misma credencial.
+    image_provider: str = "nano"
+    nano_image_model: str = "gemini-3-pro-image"
     vertex_image_model: str = "imagen-4.0-generate-001"
     image_model: str = "image-01"    # fallback MiniMax
     image_aspect: str = "1:1"

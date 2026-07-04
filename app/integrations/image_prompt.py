@@ -49,8 +49,16 @@ _SYSTEM = (
     "tablet entre las estanterías, empujando un carro). PROHIBIDAS las poses pasivas de retrato "
     "(sonreír a cámara, estar parado quieto, mirar el celular sin hacer nada): esas hacen que el "
     "modelo se vaya a un headshot de estudio. La acción es lo que mantiene el entorno real.\n\n"
-    "Devolvé SOLO el prompt final en inglés, en UN párrafo, sin comillas, sin títulos, sin "
-    "explicaciones ni la palabra 'Prompt:'."
+    "ESTRUCTURÁ el prompt final EN INGLÉS siguiendo esta plantilla (sin los corchetes):\n"
+    "[TIPO: editorial photo / lifestyle photo] of [SUJETO detallado], [ACCIÓN física concreta].\n"
+    "Setting: [el lugar real del rubro, protagónico].\n"
+    "Style: [estética + paleta; navy/royal blue como acento].\n"
+    "Lighting: [luz real, ej. warm natural window light].\n"
+    "Camera: [encuadre entero/3-4], shot on [35/50mm, DOF].\n"
+    "Composition: negative space at the bottom for a text overlay, designed for [1:1 / 9:16].\n"
+    "Mood: [sensación].\n"
+    "No text, no watermarks, no logos.\n"
+    "Devolvé SOLO ese prompt estructurado, sin comillas ni explicaciones ni la palabra 'Prompt:'."
 )
 
 
@@ -59,11 +67,9 @@ def _clean(t: str) -> str:
     # sacar prefijos tipo "Prompt:" / markdown / comillas envolventes
     t = re.sub(r"^\s*(prompt|final prompt|imagen)\s*[:：]\s*", "", t, flags=re.IGNORECASE)
     t = t.strip().strip('"').strip("`").strip()
-    # quedarnos con el primer bloque (si devolvió varias líneas de explicación)
-    parts = [p.strip() for p in t.split("\n\n") if p.strip()]
-    if parts:
-        t = parts[0]
-    return t.replace("\n", " ").strip()[:1500]
+    # conservar la estructura de la plantilla (colapsar solo líneas en blanco de más)
+    t = re.sub(r"\n{2,}", "\n", t)
+    return t.strip()[:2000]
 
 
 def refine(raw_prompt: str, formato: str = "post") -> str:

@@ -57,6 +57,38 @@ def enabled() -> bool:
     return bool(s.minimax_api_key and getattr(s, "images_enabled", True))
 
 
+def _nano_banana(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
+    """Genera con Nano Banana Pro (Gemini 3 Pro Image) vía Vertex — muy superior a
+    Imagen 4 en fidelidad al prompt (mantiene la escena/acción, no se va a estudio).
+    Reusa la auth de service account de veo_video (location 'global')."""
+    import base64
+    from . import veo_video
+    s = get_settings()
+    if not s.google_service_account_json:
+        return []
+    token = veo_video._token()
+    project = veo_video._project()
+    model = getattr(s, "nano_image_model", "gemini-3-pro-image")
+    url = (f"https://aiplatform.googleapis.com/v1/projects/{project}"
+           f"/locations/global/publishers/google/models/{model}:generateContent")
+    body = {
+        "contents": [{"role": "user", "parts": [{"text": prompt[:2000]}]}],
+        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"],
+                             "imageConfig": {"aspectRatio": aspect_ratio or "1:1"}},
+    }
+    out: List[bytes] = []
+    with httpx.Client(timeout=180) as c:
+        for _ in range(max(1, min(n, 4))):
+            r = c.post(url, json=body, headers={"Authorization": f"Bearer {token}"})
+            r.raise_for_status()
+            parts = (((r.json().get("candidates") or [{}])[0]).get("content", {}) or {}).get("parts", [])
+            for p in parts:
+                if "inlineData" in p:
+                    out.append(base64.b64decode(p["inlineData"]["data"]))
+                    break
+    return out
+
+
 def _vertex_imagen(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
     """Genera imágenes con Google Imagen 4 (Vertex AI). Devuelve bytes crudos.
     Reusa la auth de service account de veo_video (mismo token cloud-platform)."""
@@ -138,21 +170,26 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
                     "logos on clothing, no UI, no chat bubbles, no screenshots, no charts. "
                     "Plain work clothing. Pure photographic imagery.")
 
-    provider = getattr(s, "image_provider", "vertex")
+    provider = getattr(s, "image_provider", "nano")
+    # Cadena de fallback: el provider elegido primero, después los demás.
+    _chain = {
+        "nano":   [("nano", _nano_banana), ("vertex", _vertex_imagen), ("minimax", _minimax_image)],
+        "vertex": [("vertex", _vertex_imagen), ("minimax", _minimax_image)],
+        "minimax": [("minimax", _minimax_image)],
+    }.get(provider, [("nano", _nano_banana), ("vertex", _vertex_imagen), ("minimax", _minimax_image)])
     raws: List[bytes] = []
-    used = provider
-    if provider == "vertex":
+    used = ""
+    for name, fn in _chain:
         try:
-            raws = _vertex_imagen(full_prompt, aspect_ratio or "1:1", n)
+            raws = fn(full_prompt, aspect_ratio or "1:1", n)
         except Exception as e:
-            log.warning("vertex_imagen_failed", error=str(e)[:200])
-    if not raws:  # fallback (o provider=minimax)
-        used = "minimax"
-        try:
-            raws = _minimax_image(full_prompt, aspect_ratio or "1:1", n)
-        except Exception as e:
-            log.warning("minimax_image_failed", error=str(e)[:200])
-            return []
+            log.warning("image_provider_failed", provider=name, error=str(e)[:200])
+            raws = []
+        if raws:
+            used = name
+            break
+    if not raws:
+        return []
 
     out: List[str] = []
     for raw in raws:
