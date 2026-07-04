@@ -20,8 +20,8 @@ log = get_logger("competitor_study")
 # Competidores de referencia (CRM/IA/automatización en español) a estudiar por nombre.
 # Editable: agregá los que el usuario quiera vigilar.
 COMPETITORS = [
-    "Kommo CRM WhatsApp", "Zolutium IA", "ManyChat español",
-    "Leadsales CRM", "Cliengo chatbot", "Tidio IA",
+    "Kommo", "Zolutium", "ManyChat", "Leadsales", "Cliengo", "Tidio",
+    "Landbot", "Aivo", "Keybe", "Whaticket", "Callbell", "Chatfuel",
 ]
 
 _QUERIES = [
@@ -68,6 +68,24 @@ def refresh() -> Dict[str, Any]:
         return {"ok": False, "reason": "web_search no disponible"}
 
     blocks: List[str] = []
+
+    # Fuente PRIMARIA: anuncios REALES de la Biblioteca de Anuncios de Meta (si hay
+    # token con identity confirmation). Trae los creativos que los competidores CORREN.
+    ads_found = 0
+    try:
+        from . import meta_ad_library as mal
+        if mal.enabled():
+            for comp in COMPETITORS[:8]:
+                for ad in mal.search_ads(comp, countries=("ES",), limit=4):
+                    body = (ad.get("body") or ad.get("title") or "").strip()
+                    if body:
+                        blocks.append(f"- [ANUNCIO REAL de {ad.get('page_name') or comp}]: {body[:220]}")
+                        ads_found += 1
+            log.info("competitor_adlibrary", ads=ads_found)
+    except Exception as e:
+        log.warning("competitor_adlibrary_failed", error=str(e)[:150])
+
+    # Fuente secundaria: búsquedas web (siempre) — tendencias + competidores por nombre.
     for q in _QUERIES + _competitor_queries():
         try:
             for r in (web_search(q, 5) or [])[:5]:
@@ -82,7 +100,9 @@ def refresh() -> Dict[str, Any]:
         return {"ok": False, "reason": f"búsqueda devolvió poco ({len(blocks)})"}
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    user = (f"Fecha: {today}. Resultados de búsqueda reales:\n\n" + "\n".join(blocks[:40])
+    user = (f"Fecha: {today}. Material real (los items '[ANUNCIO REAL de X]' son "
+            f"creativos que la competencia CORRE de verdad en Meta — priorizalos):\n\n"
+            + "\n".join(blocks[:50])
             + "\n\nDestilá el playbook con las secciones pedidas.")
     try:
         from ..clients.minimax import MiniMaxClient
@@ -98,6 +118,7 @@ def refresh() -> Dict[str, Any]:
         log.warning("competitor_distill_thin", chars=len(text))
         return {"ok": False, "reason": "destilado pobre"}
 
-    cp.save_playbook(text + f"\n\n_Refrescado automáticamente el {today} desde research en vivo._\n")
-    log.info("competitor_refresh_ok", chars=len(text), queries=len(_QUERIES))
-    return {"ok": True, "chars": len(text), "queries": len(_QUERIES)}
+    src = f"{ads_found} anuncios reales (Ad Library) + búsquedas web" if ads_found else "búsquedas web"
+    cp.save_playbook(text + f"\n\n_Refrescado el {today} desde {src}._\n")
+    log.info("competitor_refresh_ok", chars=len(text), queries=len(_QUERIES), ads=ads_found)
+    return {"ok": True, "chars": len(text), "queries": len(_QUERIES), "real_ads": ads_found}

@@ -173,6 +173,11 @@ class Settings(BaseSettings):
     # Si la key está vacía, el flag llm_provider de los agentes se ignora → MiniMax.
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
+
+    # ── Meta Ad Library API (creativos reales de competidores) ──
+    # Token de USUARIO con confirmación de identidad (facebook.com/ads/library/api).
+    # El system-user token de publicación NO sirve para esta API.
+    meta_ad_library_token: str = ""
     glm_model: str = "z-ai/glm-5.2"
     deepseek_model: str = "deepseek-ai/deepseek-v4-pro"
 
