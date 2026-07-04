@@ -17,24 +17,44 @@ from . import competitor_playbook as cp
 
 log = get_logger("competitor_study")
 
+# Competidores de referencia (CRM/IA/automatización en español) a estudiar por nombre.
+# Editable: agregá los que el usuario quiera vigilar.
+COMPETITORS = [
+    "Kommo CRM WhatsApp", "Zolutium IA", "ManyChat español",
+    "Leadsales CRM", "Cliengo chatbot", "Tidio IA",
+]
+
 _QUERIES = [
     "viral hooks AI agency short form content 2026 what works",
     "best performing reels tiktok AI automation agency 2026 formats",
     "high converting meta ads AI chatbot whatsapp automation 2026 creative",
-    "instagram reels B2B service business trends 2026 retention",
+    "reels tiktok shorts agencias IA automatización español formato viral 2026",
+    "contenido IA automatización mercado latino argentina redes que funciona 2026",
 ]
 
+
+def _competitor_queries():
+    return [f"{c} anuncios reels contenido marketing que usa" for c in COMPETITORS[:6]]
+
+
 _DISTILL_SYSTEM = (
-    "Sos un estratega de contenido. Te paso resultados de búsqueda REALES sobre qué "
-    "contenido rinde HOY en agencias y servicios de IA. Destilá TODO en un playbook "
-    "accionable en español rioplatense, con EXACTAMENTE estas secciones (mismo formato "
-    "markdown): '## Regla de los primeros 2 segundos', '## Hooks que más convierten "
-    "(rankeados por data)', '## Formatos y duración', '## Meta Ads (paid)', "
-    "'## Estrategia de producción', '## Clichés visuales a EVITAR'. Sé concreto y "
-    "cuantitativo cuando el material lo permita (retención %, duración en s, nº de "
-    "variantes). NADA de relleno ni disclaimers. Empezá con el título "
-    "'# Playbook de competencia — contenido que funciona (agencias/servicios de IA)' "
-    "y una línea con la fecha."
+    "Sos un estratega de contenido para una agencia argentina de automatización con IA. "
+    "Te paso resultados de búsqueda REALES sobre qué contenido/anuncios rinden HOY en "
+    "agencias y servicios de IA (incluidos competidores concretos como Kommo, Zolutium, "
+    "ManyChat). Destilá TODO en un playbook accionable en español rioplatense, con "
+    "EXACTAMENTE estas secciones (mismo formato markdown): "
+    "'## Regla de los primeros 2 segundos', '## Hooks que más convierten (rankeados por data)', "
+    "'## Formatos y duración', '## Video / Shorts (lo que hacen los que la rompen)', "
+    "'## Qué hacen los competidores en español (Kommo, Zolutium y afines)', "
+    "'## Meta Ads (paid)', '## Estrategia de producción', '## Clichés visuales a EVITAR'. "
+    "En la sección de competidores, nombralos y decí qué táctica concreta les funciona "
+    "(hook, formato, prueba social, oferta) y cómo diferenciarnos. Tené en cuenta que el "
+    "mercado ARGENTINO está MENOS desarrollado en redes que el resto → podemos usar "
+    "formatos y calidad más avanzados que la competencia local todavía no usa (ventaja). "
+    "Sé concreto y cuantitativo (retención %, duración en s, nº de variantes). NADA de "
+    "relleno ni disclaimers. Empezá con el título "
+    "'# Playbook de competencia — contenido que funciona (agencias/servicios de IA)' y "
+    "una línea con la fecha."
 )
 
 
@@ -48,7 +68,7 @@ def refresh() -> Dict[str, Any]:
         return {"ok": False, "reason": "web_search no disponible"}
 
     blocks: List[str] = []
-    for q in _QUERIES:
+    for q in _QUERIES + _competitor_queries():
         try:
             for r in (web_search(q, 5) or [])[:5]:
                 t = (r.get("title") or "").strip()

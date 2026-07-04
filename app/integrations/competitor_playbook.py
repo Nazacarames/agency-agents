@@ -51,6 +51,28 @@ _Fuente: research 2026-07-03. Se refresca semanalmente._
 - Formatos ganadores: "3 tips en 30s", "before/after", tool/outcome showcase,
   micro-caso ("le puse un agente 7 días, esto pasó"), construir en público.
 
+## Video / Shorts (lo que hacen los que la rompen)
+- **Mostrá el PRODUCTO funcionando en pantalla**: el bot contestando un WhatsApp real,
+  el pedido cargándose solo. La demo EN VIVO es el hook más fuerte (outcome-first).
+- **Cara a cámara + texto grande** simultáneos desde el frame 0 (doble anclaje).
+- **1 a 3 shorts/día**, espaciados ≥3hs (evita canibalizar alcance y filtros de spam).
+- Hashtags de NICHO, no `#fyp`/`#parati`: `#automatizacionIA`, `#crmwhatsapp`, `#pymesarg`.
+- El contenido educativo de IA en español creció **387% interanual** (2.8 mil millones
+  de views): hay demanda enorme y poca oferta buena en criollo → entrá con volumen.
+
+## Qué hacen los competidores en español (Kommo, Zolutium y afines)
+- **Zolutium**: hook "empleado virtual 24/7 que responde, agenda y cobra solo";
+  3 pilares (+ventas / ahorro / optimización); MUCHA prueba social (Forbes/NBC, +20
+  screenshots de testimonios reales, "14.000 clientes"); oferta con precio tachado
+  ($250→$97) y garantía. Táctica a robar: **testimonios en screenshot** + **outcome
+  numérico**. A evitar: su estética es genérica de SaaS → nosotros vamos más humano/local.
+- **Kommo**: educa sobre "CRM para WhatsApp" con carruseles y demos de Salesbot;
+  contenido tutorial. Táctica a robar: **demo del bot paso a paso**.
+- **Diferenciación Automiq**: somos argentinos, mostramos casos LOCALES reales
+  (distribuidoras, no "negocios" abstractos), voz porteña, y la cara de Nazareno
+  (marca personal) que ninguno de ellos tiene. El mercado AR está **menos desarrollado**
+  → podemos usar mejor producción (Veo, Imagen 4) que la competencia local no usa.
+
 ## Meta Ads (paid)
 - **Click-to-WhatsApp**: el formato estrella para nuestro servicio (fricción cero,
   el lead cae directo al chat). Alineado 1:1 con lo que vende Automiq.
