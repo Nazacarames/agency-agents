@@ -8,6 +8,14 @@ from ._common import (get_context_block, official_site_directive,
                       competitor_visual_directive_for)
 
 
+def _playbook_block() -> str:
+    try:
+        from ..integrations.competitor_playbook import playbook_block
+        return playbook_block()
+    except Exception:
+        return ""
+
+
 SOCIAL_MEDIA_INSTRUCTIONS = """
 # Social Media Strategist — Automiq
 
@@ -78,6 +86,7 @@ class SocialMediaAgent(BaseAgent):
             "Balanceá: si la semana pasada fue mucha venta, esta que sea más educativa."
             + official_site_directive()
             + competitor_visual_directive_for(ctx)
+            + _playbook_block()
             + image_prompt_directive()
         )
 

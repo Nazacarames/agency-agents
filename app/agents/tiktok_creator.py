@@ -26,6 +26,14 @@ from ..log import get_logger
 log = get_logger("tiktok_creator")
 
 
+def _playbook_block() -> str:
+    try:
+        from ..integrations.competitor_playbook import playbook_block
+        return playbook_block()
+    except Exception:
+        return ""
+
+
 # Fotos canónicas de Nazareno (en /media). Se pasan como REFERENCE IMAGES a Veo 3.1
 # (referenceType=asset) → misma cara en todas las escenas, sin importar el lugar.
 NAZA_REFERENCE_PATHS = [
@@ -175,6 +183,7 @@ class TikTokCreatorAgent(BaseAgent):
             "dueños de PyME argentinas. Cerrá con los bloques VEO_FRASE/VEO_LUGAR (del guión "
             "principal) y, si hay demo de chatbot, el bloque CHAT_NEGOCIO."
             + official_site_directive()
+            + _playbook_block()
         )
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:

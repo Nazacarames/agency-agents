@@ -65,6 +65,7 @@ CLIENT_ARCHIVE_CRON = "0 5 * * *"
 # Digest de aprendizaje: consolida qué rubros convierten (lecciones data-driven para
 # leadhunter/outbound). Semanal, domingo 07:00 ART. Determinístico, sin costo de cuota.
 LEARNING_DIGEST_CRON = "0 7 * * sun"
+COMPETITOR_REFRESH_CRON = "0 8 * * sun"   # dom 08:00 — refresca el playbook de competencia
 
 
 class AgentScheduler:
@@ -92,6 +93,8 @@ class AgentScheduler:
                               _scheduled_client_archive)
         self._register_simple("learning:digest", LEARNING_DIGEST_CRON, DEFAULT_TIMEZONE,
                               _scheduled_learning_digest)
+        self._register_simple("competitor:refresh", COMPETITOR_REFRESH_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_competitor_refresh)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -218,3 +221,14 @@ async def _scheduled_learning_digest() -> None:
         log.info("learning_digest_scheduled_done", result=res)
     except Exception as e:
         log.error("learning_digest_failed", error=str(e)[:200])
+
+
+async def _scheduled_competitor_refresh() -> None:
+    """Refresca el playbook de competencia con research en vivo (estudio constante)."""
+    import asyncio
+    from .integrations import competitor_study
+    try:
+        res = await asyncio.to_thread(competitor_study.refresh)
+        log.info("competitor_refresh_scheduled_done", result=res)
+    except Exception as e:
+        log.error("competitor_refresh_failed", error=str(e)[:200])

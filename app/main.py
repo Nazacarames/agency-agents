@@ -944,6 +944,23 @@ async def api_learning_digest(request: Request):
     return {"ok": True, "result": res}
 
 
+@app.post("/api/competitor/refresh")
+async def api_competitor_refresh(request: Request):
+    """Refresca el playbook de competencia con research en vivo (Tavily + MiniMax)."""
+    _verify_webhook_secret(request)
+    from .integrations import competitor_study
+    res = await run_in_threadpool(competitor_study.refresh)
+    return {"ok": res.get("ok", False), "result": res}
+
+
+@app.get("/api/competitor/playbook")
+async def api_competitor_playbook(request: Request):
+    """Devuelve el playbook de competencia vigente (markdown)."""
+    _verify_webhook_secret(request)
+    from .integrations import competitor_playbook
+    return {"ok": True, "playbook": competitor_playbook.load_playbook()}
+
+
 @app.post("/api/lessons")
 async def api_add_lesson(body: LessonBody, request: Request):
     _verify_webhook_secret(request)

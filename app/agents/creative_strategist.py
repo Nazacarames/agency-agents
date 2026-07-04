@@ -6,6 +6,14 @@ from .base import BaseAgent, AgentContext
 from ._common import get_context_block, upstream_handoff_block, official_site_directive
 
 
+def _playbook_block() -> str:
+    try:
+        from ..integrations.competitor_playbook import playbook_block
+        return playbook_block()
+    except Exception:
+        return ""
+
+
 CREATIVE_STRATEGIST_INSTRUCTIONS = """
 # Creative Strategist — Automiq
 
@@ -87,4 +95,5 @@ class CreativeStrategistAgent(BaseAgent):
             "Que sean testeables — el equipo las va a poner en Meta Ads Manager directamente."
             f"{pains}"
             + official_site_directive()
+            + _playbook_block()
         )

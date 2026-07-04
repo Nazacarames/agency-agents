@@ -12,6 +12,14 @@ from ._common import (get_context_block, official_site_directive,
                       competitor_visual_directive_for)
 
 
+def _playbook_block() -> str:
+    try:
+        from ..integrations.competitor_playbook import playbook_block
+        return playbook_block()
+    except Exception:
+        return ""
+
+
 CONTENT_CREATOR_INSTRUCTIONS = """
 # Content Creator — Automiq
 
@@ -81,6 +89,7 @@ class ContentCreatorAgent(BaseAgent):
             "aunque sean largas. El equipo de diseño las va a tomar tal cual salen."
             + official_site_directive()
             + competitor_visual_directive_for(ctx)
+            + _playbook_block()
             + image_prompt_directive()
         )
 
