@@ -224,11 +224,16 @@ async def _scheduled_learning_digest() -> None:
 
 
 async def _scheduled_competitor_refresh() -> None:
-    """Refresca el playbook de competencia con research en vivo (estudio constante)."""
+    """Refresca el playbook de competencia + el bloque de tendencias (estudio constante)."""
     import asyncio
-    from .integrations import competitor_study
+    from .integrations import competitor_study, trends
     try:
         res = await asyncio.to_thread(competitor_study.refresh)
         log.info("competitor_refresh_scheduled_done", result=res)
     except Exception as e:
         log.error("competitor_refresh_failed", error=str(e)[:200])
+    try:
+        tr = await asyncio.to_thread(trends.refresh)
+        log.info("trends_refresh_scheduled_done", result=tr)
+    except Exception as e:
+        log.error("trends_refresh_failed", error=str(e)[:200])

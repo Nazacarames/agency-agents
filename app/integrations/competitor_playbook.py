@@ -184,12 +184,21 @@ def save_playbook(text: str) -> None:
 def playbook_block() -> str:
     """Bloque para inyectar en los prompts de los agentes de contenido: el playbook
     dinámico (se refresca solo) + el dossier de competidores (contexto fijo profundo)."""
+    trends = ""
+    try:
+        from . import trends as _t
+        tb = _t.load_block()
+        if tb:
+            trends = "\n\n" + tb
+    except Exception:
+        trends = ""
     return (
         "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo) ===\n"
         + load_playbook().strip()
         + "\n=== fin playbook ===\n"
         + COMPETITOR_DEEP_DIVE
+        + trends
         + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
         "plataforma, robá las tácticas del dossier adaptadas a distribuidoras argentinas, "
-        "y evitá los clichés visuales listados."
+        "surfeá las tendencias que están subiendo, y evitá los clichés visuales listados."
     )

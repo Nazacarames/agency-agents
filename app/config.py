@@ -175,6 +175,10 @@ class Settings(BaseSettings):
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
 
+    # ── TrendsMCP (tendencias de contenido: Google/YouTube/TikTok/Reddit) ──
+    trends_api_key: str = ""
+    trends_mcp_url: str = "https://api.trendsmcp.ai/mcp"
+
     # ── Meta Ad Library API (creativos reales de competidores) ──
     # Token de USUARIO con confirmación de identidad (facebook.com/ads/library/api).
     # El system-user token de publicación NO sirve para esta API.

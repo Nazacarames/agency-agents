@@ -961,6 +961,23 @@ async def api_competitor_playbook(request: Request):
     return {"ok": True, "playbook": competitor_playbook.load_playbook()}
 
 
+@app.post("/api/trends/refresh")
+async def api_trends_refresh(request: Request):
+    """Refresca el bloque de tendencias de contenido (TrendsMCP)."""
+    _verify_webhook_secret(request)
+    from .integrations import trends
+    res = await run_in_threadpool(trends.refresh)
+    return {"ok": res.get("ok", False), "result": res}
+
+
+@app.get("/api/trends")
+async def api_trends(request: Request):
+    """Devuelve el bloque de tendencias vigente."""
+    _verify_webhook_secret(request)
+    from .integrations import trends
+    return {"ok": True, "trends": trends.load_block()}
+
+
 @app.post("/api/lessons")
 async def api_add_lesson(body: LessonBody, request: Request):
     _verify_webhook_secret(request)
