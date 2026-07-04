@@ -89,6 +89,10 @@ class Settings(BaseSettings):
     # URL pública del backend, para que la Graph API pueda DESCARGAR la imagen
     # (las imágenes viven en /media/<file>). Ej: https://...up.railway.app
     public_base_url: str = ""
+    # Microservicio externo de montaje de video (automiq-montage, RAM propia). Si está
+    # seteada, tiktok_creator arma el short con él (split+subs+color+broll); si no o si
+    # falla, cae al armado local de video_assembler. Ej: https://automiq-montage.up.railway.app
+    montage_service_url: str = ""
     # Auto-publicación: si está ON, los agentes que planifican contenido
     # (content_creator, social_media) publican CADA imagen que generan en las
     # redes indicadas, con el caption que planificaron. Requiere tokens Meta.

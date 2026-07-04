@@ -221,10 +221,20 @@ class TikTokCreatorAgent(BaseAgent):
                 return text
             frames = [p for p in (mock_frames or []) if p]
             if frames:
-                # PRO: Nazareno hablando ARRIBA + el bot funcionando ABAJO, a la vez.
-                # Si el ffmpeg compuesto falla (RAM), cae al secuencial (Naza → chat).
-                url = (video_assembler.assemble_split(clip_path, frames)
-                       or video_assembler.assemble_short_animated(clip_path, frames))
+                # PRIMERO el servicio de montaje externo (split + subtítulos + color +
+                # b-roll, con RAM propia). Si no está o falla, cae al armado local.
+                url = None
+                try:
+                    from ..integrations import montage_client
+                    if montage_client.enabled():
+                        url = montage_client.produce(
+                            clip_path, frames, script=getattr(self, "_veo_frase", ""))
+                except Exception as e:
+                    log.warning("montage_client_failed", error=str(e)[:200])
+                # PRO local: Nazareno ARRIBA + bot ABAJO a la vez; fallback secuencial.
+                if not url:
+                    url = (video_assembler.assemble_split(clip_path, frames)
+                           or video_assembler.assemble_short_animated(clip_path, frames))
             else:
                 url = video_assembler.assemble_short(clip_path, [], proof_dur=5.0)
             if not url:
@@ -342,6 +352,7 @@ class TikTokCreatorAgent(BaseAgent):
             if not mf:
                 return text, None
             frase = mf.group(1).strip().strip('"').strip("“”")
+            self._veo_frase = frase   # se reusa como subtítulos en el montaje
             lugar = (ml.group(1).strip().lower() if ml else NAZA_LUGAR_DEFAULT)
             if lugar not in NAZA_LUGARES:
                 lugar = NAZA_LUGAR_DEFAULT
