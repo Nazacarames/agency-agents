@@ -18,6 +18,7 @@ Best-effort: si algo falla devuelve [] y el contenido sale sin imagen.
 from __future__ import annotations
 
 import io
+import random
 import textwrap
 import uuid
 from pathlib import Path
@@ -38,6 +39,19 @@ _BODY_FONT = _FONTS / "DMSans.ttf"
 _NAVY = (15, 27, 51)
 _BLUE = (37, 99, 235)
 _WHITE = (255, 255, 255)
+
+# Rotación de PLANO (aprendido mirando Tiendanube/Shopify/MercadoLibre 2026-07-05:
+# rotan el encuadre; nosotros repetíamos "persona centrada" → feed monótono). Se
+# elige uno al azar por imagen → mismo sujeto/escena, encuadre distinto = variedad.
+# Sin pantallas/UI legibles (los modelos las deforman; el chat lo compone Pillow aparte).
+_SHOTS = [
+    "Wide establishing shot: the person small within the frame, the real workspace filling most of it.",
+    "Tight macro close-up of the hands at work (handling product, packing a box, using tools), shallow depth of field.",
+    "Candid over-the-shoulder from behind, the person facing their work, the room deep and in context.",
+    "Close-up of the face mid-action, warm interior light mixed with cool window light, shallow depth of field.",
+    "Low-angle three-quarter shot in the real location, cinematic warm-and-cool lighting, authentic cluttered background.",
+    "Medium profile shot at their workbench or counter, natural side light, real depth behind them.",
+]
 
 
 def _images_dir() -> Path:
@@ -169,6 +183,8 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
                     "Absolutely NO text, letters, words, numbers, captions, watermark, no brand "
                     "logos on clothing, no UI, no chat bubbles, no screenshots, no charts. "
                     "Plain work clothing. Pure photographic imagery.")
+    # Rotar el encuadre (anti-repetición): misma escena, plano/luz distinta cada vez.
+    full_prompt += " FRAMING: " + random.choice(_SHOTS)
 
     provider = getattr(s, "image_provider", "nano")
     # Cadena de fallback: el provider elegido primero, después los demás.

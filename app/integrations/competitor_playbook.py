@@ -93,65 +93,77 @@ _Fuente: research 2026-07-03. Se refresca semanalmente._
 """
 
 
-# Dossier de competidores (análisis manual profundo 2026-07-04, varios ángulos).
-# Es contexto FIJO (no lo toca el refresh) que se inyecta junto al playbook.
+# Dossier de referencia — MIRADO de verdad (video real bajado y visto frame por frame,
+# 2026-07-05: yt-dlp + ffmpeg + lectura de frames). NO es de training/web: son notas de
+# lo que efectivamente se vio. Contexto FIJO que se inyecta junto al playbook.
 COMPETITOR_DEEP_DIVE = """
-=== DOSSIER DE COMPETIDORES (análisis profundo — imágenes y video) ===
+=== DOSSIER DE REFERENCIA (MIRADO frame por frame — video real, 2026-07-05) ===
 
-## Zolutium (@zolutium.es · 37,5K en TikTok · España/LATAM)
-- Ángulo: "app #1 de IA, empleado virtual 24/7 que vende, atiende y agenda solo".
-  Números en el hero: **+50% ventas, +85% menos leads no calificados**.
-- Prueba social AGRESIVA: logos Forbes/Yahoo/WSJ, "30.000 usuarios", "11.000 negocios",
-  15+ testimonios (nombre + ubicación + antes/después).
-- Ángulos emocionales: **tranquilidad/alivio** ("vas a estar tranquilo"), "trabajá
-  mientras dormís", FOMO, garantía 100% sin contratos.
-- VIDEO (TikTok): hook fijo "Descubrí cómo Zolutium revoluciona tu negocio → agendá
-  una DEMO EN VIVO". IMÁGENES: screenshots de chats del bot, testimonios con avatar+
-  ubicación, mapas geográficos, métricas grandes. Estética gradiente azul/púrpura.
-- ROBAR: testimonio en screenshot con antes/después; número grande en el frame;
-  ángulo "tranquilidad". EVITAR: su gradiente corporativo genérico → nosotros humano/local.
+## COMPETIDORES (mismo rubro: bot/CRM de mensajería)
 
-## Kommo (CRM de WhatsApp · YouTube fuerte)
-- Ángulo: "el CRM #1 basado en mensajería". Su formato estrella es **click-to-WhatsApp ads**.
-- Contenido educativo, partner de Meta, tutoriales del Salesbot paso a paso; free trial 2 semanas.
-- ROBAR: la **demo del bot paso a paso**; el ángulo click-to-WhatsApp (nuestro producto ES eso).
+### ManyChat  [MIRADO]
+- Formato: talking-head enérgico (creador a cámara, luz cálida rim) + CARTEL en pill
+  blanco con frase filosa ("The Harsh Truth is…") + secciones planas color-marca (violeta)
+  con UI animándose (toggles, un checkmark marcando "EMAIL COLLECTION ✓") + íconos emoji
+  como beats visuales (❤️ 🔗 💰) + screenshots del dashboard.
+- Hooks: contrarian/curiosidad ("La verdad incómoda es…"), texto GRANDE desde el frame 0.
+- ROBAR: el cartel-pill con una frase filosa; los íconos emoji como beats; mostrar la
+  feature EN MOVIMIENTO (un toggle/checkmark animándose), no una captura estática.
 
-## Landbot (no-code chatbot · rey del contenido)
-- Formato **"case study modular"**: misma estructura fija (objetivo, disparador, qué
-  pregunta, lógica, handoff, métrica) con rubro variado (gobierno, salud, energía, ONGs).
-- VIDEO: **clips cortos SIN AUDIO mostrando el bot en tiempo real** (loop), visual dominante,
-  poco texto. IMÁGENES: GIFs/loops del bot funcionando.
-- ROBAR: los clips loop del bot en acción (ideales para reels) + el caso modular (mismo
-  esqueleto, rubro distinto cada semana → escala de contenido).
+### Kommo  [MIRADO]
+- Formato: creador estilo streamer (silla gamer, micrófono grande, fondo con luces RGB y
+  pantallas) + POP-INS de logos de plataforma (WhatsApp verde, Instagram) animando al lado
+  suyo mientras habla + screen-share del CRM con él en PiP abajo-derecha + cutaway de
+  reacción (inserto tipo meme para cortar el ritmo). Ángulo: click-to-WhatsApp, Salesbot paso a paso.
+- ROBAR: los pop-ins de logos WhatsApp/IG entrando animados junto al presentador; el
+  screen-share + PiP para el paso a paso; el cutaway de reacción.
+- NUESTRA ventaja: Nazareno es cara HUMANA real y local (no set genérico de streamer),
+  voz porteña, casos AR.
 
-## Aivo (IA conversacional enterprise · ARGENTINA, Córdoba)
-- Ángulo: casos con **NÚMEROS DUROS**. Banco Comafi 98% resolución + $2M primer mes;
-  Bancor 80.000 consultas/mes, 85% resolución 1ra interacción; Efecty 2,5M consultas,
-  -48% llamadas; Banco Bolivariano 98% automatizado en WhatsApp.
-- Formato: titular narrativo + resultado cuantitativo (cards "Load More").
-- ROBAR: el formato "Empresa + número duro + resultado" (el más creíble) — nosotros con
-  distribuidoras locales. Aivo es argentina y global → prueba de que el mercado local escala.
+## MARCAS DE REFERENCIA — e-commerce con mucho ad (de acá robamos ESTÉTICA, no compiten)
 
-## Tácticas para NUESTRAS IMÁGENES (Imagen 4)
-- Testimonio en screenshot (estilo Zolutium) pero con distribuidoras ARGENTINAS reales.
-- Número grande como protagonista (lo compone el sistema con Pillow, no el modelo).
-- Foto editorial de la ESCENA real (depósito, repartidor) — NO gradientes corporativos.
-- Mockup de chat de WhatsApp del bot funcionando (no imagen generada de UI).
+### Tiendanube  [MIRADO] ← la más cercana a nuestro público
+- Estética: emprendedores REALES en su espacio REAL y desordenado (taller textil con
+  percheros de telas estampadas; cocina de casa de noche), luz cinematográfica mezclando
+  cálido de interior + frío de ventana, DOF corto. El producto/UI aparece EN CONTEXTO en
+  un notebook/celular real sostenido por manos reales ("Creá tu tienda online"), con
+  overlays 3D lúdicos (etiqueta "10% OFF", ícono cute) como acento.
+- ROBAR (clave): el MAKER en su taller real (NO estudio); la mezcla de luz cálido+frío;
+  el producto en un device real sostenido; el overlay 3D jugado como acento.
 
-## Tácticas para NUESTROS VIDEOS/SHORTS (Veo + Nazareno)
-- Clip corto del bot contestando EN VIVO (estilo Landbot, loop) intercalado con Nazareno.
-- Hook "demo en vivo" (Zolutium) pero SIN ser anuncio: "mirá lo que hace este agente en
-  una distribuidora" (enseñás, no vendés).
-- Caso con número duro (Aivo): "le puse un agente a una distribuidora, esto pasó en 7 días".
-- Formato modular (Landbot): mismo esqueleto, rubro distinto cada video → volumen.
+### Shopify  [MIRADO]
+- Estética: premium cinematográfico, gente REAL haciendo oficio (un viejo en su puesto con
+  verduras y tablero ajedrezado, un vivero, un barista, manos en primerísimo plano), luz
+  natural cálida, DOF muy corto, moody. El HÉROE es el que labura; el producto se implica.
+- ROBAR: dignificar al que trabaja (primeros planos de manos haciendo el oficio) y la
+  VARIEDAD DE PLANOS (wide establishing, macro de manos, over-shoulder, close-up de cara).
 
-## Rangos de referencia del sector (NO son promesas nuestras — marcarlos como referencia)
-- Resolución 85-98% · reducción de llamadas 20-50% · +50% ventas · atención 24/7.
+### Mercado Libre  [MIRADO]
+- Estética (brand film "Somos millones"): cine emocional épico — cosmos/nebulosas oscuras,
+  NOSTALGIA ("Internet · Año 1999", un tipo en una compu vieja), macro de lente, escala
+  épica, logo amarillo POP sobre fondo oscuro, carteles de texto centrados.
+- ROBAR: el ángulo NOSTALGIA/origen ("¿te acordás cuando…?") y la escala emocional para
+  UNA pieza de marca cada tanto (no todo el tiempo); el color de marca pop sobre fondo oscuro.
+
+## LA LECCIÓN VISUAL #1 (por qué nuestras imágenes salían parecidas)
+Ninguna hace retrato de estudio ni 3D azul genérico. Y sobre todo: TODAS ROTAN EL TIPO DE
+PLANO. Nosotros repetíamos "persona centrada en la escena" siempre. Hay que rotar: wide
+establishing / macro de manos trabajando / over-shoulder / POV / close-up de cara /
+low-angle. Mismo sujeto, plano distinto = feed que no aburre. (Ya cableado en image_gen:
+rotación de plano al azar por imagen.)
+
+## Tácticas NUESTRAS
+- IMÁGENES: maker argentino real en su depósito/taller (Tiendanube+Shopify), luz cálido+frío,
+  plano rotado; el número/etiqueta lo compone Pillow encima. NADA de estudio ni 3D azul.
+- VIDEOS/SHORTS: talking-head Nazareno + cartel-pill con frase filosa (ManyChat) + pop-ins
+  de logos WhatsApp/IG (Kommo) + demo del bot en PiP; 1 pieza de marca emocional estilo
+  MeLi de vez en cuando. Caso con número duro: "le puse un agente a una distribuidora 7 días".
+- Rangos del sector como REFERENCIA (no promesa): resolución 85-98% · -20/50% llamadas · 24/7.
 
 ## La ventaja Automiq (lo que NINGUNO tiene)
 Cara humana (Nazareno) + voz porteña + casos LOCALES reales (distribuidoras) + producción
-superior (Veo/Imagen 4). El mercado argentino está MENOS desarrollado → entramos con una
-calidad que la competencia local todavía no usa.
+superior (Veo/Imagen 4). El mercado AR está MENOS desarrollado → entramos con calidad que
+la competencia local todavía no usa.
 === fin dossier ===
 """.strip()
 
