@@ -168,6 +168,38 @@ la competencia local todavía no usa.
 """.strip()
 
 
+# SEED del visual scout (playbook de EDICIÓN/hooks/formato, foco VIDEO = 90% de leads).
+# Destilado de mirar video real con scripts/scout_watch.py. El archivo
+# data/visual-scout.md (si existe) lo overridea; si no, va este seed.
+SEED_VISUAL_SCOUT = """=== VISUAL SCOUT — playbook de EDICIÓN / hooks / formato (mirado de verdad) ===
+_Foco: VIDEO, que es el 90% de los leads. Refrescable con scripts/scout_watch.py._
+
+## Regla madre: VARIAR el formato, NADA de plantilla fija (que se sienta ORGÁNICO)
+1. **Split-card** — presentador LLENA el cuadro + demo del bot como card sobrepuesta abajo (borde de marca). NUNCA el bot pelado a pantalla completa.
+2. **Full orgánico** — presentador solo a cámara; la demo entra como cutaway corto (1-2s) intercalado, no fija todo el tiempo.
+3. **Screen-share + PiP** (Kommo) — pantalla del CRM/WhatsApp + presentador en recuadro chico abajo-derecha.
+4. **Talking-head + carteles-pill** (ManyChat) — frase filosa en pill blanco, texto GRANDE desde el frame 0, emojis como beats.
+5. **B-roll de maker** (Tiendanube/Shopify) — SIN presentador: el dueño real en su depósito/taller, manos trabajando, luz cálido+frío.
+
+## Dónde va la demo del bot (clave)
+NUNCA sola y pelada. Va sobrepuesta abajo (card), al costado (inset) o como cutaway mientras la persona habla; la palabra referencia lo que se ve ("mirá lo que contesta acá abajo").
+
+## Hooks REALES mirados (robar la estructura)
+- **Kommo (pain-question):** "¿Alguna vez tuviste la sensación de que los chats de clientes son un torbellino imposible de controlar?"
+- **ManyChat (contrarian):** "La verdad incómoda es…"
+- Patrón: dolor concreto del dueño de PyME + promesa de orden en la 1ª frase, hablado natural (no leído).
+
+## Edición orgánica (no plantilla)
+Texto grande desde el frame 0; cortes que respiran; pop-ins de logos WhatsApp/IG al nombrarlos; un cutaway de reacción para romper ritmo; porteño, una idea por video. Evitá el look template (paneles fijos, transiciones genéricas).
+
+## Imágenes / banners para ads (no siempre una persona)
+Además del maker en su entorno: banners con producto / un ícono fuerte / fondo potente + espacio limpio para el titular (lo compone Pillow). Navy + azul. Usar image_gen.generate_image(..., kind="banner").
+
+## Redes cubiertas
+YouTube ✅ + TikTok ✅ (por búsqueda). Instagram y Meta/FB Ads: pendientes de credenciales (cookies IG + token Ad Library).
+=== fin visual scout ==="""
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -204,11 +236,23 @@ def playbook_block() -> str:
             trends = "\n\n" + tb
     except Exception:
         trends = ""
+    # Playbook de EDICIÓN/hooks/visual del "visual scout" (destilado de mirar video real).
+    # Igual que el playbook: SEED en código (llega seguro a prod) + override opcional del
+    # archivo data/visual-scout.md que escribe scripts/scout_watch.py + curación humana.
+    scout_txt = SEED_VISUAL_SCOUT
+    try:
+        t = (_DATA_DIR / "visual-scout.md").read_text(encoding="utf-8").strip()
+        if t:
+            scout_txt = t
+    except Exception:
+        pass
+    scout = "\n\n" + scout_txt
     return (
         "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo) ===\n"
         + load_playbook().strip()
         + "\n=== fin playbook ===\n"
         + COMPETITOR_DEEP_DIVE
+        + scout
         + trends
         + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
         "plataforma, robá las tácticas del dossier adaptadas a distribuidoras argentinas, "

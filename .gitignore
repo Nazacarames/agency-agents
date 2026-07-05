@@ -77,3 +77,6 @@ _lg.json
 
 # OS
 Thumbs.db
+
+# visual scout scratch (sheets/captions descargados; se regeneran)
+data/scout/

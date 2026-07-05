@@ -167,24 +167,40 @@ def _minimax_image(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
 
 
 def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
-                   text: Optional[str] = None, subtitle: Optional[str] = None) -> List[str]:
+                   text: Optional[str] = None, subtitle: Optional[str] = None,
+                   kind: str = "photo") -> List[str]:
     """Genera n imágenes (con texto compuesto si se pide) y devuelve URLs locales.
-    Provider primario Vertex Imagen 4; fallback automático a MiniMax."""
+    Provider primario Vertex Imagen 4; fallback automático a MiniMax.
+
+    kind="photo" (default) → foto editorial de una persona en su entorno real.
+    kind="banner" → banner/gráfico para ad (producto/ícono/fondo con espacio para
+    titular); NO fuerza persona ni entorno. En ambos casos el texto lo compone Pillow.
+    """
     s = get_settings()
     if not enabled() or not (prompt or "").strip():
         return []
     full_prompt = prompt.strip()
-    # SIEMPRE prohibir texto: los modelos dibujan letras/números deformes e ilegibles.
-    # El texto real lo compone Pillow por encima. Negativo fuerte y repetido.
-    full_prompt += (". IMPORTANT: real ENVIRONMENTAL photography — the actual location "
-                    "(warehouse, depot, storefront, street) must fill the frame and be clearly "
-                    "visible around the person. This is NOT a studio portrait: no seamless "
-                    "backdrop, no plain gray/white studio background, no fashion catalog look. "
-                    "Absolutely NO text, letters, words, numbers, captions, watermark, no brand "
-                    "logos on clothing, no UI, no chat bubbles, no screenshots, no charts. "
-                    "Plain work clothing. Pure photographic imagery.")
-    # Rotar el encuadre (anti-repetición): misma escena, plano/luz distinta cada vez.
-    full_prompt += " FRAMING: " + random.choice(_SHOTS)
+    if kind == "banner":
+        # Banner de ad: composición gráfica/producto, no necesariamente una persona.
+        full_prompt += (". Modern ADVERTISING BANNER / graphic composition: bold, clean, "
+                        "high-contrast, brand-forward, premium editorial design. May feature a "
+                        "product, a single strong icon/graphic, or a striking background — with "
+                        "generous CLEAN EMPTY SPACE reserved for a headline. Navy (#0F1B33) base "
+                        "with royal blue (#2563EB) accents. Absolutely NO text, letters, words, "
+                        "numbers, captions, watermark or logos (they are composited later). "
+                        "Leave clear negative space for the headline.")
+    else:
+        # SIEMPRE prohibir texto: los modelos dibujan letras/números deformes e ilegibles.
+        # El texto real lo compone Pillow por encima. Negativo fuerte y repetido.
+        full_prompt += (". IMPORTANT: real ENVIRONMENTAL photography — the actual location "
+                        "(warehouse, depot, storefront, street) must fill the frame and be clearly "
+                        "visible around the person. This is NOT a studio portrait: no seamless "
+                        "backdrop, no plain gray/white studio background, no fashion catalog look. "
+                        "Absolutely NO text, letters, words, numbers, captions, watermark, no brand "
+                        "logos on clothing, no UI, no chat bubbles, no screenshots, no charts. "
+                        "Plain work clothing. Pure photographic imagery.")
+        # Rotar el encuadre (anti-repetición): misma escena, plano/luz distinta cada vez.
+        full_prompt += " FRAMING: " + random.choice(_SHOTS)
 
     provider = getattr(s, "image_provider", "nano")
     # Cadena de fallback: el provider elegido primero, después los demás.
