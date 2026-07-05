@@ -19,7 +19,17 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
+
+# reusa la integración de la app para descubrir reels de IG por API oficial (Business
+# Discovery) — así NO hace falta pegar URLs a mano. Requiere META_PAGE_TOKEN +
+# IG_BUSINESS_ID en el entorno (o correrlo donde la app tenga la config).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from app.integrations import ig_discovery
+except Exception:
+    ig_discovery = None
 
 # Roster: clave -> (etiqueta, query de búsqueda). YouTube+TikTok andan por búsqueda.
 # TikTok se fuerza con el prefijo del sitio en la query cuando conviene.
@@ -150,6 +160,34 @@ def main(keys: list[str]) -> int:
         print(f"[scout] {k}: sheet={'OK' if ok else 'FAIL'} caption={len(cap)} chars")
         manifest.append(f"## {label}\n- sheet: `{sheet.name}`\n- caption: "
                         f"{(cap[:180] + '…') if cap else '(sin captions)'}\n")
+
+    # Instagram AUTOMÁTICO vía Business Discovery (API oficial, no scraping). Baja el
+    # video_url del CDN directo → sheet. Se activa si hay token (META_PAGE_TOKEN + IG_BUSINESS_ID).
+    if ig_discovery and ig_discovery.enabled():
+        for key, handle in ig_discovery.IG_HANDLES.items():
+            reels = ig_discovery.recent_reels(handle, n=1)
+            if not reels:
+                print(f"[scout] ig:{key} ({handle}): sin reels")
+                manifest.append(f"- **IG {handle}** — sin reels (handle o cuenta no business)\n")
+                continue
+            r = reels[0]
+            mp4 = out / f"ig_{key}.mp4"
+            try:
+                urllib.request.urlretrieve(r["media_url"], str(mp4))
+            except Exception as e:
+                print(f"[scout] ig:{key}: download fail {str(e)[:80]}")
+                continue
+            sheet = out / f"ig_{key}_sheet.png"
+            ok = _sheet(mp4, sheet)
+            try:
+                mp4.unlink()
+            except OSError:
+                pass
+            print(f"[scout] ig:{key}: sheet={'OK' if ok else 'FAIL'} | {r.get('permalink')}")
+            manifest.append(f"## IG {handle}\n- sheet: `{sheet.name}`\n- {r.get('permalink')}\n"
+                            f"- caption: {(r.get('caption') or '')[:160]}\n")
+    else:
+        print("[scout] IG auto: salteado (falta META_PAGE_TOKEN / IG_BUSINESS_ID)")
 
     # URLs directas (reels de IG, videos de TikTok/YT que pases a mano)
     for i, url in enumerate(urls):
