@@ -9,9 +9,11 @@ Corre LOCAL a propósito (IP residencial): yt-dlp desde un datacenter (Railway) 
 bloquean seguido YouTube/TikTok. Deps: yt-dlp + ffmpeg (ya instalados en la máquina).
 
 Uso:
-    python scripts/scout_watch.py                # todo el roster por defecto
-    python scripts/scout_watch.py kommo shopify  # solo esas claves
-Salida: data/scout/<fecha por args>/<clave>_sheet.png + <clave>.caption.txt + manifest.md
+    python scripts/scout_watch.py                       # todo el roster (YT+TikTok)
+    python scripts/scout_watch.py kommo shopify         # solo esas claves
+    python scripts/scout_watch.py https://instagram.com/reel/XXXX/   # URL directa (IG usa cookies)
+Salida: data/scout/latest/<clave>_sheet.png + <clave>.caption.txt + manifest.md
+Nota: yt-dlp NO lista perfiles de IG (extractor roto) → para IG pasá URLs de reel directas.
 """
 from __future__ import annotations
 
@@ -31,16 +33,10 @@ ROSTER = {
     "meli":       ("Mercado Libre (ref)",     "Mercado Libre comercial anuncio vendedores"),
 }
 
-# Instagram: se activa SOLO si existe el cookies.txt exportado (Chrome nuevo no deja
-# leer sus cookies en vivo). Perfiles reales del roster; se bajan los reels recientes.
+# Cookies exportadas (Chrome nuevo no deja leerlas en vivo). Se usan para URLs de IG.
+# OJO: yt-dlp NO puede listar perfiles/reels de IG (extractor roto) → IG sólo funciona
+# pasando URLs DIRECTAS de un reel (instagram.com/reel/<code>/), no el perfil.
 IG_COOKIES = Path.home() / ".config" / "scout" / "ig_cookies.txt"
-IG_ROSTER = {
-    "kommo_ig":      ("Kommo IG",      "https://www.instagram.com/kommo/"),
-    "manychat_ig":   ("ManyChat IG",   "https://www.instagram.com/manychat/"),
-    "tiendanube_ig": ("Tiendanube IG", "https://www.instagram.com/tiendanube/"),
-    "shopify_ig":    ("Shopify IG",    "https://www.instagram.com/shopify/"),
-    "meli_ig":       ("Mercado Libre IG", "https://www.instagram.com/mercadolibre/"),
-}
 
 
 def _sh(cmd: list[str], timeout: int = 240) -> subprocess.CompletedProcess:
@@ -93,14 +89,13 @@ def _caption(query: str, prefix: Path) -> str:
     return text
 
 
-def _download_ig(profile_url: str, out_mp4: Path) -> bool:
-    """Baja el reel más reciente de un perfil de IG usando el cookies.txt exportado.
-    IG bloquea sin sesión → requiere IG_COOKIES."""
-    if not IG_COOKIES.exists():
-        return False
-    cmd = ["yt-dlp", "--no-warnings", "-q", "--cookies", str(IG_COOKIES),
-           "--playlist-items", "1", "-f", "b[height<=720]/b/best",
-           "--merge-output-format", "mp4", "-o", str(out_mp4), profile_url]
+def _download_url(url: str, out_mp4: Path) -> bool:
+    """Baja un video de una URL directa (reel de IG, video de TikTok/YT, etc.).
+    Para IG usa las cookies exportadas (si existen)."""
+    ck = ["--cookies", str(IG_COOKIES)] if ("instagram.com" in url and IG_COOKIES.exists()) else []
+    cmd = ["yt-dlp", "--no-warnings", "-q", "--playlist-items", "1", *ck,
+           "-f", "b[height<=720]/b/best", "--merge-output-format", "mp4",
+           "-o", str(out_mp4), url]
     _sh(cmd)
     return out_mp4.exists()
 
@@ -133,7 +128,8 @@ def main(keys: list[str]) -> int:
     root = Path(__file__).resolve().parent.parent
     out = root / "data" / "scout" / "latest"
     out.mkdir(parents=True, exist_ok=True)
-    keys = [k for k in keys if k in ROSTER] or list(ROSTER)
+    urls = [a for a in keys if a.startswith("http")]
+    keys = [k for k in keys if k in ROSTER] or ([] if urls else list(ROSTER))
     manifest = ["# Scout — contact sheets para MIRAR y destilar\n"]
     for k in keys:
         label, query = ROSTER[k]
@@ -155,25 +151,22 @@ def main(keys: list[str]) -> int:
         manifest.append(f"## {label}\n- sheet: `{sheet.name}`\n- caption: "
                         f"{(cap[:180] + '…') if cap else '(sin captions)'}\n")
 
-    # Instagram (solo si hay cookies exportadas)
-    if IG_COOKIES.exists():
-        for k, (label, url) in IG_ROSTER.items():
-            mp4 = out / f"{k}.mp4"
-            print(f"[scout] {k}: bajando IG…", flush=True)
-            if not _download_ig(url, mp4):
-                manifest.append(f"- **{label}** — no se pudo bajar (reel privado/sin video)\n")
-                continue
-            sheet = out / f"{k}_sheet.png"
-            ok = _sheet(mp4, sheet)
-            try:
-                mp4.unlink()
-            except OSError:
-                pass
-            print(f"[scout] {k}: sheet={'OK' if ok else 'FAIL'}")
-            manifest.append(f"## {label}\n- sheet: `{sheet.name}`\n")
-    else:
-        print(f"[scout] IG: salteado (falta {IG_COOKIES})")
-        manifest.append(f"\n> IG salteado: falta el cookies.txt en `{IG_COOKIES}`\n")
+    # URLs directas (reels de IG, videos de TikTok/YT que pases a mano)
+    for i, url in enumerate(urls):
+        name = f"url{i+1}"
+        mp4 = out / f"{name}.mp4"
+        print(f"[scout] {name}: bajando {url[:60]}…", flush=True)
+        if not _download_url(url, mp4):
+            manifest.append(f"- **{url}** — no se pudo bajar\n")
+            continue
+        sheet = out / f"{name}_sheet.png"
+        ok = _sheet(mp4, sheet)
+        try:
+            mp4.unlink()
+        except OSError:
+            pass
+        print(f"[scout] {name}: sheet={'OK' if ok else 'FAIL'}")
+        manifest.append(f"## {url}\n- sheet: `{sheet.name}`\n")
 
     (out / "manifest.md").write_text("\n".join(manifest), encoding="utf-8")
     print(f"[scout] listo -> {out}")
