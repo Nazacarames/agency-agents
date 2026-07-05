@@ -184,22 +184,25 @@ def assemble_short_animated(clip_path: str, frame_paths: List[str],
 
 
 def _split_filter(w: int, h: int) -> str:
-    """filter_complex del layout SPLIT: Nazareno arriba (con su voz) + demo del bot
-    abajo, ambos a la vez. La base temporal es el clip de Nazareno (dura su audio);
-    la demo se congela en el último frame (tpad clone) hasta que él termina."""
-    top_h = (int(h * 0.545) // 2) * 2      # ~55% para Nazareno
-    bot_h = h - top_h
-    navy = f"0x{PAD[2:]}" if PAD.startswith("0x") else PAD
+    """filter_complex del layout VIRAL: el presentador (Nazareno) LLENA el cuadro
+    (cover 9:16) y la demo del bot va como CARD sobrepuesta abajo con borde de marca
+    — NO un split 50/50 plano (eso se veía a plantilla; ningún viral lo hace). La
+    cabeza/ojos del presentador quedan visibles arriba mientras habla; la demo se
+    congela (tpad clone) hasta que él termina."""
+    blue = "0x2563EB"                       # azul de marca (borde de la card)
+    card_w = (int(w * 0.83) // 2) * 2       # card ~83% del ancho, centrada
+    bw = max(4, w // 180)                    # grosor del borde
+    margin = int(h * 0.05)                   # separación del borde inferior
     return (
-        # Nazareno: crop centrado a proporción w:top_h, escalado arriba; navy debajo.
-        f"[0:v]crop=1080:1040:0:(ih-1040)/2,scale={w}:{top_h},setsar=1,"
-        f"pad={w}:{h}:0:0:color={navy}[base];"
-        # Bot: crop de la zona header+mensajes del chat, escalado a la banda inferior,
-        # y congelado (clone) para cubrir toda la duración de Nazareno.
-        f"[1:v]crop=1080:1120:0:0,scale={w}:{bot_h}:force_original_aspect_ratio=decrease,"
-        f"pad={w}:{bot_h}:(ow-iw)/2:(oh-ih)/2:color={navy},setsar=1,"
-        f"tpad=stop_mode=clone:stop_duration=30[bot];"
-        f"[base][bot]overlay=0:{top_h}:shortest=1,format=yuv420p[v]"
+        # Presentador: cover del 9:16 completo (llena el cuadro, sin bandas).
+        f"[0:v]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},setsar=1[base];"
+        # Demo: recorte del chat (header+mensajes, top ~47% robusto a 1080/720),
+        # card con borde azul, congelada hasta el final del hablado.
+        f"[1:v]crop=iw:ih*0.47:0:0,scale={card_w}:-2,"
+        f"pad=iw+{2*bw}:ih+{2*bw}:{bw}:{bw}:color={blue},setsar=1,"
+        f"tpad=stop_mode=clone:stop_duration=30[demo];"
+        # Card anclada abajo (H-h-margin), centrada, sobre el presentador.
+        f"[base][demo]overlay=(W-w)/2:H-h-{margin}:shortest=1,format=yuv420p[v]"
     )
 
 
