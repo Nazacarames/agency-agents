@@ -141,6 +141,7 @@ def main(keys: list[str]) -> int:
     urls = [a for a in keys if a.startswith("http")]
     keys = [k for k in keys if k in ROSTER] or ([] if urls else list(ROSTER))
     manifest = ["# Scout — contact sheets para MIRAR y destilar\n"]
+    sheets: list[tuple[str, str, str]] = []   # (label, sheet_path, caption) para el distill
     for k in keys:
         label, query = ROSTER[k]
         mp4 = out / f"{k}.mp4"
@@ -160,6 +161,8 @@ def main(keys: list[str]) -> int:
         print(f"[scout] {k}: sheet={'OK' if ok else 'FAIL'} caption={len(cap)} chars")
         manifest.append(f"## {label}\n- sheet: `{sheet.name}`\n- caption: "
                         f"{(cap[:180] + '…') if cap else '(sin captions)'}\n")
+        if ok:
+            sheets.append((label, str(sheet), cap))
 
     # Instagram AUTOMÁTICO vía Business Discovery (API oficial, no scraping). Baja el
     # video_url del CDN directo → sheet. Se activa si hay token (META_PAGE_TOKEN + IG_BUSINESS_ID).
@@ -186,6 +189,8 @@ def main(keys: list[str]) -> int:
             print(f"[scout] ig:{key}: sheet={'OK' if ok else 'FAIL'} | {r.get('permalink')}")
             manifest.append(f"## IG {handle}\n- sheet: `{sheet.name}`\n- {r.get('permalink')}\n"
                             f"- caption: {(r.get('caption') or '')[:160]}\n")
+            if ok:
+                sheets.append((f"IG {handle}", str(sheet), r.get("caption") or ""))
     else:
         print("[scout] IG auto: salteado (falta META_PAGE_TOKEN / IG_BUSINESS_ID)")
 
@@ -205,10 +210,54 @@ def main(keys: list[str]) -> int:
             pass
         print(f"[scout] {name}: sheet={'OK' if ok else 'FAIL'}")
         manifest.append(f"## {url}\n- sheet: `{sheet.name}`\n")
+        if ok:
+            sheets.append((url, str(sheet), ""))
 
     (out / "manifest.md").write_text("\n".join(manifest), encoding="utf-8")
+    # Cierra el loop: Gemini MIRA los sheets y escribe el playbook (data/visual-scout.md).
+    _distill(sheets, root / "data" / "visual-scout.md")
     print(f"[scout] listo -> {out}")
     return 0
+
+
+_DISTILL_PROMPT = (
+    "Sos director de contenido de una agencia argentina que hace TikToks/Reels para "
+    "dueños de PyME sobre IA y bots de WhatsApp. Adjunto contact sheets (6 frames c/u) "
+    "de reels REALES de competidores y marcas e-commerce de referencia. MIRALOS y escribí "
+    "un playbook de EDICIÓN/hooks/formato, concreto y accionable, en español rioplatense, "
+    "con estas secciones EXACTAS:\n"
+    "## Regla madre (variar formato, orgánico)\n## Dónde va la demo del bot\n"
+    "## Hooks (con ejemplos concretos que veas)\n## Edición que se siente orgánica\n"
+    "## Imágenes/banners para ads\n"
+    "Basate SOLO en lo que ves en los frames (y las captions de contexto abajo). Nada de "
+    "genéricos: citá qué hacen (dónde ponen la demo, tipografía de carteles, cortes, PiP, "
+    "b-roll). Máx ~350 palabras. Contexto (captions):\n"
+)
+
+
+def _distill(sheets: list, out_md: Path) -> bool:
+    """Gemini mira los sheets y escribe data/visual-scout.md. Best-effort: si no hay
+    visión configurada o falla, no toca el archivo (queda el SEED en código)."""
+    if not sheets:
+        return False
+    try:
+        from app.integrations import vision
+    except Exception:
+        print("[scout] distill: sin módulo vision"); return False
+    if not vision.enabled():
+        print("[scout] distill: visión no configurada (falta GOOGLE_SERVICE_ACCOUNT_JSON) → queda el SEED")
+        return False
+    ctx = "\n".join(f"- {lbl}: {(cap or '')[:180]}" for lbl, _p, cap in sheets)
+    paths = [p for _l, p, _c in sheets]
+    txt = vision.describe(paths, _DISTILL_PROMPT + ctx)
+    if not txt or len(txt) < 200:
+        print("[scout] distill: respuesta vacía/corta → queda el SEED"); return False
+    body = ("=== VISUAL SCOUT — playbook de EDICIÓN / hooks / formato (MIRADO por Gemini) ===\n"
+            "_Auto-destilado de reels reales (YT+TikTok+IG) por el scout. Foco VIDEO._\n\n"
+            + txt.strip() + "\n=== fin visual scout ===\n")
+    out_md.write_text(body, encoding="utf-8")
+    print(f"[scout] distill OK -> {out_md} ({len(txt)} chars)")
+    return True
 
 
 if __name__ == "__main__":
