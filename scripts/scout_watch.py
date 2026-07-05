@@ -31,6 +31,17 @@ ROSTER = {
     "meli":       ("Mercado Libre (ref)",     "Mercado Libre comercial anuncio vendedores"),
 }
 
+# Instagram: se activa SOLO si existe el cookies.txt exportado (Chrome nuevo no deja
+# leer sus cookies en vivo). Perfiles reales del roster; se bajan los reels recientes.
+IG_COOKIES = Path.home() / ".config" / "scout" / "ig_cookies.txt"
+IG_ROSTER = {
+    "kommo_ig":      ("Kommo IG",      "https://www.instagram.com/kommo/"),
+    "manychat_ig":   ("ManyChat IG",   "https://www.instagram.com/manychat/"),
+    "tiendanube_ig": ("Tiendanube IG", "https://www.instagram.com/tiendanube/"),
+    "shopify_ig":    ("Shopify IG",    "https://www.instagram.com/shopify/"),
+    "meli_ig":       ("Mercado Libre IG", "https://www.instagram.com/mercadolibre/"),
+}
+
 
 def _sh(cmd: list[str], timeout: int = 240) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
@@ -82,6 +93,18 @@ def _caption(query: str, prefix: Path) -> str:
     return text
 
 
+def _download_ig(profile_url: str, out_mp4: Path) -> bool:
+    """Baja el reel más reciente de un perfil de IG usando el cookies.txt exportado.
+    IG bloquea sin sesión → requiere IG_COOKIES."""
+    if not IG_COOKIES.exists():
+        return False
+    cmd = ["yt-dlp", "--no-warnings", "-q", "--cookies", str(IG_COOKIES),
+           "--playlist-items", "1", "-f", "b[height<=720]/b/best",
+           "--merge-output-format", "mp4", "-o", str(out_mp4), profile_url]
+    _sh(cmd)
+    return out_mp4.exists()
+
+
 def _sheet(mp4: Path, out_png: Path) -> bool:
     """6 frames a timestamps fijos (robusto sin duración) → montage 3x2."""
     work = out_png.parent
@@ -131,6 +154,27 @@ def main(keys: list[str]) -> int:
         print(f"[scout] {k}: sheet={'OK' if ok else 'FAIL'} caption={len(cap)} chars")
         manifest.append(f"## {label}\n- sheet: `{sheet.name}`\n- caption: "
                         f"{(cap[:180] + '…') if cap else '(sin captions)'}\n")
+
+    # Instagram (solo si hay cookies exportadas)
+    if IG_COOKIES.exists():
+        for k, (label, url) in IG_ROSTER.items():
+            mp4 = out / f"{k}.mp4"
+            print(f"[scout] {k}: bajando IG…", flush=True)
+            if not _download_ig(url, mp4):
+                manifest.append(f"- **{label}** — no se pudo bajar (reel privado/sin video)\n")
+                continue
+            sheet = out / f"{k}_sheet.png"
+            ok = _sheet(mp4, sheet)
+            try:
+                mp4.unlink()
+            except OSError:
+                pass
+            print(f"[scout] {k}: sheet={'OK' if ok else 'FAIL'}")
+            manifest.append(f"## {label}\n- sheet: `{sheet.name}`\n")
+    else:
+        print(f"[scout] IG: salteado (falta {IG_COOKIES})")
+        manifest.append(f"\n> IG salteado: falta el cookies.txt en `{IG_COOKIES}`\n")
+
     (out / "manifest.md").write_text("\n".join(manifest), encoding="utf-8")
     print(f"[scout] listo -> {out}")
     return 0
