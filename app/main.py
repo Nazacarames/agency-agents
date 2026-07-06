@@ -961,6 +961,16 @@ async def api_competitor_playbook(request: Request):
     return {"ok": True, "playbook": competitor_playbook.load_playbook()}
 
 
+@app.post("/api/scout/refresh")
+async def api_scout_refresh(request: Request):
+    """Aprendizaje constante: el visual scout mira reels reales de IG con Gemini y refresca
+    el playbook de edición/hooks (autónomo, corre en el server)."""
+    _verify_webhook_secret(request)
+    from .integrations import content_scout
+    res = await run_in_threadpool(content_scout.refresh)
+    return {"ok": res.get("ok", False), "result": res}
+
+
 @app.post("/api/trends/refresh")
 async def api_trends_refresh(request: Request):
     """Refresca el bloque de tendencias de contenido (TrendsMCP)."""

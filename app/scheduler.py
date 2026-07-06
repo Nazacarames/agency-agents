@@ -66,6 +66,7 @@ CLIENT_ARCHIVE_CRON = "0 5 * * *"
 # leadhunter/outbound). Semanal, domingo 07:00 ART. Determinístico, sin costo de cuota.
 LEARNING_DIGEST_CRON = "0 7 * * sun"
 COMPETITOR_REFRESH_CRON = "0 8 * * sun"   # dom 08:00 — refresca el playbook de competencia
+SCOUT_REFRESH_CRON = "0 9 * * sun"        # dom 09:00 — visual scout IG (Gemini mira reels reales)
 
 
 class AgentScheduler:
@@ -95,6 +96,8 @@ class AgentScheduler:
                               _scheduled_learning_digest)
         self._register_simple("competitor:refresh", COMPETITOR_REFRESH_CRON, DEFAULT_TIMEZONE,
                               _scheduled_competitor_refresh)
+        self._register_simple("scout:refresh", SCOUT_REFRESH_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_scout_refresh)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -237,3 +240,16 @@ async def _scheduled_competitor_refresh() -> None:
         log.info("trends_refresh_scheduled_done", result=tr)
     except Exception as e:
         log.error("trends_refresh_failed", error=str(e)[:200])
+
+
+async def _scheduled_scout_refresh() -> None:
+    """Aprendizaje constante: el visual scout mira reels reales de IG (Gemini) y refresca
+    el playbook de edición/hooks. Autónomo en el server (Business Discovery + Gemini no se
+    bloquean por IP). Best-effort."""
+    import asyncio
+    from .integrations import content_scout
+    try:
+        res = await asyncio.to_thread(content_scout.refresh)
+        log.info("scout_refresh_scheduled_done", result=res)
+    except Exception as e:
+        log.error("scout_refresh_failed", error=str(e)[:200])
