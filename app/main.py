@@ -637,6 +637,16 @@ class CmPublishBody(BaseModel):
     targets: Optional[List[str]] = None  # ["instagram","tiktok","youtube"]
 
 
+class LinkedInMarkBody(BaseModel):
+    key: str
+    state: str                          # invited | connected | replied | skipped
+
+
+class LinkedInPublishBody(BaseModel):
+    text: str
+    image: Optional[str] = None         # /media/<file> opcional
+
+
 _AGENT_DESCRIPTIONS = {
     "leadhunter": "Genera 10 leads/día con contacto verificado (FIT 4-6)",
     "content_creator": "Posts/contenido para redes de Automiq",
@@ -2110,6 +2120,129 @@ async def api_tiktok_disconnect(request: Request):
     from .integrations.tiktok_client import clear_token
     clear_token()
     return {"ok": True}
+
+
+# ── LinkedIn: leads asistidos + OAuth + publicación ──
+
+@app.get("/api/linkedin/leads")
+async def api_linkedin_leads(request: Request):
+    """'LinkedIn del día': invitaciones y DMs listos para copiar/pegar."""
+    _verify_webhook_secret(request)
+    from .integrations import linkedin_leads
+    return {"ok": True, "leads": linkedin_leads.today_list(),
+            "counts": linkedin_leads.counts()}
+
+
+@app.post("/api/linkedin/enrich")
+async def api_linkedin_enrich(request: Request):
+    """Busca perfiles de LinkedIn de los leads sin perfil + genera nota/DM (a demanda;
+    también corre solo tras el ingest de outbound)."""
+    _verify_webhook_secret(request)
+    from .integrations import linkedin_leads
+    res = await run_in_threadpool(linkedin_leads.enrich, 10)
+    return {"ok": True, "result": res}
+
+
+@app.post("/api/linkedin/mark")
+async def api_linkedin_mark(body: LinkedInMarkBody, request: Request):
+    """Avance manual: invited / connected / replied / skipped."""
+    _verify_webhook_secret(request)
+    from .integrations import linkedin_leads
+    if not linkedin_leads.mark(body.key, body.state):
+        raise HTTPException(status_code=400, detail="lead o estado inválido")
+    return {"ok": True}
+
+
+@app.get("/api/linkedin/status")
+async def api_linkedin_status(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import linkedin_client as lk
+    return lk.status()
+
+
+@app.post("/api/linkedin/publish")
+async def api_linkedin_publish(body: LinkedInPublishBody, request: Request):
+    """Publica un post (texto + imagen /media/... opcional) en el perfil conectado."""
+    _verify_webhook_secret(request)
+    from .integrations import linkedin_client as lk
+    if not (body.text or "").strip():
+        raise HTTPException(status_code=400, detail="texto vacío")
+    image_path = None
+    if body.image:
+        p = _data_dir() / "images" / Path(body.image).name
+        if p.exists():
+            image_path = str(p)
+    res = await run_in_threadpool(lk.publish, body.text.strip(), image_path)
+    if not res.get("ok"):
+        raise HTTPException(status_code=502, detail=res.get("error", "no se pudo publicar"))
+    try:
+        from .integrations import publish_queue as pq
+        pq.record_published(image=body.image or "", caption=body.text[:200],
+                            target="linkedin", result=res, source="api")
+    except Exception:
+        pass
+    return res
+
+
+def _linkedin_state_path() -> Path:
+    return _data_dir() / "linkedin-oauth-state.json"
+
+
+@app.get("/auth/linkedin/login")
+async def linkedin_login(request: Request):
+    """Inicia el OAuth de LinkedIn. Requiere ?key=WEBHOOK_SECRET."""
+    s = get_settings()
+    key = request.query_params.get("key", "")
+    if not s.webhook_secret or not hmac.compare_digest(key, s.webhook_secret):
+        raise HTTPException(status_code=401, detail="key inválida")
+    from .integrations import linkedin_client as lk
+    if not lk.configured():
+        raise HTTPException(status_code=400,
+                            detail="LinkedIn no configurado (faltan LINKEDIN_CLIENT_ID/SECRET)")
+    state = uuid.uuid4().hex
+    import time as _t
+    p = _linkedin_state_path()
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except Exception:
+        data = {}
+    now = int(_t.time())
+    data = {st: v for st, v in data.items() if now - int(v.get("ts", 0)) < 3600}
+    data[state] = {"key": key, "ts": now}
+    p.write_text(json.dumps(data), encoding="utf-8")
+    return RedirectResponse(lk.authorize_url(state))
+
+
+@app.get("/auth/linkedin/callback")
+async def linkedin_callback(request: Request):
+    qp = request.query_params
+    if qp.get("error"):
+        return HTMLResponse(f"<h2>LinkedIn devolvió un error</h2>"
+                            f"<pre>{qp.get('error')}: {qp.get('error_description','')}</pre>",
+                            status_code=400)
+    code = qp.get("code")
+    if not code:
+        return HTMLResponse("<h2>Falta el parámetro code</h2>", status_code=400)
+    p = _linkedin_state_path()
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except Exception:
+        data = {}
+    v = data.pop(qp.get("state", ""), None) or {}
+    try:
+        p.write_text(json.dumps(data), encoding="utf-8")
+    except Exception:
+        pass
+    from .integrations import linkedin_client as lk
+    try:
+        tok = await run_in_threadpool(lk.exchange_code, code)
+    except Exception as e:
+        return HTMLResponse(f"<h2>No se pudo conectar LinkedIn</h2><pre>{str(e)[:400]}</pre>",
+                            status_code=502)
+    return HTMLResponse(f"<body style='font-family:system-ui;background:#0D1426;color:#EAF0FF;"
+                        f"padding:3rem'><h2>✅ LinkedIn conectado</h2>"
+                        f"<p>Cuenta: <b>{tok.get('name','')}</b>. Ya podés publicar desde el "
+                        f"panel (los tokens duran ~60 días).</p></body>")
 
 
 @app.get("/tiktok", response_class=HTMLResponse)

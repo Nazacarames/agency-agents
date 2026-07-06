@@ -203,6 +203,15 @@ class OutboundAgent(BaseAgent):
 
         # Guardamos el store ya ingestado y el contexto para post_process.
         ls.save_store(store)
+
+        # 2b) Enriquecer con LinkedIn los leads nuevos (perfil del decisor + nota/DM
+        #     para el outbound asistido del panel). Best-effort, no bloquea el email.
+        try:
+            from ..integrations import linkedin_leads
+            ctx.args["_ob_li"] = linkedin_leads.enrich(limit=10)
+        except Exception:
+            pass
+
         ctx.args["_ob_due_keys"] = [l["key"] for l in due_today]
         ctx.args["_ob_over_cap"] = over_cap
         ctx.args["_ob_ingest"] = ingest_stats

@@ -38,6 +38,10 @@ scripts/youtube_token.json
 data/tiktok-token.json
 data/tiktok-oauth-state.json
 
+# Token y estado OAuth de LinkedIn — NUNCA commitear
+data/linkedin-token.json
+data/linkedin-oauth-state.json
+
 # Webhooks de Discord (URLs = secreto del canal) — NUNCA commitear
 scripts/_discord_*.json
 

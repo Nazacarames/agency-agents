@@ -545,6 +545,13 @@
       <!-- PIPELINE -->
       <section id="tab-pipeline" class="tabsec hidden">
         <div class="kpi-row" id="pipeKpis"></div>
+        <div class="panel" style="margin-bottom:18px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><h3>🔗 LinkedIn del día</h3><div class="ph-sub">Invitaciones y DMs listos: abrí el perfil, pegá el texto y marcá. El clic lo das vos (cero riesgo de ban).</div></div>
+            <button class="btn-ghost btn-sm" id="liEnrichBtn">↻ Buscar perfiles</button>
+          </div>
+          <div id="liList" style="margin-top:10px"></div>
+        </div>
         <div class="panel" style="margin-bottom:18px"><h3>Embudo de conversión</h3><div class="ph-sub">De lead a cliente.</div><div id="pipeFunnel"></div></div>
         <div class="sec-head"><h2 class="muted" style="font-weight:600;font-size:13.5px">Leads del motor de outbound · convertí cualquiera a cliente con “→ Cliente”.</h2></div>
         <div class="tbl-wrap"><table><thead>
@@ -724,6 +731,15 @@
           </div>
           <button class="btn" id="cmPubBtn" style="margin-top:14px">🚀 Publicar</button>
           <div id="cmResult" style="margin-top:12px"></div>
+        </div>
+
+        <div class="card" style="margin-top:4px">
+          <h3 style="margin-bottom:4px">💼 LinkedIn (B2B)</h3>
+          <div id="liConnStatus" class="faint" style="font-size:13px;margin-bottom:8px">…</div>
+          <label>Post de texto (el copy B2B lo tenés en los reportes de social_media / creative)</label>
+          <textarea id="liText" class="inp" style="min-height:70px" placeholder="Cómo una distribuidora de San Martín recuperó el 30% de su cartera en 60 días con un bot de WhatsApp…"></textarea>
+          <button class="btn-ghost" id="liPubBtn" style="margin-top:8px">Publicar en LinkedIn</button>
+          <span id="liPubResult" style="margin-left:8px"></span>
         </div>
       </section>
 
@@ -1729,7 +1745,50 @@ function pipeValueBreakdown(counts, ticket){
   const items=stages.map(st=>`<span class="lg"><span class="sw" style="background:${PALETTE[order.indexOf(st)%PALETTE.length]}"></span>${esc(st)} <b style="color:var(--navy);margin-left:2px">${fmtUsd((counts[st]||0)*ticket*STAGE_PROB[st])}</b></span>`).join('');
   return `<div class="legend" style="margin-top:14px;font-size:12px"><span class="faint">Valor ponderado por etapa:</span> ${items}</div>`;
 }
+// ── LinkedIn del día (outbound asistido) ──
+const LI_LABEL = {pending:'📨 invitar', invited:'⏳ invitado', connected:'💬 mandar DM'};
+async function loadLinkedInDia(){
+  const box=el('liList'); if(!box) return;
+  try{
+    const d=await api('/api/linkedin/leads');
+    if(!(d.leads||[]).length){ box.innerHTML='<span class="faint">Sin pendientes. Los perfiles se buscan solos con cada corrida de outbound, o tocá “Buscar perfiles”.</span>'; return; }
+    box.innerHTML = d.leads.map(l=>`
+      <div style="border-top:1px solid var(--line);padding:10px 0">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px">
+            <b>${esc(l.company||'?')}</b> <span class="badge grey">${LI_LABEL[l.li_state]||esc(l.li_state)}</span><br>
+            <span class="faint" style="font-size:12px">${esc(l.decisor||'')} ${l.headline?'· '+esc(l.headline):''}</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <a class="btn-ghost btn-xs" href="${esc(l.linkedin)}" target="_blank">Perfil ↗</a>
+            <button class="btn-ghost btn-xs" onclick="liCopy(${aj(l.li_state==='connected'?(l.dm||''):(l.note||''))},this)">📋 ${l.li_state==='connected'?'DM':'nota'}</button>
+            ${l.li_state==='pending'?`<button class="btn-ghost btn-xs" onclick="liMark('${l.key}','invited')">✓ Invité</button>`:''}
+            ${l.li_state==='invited'?`<button class="btn-ghost btn-xs" onclick="liMark('${l.key}','connected')">🤝 Aceptó</button>`:''}
+            ${l.li_state==='connected'?`<button class="btn-ghost btn-xs" onclick="liMark('${l.key}','replied')">✓ DM enviado</button>`:''}
+            <button class="btn-ghost btn-xs" onclick="liMark('${l.key}','skipped')">×</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }catch(e){ box.innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+}
+async function liCopy(text,btn){
+  try{ await navigator.clipboard.writeText(text); toast('Copiado — pegalo en LinkedIn'); if(btn){btn.textContent='✓ copiado';} }
+  catch(e){ window.prompt('Copiá el texto:', text); }
+}
+async function liMark(key,state){
+  try{ await api('/api/linkedin/mark',{method:'POST',body:JSON.stringify({key,state})}); loadLinkedInDia(); }
+  catch(e){ toast(e.message); }
+}
+el('liEnrichBtn').addEventListener('click', async ()=>{
+  el('liEnrichBtn').disabled=true; el('liEnrichBtn').textContent='buscando… (~1 min)';
+  try{ const r=await api('/api/linkedin/enrich',{method:'POST'});
+    toast(`Perfiles: ${r.result.con_perfil} encontrados · ${r.result.sin_perfil} sin perfil`); loadLinkedInDia(); }
+  catch(e){ toast(e.message); }
+  finally{ el('liEnrichBtn').disabled=false; el('liEnrichBtn').textContent='↻ Buscar perfiles'; }
+});
+
 async function loadPipeline(){
+  loadLinkedInDia();
   const body=el('pipeBody'); body.innerHTML='<tr><td colspan="7" class="muted">Cargando…</td></tr>';
   try{
     const [d, bill]=await Promise.all([ api('/api/pipeline'), api('/api/finance/summary').catch(()=>null) ]);
@@ -2238,7 +2297,26 @@ async function publishImg(btn, src){
 
 // ── Community Manager (1 clic → IG / TikTok / YT Shorts) ──
 let CM_VIDEO = '';
+async function loadLiConn(){
+  try{
+    const st=await api('/api/linkedin/status');
+    el('liConnStatus').innerHTML = !st.configured
+      ? '⚙️ Falta configurar: creá la app en <b>developers.linkedin.com</b> (productos "Share on LinkedIn" + "Sign In with OpenID"), cargá <code>LINKEDIN_CLIENT_ID</code>/<code>SECRET</code> en Railway y agregá el redirect <code>/auth/linkedin/callback</code>.'
+      : st.connected
+        ? `✅ Conectado como <b>${esc(st.name||'')}</b> (token hasta ${esc(st.expires||'?')})`
+        : `🔌 Configurado pero sin conectar → <a href="/auth/linkedin/login?key=${encodeURIComponent(KEY)}" target="_blank">Conectar cuenta de LinkedIn</a>`;
+  }catch(e){ el('liConnStatus').textContent=''; }
+}
+el('liPubBtn').addEventListener('click', async ()=>{
+  const text=el('liText').value.trim(); if(!text){ toast('Escribí el post'); return; }
+  el('liPubBtn').disabled=true; el('liPubResult').textContent='publicando…';
+  try{ const r=await api('/api/linkedin/publish',{method:'POST',body:JSON.stringify({text})});
+    el('liPubResult').innerHTML = `✅ <a href="${esc(r.permalink||'#')}" target="_blank">ver post</a>`; }
+  catch(e){ el('liPubResult').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+  finally{ el('liPubBtn').disabled=false; }
+});
 async function loadCM(){
+  loadLiConn();
   el('cmVideos').innerHTML = '<span class="faint">cargando videos…</span>';
   try{
     const d = await api('/api/cm/videos');

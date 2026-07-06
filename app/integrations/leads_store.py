@@ -432,7 +432,9 @@ def update_lead(key: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not lead:
             return None
         for k in ("company", "email", "phone", "channel", "state", "next_step",
-                  "reengaged_at"):
+                  "reengaged_at",
+                  # outbound asistido por LinkedIn (perfil del decisor + nota/DM + estado)
+                  "linkedin", "li_headline", "li_note", "li_dm", "li_state", "li_at"):
             if k in fields and fields[k] is not None:
                 lead[k] = fields[k]
         save_store(store)
@@ -454,6 +456,9 @@ def lead_view(lead: Dict[str, Any]) -> Dict[str, Any]:
         "first_seen": lead.get("first_seen"),
         "last_reply_at": lead.get("last_reply_at"),
         "reengaged_at": lead.get("reengaged_at"),
+        "decisor": lead.get("decisor"),
+        "linkedin": lead.get("linkedin"),
+        "li_state": lead.get("li_state"),
     }
 
 

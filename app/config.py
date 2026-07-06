@@ -164,6 +164,12 @@ class Settings(BaseSettings):
     # mp4 de prueba en un dominio VERIFICADO (la landing) para el demo de review.
     tiktok_test_video_url: str = ""
 
+    # ── LinkedIn (Share on LinkedIn + OpenID Connect) ──
+    # App en developers.linkedin.com: publica posts (texto+imagen) en el perfil
+    # conectado. Credenciales SOLO en env de Railway (defaults vacíos).
+    linkedin_client_id: str = ""
+    linkedin_client_secret: str = ""
+
     # ── Google Veo (generación de video, créditos GCP via Vertex AI) ──
     # La org bloquea API keys (política de seguridad) → usamos Vertex AI con
     # service account (ADC). Los US$300 de GCP se descuentan directo. Veo 3
