@@ -1,3 +1,10 @@
+---
+name: marketing-lanzamiento
+description: "Genera un playbook de lanzamiento semana a semana con plantillas, checklists, emails, posts y metricas para lanzar un producto, servicio o feature. Usar con /marketing lanzamiento [descripcion] o cuando el usuario pide 'plan de lanzamiento', 'go-to-market', 'como lanzo esto'."
+metadata:
+  version: 1.0.0
+---
+
 # Generador de Playbook de Lanzamiento
 
 ## Proposito de la skill

@@ -1,3 +1,10 @@
+---
+name: marketing-informe
+description: "Compila auditorias y analisis previos en un informe de marketing profesional en Markdown listo para cliente, con scores, hallazgos y plan de accion priorizado. Usar con /marketing informe [dominio] o cuando el usuario pide 'informe completo', 'compilado para el cliente', 'assessment', 'scorecard'."
+metadata:
+  version: 1.0.0
+---
+
 # Generador de Informe de Marketing (Markdown)
 
 ## Proposito de la skill

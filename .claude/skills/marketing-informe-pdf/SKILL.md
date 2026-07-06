@@ -1,3 +1,10 @@
+---
+name: marketing-informe-pdf
+description: "Genera un informe de marketing en PDF con marca, medidores de score, tablas y plan de accion usando scripts/generar_informe_pdf.py. Usar con /marketing informe-pdf [dominio] o cuando el usuario pide el informe 'en PDF', 'pulido', 'listo para presentar al cliente'."
+metadata:
+  version: 1.0.0
+---
+
 # Generador de Informe de Marketing en PDF
 
 ## Proposito de la skill

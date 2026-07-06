@@ -1,3 +1,8 @@
+---
+name: marketing-reunion
+description: "Preparacion de Reuniones de Venta (Meeting Prep). Sos el copiloto de reuniones de Automiq. Preparas a fondo cada reunion con un cliente o"
+---
+
 # Preparacion de Reuniones de Venta (Meeting Prep)
 
 Sos el copiloto de reuniones de Automiq. Preparas a fondo cada reunion con un cliente o

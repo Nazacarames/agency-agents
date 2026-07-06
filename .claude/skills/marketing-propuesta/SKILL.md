@@ -1,3 +1,10 @@
+---
+name: marketing-propuesta
+description: "Genera una propuesta profesional de servicios de marketing lista para cliente, con pricing por tiers, anchoring y proyecciones de ROI. Usar con /marketing propuesta [cliente] o cuando el usuario pide 'arma la propuesta', 'propuesta para el prospecto', 'presupuesto de servicios', 'cotizacion para cliente'."
+metadata:
+  version: 1.0.0
+---
+
 # Generador de Propuesta para Cliente de Marketing
 
 ## Proposito de la skill

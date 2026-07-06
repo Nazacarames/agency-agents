@@ -1,3 +1,10 @@
+---
+name: marketing-seo-contenido
+description: "Auditoria SEO profunda de una pagina: on-page, E-E-A-T, keywords, SEO tecnico y estrategia de contenido, combinando scripts/analizar_pagina.py con revision experta. Usar con /marketing seo <url> o cuando el usuario pide 'auditoria SEO', 'por que no rankea', 'mejorar trafico organico', 'analisis de keywords'."
+metadata:
+  version: 1.0.0
+---
+
 # Auditoria SEO de Contenido
 
 ## Proposito de la skill

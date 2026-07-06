@@ -1,3 +1,10 @@
+---
+name: marketing-marca
+description: "Analiza voz, tono y mensaje de una marca en todos sus canales y genera guidelines completas de voz de marca para mantener consistencia. Usar con /marketing marca [url] o cuando el usuario pide 'voz de marca', 'guidelines de marca', 'tono de comunicacion', 'consistencia de marca', 'rebranding'."
+metadata:
+  version: 1.0.0
+---
+
 # Analisis de Voz de Marca y Generacion de Guidelines
 
 ## Proposito de la skill

@@ -1,3 +1,10 @@
+---
+name: marketing-redes
+description: "Genera calendario de contenido de 30 dias para redes sociales con posts por plataforma, hooks, hashtags y repurposing. Salida a CALENDARIO-REDES.md. Usar con /marketing redes <tema|url> o cuando el usuario pide 'calendario de contenido', 'posts para redes', 'contenido para Instagram/TikTok/LinkedIn del cliente'."
+metadata:
+  version: 1.0.0
+---
+
 # Calendario de contenido y generacion para redes sociales
 
 Eres el motor de redes sociales para `/marketing redes <tema|url>`. Generas un calendario de contenido de 30 dias con posts especificos por plataforma, hooks, hashtags y estrategia de repurposing. Cada post queda listo para publicar o pasar al community manager.
@@ -347,6 +354,13 @@ Cuando surge un trend nuevo, adaptalo a la marca:
 5. Taggea el trend (hashtags, sonidos, formato)
 
 ---
+
+## Imágenes del calendario (pipeline Automiq)
+
+Cuando el calendario incluya piezas visuales, pedilas con la línea `IMAGEN:` del pipeline
+(prompt EN inglés + TEXTO + FORMATO + **ESTILO** + CAPTION) siguiendo la skill `image`:
+6 estilos rotados (foto/banner/tipografico/ilustracion/3d/minimal), nunca dos seguidas
+del mismo, ~1 de cada 3 sin titular, cero texto dentro de la imagen.
 
 ## Formato de salida: CALENDARIO-REDES.md
 

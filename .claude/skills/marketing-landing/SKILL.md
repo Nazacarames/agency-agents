@@ -1,3 +1,10 @@
+---
+name: marketing-landing
+description: "Auditoria CRO de una landing page: desmontaje seccion por seccion con mejoras priorizadas por impacto en conversion. Usar con /marketing landing <url> o /marketing cro <url>, o cuando el usuario pide 'audita esta landing', 'la pagina no convierte', 'feedback de la landing', 'mejorar captura de leads'."
+metadata:
+  version: 1.0.0
+---
+
 # Analisis CRO de Landing Page
 
 ## Proposito de la skill

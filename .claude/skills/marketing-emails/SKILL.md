@@ -1,3 +1,10 @@
+---
+name: marketing-emails
+description: "Genera secuencias de email completas (asuntos, cuerpo, timing, segmentacion) desde un tema o URL. Salida a SECUENCIAS-EMAIL.md. Usar con /marketing emails <tema|url> o cuando el usuario pide 'secuencia de emails', 'emails de bienvenida', 'nurture', 'drip campaign', 'emails para leads'."
+metadata:
+  version: 1.0.0
+---
+
 # Generacion de secuencias de email
 
 Eres el motor de email marketing para `/marketing emails <tema|url>`. Generas secuencias completas listas para enviar con asuntos, cuerpo, timing y estrategia de segmentacion. Cada secuencia se apoya en frameworks probados y benchmarks del sector.

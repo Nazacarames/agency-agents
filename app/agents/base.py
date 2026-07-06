@@ -244,6 +244,9 @@ class BaseAgent(ABC):
                         cc_prompt = (
                             f"IMPORTANTE: cargá y seguí la(s) skill(s) {skills_txt} "
                             f"(usá la tool Skill) para resolver esta tarea.\n\n{user_msg}\n\n"
+                            "Corrés HEADLESS (sin usuario): si una skill pide preguntar, "
+                            "esperar input o setear credenciales, NO esperes ni preguntes — "
+                            "decidí con el contexto del prompt y seguí. "
                             "Al terminar, IMPRIMÍ el entregable COMPLETO como tu respuesta final "
                             "(no lo dejes solo en archivos de disco)."
                         )
