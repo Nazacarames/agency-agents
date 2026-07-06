@@ -247,12 +247,21 @@ def playbook_block() -> str:
     except Exception:
         pass
     scout = "\n\n" + scout_txt
+    # Autopsy de NUESTRO contenido (datos reales de IG): qué funcionó de lo propio.
+    # Best-effort y silencioso hasta que haya engagement real.
+    autopsy = ""
+    try:
+        from . import content_autopsy
+        autopsy = content_autopsy.block()
+    except Exception:
+        autopsy = ""
     return (
         "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo) ===\n"
         + load_playbook().strip()
         + "\n=== fin playbook ===\n"
         + COMPETITOR_DEEP_DIVE
         + scout
+        + autopsy
         + trends
         + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
         "plataforma, robá las tácticas del dossier adaptadas a distribuidoras argentinas, "
