@@ -123,6 +123,8 @@ aparece como **PRUEBA**, jamás como pitch. La venta es consecuencia de la autor
 4. **Antes/Después** (tarea manual → automatizada, con el tiempo ahorrado).
 5. **Tutorial 1 micro-skill** ("Un truco para que la IA te conteste los DMs solo").
 6. **Top 3** ("3 tareas que tu negocio debería automatizar YA").
+7. **Reacción a viral** — si abajo te paso un POST VIRAL REAL, reaccioná a él: contá qué
+   viste, dá tu opinión honesta y atalo a una lección para PyMEs. NO lo reposteás; comentás.
 
 ## Formato de video (IMPORTANTE — split en vivo, como los que la rompen)
 El video se arma en SPLIT: vos (Nazareno) hablás ARRIBA y, AL MISMO TIEMPO, abajo se ve
@@ -195,7 +197,33 @@ class TikTokCreatorAgent(BaseAgent):
             "principal) y, si hay demo de chatbot, el bloque CHAT_NEGOCIO."
             + official_site_directive()
             + _playbook_block()
+            + self._reaction_seed()
         )
+
+    def _reaction_seed(self) -> str:
+        """Trae un post viral REAL de un competidor/ref (ig_discovery) para el formato
+        'reacción a viral'. Best-effort: si no hay token/reels, devuelve "" y el agente
+        usa otros formatos."""
+        try:
+            import random
+            from ..integrations import ig_discovery
+            if not ig_discovery.enabled():
+                return ""
+            keys = list(ig_discovery.IG_HANDLES.items())
+            random.shuffle(keys)
+            for key, handle in keys:
+                reels = ig_discovery.recent_reels(handle, n=10)
+                if reels:
+                    r = reels[0]
+                    cap = (r.get("caption") or "").replace("\n", " ").strip()[:220]
+                    return ("\n\nPOST VIRAL REAL para el formato 'reacción a viral' (usalo en UNO "
+                            f"de los 3 guiones si te sirve): {handle} — \"{cap}\" "
+                            f"({r.get('permalink')}). Reaccioná: qué viste, tu opinión, la lección "
+                            "para dueños de PyME. NO lo reposteás, lo comentás.")
+            return ""
+        except Exception as e:
+            log.warning("reaction_seed_failed", error=str(e)[:150])
+            return ""
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         text = response_text or ""
