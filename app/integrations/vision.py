@@ -24,16 +24,41 @@ def enabled() -> bool:
     return veo_video.enabled()
 
 
-def describe(image_paths: List[str], prompt: str, model: str = "gemini-2.5-flash",
-             max_tokens: int = 1800) -> str:
-    """Devuelve la respuesta de texto de Gemini mirando las imágenes (hasta 8). "" si falla."""
-    if not enabled() or not image_paths:
-        return ""
+_MAX_INLINE = 18 * 1024 * 1024   # límite práctico de inlineData en Vertex (~20MB request)
+
+
+def _generate(parts: list, model: str, max_tokens: int, timeout: float = 240.0) -> str:
     try:
         token = veo_video._token()
         project = veo_video._project()
     except Exception as e:
         log.warning("vision_auth_failed", error=str(e)[:150])
+        return ""
+    url = (f"https://aiplatform.googleapis.com/v1/projects/{project}"
+           f"/locations/global/publishers/google/models/{model}:generateContent")
+    body = {"contents": [{"role": "user", "parts": parts}],
+            "generationConfig": {"temperature": 0.4, "maxOutputTokens": max_tokens,
+                                 # gemini-2.5-flash usa "thinking" y se come el budget de
+                                 # tokens → respuesta truncada. thinkingBudget=0 lo apaga.
+                                 "thinkingConfig": {"thinkingBudget": 0}}}
+    try:
+        with httpx.Client(timeout=timeout) as c:
+            r = c.post(url, json=body, headers={"Authorization": f"Bearer {token}"})
+        if r.status_code != 200:
+            log.warning("vision_http", status=r.status_code, body=r.text[:200])
+            return ""
+        cand = (r.json().get("candidates") or [{}])[0]
+        return "".join(pt.get("text", "")
+                       for pt in (cand.get("content", {}).get("parts") or [])).strip()
+    except Exception as e:
+        log.warning("vision_failed", error=str(e)[:150])
+        return ""
+
+
+def describe(image_paths: List[str], prompt: str, model: str = "gemini-2.5-flash",
+             max_tokens: int = 1800) -> str:
+    """Gemini mira imágenes (hasta 8) y responde texto. "" si falla."""
+    if not enabled() or not image_paths:
         return ""
     parts = []
     for p in image_paths[:8]:
@@ -46,22 +71,31 @@ def describe(image_paths: List[str], prompt: str, model: str = "gemini-2.5-flash
     if not parts:
         return ""
     parts.append({"text": prompt})
-    url = (f"https://aiplatform.googleapis.com/v1/projects/{project}"
-           f"/locations/global/publishers/google/models/{model}:generateContent")
-    body = {"contents": [{"role": "user", "parts": parts}],
-            "generationConfig": {"temperature": 0.4, "maxOutputTokens": max_tokens,
-                                 # gemini-2.5-flash usa "thinking" y se come el budget de
-                                 # tokens → respuesta truncada. thinkingBudget=0 lo apaga.
-                                 "thinkingConfig": {"thinkingBudget": 0}}}
-    try:
-        with httpx.Client(timeout=180) as c:
-            r = c.post(url, json=body, headers={"Authorization": f"Bearer {token}"})
-        if r.status_code != 200:
-            log.warning("vision_http", status=r.status_code, body=r.text[:200])
-            return ""
-        cand = (r.json().get("candidates") or [{}])[0]
-        return "".join(pt.get("text", "")
-                       for pt in (cand.get("content", {}).get("parts") or [])).strip()
-    except Exception as e:
-        log.warning("vision_failed", error=str(e)[:150])
+    return _generate(parts, model, max_tokens)
+
+
+def describe_video(video_path: str, prompt: str, model: str = "gemini-2.5-flash",
+                   max_tokens: int = 1800) -> str:
+    """Gemini analiza el VIDEO ENTERO nativo (movimiento + AUDIO + texto en pantalla en
+    el tiempo) — muy superior a frames sueltos. El video debe venir ya achicado (<~18MB
+    inline). "" si falla o pesa demasiado."""
+    if not enabled() or not video_path:
         return ""
+    try:
+        raw = Path(video_path).read_bytes()
+    except Exception:
+        return ""
+    if len(raw) > _MAX_INLINE:
+        log.warning("vision_video_too_big", bytes=len(raw))
+        return ""
+    parts = [{"inlineData": {"mimeType": "video/mp4", "data": base64.b64encode(raw).decode()}},
+             {"text": prompt}]
+    return _generate(parts, model, max_tokens)
+
+
+def synthesize(text: str, prompt: str, model: str = "gemini-2.5-flash",
+               max_tokens: int = 2000) -> str:
+    """Llamada solo-texto (para sintetizar notas en el playbook final). "" si falla."""
+    if not enabled() or not text.strip():
+        return ""
+    return _generate([{"text": prompt + "\n\n" + text}], model, max_tokens)

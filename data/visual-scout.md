@@ -1,30 +1,34 @@
-=== VISUAL SCOUT — playbook de EDICIÓN / hooks / formato (mirado de verdad) ===
-_Refrescado mirando video real con scripts/scout_watch.py (2026-07-05). Foco: VIDEO, que es el 90% de los leads._
+=== VISUAL SCOUT — playbook de EDICIÓN / hooks / formato (MIRADO por Gemini, video nativo) ===
+_Auto-destilado de reels reales (TikTok/IG/YT) por el scout. Foco VIDEO._
 
-## Regla madre: VARIAR el formato, NADA de plantilla fija
-Rotá entre estos formatos (no uses siempre el mismo). Que se sienta ORGÁNICO, no robot:
-1. **Split-card** — presentador LLENA el cuadro + demo del bot como card sobrepuesta abajo (borde de marca). La cabeza/ojos arriba, la demo abajo. NUNCA el bot pelado a pantalla completa.
-2. **Full orgánico** — presentador solo a cámara, la demo entra como **cutaway corto** (1-2s) intercalado, no fija todo el tiempo.
-3. **Screen-share + PiP** (estilo Kommo) — pantalla del CRM/WhatsApp con el presentador en un recuadro chico abajo-derecha.
-4. **Talking-head + carteles-pill** (estilo ManyChat) — frase filosa en un pill blanco, texto GRANDE desde el frame 0, íconos emoji como beats.
-5. **B-roll cinematográfico de maker** (estilo Tiendanube/Shopify) — SIN presentador: el dueño real en su depósito/taller, manos trabajando, luz cálido+frío; la marca/mensaje va en texto.
+¡Che, pyme! ¿Querés que tus Reels y TikToks la rompan y vendan como pan caliente? Acá te armé un playbook bien argento para que tu bot de WhatsApp sea la estrella.
 
-## Dónde va la demo del bot (clave que pidió el usuario)
-- NUNCA mostrar el bot funcionando solo y pelado. Va **sobrepuesto abajo** (card), **al costado** (inset), o como **cutaway** mientras la persona habla. La palabra tiene que referirse a lo que se ve ("mirá lo que le contesta acá abajo").
+## Regla madre (variar formato, orgánico)
+¡Acá no hay una única receta! Tenés que variar los formatos para no aburrir y que tus videos se sientan lo más orgánicos posible. Como Manychat, que usa un "anuncio" con chicas en un hotel, o Shopify, que te pone un tipo con gorra. La idea es que no parezca un infomercial.
 
-## Hooks REALES mirados (robar la estructura, no la marca)
-- **Kommo (pain-question):** "¿Alguna vez tuviste la sensación de que los chats de clientes son un torbellino que no se puede controlar?" → dolor + curiosidad en los primeros 2s.
-- **ManyChat (contrarian):** "La verdad incómoda es…" → contradice lo que el otro cree.
-- Patrón que rinde: **dolor concreto del dueño de PyME + promesa de orden** en la 1ª frase, hablado natural (no leído).
+## Dónde va la demo del bot
+La demo no es un embole. ¡Va integrada y sutil! Como Tiendanube, que te muestra cómo subís productos mientras el emprendedor labura, o Mercado Libre, que te mete la interfaz en medio de una historia épica. Podés usar PiP (Picture-in-Picture) como Kommo y Shopify para mostrar la interfaz del bot en acción mientras vos explicás. La clave es que se vea cómo el bot resuelve un problema, no solo sus funciones.
 
-## Edición que se siente orgánica (no plantilla)
-- Texto grande desde el frame 0 (doble anclaje: cara + cartel).
-- Cortes que respiran, pop-ins de logos WhatsApp/IG cuando se nombran, un cutaway de reacción para romper el ritmo.
-- Ritmo hablado natural, porteño, una idea por video. Evitá el look "template" (paneles fijos, transiciones genéricas).
+## Hooks (con ejemplos concretos)
+¡Los primeros 3 segundos son clave, pibe!
+*   **Pregunta que duela:** "¿Tu WhatsApp explota de mensajes y perdés ventas?" (Kommo) o "¿Cansado de responder mensajes a las 3 AM?" (Nuvemshop).
+*   **Anuncio impactante:** "¡Atención, PyMEs! Encontramos la solución que tu negocio necesita." (Manychat, adaptado).
+*   **Intriga/Historia:** "¿Te acordás cuando el WhatsApp era solo para chatear?" (Mercado Libre, adaptado) o "¿Y si cada cliente tuviera su propio vendedor 24/7?" (Shopify).
+*   **Números que impactan:** "¿Tu pyme recibe 30 consultas de WhatsApp por hora?" (Kommo CRM).
 
-## Imágenes / banners para ads (no siempre una persona)
-- Además de la foto del maker en su entorno: **banners** con producto / un ícono fuerte / fondo potente + **espacio limpio para el titular** (lo compone Pillow). Navy + azul de marca. Usar `image_gen.generate_image(..., kind="banner")`.
+## Edición que se siente orgánica
+Acá tenés que ser un ninja de la edición:
+*   **Cortes rápidos y dinámicos:** ¡Que no haya tiempo para el bostezo! Como todos los ejemplos, desde Manychat hasta Mercado Libre.
+*   **Texto en pantalla:** Reforzá los mensajes clave: "Respuestas 24/7", "Vendé más fácil", "Ahorrá tiempo", "Tu bot habla como vos". (Kommo, Nuvemshop, Shopify).
+*   **Música:** Alegre, motivadora, que acompañe sin tapar el mensaje. ¡Que te den ganas de bailar y comprar! (Manychat, Nuvemshop).
+*   **Visuales de "caos" vs. "orden":** Mostrá el quilombo de mensajes sin bot y la paz con el bot. Podés usar animaciones estilo "doodle" como Kommo.
 
-## Redes cubiertas hoy
-YouTube ✅ + TikTok ✅ (por búsqueda). Instagram y Meta/FB Ads: PENDIENTE de credenciales (cookies de IG + token de Ad Library) para sumarlas al scout.
+## Imágenes/banners para ads
+Para los ads, usá lo más potente de tus Reels:
+*   **Capturas de pantalla del bot en acción:** Con texto que destaque el beneficio principal. Por ejemplo, un chat donde el bot resuelve una duda compleja.
+*   **Gráficos simples:** Que muestren "Antes vs. Después" (ej: pila de mensajes vs. pocos mensajes).
+*   **Frases de hooks potentes:** "¿Querés vender más sin laburar de más? ¡Tu bot te espera!"
+*   **Testimonios cortos:** "¡Mi bot me cambió la vida!" (con la cara de un pyme contento).
+
+¡Dale, ponete las pilas y hacé que tu bot de WhatsApp sea el Messi de las ventas para las PyMEs argentinas!
 === fin visual scout ===

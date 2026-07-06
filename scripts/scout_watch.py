@@ -1,263 +1,196 @@
 #!/usr/bin/env python3
 """
-scout_watch — motor del "visual scout": baja contenido REAL de competidores y marcas
-de referencia (YouTube + TikTok) y arma un contact sheet (varios frames en 1 PNG) +
-captions por fuente, para que un humano/Claude Code lo MIRE y destile el playbook de
-edición/hooks/visual (data/visual-scout.md), que después se inyecta a los agentes.
+scout_watch — "visual scout" de video: baja contenido REAL de competidores/marcas de
+referencia, se lo pasa a **Gemini que analiza el VIDEO ENTERO** (movimiento + AUDIO +
+texto en pantalla en el tiempo) y destila un playbook de edición/hooks/formato
+(data/visual-scout.md) que se inyecta a los agentes. Cierra el loop descubre→mira→destila.
 
 Corre LOCAL a propósito (IP residencial): yt-dlp desde un datacenter (Railway) lo
-bloquean seguido YouTube/TikTok. Deps: yt-dlp + ffmpeg (ya instalados en la máquina).
+bloquean TikTok/YouTube. Deps: yt-dlp + ffmpeg. Vision: Gemini vía Vertex (necesita
+GOOGLE_SERVICE_ACCOUNT_JSON en el entorno; se puede traer con `railway variables --json`).
+IG no usa yt-dlp (extractor de perfiles roto) → Business Discovery API (ig_discovery).
 
 Uso:
-    python scripts/scout_watch.py                       # todo el roster (YT+TikTok)
-    python scripts/scout_watch.py kommo shopify         # solo esas claves
-    python scripts/scout_watch.py https://instagram.com/reel/XXXX/   # URL directa (IG usa cookies)
-Salida: data/scout/latest/<clave>_sheet.png + <clave>.caption.txt + manifest.md
-Nota: yt-dlp NO lista perfiles de IG (extractor roto) → para IG pasá URLs de reel directas.
+    python scripts/scout_watch.py                 # TikTok + IG (+ YT backup)
+    python scripts/scout_watch.py --yt            # además YouTube por búsqueda
+    python scripts/scout_watch.py https://tiktok.com/@x/video/123   # URL suelta
 """
 from __future__ import annotations
 
 import subprocess
 import sys
-import urllib.request
 from pathlib import Path
 
-# reusa la integración de la app para descubrir reels de IG por API oficial (Business
-# Discovery) — así NO hace falta pegar URLs a mano. Requiere META_PAGE_TOKEN +
-# IG_BUSINESS_ID en el entorno (o correrlo donde la app tenga la config).
+try:  # consola de Windows (cp1252) rompe con acentos/flechas en los prints
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 try:
-    from app.integrations import ig_discovery
+    from app.integrations import ig_discovery, vision
 except Exception:
-    ig_discovery = None
+    ig_discovery = vision = None
 
-# Roster: clave -> (etiqueta, query de búsqueda). YouTube+TikTok andan por búsqueda.
-# TikTok se fuerza con el prefijo del sitio en la query cuando conviene.
-ROSTER = {
-    # Competidores (bot/CRM de mensajería)
-    "kommo":      ("Kommo (competidor)",      "Kommo CRM WhatsApp salesbot español"),
-    "manychat":   ("ManyChat (competidor)",   "ManyChat instagram dm automation demo"),
-    # Marcas de referencia e-commerce (mucho ad — de acá robamos estética/edición)
-    "tiendanube": ("Tiendanube (ref e-comm)", "Tiendanube comercial anuncio emprendedores"),
-    "shopify":    ("Shopify (ref e-comm)",    "Shopify commercial small business ad"),
-    "meli":       ("Mercado Libre (ref)",     "Mercado Libre comercial anuncio vendedores"),
+# TikTok = perfil (lo que el usuario produce); YT = búsqueda (backup). Handles best-effort.
+TIKTOK = {
+    "manychat":   "https://www.tiktok.com/@manychat",
+    "kommo":      "https://www.tiktok.com/@kommo",
+    "shopify":    "https://www.tiktok.com/@shopify",
+    "tiendanube": "https://www.tiktok.com/@tiendanube",
+    "meli":       "https://www.tiktok.com/@mercadolibre",
 }
-
-# Cookies exportadas (Chrome nuevo no deja leerlas en vivo). Se usan para URLs de IG.
-# OJO: yt-dlp NO puede listar perfiles/reels de IG (extractor roto) → IG sólo funciona
-# pasando URLs DIRECTAS de un reel (instagram.com/reel/<code>/), no el perfil.
-IG_COOKIES = Path.home() / ".config" / "scout" / "ig_cookies.txt"
+YT = {
+    "kommo":      "Kommo CRM WhatsApp salesbot español",
+    "manychat":   "ManyChat instagram dm automation demo",
+    "tiendanube": "Tiendanube comercial anuncio emprendedores",
+    "shopify":    "Shopify commercial small business ad",
+    "meli":       "Mercado Libre comercial anuncio vendedores",
+}
 
 
 def _sh(cmd: list[str], timeout: int = 240) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
 
-def _download(query: str, out_mp4: Path) -> bool:
-    """Baja los primeros ~28s del mejor match corto (garantiza clip, evita el 429 de
-    subtítulos que aborta el download)."""
-    cmd = ["yt-dlp", "--no-warnings", "-q", "--playlist-items", "1",
-           "--download-sections", "*0-28", "-f", "b[height<=720]/b/best",
-           "--merge-output-format", "mp4", "-o", str(out_mp4), f"ytsearch6:{query}"]
-    _sh(cmd)
-    return out_mp4.exists()
-
-
-def _caption(query: str, prefix: Path) -> str:
-    """Intenta bajar captions (aparte del video para no arriesgar el 429). Best-effort."""
-    import re
-    cmd = ["yt-dlp", "--no-warnings", "-q", "--skip-download", "--write-auto-sub",
-           "--sub-lang", "es,es-419,en", "--playlist-items", "1",
-           "-o", str(prefix) + ".%(ext)s", f"ytsearch1:{query}"]
-    _sh(cmd, timeout=90)
-    # junta el texto plano del primer sub (.srt o .vtt) que aparezca
-    subs = sorted(prefix.parent.glob(prefix.name + "*.vtt")) + \
-        sorted(prefix.parent.glob(prefix.name + "*.srt"))
-    text = ""
-    for sub in subs:
-        lines = []
-        for ln in sub.read_text(encoding="utf-8", errors="ignore").splitlines():
-            ln = ln.strip()
-            if (not ln or ln.isdigit() or "-->" in ln or ln.startswith("WEBVTT")
-                    or ln.startswith(("Kind:", "Language:", "align:", "position:"))):
-                continue
-            ln = re.sub(r"<[^>]+>", "", ln).strip()      # saca tags de tiempo inline del vtt
-            if ln:
-                lines.append(ln)
-        out, prev = [], None
-        for ln in lines:                                  # dedup consecutivos (auto-subs repiten)
-            if ln != prev:
-                out.append(ln)
-            prev = ln
-        text = " ".join(out)[:2000]
-        break
-    for sub in subs:                                      # limpieza de los archivos de subs
-        try:
-            sub.unlink()
-        except OSError:
-            pass
-    return text
-
-
-def _download_url(url: str, out_mp4: Path) -> bool:
-    """Baja un video de una URL directa (reel de IG, video de TikTok/YT, etc.).
-    Para IG usa las cookies exportadas (si existen)."""
-    ck = ["--cookies", str(IG_COOKIES)] if ("instagram.com" in url and IG_COOKIES.exists()) else []
+def _dl(url_or_search: str, out_mp4: Path, cookies: Path | None = None) -> bool:
+    ck = ["--cookies", str(cookies)] if cookies and cookies.exists() else []
     cmd = ["yt-dlp", "--no-warnings", "-q", "--playlist-items", "1", *ck,
            "-f", "b[height<=720]/b/best", "--merge-output-format", "mp4",
-           "-o", str(out_mp4), url]
+           "-o", str(out_mp4), url_or_search]
     _sh(cmd)
     return out_mp4.exists()
 
 
-def _sheet(mp4: Path, out_png: Path) -> bool:
-    """6 frames a timestamps fijos (robusto sin duración) → montage 3x2."""
-    work = out_png.parent
-    tmp = [work / f"_{out_png.stem}_f{i}.png" for i in range(6)]
-    for t, f in zip([1, 5, 9, 13, 18, 24], tmp):
-        _sh(["ffmpeg", "-v", "error", "-ss", str(t), "-i", str(mp4),
-             "-frames:v", "1", "-vf", "scale=300:-1", str(f), "-y"], timeout=60)
-    have = [f for f in tmp if f.exists()]
-    if not have:
+def _dl_cdn(url: str, out_mp4: Path) -> bool:
+    import urllib.request
+    try:
+        urllib.request.urlretrieve(url, str(out_mp4))
+        return out_mp4.exists()
+    except Exception:
         return False
-    for f in tmp:  # rellena faltantes (video corto) con el último disponible
-        if not f.exists():
-            _sh(["ffmpeg", "-v", "error", "-i", str(have[-1]), "-c", "copy", str(f), "-y"])
-    _sh(["ffmpeg", "-v", "error", *sum([["-i", str(f)] for f in tmp], []),
-         "-filter_complex", "[0][1][2]hstack=3[a];[3][4][5]hstack=3[b];[a][b]vstack",
-         str(out_png), "-y"], timeout=60)
-    for f in tmp:
-        try:
-            f.unlink()
-        except OSError:
-            pass
-    return out_png.exists()
 
 
-def main(keys: list[str]) -> int:
-    root = Path(__file__).resolve().parent.parent
-    out = root / "data" / "scout" / "latest"
-    out.mkdir(parents=True, exist_ok=True)
-    urls = [a for a in keys if a.startswith("http")]
-    keys = [k for k in keys if k in ROSTER] or ([] if urls else list(ROSTER))
-    manifest = ["# Scout — contact sheets para MIRAR y destilar\n"]
-    sheets: list[tuple[str, str, str]] = []   # (label, sheet_path, caption) para el distill
-    for k in keys:
-        label, query = ROSTER[k]
-        mp4 = out / f"{k}.mp4"
-        print(f"[scout] {k}: bajando…", flush=True)
-        if not _download(query, mp4):
-            print(f"[scout] {k}: sin video")
-            manifest.append(f"- **{label}** — ❌ no se pudo bajar\n")
-            continue
-        sheet = out / f"{k}_sheet.png"
-        ok = _sheet(mp4, sheet)
-        cap = _caption(query, out / f"{k}")
-        (out / f"{k}.caption.txt").write_text(cap, encoding="utf-8")
-        try:
-            mp4.unlink()
-        except OSError:
-            pass
-        print(f"[scout] {k}: sheet={'OK' if ok else 'FAIL'} caption={len(cap)} chars")
-        manifest.append(f"## {label}\n- sheet: `{sheet.name}`\n- caption: "
-                        f"{(cap[:180] + '…') if cap else '(sin captions)'}\n")
-        if ok:
-            sheets.append((label, str(sheet), cap))
-
-    # Instagram AUTOMÁTICO vía Business Discovery (API oficial, no scraping). Baja el
-    # video_url del CDN directo → sheet. Se activa si hay token (META_PAGE_TOKEN + IG_BUSINESS_ID).
-    if ig_discovery and ig_discovery.enabled():
-        for key, handle in ig_discovery.IG_HANDLES.items():
-            reels = ig_discovery.recent_reels(handle, n=1)
-            if not reels:
-                print(f"[scout] ig:{key} ({handle}): sin reels")
-                manifest.append(f"- **IG {handle}** — sin reels (handle o cuenta no business)\n")
-                continue
-            r = reels[0]
-            mp4 = out / f"ig_{key}.mp4"
-            try:
-                urllib.request.urlretrieve(r["media_url"], str(mp4))
-            except Exception as e:
-                print(f"[scout] ig:{key}: download fail {str(e)[:80]}")
-                continue
-            sheet = out / f"ig_{key}_sheet.png"
-            ok = _sheet(mp4, sheet)
-            try:
-                mp4.unlink()
-            except OSError:
-                pass
-            print(f"[scout] ig:{key}: sheet={'OK' if ok else 'FAIL'} | {r.get('permalink')}")
-            manifest.append(f"## IG {handle}\n- sheet: `{sheet.name}`\n- {r.get('permalink')}\n"
-                            f"- caption: {(r.get('caption') or '')[:160]}\n")
-            if ok:
-                sheets.append((f"IG {handle}", str(sheet), r.get("caption") or ""))
-    else:
-        print("[scout] IG auto: salteado (falta META_PAGE_TOKEN / IG_BUSINESS_ID)")
-
-    # URLs directas (reels de IG, videos de TikTok/YT que pases a mano)
-    for i, url in enumerate(urls):
-        name = f"url{i+1}"
-        mp4 = out / f"{name}.mp4"
-        print(f"[scout] {name}: bajando {url[:60]}…", flush=True)
-        if not _download_url(url, mp4):
-            manifest.append(f"- **{url}** — no se pudo bajar\n")
-            continue
-        sheet = out / f"{name}_sheet.png"
-        ok = _sheet(mp4, sheet)
-        try:
-            mp4.unlink()
-        except OSError:
-            pass
-        print(f"[scout] {name}: sheet={'OK' if ok else 'FAIL'}")
-        manifest.append(f"## {url}\n- sheet: `{sheet.name}`\n")
-        if ok:
-            sheets.append((url, str(sheet), ""))
-
-    (out / "manifest.md").write_text("\n".join(manifest), encoding="utf-8")
-    # Cierra el loop: Gemini MIRA los sheets y escribe el playbook (data/visual-scout.md).
-    _distill(sheets, root / "data" / "visual-scout.md")
-    print(f"[scout] listo -> {out}")
-    return 0
+def _shrink(src: Path, dst: Path) -> bool:
+    """Achica el video para caber inline en Gemini (<~18MB): 480p, primeros 45s, audio
+    conservado (Gemini lo escucha)."""
+    _sh(["ffmpeg", "-v", "error", "-y", "-t", "45", "-i", str(src),
+         "-vf", "scale=-2:480", "-c:v", "libx264", "-crf", "30", "-preset", "veryfast",
+         "-c:a", "aac", "-b:a", "64k", str(dst)])
+    return dst.exists() and dst.stat().st_size < 18 * 1024 * 1024
 
 
-_DISTILL_PROMPT = (
-    "Sos director de contenido de una agencia argentina que hace TikToks/Reels para "
-    "dueños de PyME sobre IA y bots de WhatsApp. Adjunto contact sheets (6 frames c/u) "
-    "de reels REALES de competidores y marcas e-commerce de referencia. MIRALOS y escribí "
-    "un playbook de EDICIÓN/hooks/formato, concreto y accionable, en español rioplatense, "
-    "con estas secciones EXACTAS:\n"
-    "## Regla madre (variar formato, orgánico)\n## Dónde va la demo del bot\n"
-    "## Hooks (con ejemplos concretos que veas)\n## Edición que se siente orgánica\n"
-    "## Imágenes/banners para ads\n"
-    "Basate SOLO en lo que ves en los frames (y las captions de contexto abajo). Nada de "
-    "genéricos: citá qué hacen (dónde ponen la demo, tipografía de carteles, cortes, PiP, "
-    "b-roll). Máx ~350 palabras. Contexto (captions):\n"
+_NOTE_PROMPT = (
+    "Analizá este TikTok/reel de un competidor o marca de referencia (mirá el video Y "
+    "escuchá el audio). En español rioplatense, MUY concreto y breve (~120 palabras), con: "
+    "HOOK exacto (primeros 3s: qué dice/muestra), FORMATO/EDICIÓN (cortes, PiP, texto en "
+    "pantalla, ritmo, música), DÓNDE va la demo del producto, y QUÉ ROBAR para TikToks de "
+    "bots de WhatsApp para PyMEs argentinas. Nada genérico: citá lo que ves y oís."
+)
+_SYNTH_PROMPT = (
+    "Sos director de contenido de una agencia argentina (TikToks/Reels sobre IA y bots de "
+    "WhatsApp para PyMEs). Abajo hay notas de análisis de reels REALES de competidores y "
+    "marcas de referencia. Sintetizalas en UN playbook accionable en español rioplatense, "
+    "con estas secciones EXACTAS:\n## Regla madre (variar formato, orgánico)\n"
+    "## Dónde va la demo del bot\n## Hooks (con ejemplos concretos)\n"
+    "## Edición que se siente orgánica\n## Imágenes/banners para ads\n"
+    "Citá ejemplos concretos de las notas. Máx ~380 palabras. NOTAS:"
 )
 
 
-def _distill(sheets: list, out_md: Path) -> bool:
-    """Gemini mira los sheets y escribe data/visual-scout.md. Best-effort: si no hay
-    visión configurada o falla, no toca el archivo (queda el SEED en código)."""
-    if not sheets:
-        return False
+def _analyze(mp4: Path, work: Path, label: str) -> str:
+    """Achica + Gemini analiza el video entero → nota. "" si algo falla."""
+    if not (vision and vision.enabled()):
+        return ""
+    small = work / f"s_{mp4.stem}.mp4"
+    if not _shrink(mp4, small):
+        return ""
+    note = vision.describe_video(str(small), _NOTE_PROMPT)
     try:
-        from app.integrations import vision
-    except Exception:
-        print("[scout] distill: sin módulo vision"); return False
-    if not vision.enabled():
-        print("[scout] distill: visión no configurada (falta GOOGLE_SERVICE_ACCOUNT_JSON) → queda el SEED")
-        return False
-    ctx = "\n".join(f"- {lbl}: {(cap or '')[:180]}" for lbl, _p, cap in sheets)
-    paths = [p for _l, p, _c in sheets]
-    txt = vision.describe(paths, _DISTILL_PROMPT + ctx)
-    if not txt or len(txt) < 200:
-        print("[scout] distill: respuesta vacía/corta → queda el SEED"); return False
-    body = ("=== VISUAL SCOUT — playbook de EDICIÓN / hooks / formato (MIRADO por Gemini) ===\n"
-            "_Auto-destilado de reels reales (YT+TikTok+IG) por el scout. Foco VIDEO._\n\n"
-            + txt.strip() + "\n=== fin visual scout ===\n")
-    out_md.write_text(body, encoding="utf-8")
-    print(f"[scout] distill OK -> {out_md} ({len(txt)} chars)")
-    return True
+        small.unlink()
+    except OSError:
+        pass
+    return note
+
+
+def main(argv: list[str]) -> int:
+    root = Path(__file__).resolve().parent.parent
+    out = root / "data" / "scout" / "latest"
+    out.mkdir(parents=True, exist_ok=True)
+    do_yt = "--yt" in argv
+    urls = [a for a in argv if a.startswith("http")]
+    if not (vision and vision.enabled()):
+        print("[scout] OJO: visión no configurada (falta GOOGLE_SERVICE_ACCOUNT_JSON) → "
+              "no puedo destilar. Seteá la credencial (railway variables --json).")
+
+    notes: list[tuple[str, str]] = []
+
+    def handle(label: str, mp4: Path):
+        if not mp4.exists():
+            print(f"[scout] {label}: sin video"); return
+        note = _analyze(mp4, out, label)
+        try:
+            mp4.unlink()
+        except OSError:
+            pass
+        if note:
+            notes.append((label, note))
+            print(f"[scout] {label}: analizado ({len(note)} chars)")
+        else:
+            print(f"[scout] {label}: sin nota")
+
+    # 1) TikTok por perfil (con backup a YouTube por búsqueda)
+    for key, url in TIKTOK.items():
+        print(f"[scout] tiktok:{key} …", flush=True)
+        mp4 = out / f"tt_{key}.mp4"
+        if _dl(url, mp4):
+            handle(f"TikTok @{url.split('@')[-1]}", mp4)
+        elif key in YT:
+            print(f"[scout] tiktok:{key} falló → YouTube backup")
+            if _dl(f"ytsearch1:{YT[key]}", mp4):
+                handle(f"YouTube {key}", mp4)
+
+    # 2) YouTube extra (opcional)
+    if do_yt:
+        for key, q in YT.items():
+            mp4 = out / f"yt_{key}.mp4"
+            if _dl(f"ytsearch1:{q}", mp4):
+                handle(f"YouTube {key}", mp4)
+
+    # 3) Instagram vía Business Discovery (API oficial, no yt-dlp)
+    if ig_discovery and ig_discovery.enabled():
+        for key, h in ig_discovery.IG_HANDLES.items():
+            reels = ig_discovery.recent_reels(h, n=15)
+            if not reels:
+                continue
+            print(f"[scout] ig:{key} ({h}) …", flush=True)
+            mp4 = out / f"ig_{key}.mp4"
+            if _dl_cdn(reels[0]["media_url"], mp4):
+                handle(f"IG @{h}", mp4)
+
+    # 4) URLs sueltas
+    for i, url in enumerate(urls):
+        mp4 = out / f"url{i+1}.mp4"
+        ck = ig_discovery.IG_COOKIES if False else None  # (IG usa Business Discovery, no cookies)
+        if _dl(url, mp4):
+            handle(url, mp4)
+
+    # 5) Sintetizar el playbook y escribir data/visual-scout.md
+    if not notes:
+        print("[scout] sin notas → no toco visual-scout.md (queda el SEED)")
+        return 0
+    blob = "\n\n".join(f"### {lbl}\n{note}" for lbl, note in notes)
+    (out / "notes.md").write_text(blob, encoding="utf-8")
+    playbook = vision.synthesize(blob, _SYNTH_PROMPT) if (vision and vision.enabled()) else ""
+    if not playbook or len(playbook) < 200:
+        print("[scout] síntesis vacía → guardo las notas crudas como playbook")
+        playbook = blob
+    body = ("=== VISUAL SCOUT — playbook de EDICIÓN / hooks / formato (MIRADO por Gemini, video nativo) ===\n"
+            "_Auto-destilado de reels reales (TikTok/IG/YT) por el scout. Foco VIDEO._\n\n"
+            + playbook.strip() + "\n=== fin visual scout ===\n")
+    (root / "data" / "visual-scout.md").write_text(body, encoding="utf-8")
+    print(f"[scout] LISTO: {len(notes)} fuentes → data/visual-scout.md ({len(playbook)} chars)")
+    return 0
 
 
 if __name__ == "__main__":
