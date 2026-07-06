@@ -255,6 +255,18 @@ def playbook_block() -> str:
         autopsy = content_autopsy.block()
     except Exception:
         autopsy = ""
+    # Baúl de ganchos (plantillas acumuladas) + radar de novedades de HOY (trend-jacking).
+    vault = radar = ""
+    try:
+        from . import hook_vault
+        vault = hook_vault.block()
+    except Exception:
+        pass
+    try:
+        from . import trend_radar
+        radar = trend_radar.block()
+    except Exception:
+        pass
     return (
         "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo) ===\n"
         + load_playbook().strip()
@@ -262,6 +274,8 @@ def playbook_block() -> str:
         + COMPETITOR_DEEP_DIVE
         + scout
         + autopsy
+        + vault
+        + radar
         + trends
         + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
         "plataforma, robá las tácticas del dossier adaptadas a distribuidoras argentinas, "

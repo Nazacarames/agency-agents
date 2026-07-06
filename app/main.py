@@ -618,6 +618,25 @@ class PublishBody(BaseModel):
     targets: Optional[List[str]] = None  # ["instagram","facebook"]; default ambos
 
 
+class HookBody(BaseModel):
+    hook: str
+    tipo: Optional[str] = ""
+    nicho: Optional[str] = ""
+    fuente: Optional[str] = ""
+    permalink: Optional[str] = ""
+    likes: Optional[int] = 0
+
+
+class CmCaptionBody(BaseModel):
+    hint: Optional[str] = ""            # tema del video (para generar la caption)
+
+
+class CmPublishBody(BaseModel):
+    video: str                          # /media/<file>.mp4
+    caption: Optional[str] = ""
+    targets: Optional[List[str]] = None  # ["instagram","tiktok","youtube"]
+
+
 _AGENT_DESCRIPTIONS = {
     "leadhunter": "Genera 10 leads/día con contacto verificado (FIT 4-6)",
     "content_creator": "Posts/contenido para redes de Automiq",
@@ -986,6 +1005,173 @@ async def api_trends(request: Request):
     _verify_webhook_secret(request)
     from .integrations import trends
     return {"ok": True, "trends": trends.load_block()}
+
+
+# ── Baúl de Ganchos / Espía de competencia / Radar de tendencias / Community Manager ──
+
+@app.get("/api/hooks")
+async def api_hooks(request: Request, q: str = "", tipo: str = "", nicho: str = ""):
+    """El Baúl de Ganchos: plantillas acumuladas, buscables por nicho/tipo/likes."""
+    _verify_webhook_secret(request)
+    from .integrations import hook_vault
+    return {"ok": True, "items": hook_vault.list_hooks(q, tipo, nicho),
+            "tipos": hook_vault.TIPOS}
+
+
+@app.post("/api/hooks")
+async def api_hooks_add(body: HookBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import hook_vault
+    item = hook_vault.add(body.hook, body.tipo or "", body.nicho or "",
+                          body.fuente or "", body.permalink or "", body.likes or 0)
+    if not item:
+        raise HTTPException(status_code=400, detail="gancho vacío o ya estaba en el baúl")
+    return {"ok": True, "item": item}
+
+
+@app.delete("/api/hooks/{item_id}")
+async def api_hooks_delete(item_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import hook_vault
+    return {"ok": hook_vault.delete(item_id)}
+
+
+@app.post("/api/hooks/{item_id}/use")
+async def api_hooks_use(item_id: str, request: Request, background: BackgroundTasks):
+    """'Usar este': tira el gancho derecho al guion — dispara tiktok_creator con
+    la consigna de construir el video de hoy alrededor de esa plantilla."""
+    _verify_webhook_secret(request)
+    from .integrations import hook_vault, tasks_store as ts
+    item = hook_vault.mark_used(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="gancho no encontrado")
+    prompt = (f"Usá EXACTAMENTE esta plantilla de gancho como apertura del guion de hoy "
+              f"(adaptá los [placeholders] a nuestro nicho de bots/IA para PyMEs argentinas): "
+              f"\"{item['hook']}\"" + (f" (visto en {item['fuente']})" if item.get("fuente") else ""))
+    run_id = str(uuid.uuid4())
+    task = ts.add_task("tiktok_creator", prompt, run_id)
+    background.add_task(_run_agent_task, "tiktok_creator", prompt, run_id, None)
+    return {"ok": True, "task": task, "hook": item["hook"]}
+
+
+@app.get("/api/radar")
+async def api_radar(request: Request):
+    """Espía de competencia: top reels por cuenta (likes + gancho transcripto).
+    Se refresca solo cada domingo con el scout (POST /api/scout/refresh a mano)."""
+    _verify_webhook_secret(request)
+    from .integrations import content_scout
+    return {"ok": True, "radar": content_scout.load_radar()}
+
+
+@app.get("/api/trends/radar")
+async def api_trend_radar(request: Request):
+    """Radar de tendencias del día: novedades etiquetadas (gancho/explicativo/ignorar)."""
+    _verify_webhook_secret(request)
+    from .integrations import trend_radar
+    return {"ok": True, "radar": trend_radar.load_radar()}
+
+
+@app.post("/api/trends/radar/refresh")
+async def api_trend_radar_refresh(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import trend_radar
+    res = await run_in_threadpool(trend_radar.refresh)
+    return {"ok": res.get("ok", False), "result": res}
+
+
+@app.get("/api/cm/videos")
+async def api_cm_videos(request: Request):
+    """Community Manager: los últimos videos generados (data/images/*.mp4), listos
+    para publicar con un clic."""
+    _verify_webhook_secret(request)
+    d = _data_dir() / "images"
+    vids = []
+    try:
+        files = sorted(d.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)[:20]
+        for p in files:
+            vids.append({"name": p.name, "url": f"/media/{p.name}",
+                         "size_mb": round(p.stat().st_size / 1e6, 1),
+                         "mtime": datetime.fromtimestamp(p.stat().st_mtime).isoformat()[:16]})
+    except Exception:
+        pass
+    return {"ok": True, "videos": vids}
+
+
+@app.post("/api/cm/caption")
+async def api_cm_caption(body: CmCaptionBody, request: Request):
+    """Genera la descripción sola (gancho + ángulo + CTA + hashtags) con Gemini."""
+    _verify_webhook_secret(request)
+    from .integrations import vision
+    if not vision.enabled():
+        raise HTTPException(status_code=400, detail="Gemini no configurado")
+    hint = (body.hint or "video sobre bots de WhatsApp con IA para PyMEs argentinas").strip()
+    prompt = ("Escribí UNA caption para un reel/short de Automiq (agencia argentina de IA y "
+              "bots de WhatsApp para PyMEs). Estructura: gancho filoso (1 línea), ángulo/beneficio "
+              "(1-2 líneas), llamado a la acción (1 línea), y 4-6 hashtags. Español rioplatense, "
+              "sin comillas, máx 400 caracteres. Tema del video:")
+    cap = await run_in_threadpool(vision.synthesize, hint, prompt)
+    if not cap:
+        raise HTTPException(status_code=502, detail="no se pudo generar la caption")
+    return {"ok": True, "caption": cap.strip()[:900]}
+
+
+def _cm_publish_sync(video: str, caption: str, targets: List[str]) -> Dict[str, Any]:
+    """Publica un video en las plataformas elegidas (sync, corre en threadpool)."""
+    from .integrations import social_publish as sp, publish_queue as pq
+    from .integrations import youtube_client as yt
+    s = get_settings()
+    results: Dict[str, Any] = {}
+    path = _data_dir() / "images" / Path(video).name
+    for t in targets:
+        try:
+            if t == "instagram":
+                r = sp.publish_instagram_reel(video, caption)
+                results[t] = {"ok": bool(r.get("ok")), "permalink": r.get("permalink", ""),
+                              "error": str(r.get("error", ""))[:150]}
+            elif t == "tiktok":
+                from .integrations.tiktok_client import get_tiktok_client
+                if not getattr(s, "tiktok_configured", False) or not path.exists():
+                    results[t] = {"ok": False, "error": "tiktok no configurado o video no local"}
+                    continue
+                tc = get_tiktok_client(s)
+                r = tc.post_video_file_upload(path.read_bytes(), caption)
+                pid = (r.get("data") or {}).get("publish_id")
+                results[t] = {"ok": bool(pid), "id": pid,
+                              "privacy": "SELF_ONLY" if s.tiktok_sandbox else "PUBLIC"}
+            elif t == "youtube":
+                if not yt.enabled() or not path.exists():
+                    results[t] = {"ok": False, "error": "youtube no configurado o video no local"}
+                    continue
+                title = (caption.splitlines()[0][:90] + " #Shorts") if caption else "Automiq #Shorts"
+                r = yt.upload_video(str(path), title, caption)
+                results[t] = {"ok": True, "id": r.get("id"), "permalink": r.get("url", ""),
+                              "privacy": r.get("privacy")}
+            else:
+                results[t] = {"ok": False, "error": f"target desconocido: {t}"}
+        except Exception as e:
+            results[t] = {"ok": False, "error": str(e)[:180]}
+        # registrar en Publicaciones del panel (best-effort)
+        try:
+            if results.get(t, {}).get("ok"):
+                pq.record_published(image=video, caption=caption, target=t,
+                                    result=results[t], source="community_manager", kind="reel")
+        except Exception:
+            pass
+    return {"ok": any(v.get("ok") for v in results.values()), "results": results}
+
+
+@app.post("/api/cm/publish")
+async def api_cm_publish(body: CmPublishBody, request: Request):
+    """Un clic → sube el reel a las plataformas elegidas (IG / TikTok / YouTube)."""
+    _verify_webhook_secret(request)
+    if not (body.video or "").strip():
+        raise HTTPException(status_code=400, detail="falta el video")
+    targets = body.targets or ["instagram"]
+    res = await run_in_threadpool(_cm_publish_sync, body.video.strip(),
+                                  body.caption or "", targets)
+    if not res.get("ok"):
+        raise HTTPException(status_code=502, detail={"msg": "no se pudo publicar", **res})
+    return res
 
 
 @app.post("/api/lessons")

@@ -67,6 +67,7 @@ CLIENT_ARCHIVE_CRON = "0 5 * * *"
 LEARNING_DIGEST_CRON = "0 7 * * sun"
 COMPETITOR_REFRESH_CRON = "0 8 * * sun"   # dom 08:00 — refresca el playbook de competencia
 SCOUT_REFRESH_CRON = "0 9 * * sun"        # dom 09:00 — visual scout IG (Gemini mira reels reales)
+TREND_RADAR_CRON = "45 6 * * *"           # diario 06:45 — radar de tendencias; digest ~7 AM
 
 
 class AgentScheduler:
@@ -98,6 +99,8 @@ class AgentScheduler:
                               _scheduled_competitor_refresh)
         self._register_simple("scout:refresh", SCOUT_REFRESH_CRON, DEFAULT_TIMEZONE,
                               _scheduled_scout_refresh)
+        self._register_simple("trends:radar", TREND_RADAR_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_trend_radar)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -253,3 +256,17 @@ async def _scheduled_scout_refresh() -> None:
         log.info("scout_refresh_scheduled_done", result=res)
     except Exception as e:
         log.error("scout_refresh_failed", error=str(e)[:200])
+
+
+async def _scheduled_trend_radar() -> None:
+    """Radar de tendencias diario: revisa las fuentes, etiqueta (gancho/explicativo/
+    ignorar) y manda el top 5 por Discord (~7 AM). Best-effort."""
+    import asyncio
+    from .integrations import trend_radar
+    try:
+        res = await asyncio.to_thread(trend_radar.refresh)
+        if res.get("ok"):
+            await asyncio.to_thread(trend_radar.send_digest)
+        log.info("trend_radar_scheduled_done", result=res)
+    except Exception as e:
+        log.error("trend_radar_failed", error=str(e)[:200])

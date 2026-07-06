@@ -705,6 +705,51 @@
         </div>
       </section>
 
+      <section id="tab-cm" class="tabsec hidden">
+        <div class="card" style="margin-bottom:16px">
+          <label>1 · Elegí el video (los últimos generados por los agentes)</label>
+          <div id="cmVideos" class="grid" style="margin-top:8px"></div>
+          <div class="row" style="margin-top:14px">
+            <div style="flex:2;min-width:220px"><label>2 · Tema del video (para generar la descripción sola)</label>
+              <input id="cmHint" class="inp" placeholder="bot de WhatsApp que cobra solo para una distribuidora"/></div>
+            <div style="flex:0;align-self:flex-end"><button class="btn-ghost" id="cmCapBtn">✨ Generar descripción</button></div>
+          </div>
+          <label style="margin-top:10px">Descripción (gancho + ángulo + CTA)</label>
+          <textarea id="cmCaption" class="inp" style="min-height:80px" placeholder="Se genera sola con ✨, o escribila vos"></textarea>
+          <label style="margin-top:10px">3 · Plataformas</label>
+          <div class="row" style="gap:14px;margin-top:4px">
+            <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmIg" checked/> Instagram</label>
+            <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmTt" checked/> TikTok</label>
+            <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmYt" checked/> YT Shorts</label>
+          </div>
+          <button class="btn" id="cmPubBtn" style="margin-top:14px">🚀 Publicar</button>
+          <div id="cmResult" style="margin-top:12px"></div>
+        </div>
+      </section>
+
+      <section id="tab-baul" class="tabsec hidden">
+        <div class="row" style="margin-bottom:14px">
+          <input id="hkQ" class="inp" style="flex:2;min-width:180px" placeholder="Buscar gancho o fuente…"/>
+          <select id="hkTipo" class="inp" style="flex:1;min-width:130px"><option value="">Todos los tipos</option></select>
+          <input id="hkNicho" class="inp" style="flex:1;min-width:120px" placeholder="Nicho"/>
+          <button class="btn-ghost" id="hkAddBtn">＋ Guardar gancho</button>
+        </div>
+        <div id="hkList" class="grid"></div>
+      </section>
+
+      <section id="tab-espia" class="tabsec hidden">
+        <div id="espiaMeta" class="sec-sub" style="margin-bottom:14px"></div>
+        <div id="espiaList"></div>
+      </section>
+
+      <section id="tab-tendencias" class="tabsec hidden">
+        <div class="row" style="margin-bottom:14px;align-items:center">
+          <div id="trMeta" class="sec-sub" style="flex:1"></div>
+          <button class="btn-ghost btn-sm" id="trRefreshBtn">↻ Revisar fuentes ahora</button>
+        </div>
+        <div id="trList"></div>
+      </section>
+
     </div>
   </main>
 </div>
@@ -739,6 +784,10 @@ const ICONS = {
   growth: ico('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'),
   publicaciones: ico('<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>'),
   ads: ico('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>'),
+  cm: ico('<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/><circle cx="5" cy="19" r="0"/>'),
+  baul: ico('<rect x="2" y="8" width="20" height="13" rx="2"/><path d="M2 8l3-5h14l3 5"/><line x1="10" y1="13" x2="14" y2="13"/>'),
+  espia: ico('<circle cx="12" cy="12" r="3"/><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>'),
+  tendencias: ico('<path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/>'),
 };
 const NAV = [
   {id:'resumen', label:'Resumen', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
@@ -754,6 +803,10 @@ const NAV = [
   {id:'calendario', label:'Calendario', sub:'Tu Google Calendar: mirá y agendá reuniones desde acá. Sincronizado en vivo.'},
   {id:'agenda', label:'Reuniones', sub:'Preparación de reuniones con todo el contexto del cliente. Abajo, tu agenda.'},
   {id:'contenido', label:'Contenido', sub:'Generación y publicación de contenido para nuestras redes.'},
+  {id:'cm', label:'Community Mgr', sub:'Un clic y el reel sale a Instagram, TikTok y YouTube Shorts con descripción auto-generada.'},
+  {id:'baul', label:'Baúl de Ganchos', sub:'Cada gancho guardado queda como plantilla lista para reusar. Buscá por nicho, tipo y likes.'},
+  {id:'espia', label:'Espía', sub:'Los reels más gustados de la competencia, con el gancho transcripto. Se refresca solo los domingos.'},
+  {id:'tendencias', label:'Tendencias', sub:'Novedades del nicho etiquetadas por potencial de gancho. Resumen por Discord a las 7 AM.'},
   {id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
 ];
 
@@ -810,6 +863,10 @@ function loadTab(tab){
   if(tab==='agenda') loadAgenda();
   if(tab==='calendario') loadCalendar();
   if(tab==='contenido') loadContenido();
+  if(tab==='cm') loadCM();
+  if(tab==='baul') loadBaul();
+  if(tab==='espia') loadEspia();
+  if(tab==='tendencias') loadTendencias();
 }
 function setNavCount(id,n){ const e=el('navc-'+id); if(!e)return; if(n==null){e.classList.add('hidden');return;} e.textContent=n; e.classList.remove('hidden'); }
 
@@ -2178,6 +2235,158 @@ async function publishImg(btn, src){
     toast('No se pudo publicar: '+e.message); btn.disabled=false; btn.textContent=old;
   }
 }
+
+// ── Community Manager (1 clic → IG / TikTok / YT Shorts) ──
+let CM_VIDEO = '';
+async function loadCM(){
+  el('cmVideos').innerHTML = '<span class="faint">cargando videos…</span>';
+  try{
+    const d = await api('/api/cm/videos');
+    if(!(d.videos||[]).length){ el('cmVideos').innerHTML='<span class="faint">Todavía no hay videos generados. Corré el tiktok_creator desde Agentes.</span>'; return; }
+    el('cmVideos').innerHTML = d.videos.map(v=>`
+      <div class="card cm-vid" data-url="${esc(v.url)}" style="cursor:pointer;padding:10px${v.url===CM_VIDEO?';box-shadow:inset 0 0 0 2px var(--blue)':''}">
+        <video src="${esc(v.url)}" style="width:100%;border-radius:8px;max-height:220px;background:#000" preload="metadata" muted></video>
+        <div style="margin-top:6px;font-size:12px" class="faint">${esc(v.name)} · ${esc(String(v.size_mb))}MB · ${esc(v.mtime)}</div>
+      </div>`).join('');
+    document.querySelectorAll('.cm-vid').forEach(c=>c.addEventListener('click',()=>{
+      CM_VIDEO=c.dataset.url;
+      document.querySelectorAll('.cm-vid').forEach(x=>x.style.boxShadow = x.dataset.url===CM_VIDEO?'inset 0 0 0 2px var(--blue)':'');
+    }));
+  }catch(e){ el('cmVideos').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+}
+el('cmCapBtn').addEventListener('click', async ()=>{
+  el('cmCapBtn').disabled=true; el('cmCapBtn').textContent='generando…';
+  try{ const r=await api('/api/cm/caption',{method:'POST',body:JSON.stringify({hint:el('cmHint').value.trim()})});
+    el('cmCaption').value=r.caption; }
+  catch(e){ toast('No salió: '+e.message); }
+  finally{ el('cmCapBtn').disabled=false; el('cmCapBtn').textContent='✨ Generar descripción'; }
+});
+el('cmPubBtn').addEventListener('click', async ()=>{
+  if(!CM_VIDEO){ toast('Elegí un video primero'); return; }
+  const targets=[]; if(el('cmIg').checked)targets.push('instagram'); if(el('cmTt').checked)targets.push('tiktok'); if(el('cmYt').checked)targets.push('youtube');
+  if(!targets.length){ toast('Elegí al menos una plataforma'); return; }
+  el('cmPubBtn').disabled=true; el('cmPubBtn').textContent='publicando… (puede tardar 1-2 min)';
+  try{
+    const r=await api('/api/cm/publish',{method:'POST',body:JSON.stringify({video:CM_VIDEO,caption:el('cmCaption').value.trim(),targets})});
+    el('cmResult').innerHTML = Object.entries(r.results||{}).map(([k,v])=>
+      `<div>${esc(k)}: ${v.ok?'✅':'❌'} ${v.permalink?`<a href="${esc(v.permalink)}" target="_blank">ver</a>`:''} ${v.privacy?'<span class="faint">('+esc(v.privacy)+')</span>':''} <span class="err">${esc(v.error||'')}</span></div>`).join('');
+    toast('Listo');
+  }catch(e){ el('cmResult').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+  finally{ el('cmPubBtn').disabled=false; el('cmPubBtn').textContent='🚀 Publicar'; }
+});
+
+// ── Baúl de Ganchos ──
+async function loadBaul(){
+  el('hkList').innerHTML='<span class="faint">cargando…</span>';
+  try{
+    const q=el('hkQ').value.trim(), tipo=el('hkTipo').value, nicho=el('hkNicho').value.trim();
+    const d=await api(`/api/hooks?q=${encodeURIComponent(q)}&tipo=${encodeURIComponent(tipo)}&nicho=${encodeURIComponent(nicho)}`);
+    if(el('hkTipo').options.length<=1) (d.tipos||[]).forEach(t=>{ const o=document.createElement('option'); o.value=o.textContent=t; el('hkTipo').appendChild(o); });
+    setNavCount('baul', (d.items||[]).length);
+    el('hkList').innerHTML = (d.items||[]).map(i=>`
+      <div class="card" style="padding:14px">
+        <div style="font-weight:700;font-size:15px">“${esc(i.hook)}”</div>
+        <div class="faint" style="font-size:12px;margin-top:6px">
+          <span class="badge grey">${esc(i.tipo||'?')}</span> · ${esc(i.nicho||'general')}
+          ${i.fuente?` · primero: <b>${esc(i.fuente)}</b>`:''}
+          ${i.likes?` · ❤️ ${Number(i.likes).toLocaleString()}`:''}
+          ${i.uses?` · usado ${i.uses}×`:''}
+          ${i.permalink?` · <a href="${esc(i.permalink)}" target="_blank">ver</a>`:''}
+        </div>
+        <div style="margin-top:10px;display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="useHook('${i.id}',this)">🎬 Usar este</button>
+          <button class="btn-ghost btn-sm" onclick="delHook('${i.id}')">🗑</button>
+        </div>
+      </div>`).join('') || '<span class="faint">Sin ganchos con ese filtro.</span>';
+  }catch(e){ el('hkList').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+}
+let hkT; ['hkQ','hkNicho'].forEach(id=>el(id).addEventListener('input',()=>{ clearTimeout(hkT); hkT=setTimeout(loadBaul,350); }));
+el('hkTipo').addEventListener('change',loadBaul);
+el('hkAddBtn').addEventListener('click', async ()=>{
+  const hook=window.prompt('El gancho (usá [X], [NÚMERO] como placeholders):',''); if(!hook)return;
+  const tipo=window.prompt('Tipo (negación/curiosidad/lista/resultado/contrarian/…):','curiosidad')||'';
+  try{ await api('/api/hooks',{method:'POST',body:JSON.stringify({hook,tipo})}); toast('Guardado en el baúl'); loadBaul(); }
+  catch(e){ toast(e.message); }
+});
+async function useHook(id,btn){
+  btn.disabled=true; btn.textContent='mandando al guion…';
+  try{ const r=await api(`/api/hooks/${id}/use`,{method:'POST'});
+    toast('🎬 tiktok_creator arrancó con ese gancho — mirá Tareas'); btn.textContent='✓ en el guion';
+  }catch(e){ toast(e.message); btn.disabled=false; btn.textContent='🎬 Usar este'; }
+}
+async function delHook(id){ try{ await api(`/api/hooks/${id}`,{method:'DELETE'}); loadBaul(); }catch(e){ toast(e.message); } }
+
+// ── Espía de competencia ──
+// arg JS seguro dentro de un onclick="..." (JSON + entidades HTML)
+function aj(v){ return esc(JSON.stringify(v)); }
+async function loadEspia(){
+  el('espiaList').innerHTML='<span class="faint">cargando…</span>';
+  try{
+    const d=await api('/api/radar'); const r=d.radar||{};
+    el('espiaMeta').innerHTML = r.updated_at
+      ? `Última pasada del espía: <b>${esc(fmtDate(r.updated_at))}</b> (corre solo los domingos 09:00).`
+      : 'El espía todavía no corrió. Corre solo el domingo a la mañana, o forzalo con el scout.';
+    el('espiaList').innerHTML = (r.accounts||[]).map(a=>`
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b>@${esc(a.handle)}</b><span class="faint" style="font-size:12px">${Number(a.followers||0).toLocaleString()} seguidores</span>
+        </div>
+        ${(a.reels||[]).map((re,i)=>`
+          <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
+            <div style="display:flex;justify-content:space-between;gap:8px">
+              <div style="flex:1">
+                ${re.hook?`<div style="font-weight:700">🎣 “${esc(re.hook)}”</div>`:''}
+                ${re.screen_text?`<div class="faint" style="font-size:12px">📺 ${esc(re.screen_text)}</div>`:''}
+                <div class="faint" style="font-size:12px;margin-top:4px">${esc((re.caption||'').slice(0,120))}</div>
+              </div>
+              <div style="text-align:right;flex:none">
+                <div>❤️ ${Number(re.likes||0).toLocaleString()}</div>
+                <div class="faint" style="font-size:12px">💬 ${Number(re.comments||0).toLocaleString()}</div>
+              </div>
+            </div>
+            <div style="margin-top:6px;display:flex;gap:6px">
+              ${re.permalink?`<a class="btn-ghost btn-xs" href="${esc(re.permalink)}" target="_blank">Ver reel</a>`:''}
+              ${re.hook?`<button class="btn-ghost btn-xs" onclick="saveEspiaHook(${aj(re.hook)},${aj('IG @'+a.handle)},${aj(re.permalink||'')},${Number(re.likes||0)},this)">💾 Al baúl</button>`:''}
+            </div>
+          </div>`).join('')}
+      </div>`).join('') || '';
+  }catch(e){ el('espiaList').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+}
+async function saveEspiaHook(hook,fuente,permalink,likes,btn){
+  try{ await api('/api/hooks',{method:'POST',body:JSON.stringify({hook,fuente,permalink,likes,nicho:'saas/ecommerce'})});
+    toast('Guardado en el baúl'); if(btn){btn.textContent='✓ en el baúl'; btn.disabled=true;}
+  }catch(e){ toast(e.message); }
+}
+
+// ── Tendencias ──
+const TR_BADGE = {gancho:'<span class="badge ok">potencial de gancho</span>', explicativo:'<span class="badge blue">explicativo</span>', ignorar:'<span class="badge grey">ignorar</span>'};
+async function loadTendencias(){
+  el('trList').innerHTML='<span class="faint">cargando…</span>';
+  try{
+    const d=await api('/api/trends/radar'); const r=d.radar||{};
+    el('trMeta').innerHTML = r.updated_at
+      ? `Última revisión: <b>${esc(fmtDate(r.updated_at))}</b>. Corre sola cada mañana (digest por Discord ~7 AM).`
+      : 'Todavía no corrió. Se revisa solo cada mañana a las 6:45, o forzalo acá.';
+    const items=(r.items||[]);
+    el('trList').innerHTML = items.map(t=>`
+      <div class="card" style="margin-bottom:10px;padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+          <div style="flex:1">
+            <b>${t.url?`<a href="${esc(t.url)}" target="_blank" style="color:inherit">${esc(t.title)}</a>`:esc(t.title)}</b>
+            <div class="faint" style="font-size:12px;margin-top:3px">${esc(t.source||'')} — ${esc(t.snippet||'')}</div>
+            ${t.hook_idea?`<div style="margin-top:6px">🎣 <i>${esc(t.hook_idea)}</i> <button class="btn-ghost btn-xs" onclick="saveEspiaHook(${aj(t.hook_idea)},${aj(t.source||'radar')},${aj(t.url||'')},0,this)">💾 Al baúl</button></div>`:''}
+          </div>
+          <div style="flex:none">${TR_BADGE[t.tag]||TR_BADGE.explicativo}</div>
+        </div>
+      </div>`).join('') || '<span class="faint">Sin novedades cargadas.</span>';
+  }catch(e){ el('trList').innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+}
+el('trRefreshBtn').addEventListener('click', async ()=>{
+  el('trRefreshBtn').disabled=true; el('trRefreshBtn').textContent='revisando fuentes… (~1 min)';
+  try{ await api('/api/trends/radar/refresh',{method:'POST'}); loadTendencias(); toast('Radar actualizado'); }
+  catch(e){ toast(e.message); }
+  finally{ el('trRefreshBtn').disabled=false; el('trRefreshBtn').textContent='↻ Revisar fuentes ahora'; }
+});
 
 // renderiza texto con imágenes markdown ![](url) como <img>
 function renderWithImages(md){

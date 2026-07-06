@@ -42,14 +42,16 @@ def enabled() -> bool:
     return bool(getattr(s, "ig_business_id", "") and getattr(s, "meta_page_token", ""))
 
 
-def recent_media(handle: str, n: int = 3) -> List[Dict]:
-    """Media reciente pública de una cuenta business (por username). [] si falla."""
+def profile_media(handle: str, n: int = 3) -> Dict:
+    """Perfil + media reciente de una cuenta business (por username):
+    {username, followers_count, media: [...]}. {} si falla."""
     s = get_settings()
     if not enabled() or not handle:
-        return []
+        return {}
     fields = (f"business_discovery.username({handle})"
               f"{{username,followers_count,media.limit({n})"
-              f"{{media_type,media_product_type,media_url,permalink,caption,timestamp}}}}")
+              f"{{media_type,media_product_type,media_url,permalink,caption,timestamp,"
+              f"like_count,comments_count}}}}")
     q = urllib.parse.urlencode({"fields": fields, "access_token": s.meta_page_token})
     try:
         r = json.load(urllib.request.urlopen(f"{_GRAPH}/{s.ig_business_id}?{q}", timeout=30))
@@ -57,15 +59,23 @@ def recent_media(handle: str, n: int = 3) -> List[Dict]:
         try:
             r = json.load(e)
         except Exception:
-            return []
+            return {}
     except Exception as ex:
         log.warning("ig_discovery_failed", handle=handle, error=str(ex)[:150])
-        return []
+        return {}
     if "error" in r:
         log.warning("ig_discovery_error", handle=handle,
                     msg=str(r["error"].get("message"))[:120])
-        return []
-    return (r.get("business_discovery", {}).get("media", {}).get("data") or [])
+        return {}
+    bd = r.get("business_discovery", {}) or {}
+    return {"username": bd.get("username", handle),
+            "followers_count": bd.get("followers_count", 0),
+            "media": (bd.get("media", {}) or {}).get("data") or []}
+
+
+def recent_media(handle: str, n: int = 3) -> List[Dict]:
+    """Media reciente pública de una cuenta business (por username). [] si falla."""
+    return profile_media(handle, n).get("media", [])
 
 
 def recent_reels(handle: str, n: int = 15) -> List[Dict]:

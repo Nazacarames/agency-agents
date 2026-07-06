@@ -61,6 +61,9 @@ data/metrics-store.json
 data/publish-queue.json
 data/ads-store.json
 data/inbox-processed.json
+data/hook-vault.json
+data/competitor-radar.json
+data/trend-radar.json
 data/*.json.tmp
 data/images/
 
