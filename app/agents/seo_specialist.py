@@ -74,7 +74,7 @@ class SeoSpecialistAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 12000  # 2026-06-12: subido de 6000 (truncamiento observado en producción)
     use_claude_code = True
-    claude_code_skill = "marketing-seo-contenido,ai-seo,schema"
+    claude_code_skill = "marketing-seo-contenido,ai-seo,schema,programmatic-seo,competitors,lead-magnets"
     claude_code_timeout = 900  # puede WebFetchear la landing para on-page real
 
     @property

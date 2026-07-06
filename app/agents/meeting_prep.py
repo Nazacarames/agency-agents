@@ -41,7 +41,7 @@ class MeetingPrepAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 12000
     use_claude_code = True
-    claude_code_skill = "marketing-reunion"
+    claude_code_skill = "marketing-reunion,marketing-propuesta,prospecting"
     claude_code_timeout = 700
 
     @property
