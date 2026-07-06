@@ -66,11 +66,16 @@ def generate(frase: str, persona: Optional[str] = None,
     if not enabled() or not (frase or "").strip():
         return None
     try:
-        from . import veo_video
+        from . import veo_video, omni_video
         p = persona or random.choice(PERSONAS)
-        res = veo_video.generate_and_wait(
-            ugc_veo_prompt(frase, p), aspect_ratio="9:16",
-            negative_prompt=_UGC_NEG, timeout_s=300, poll=12)
+        # Omni primero (mejor dicción/acento; persona variada sin reference);
+        # preview → fallback a Veo si falla o filtra.
+        res = omni_video.generate_and_wait(
+            ugc_veo_prompt(frase, p), negative_prompt=_UGC_NEG, timeout_s=300)
+        if not res.get("b64"):
+            res = veo_video.generate_and_wait(
+                ugc_veo_prompt(frase, p), aspect_ratio="9:16",
+                negative_prompt=_UGC_NEG, timeout_s=300, poll=12)
         b64 = res.get("b64")
         if not b64:
             return None

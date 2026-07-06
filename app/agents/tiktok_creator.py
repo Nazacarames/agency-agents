@@ -400,9 +400,18 @@ class TikTokCreatorAgent(BaseAgent):
             s = get_settings()
             base = (s.public_base_url or "").rstrip("/")
             refs = [f"{base}{p}" for p in NAZA_REFERENCE_PATHS] if base else None
-            res = veo_video.generate_and_wait(
+            # Gemini Omni primero (mejor dicción/acento/lip-sync, cara por referencia);
+            # es preview → si falla o filtra, cae a Veo 3.1 Fast (sin regresión).
+            from ..integrations import omni_video
+            motor = "Gemini Omni"
+            res = omni_video.generate_and_wait(
                 nazareno_veo_prompt(frase, lugar), reference_image_urls=refs,
-                aspect_ratio="9:16", negative_prompt=_VEO_NEG, timeout_s=300, poll=12)
+                negative_prompt=_VEO_NEG, timeout_s=300)
+            if not res.get("b64"):
+                motor = "Veo 3.1 Fast"
+                res = veo_video.generate_and_wait(
+                    nazareno_veo_prompt(frase, lugar), reference_image_urls=refs,
+                    aspect_ratio="9:16", negative_prompt=_VEO_NEG, timeout_s=300, poll=12)
             b64 = res.get("b64")
             if not b64:
                 return text, None
@@ -412,7 +421,7 @@ class TikTokCreatorAgent(BaseAgent):
             fname = f"naza_{uuid.uuid4().hex}.mp4"
             fpath = d / fname
             fpath.write_bytes(base64.b64decode(b64))
-            block = (f"\n\n---\n\n## 🎥 Clip de Nazareno (Veo 3.1 Fast)\n\n"
+            block = (f"\n\n---\n\n## 🎥 Clip de Nazareno ({motor})\n\n"
                      f"Frase: *\"{frase}\"*\n\n`/media/{fname}` — clip 9:16 listo para el hook/cierre.\n")
             return text.rstrip() + block, str(fpath)
         except Exception as e:
