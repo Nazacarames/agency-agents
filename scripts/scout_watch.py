@@ -33,12 +33,12 @@ except Exception:
     ig_discovery = vision = None
 
 # TikTok = perfil (lo que el usuario produce); YT = búsqueda (backup). Handles best-effort.
-TIKTOK = {
+TIKTOK = {   # handles VERIFICADOS 2026-07-05 (kommo TikTok es privado → cae a YT backup)
     "manychat":   "https://www.tiktok.com/@manychat",
-    "kommo":      "https://www.tiktok.com/@kommo",
     "shopify":    "https://www.tiktok.com/@shopify",
-    "tiendanube": "https://www.tiktok.com/@tiendanube",
-    "meli":       "https://www.tiktok.com/@mercadolibre",
+    "tiendanube": "https://www.tiktok.com/@nuvemshop",
+    "meli":       "https://www.tiktok.com/@mercadolibre.ar",
+    "kommo":      "https://www.tiktok.com/@kommo",  # privado → backup YouTube
 }
 YT = {
     "kommo":      "Kommo CRM WhatsApp salesbot español",
