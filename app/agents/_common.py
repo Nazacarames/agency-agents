@@ -380,14 +380,17 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         from ..integrations import image_prompt
         blocks = []
         for i, (prompt, texto, sub, caption, formato) in enumerate(parsed, 1):
-            prompt = image_prompt.refine(prompt, formato or "post")
-            urls = image_gen.generate_image(prompt, aspect_ratio="1:1", n=1, text=texto, subtitle=sub)
-            if not urls:
-                continue
-            cap = texto or prompt[:90]
             # FORMATO explícito del agente; si falta, 1 post cada 3 imágenes (1:2 con
             # historias = el ritmo del drain diario: 1 pieza de feed + 2 historias).
             kind = formato or ("post" if i % 3 == 1 else "story")
+            prompt = image_prompt.refine(prompt, formato or "post")
+            # Historia = pantalla completa vertical (9:16); si va 1:1 IG la muestra
+            # flotando con bandas negras. El feed sigue cuadrado.
+            aspect = "9:16" if kind == "story" else "1:1"
+            urls = image_gen.generate_image(prompt, aspect_ratio=aspect, n=1, text=texto, subtitle=sub)
+            if not urls:
+                continue
+            cap = texto or prompt[:90]
             klabel = "post del feed" if kind == "post" else "historia"
             block = f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})"
             if pq:
