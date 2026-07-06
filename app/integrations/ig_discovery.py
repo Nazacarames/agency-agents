@@ -26,14 +26,20 @@ log = get_logger("ig_discovery")
 
 _GRAPH = "https://graph.facebook.com/v21.0"
 
-# Handles de IG reales VERIFICADOS 2026-07-05 con Business Discovery (ojo a las trampas:
-# Tiendanube publica como "nuvemshop"; Mercado Libre AR como "mercadolibre.arg").
+# Handles de IG reales VERIFICADOS 2026-07-06 con Business Discovery (followers y
+# avg likes medidos con la API). Roster re-armado para HOOKS: los anteriores
+# (Kommo/Shopify/Tiendanube/MeLi) tenían engagement flojo y ya están minados en el
+# dossier fijo de competitor_playbook. Ojo trampa: Steven Bartlett publica como "steven".
 IG_HANDLES = {
-    "kommo":      "kommocrm",
-    "manychat":   "manychat",
-    "shopify":    "shopify",
-    "tiendanube": "nuvemshop",
-    "meli":       "mercadolibre.arg",
+    "stevenbartlett": "steven",         # 5.1M, ~104k likes/pieza — masterclass de hooks
+    "hormozi":        "hormozi",        # 4.8M — hooks de negocio directos
+    "codiesanchez":   "codiesanchez",   # 3.2M — hooks de negocio/contrarian
+    "garyvee":        "garyvee",        # 11.8M — volumen + hooks emocionales
+    "neuromodernos":  "neuromodernos",  # 498k — IA en español (nicho exacto)
+    "romualdfons":    "romualdfons",    # 286k — marketing ES, hooks agresivos
+    "eugeoller":      "euge.oller",     # 540k — negocios ES, storytelling
+    "hubspot":        "hubspot",        # 654k — formatos B2B (memes/skits/carruseles)
+    "manychat":       "manychat",       # nicho directo: bots de chat
 }
 
 

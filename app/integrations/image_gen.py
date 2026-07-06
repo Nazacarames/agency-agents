@@ -168,13 +168,16 @@ def _minimax_image(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
 
 def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
                    text: Optional[str] = None, subtitle: Optional[str] = None,
-                   kind: str = "photo") -> List[str]:
+                   kind: str = "photo", hero_text: bool = False) -> List[str]:
     """Genera n imágenes (con texto compuesto si se pide) y devuelve URLs locales.
     Provider primario Vertex Imagen 4; fallback automático a MiniMax.
 
     kind="photo" (default) → foto editorial de una persona en su entorno real.
     kind="banner" → banner/gráfico para ad (producto/ícono/fondo con espacio para
-    titular); NO fuerza persona ni entorno. En ambos casos el texto lo compone Pillow.
+    titular); NO fuerza persona ni entorno.
+    kind="art" → ilustración/3D/pieza de diseño: el prompt refinado ya trae el estilo;
+    acá sólo se refuerza el no-text (sin sufijo fotográfico ni rotación de plano).
+    En todos los casos el texto lo compone Pillow.
     """
     s = get_settings()
     if not enabled() or not (prompt or "").strip():
@@ -189,6 +192,12 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
                         "with royal blue (#2563EB) accents. Absolutely NO text, letters, words, "
                         "numbers, captions, watermark or logos (they are composited later). "
                         "Leave clear negative space for the headline.")
+    elif kind == "art":
+        # Ilustración/3D/tipográfico: el estilo viene completo del refinador; sólo
+        # reforzamos el no-text y el aire para el titular.
+        full_prompt += (". Absolutely NO text, letters, words, numbers, captions, "
+                        "watermark, logos or UI (any headline is composited later). "
+                        "Keep clean negative space near one edge for a headline.")
     else:
         # SIEMPRE prohibir texto: los modelos dibujan letras/números deformes e ilegibles.
         # El texto real lo compone Pillow por encima. Negativo fuerte y repetido.
@@ -226,7 +235,7 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
     out: List[str] = []
     for raw in raws:
         if text:
-            raw = _overlay_text(raw, text, subtitle) or raw
+            raw = _overlay_text(raw, text, subtitle, hero=hero_text) or raw
         else:
             # Instagram SÓLO acepta JPEG (PNG → "Only photo or video can be
             # accepted as media type"). Normalizamos todo a JPEG.
@@ -316,11 +325,15 @@ def _draw_lines(draw, lines, font, line_h, y, W, pad, align="center", color=None
     return y
 
 
-def _overlay_text(img_bytes: bytes, text: str, subtitle: Optional[str] = None) -> Optional[bytes]:
+def _overlay_text(img_bytes: bytes, text: str, subtitle: Optional[str] = None,
+                  hero: bool = False) -> Optional[bytes]:
     """Compone el titular con tratamiento EDITORIAL en un borde (abajo, o arriba según
     hash) — NUNCA sobre el centro, donde suele estar el sujeto. Gradiente denso para
     legibilidad, barra de acento azul fina, kicker de marca, titular Anton y bajada,
-    alineado a la izquierda. Sin recuadros ni bordes (eso se veía a plantilla)."""
+    alineado a la izquierda. Sin recuadros ni bordes (eso se veía a plantilla).
+
+    hero=True (estilo tipográfico): el titular ES la pieza — GIGANTE y centrado en el
+    cuadro (el fondo viene casi vacío a propósito), sin gradiente de borde."""
     try:
         import zlib
         from PIL import Image, ImageDraw, ImageFont
@@ -330,6 +343,31 @@ def _overlay_text(img_bytes: bytes, text: str, subtitle: Optional[str] = None) -
 
         head = (text or "").strip().upper()
         sub = (subtitle or "").strip()
+        if hero:
+            hf, hlines, hlh = _fit_font(draw, head, _HEADLINE_FONT, int(W * 0.86),
+                                        int(H * 0.52), start=230, min_size=72)
+            kf = ImageFont.truetype(str(_BODY_FONT), max(int(W * 0.026), 22))
+            sf = sub_lines = None
+            slh = 0
+            if sub:
+                sf, sub_lines, slh = _fit_font(draw, sub, _BODY_FONT, int(W * 0.8),
+                                               int(H * 0.10), start=44, min_size=26)
+                sub_lines = sub_lines[:2]
+            kh = kf.size + int(H * 0.03)
+            block_h = kh + int(hlh * len(hlines)) + (int(H * 0.02) + int(slh * len(sub_lines)) if sub_lines else 0)
+            y = (H - block_h) / 2
+            kw = sum(draw.textlength(ch, font=kf) + max(int(W * 0.006), 4) for ch in "AUTOMIQ")
+            _draw_tracked(draw, "AUTOMIQ", kf, (W - kw) / 2, y, (150, 190, 255, 255),
+                          track=max(int(W * 0.006), 4))
+            y += kh
+            y = _draw_lines(draw, hlines, hf, hlh, y, W, 0, align="center")
+            if sub_lines:
+                y += int(H * 0.02)
+                _draw_lines(draw, sub_lines, sf, slh, y, W, 0, align="center",
+                            color=(205, 222, 255, 255))
+            out = io.BytesIO()
+            img.convert("RGB").save(out, format="JPEG", quality=92)
+            return out.getvalue()
         pad = int(W * 0.075)
         bar_w = max(int(W * 0.009), 6)
         x = pad + bar_w + int(W * 0.03)          # el texto arranca a la derecha de la barra

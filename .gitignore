@@ -68,6 +68,7 @@ data/inbox-processed.json
 data/hook-vault.json
 data/competitor-radar.json
 data/trend-radar.json
+data/creative-direction.md
 data/*.json.tmp
 data/images/
 

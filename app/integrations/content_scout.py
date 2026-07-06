@@ -27,10 +27,18 @@ log = get_logger("content_scout")
 _DATA = Path(__file__).resolve().parent.parent.parent / "data"
 _RADAR_FILE = _DATA / "competitor-radar.json"
 
+# Nicho por cuenta (para etiquetar los ganchos que van al baúl).
+_NICHOS = {
+    "stevenbartlett": "negocios", "hormozi": "negocios", "codiesanchez": "negocios",
+    "garyvee": "negocios", "neuromodernos": "ia", "romualdfons": "marketing",
+    "eugeoller": "negocios", "hubspot": "saas/b2b", "manychat": "bots/pymes",
+}
+
 _NOTE_PROMPT = (
     "Analizá este reel de un competidor o marca de referencia (mirá el video Y escuchá el "
     "audio). Empezá EXACTAMENTE con estas 2 líneas:\n"
-    "HOOK: <lo que se dice/muestra en los primeros 3s, transcripto textual>\n"
+    "HOOK: <lo que se dice/muestra en los primeros 3s; si está en inglés, traducilo a "
+    "español rioplatense manteniendo la estructura del gancho>\n"
     "TEXTO EN PANTALLA: <el texto sobreimpreso más importante, o 'ninguno'>\n"
     "Después, en español rioplatense, MUY concreto y breve (~120 palabras): "
     "FORMATO/EDICIÓN (cortes, PiP, texto en pantalla, ritmo, música), DÓNDE "
@@ -137,7 +145,7 @@ def refresh() -> Dict:
                     if hook:
                         try:
                             from . import hook_vault
-                            hook_vault.add(hook, tipo="", nicho="saas/ecommerce",
+                            hook_vault.add(hook, tipo="", nicho=_NICHOS.get(key, "general"),
                                            fuente=f"IG @{acct['handle']}",
                                            permalink=acct["reels"][0].get("permalink", ""),
                                            likes=acct["reels"][0].get("likes", 0))

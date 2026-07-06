@@ -243,7 +243,18 @@ def image_prompt_directive() -> str:
         "\n\nIMÁGENES (obligatorio): la cantidad la decidís VOS según tu planificación "
         "(1 por idea / 1 por post clave). No te limites a un número fijo. "
         "Por cada pieza agregá una línea que empiece EXACTO con `IMAGEN:` así:\n"
-        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | CAPTION: <caption COMPLETO del post>`\n"
+        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | ESTILO: <foto|banner|tipografico|ilustracion|3d|minimal> | CAPTION: <caption COMPLETO del post>`\n"
+        "ESTILO (obligatorio VARIAR — nunca dos piezas seguidas del mismo): `foto` = editorial "
+        "del rubro (la base); `banner` = pieza de ad con producto/objeto héroe + aire para "
+        "titular; `tipografico` = fondo color block/gradiente audaz donde el TITULAR es la "
+        "imagen (TEXTO obligatorio y filoso); `ilustracion` = editorial con textura/carácter "
+        "para conceptos; `3d` = objeto clay/soft-3D del rubro sobre fondo limpio; `minimal` = "
+        "UN objeto + muchísimo aire + color inesperado (pattern-interrupt). Elegí el estilo "
+        "según la idea (dato duro → tipografico; concepto → ilustracion; feature → banner/3d; "
+        "historia humana → foto).\n"
+        "TEXTO no siempre: ~1 de cada 3 piezas va SIN titular (dejá TEXTO vacío) cuando la "
+        "imagen habla sola (foto documental fuerte, ilustración conceptual) — el copy vive en "
+        "el CAPTION. En `tipografico` el TEXTO es la pieza: nunca lo omitas ahí.\n"
         "⚠️ TODA la línea (incluido el CAPTION completo) va en UNA SOLA LÍNEA física: donde "
         "quieras un salto de línea dentro del caption escribí la secuencia literal \\n (barra "
         "invertida + n) — el sistema la convierte en salto real al publicar. NUNCA cortes la "
@@ -277,8 +288,10 @@ def image_prompt_directive() -> str:
         "ilustrado. Pedí explícitamente 'no text, no letters, no numbers, no UI, no signage' en el prompt.\n"
         "Ej específico: `IMAGEN: editorial photo, close-up of a warehouse manager in Monterrey checking "
         "a phone, warm morning light, shallow depth of field, navy and royal blue accents, cinematic, "
-        "no text no letters no UI | TEXTO: Pedidos que se cierran solos | SUBTEXTO: WhatsApp + IA`. "
-        "El sistema genera la imagen y le compone el texto exacto.\n"
+        "no text no letters no UI | TEXTO: Pedidos que se cierran solos | SUBTEXTO: WhatsApp + IA | "
+        "ESTILO: foto`. Otro: `IMAGEN: single cardboard box with a glowing seam, centered on a bold "
+        "coral flat background, hard light, lots of empty space | TEXTO: Tu depósito atiende solo | "
+        "ESTILO: minimal`. El sistema genera la imagen y le compone el texto exacto.\n"
         "No hace falta que perfecciones el prompt fotográfico: un paso automático "
         "(image-prompt-engineer) lo reescribe a nivel pro antes de generar. Vos dale la "
         "ESCENA concreta y el rubro; el refinador pone luz, lente, composición y estilo."
@@ -291,17 +304,28 @@ def _clean_fragment(s: str):
     return (s or "").strip().strip("`*\"' |").strip()
 
 
+_ESTILOS = {"foto": "foto", "photo": "foto", "banner": "banner",
+            "tipografico": "tipografico", "tipográfico": "tipografico",
+            "ilustracion": "ilustracion", "ilustración": "ilustracion",
+            "3d": "3d", "minimal": "minimal"}
+
+# Estilo → kind de image_gen (sufijos de generación). Foto usa el pipeline fotográfico.
+_ESTILO_KIND = {"banner": "banner", "tipografico": "banner", "minimal": "banner",
+                "ilustracion": "art", "3d": "art"}
+
+
 def _parse_image_line(line: str):
-    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | FORMATO: <post|historia> | CAPTION: <post>`
-    → (prompt, texto, subtexto, caption, formato). Los campos labelados pueden venir en
-    cualquier orden; el prompt es todo lo que va antes del primer `|`.
+    """`<prompt> | TEXTO: <titular> | SUBTEXTO: <bajada> | FORMATO: <post|historia> |
+    ESTILO: <foto|banner|tipografico|ilustracion|3d|minimal> | CAPTION: <post>`
+    → (prompt, texto, subtexto, caption, formato, estilo). Los campos labelados pueden
+    venir en cualquier orden; el prompt es todo lo que va antes del primer `|`.
     Tolera que el modelo envuelva la línea en backticks/asteriscos de markdown."""
     import re
 
     def _grab(label: str):
         # captura el valor del campo hasta el próximo campo conocido o el fin de línea
         m = re.search(
-            rf"\|\s*{label}\s*[:：]\s*(.+?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION|FORMATO)\s*[:：]|$)",
+            rf"\|\s*{label}\s*[:：]\s*(.+?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION|FORMATO|ESTILO)\s*[:：]|$)",
             line, re.IGNORECASE | re.DOTALL)
         return _clean_fragment(m.group(1)) or None if m else None
 
@@ -310,8 +334,9 @@ def _parse_image_line(line: str):
     caption = _grab("CAPTION")
     fmt = (_grab("FORMATO") or "").lower()
     formato = {"post": "post", "historia": "story", "story": "story"}.get(fmt, "")
+    estilo = _ESTILOS.get((_grab("ESTILO") or "").lower(), "")
     prompt = line.split("|", 1)[0]
-    return _clean_fragment(prompt), texto, sub, caption, formato
+    return _clean_fragment(prompt), texto, sub, caption, formato, estilo
 
 
 def _publish_summary(res: dict) -> str:
@@ -351,17 +376,19 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         # Parsear todas y descartar las vacías (p.ej. el label suelto `**IMAGEN:**`)
         parsed = []
         for raw in pat.findall(text):
-            prompt, texto, sub, caption, formato = _parse_image_line(raw.strip())
+            prompt, texto, sub, caption, formato, estilo = _parse_image_line(raw.strip())
             if len(prompt) >= 8:           # un prompt real, no un label vacío
-                parsed.append((prompt, texto, sub, caption, formato))
+                parsed.append((prompt, texto, sub, caption, formato, estilo))
         parsed = parsed[:max_images]
-        carousel = None                    # (prompts[], caption) — máx 1 por corrida
+        carousel = None                    # (prompts[], caption, estilo) — máx 1 por corrida
         for raw in pat_car.findall(text):
             # `||` separa prompts; escaparlo para que _parse_image_line no corte ahí
-            first, texto, sub, caption, _f = _parse_image_line(raw.strip().replace("||", "\x1f"))
+            first, texto, sub, caption, _f, car_estilo = _parse_image_line(
+                raw.strip().replace("||", "\x1f"))
             prompts = [p.strip() for p in first.split("\x1f") if len(p.strip()) >= 8]
             if len(prompts) >= 2:
-                carousel = (prompts[:10], caption or "\n\n".join(x for x in (texto, sub) if x))
+                carousel = (prompts[:10],
+                            caption or "\n\n".join(x for x in (texto, sub) if x), car_estilo)
                 break
         if not parsed and not carousel:
             return text
@@ -378,21 +405,32 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             except Exception:
                 pq = None
         from ..integrations import image_prompt
+        # Rotación de ESTILO anti-monotonía: si el agente no marcó ESTILO, se asigna
+        # de un mazo mezclado (foto pesa doble: sigue siendo la base de autenticidad).
+        import random
+        deck = ["foto", "foto", "banner", "ilustracion", "tipografico", "minimal", "3d"]
+        random.shuffle(deck)
         blocks = []
-        for i, (prompt, texto, sub, caption, formato) in enumerate(parsed, 1):
+        for i, (prompt, texto, sub, caption, formato, estilo) in enumerate(parsed, 1):
             # FORMATO explícito del agente; si falta, 1 post cada 3 imágenes (1:2 con
             # historias = el ritmo del drain diario: 1 pieza de feed + 2 historias).
             kind = formato or ("post" if i % 3 == 1 else "story")
-            prompt = image_prompt.refine(prompt, formato or "post")
+            estilo = estilo or deck[(i - 1) % len(deck)]
+            # TIPOGRÁFICO sin titular no es nada → cae a banner.
+            if estilo == "tipografico" and not texto:
+                estilo = "banner"
+            prompt = image_prompt.refine(prompt, formato or "post", estilo=estilo)
             # Historia = pantalla completa vertical (9:16); si va 1:1 IG la muestra
             # flotando con bandas negras. El feed sigue cuadrado.
             aspect = "9:16" if kind == "story" else "1:1"
-            urls = image_gen.generate_image(prompt, aspect_ratio=aspect, n=1, text=texto, subtitle=sub)
+            urls = image_gen.generate_image(prompt, aspect_ratio=aspect, n=1, text=texto,
+                                            subtitle=sub, kind=_ESTILO_KIND.get(estilo, "photo"),
+                                            hero_text=(estilo == "tipografico"))
             if not urls:
                 continue
             cap = texto or prompt[:90]
             klabel = "post del feed" if kind == "post" else "historia"
-            block = f"**Imagen {i}** — _{cap}_\n\n![imagen {i}]({urls[0]})"
+            block = f"**Imagen {i}** (estilo {estilo}) — _{cap}_\n\n![imagen {i}]({urls[0]})"
             if pq:
                 post_caption = caption or "\n\n".join(x for x in (texto, sub) if x) or ""
                 try:
@@ -405,10 +443,12 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
                     block += f"\n\n> ⚠️ No se pudo encolar: {str(e)[:140]}"
             blocks.append(block)
         if carousel:
-            prompts, car_caption = carousel
+            prompts, car_caption, car_estilo = carousel
             car_urls = []
             for p in prompts:
-                u = image_gen.generate_image(image_prompt.refine(p, "post"), aspect_ratio="1:1", n=1)
+                u = image_gen.generate_image(
+                    image_prompt.refine(p, "post", estilo=car_estilo), aspect_ratio="1:1",
+                    n=1, kind=_ESTILO_KIND.get(car_estilo, "photo"))
                 if u:
                     car_urls.append(u[0])
             if len(car_urls) >= 2:

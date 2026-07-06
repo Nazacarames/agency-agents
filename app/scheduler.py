@@ -68,6 +68,7 @@ LEARNING_DIGEST_CRON = "0 7 * * sun"
 COMPETITOR_REFRESH_CRON = "0 8 * * sun"   # dom 08:00 — refresca el playbook de competencia
 SCOUT_REFRESH_CRON = "0 9 * * sun"        # dom 09:00 — visual scout IG (Gemini mira reels reales)
 TREND_RADAR_CRON = "45 6 * * *"           # diario 06:45 — radar de tendencias; digest ~7 AM
+CREATIVE_STUDY_CRON = "0 10 1 * *"        # día 1 de cada mes 10:00 — re-estudia formatos de creativos
 
 
 class AgentScheduler:
@@ -101,6 +102,8 @@ class AgentScheduler:
                               _scheduled_scout_refresh)
         self._register_simple("trends:radar", TREND_RADAR_CRON, DEFAULT_TIMEZONE,
                               _scheduled_trend_radar)
+        self._register_simple("creative:study", CREATIVE_STUDY_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_creative_study)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -256,6 +259,18 @@ async def _scheduled_scout_refresh() -> None:
         log.info("scout_refresh_scheduled_done", result=res)
     except Exception as e:
         log.error("scout_refresh_failed", error=str(e)[:200])
+
+
+async def _scheduled_creative_study() -> None:
+    """Re-estudio mensual de formatos de creativos: reescribe la dirección de arte
+    que se inyecta a los agentes de contenido. Best-effort."""
+    import asyncio
+    from .integrations import creative_direction
+    try:
+        res = await asyncio.to_thread(creative_direction.refresh)
+        log.info("creative_study_scheduled_done", result=res)
+    except Exception as e:
+        log.error("creative_study_failed", error=str(e)[:200])
 
 
 async def _scheduled_trend_radar() -> None:

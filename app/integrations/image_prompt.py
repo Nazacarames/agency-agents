@@ -62,6 +62,69 @@ _SYSTEM = (
 )
 
 
+# Sistema alternativo para estilos GRÁFICOS (banner/tipográfico/ilustración/3D/minimal):
+# acá NO se fuerza la escena fotorrealista de depósito — se pide una pieza de DISEÑO.
+# Mantiene las reglas comunes: inglés, sin texto (lo compone Pillow), navy como acento,
+# aire para el titular, especificidad del rubro (distribuidoras/PyMEs argentinas).
+_SYSTEM_GRAPHIC = (
+    "Sos un Art Director + Image Prompt Engineer experto en creativos de publicidad "
+    "(generación con IA). Trabajás para Automiq, agencia ARGENTINA de automatización con "
+    "IA para distribuidoras y PyMEs. Recibís una idea CRUDA y un ESTILO, y la reescribís "
+    "en UN prompt EN INGLÉS para una pieza de DISEÑO/AD de ese estilo (no una foto "
+    "documental), estructurado: sujeto/concepto, composición, paleta, estilo de render, "
+    "mood.\n\n"
+    "REGLAS DURAS:\n"
+    "1. RESPETÁ el ESTILO pedido — es una pieza de diseño, no una foto de depósito.\n"
+    "2. PROHIBIDO texto, letras, números, logos, UI, capturas, dashboards o carteles "
+    "DENTRO de la imagen (el titular se compone aparte por encima). Pedí explícitamente "
+    "'no text, no letters, no numbers, no UI'.\n"
+    "3. Composición con NEGATIVE SPACE claro para un titular (bordes superior o inferior).\n"
+    "4. Paleta ancla: navy (#0F1B33) + royal blue (#2563EB) — puede ser protagonista en "
+    "estas piezas gráficas (a diferencia de las fotos), pero con UN acento cálido de "
+    "contraste si suma.\n"
+    "5. NADA de clichés de IA: robots, cerebros con circuitos, hologramas, manos tocando "
+    "pantallas flotantes, 3D azul corporativo genérico.\n"
+    "6. El concepto tiene que oler al RUBRO real (cajones, pallets, camioneta de reparto, "
+    "mostrador, WhatsApp/chat como idea — nunca como UI legible), no a stock genérico.\n"
+    "Devolvé SOLO el prompt final en inglés, sin comillas ni explicaciones."
+)
+
+# Estilos GRÁFICOS (rotación anti-monotonía, estudio 2026-07-06: ugly ads, tipografía
+# como héroe, estático minimal como pattern-interrupt, ilustración con carácter).
+_GRAPHIC_MODES = {
+    "banner": (
+        "ESTILO BANNER DE AD: composición gráfica publicitaria premium — un producto/objeto "
+        "del rubro como héroe (cajón de mercadería, celular, camioneta en miniatura) o un "
+        "fondo potente, iluminación de estudio dramática o color block, gran espacio limpio "
+        "para el titular. Bold, alto contraste, brand-forward."
+    ),
+    "tipografico": (
+        "ESTILO TIPOGRÁFICO: el FONDO es la pieza — color block plano o gradiente audaz "
+        "(navy→royal blue, o un color inesperado de contraste), quizás con una textura "
+        "sutil (grano, papel) o UNA forma geométrica/objeto chico como acento. Composición "
+        "casi vacía: el titular gigante (que se compone después) va a ser el héroe. "
+        "Pattern-interrupt silencioso."
+    ),
+    "ilustracion": (
+        "ESTILO ILUSTRACIÓN: ilustración editorial con carácter — textura de grano/risografía "
+        "o flat moderno con imperfecciones a mano, personajes o escenas del rubro argentino "
+        "(el dueño tapado de cajas, el repartidor, el celular que no para de sonar) con humor "
+        "o calidez. NADA de vector corporativo chato ni clipart."
+    ),
+    "3d": (
+        "ESTILO 3D CON GUSTO: render soft-3D / clay de UN objeto-metáfora del rubro (una "
+        "caja, un carrito, un globo de chat esculpido, una camioneta toy) sobre fondo limpio "
+        "de color, luz suave de estudio, sombras blandas, look táctil tipo juguete premium. "
+        "NUNCA el 3D azul corporativo genérico ni robots."
+    ),
+    "minimal": (
+        "ESTILO MINIMAL PATTERN-INTERRUPT: UN solo objeto real del rubro (un cajón, una "
+        "cinta de embalar, un timbre, un celular boca abajo) centrado o en tercio, sobre "
+        "fondo de color plano inesperado, muchísimo aire, luz dura con sombra marcada. "
+        "Quieto y silencioso a propósito: frena el scroll entre reels ruidosos."
+    ),
+}
+
 # Presets de dominio (know-how minado del skill banana-claude: una RECETA por tipo de
 # toma en vez de forzar siempre "persona en acción", que volvía todo el feed monótono).
 # El _SYSTEM sigue mandando las reglas duras; el modo sólo enfoca la escena.
@@ -117,24 +180,35 @@ def _clean(t: str) -> str:
     return t.strip()[:2000]
 
 
-def refine(raw_prompt: str, formato: str = "post") -> str:
-    """Devuelve un prompt fotográfico mejorado (o el crudo si el refinamiento falla)."""
+def refine(raw_prompt: str, formato: str = "post", estilo: str = "") -> str:
+    """Devuelve un prompt mejorado (o el crudo si el refinamiento falla).
+    `estilo` explícito manda: gráfico (banner/tipografico/ilustracion/3d/minimal) usa
+    el sistema de diseño; foto (o vacío) usa el fotográfico con detección de modo."""
     raw = (raw_prompt or "").strip()
     s = get_settings()
     if len(raw) < 8 or not getattr(s, "image_prompt_refine", True):
         return raw_prompt
-    mode = _detect_mode(raw)
-    mode_block = _MODES.get(mode, "")
-    user = (f"Idea cruda ({formato}) para una imagen de Automiq:\n{raw}\n\n"
-            + (mode_block + "\n\n" if mode_block else "")
-            + "Devolvé el prompt fotográfico final en inglés (un párrafo).")
+    estilo = (estilo or "").lower()
+    if estilo in _GRAPHIC_MODES:
+        system = _SYSTEM_GRAPHIC
+        mode = estilo
+        user = (f"Idea cruda ({formato}) para una pieza de Automiq:\n{raw}\n\n"
+                + _GRAPHIC_MODES[estilo] + "\n\n"
+                + "Devolvé el prompt final en inglés (un párrafo).")
+    else:
+        system = _SYSTEM
+        mode = _detect_mode(raw)
+        mode_block = _MODES.get(mode, "")
+        user = (f"Idea cruda ({formato}) para una imagen de Automiq:\n{raw}\n\n"
+                + (mode_block + "\n\n" if mode_block else "")
+                + "Devolvé el prompt fotográfico final en inglés (un párrafo).")
 
     # 1) GLM vía NVIDIA (mejor redactor, gratis)
     if getattr(s, "nvidia_api_key", ""):
         try:
             from ..clients.nvidia import NvidiaClient
             with NvidiaClient(s) as c:
-                r = c.complete(_SYSTEM, [{"role": "user", "content": user}],
+                r = c.complete(system, [{"role": "user", "content": user}],
                                provider="glm", max_tokens=400, temperature=0.7)
             out = _clean(r.text)
             if len(out) >= 40:
@@ -147,7 +221,7 @@ def refine(raw_prompt: str, formato: str = "post") -> str:
     try:
         from ..clients.minimax import MiniMaxClient
         with MiniMaxClient(s) as mc:
-            r = mc.complete(_SYSTEM, [{"role": "user", "content": user}],
+            r = mc.complete(system, [{"role": "user", "content": user}],
                             max_tokens=400, temperature=0.7)
         out = _clean(r.text)
         if len(out) >= 40:

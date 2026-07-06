@@ -255,6 +255,13 @@ def playbook_block() -> str:
         autopsy = content_autopsy.block()
     except Exception:
         autopsy = ""
+    # Dirección de arte viva (formatos/estilos de imagen — estudio mensual automático).
+    direction = ""
+    try:
+        from . import creative_direction
+        direction = creative_direction.block()
+    except Exception:
+        pass
     # Baúl de ganchos (plantillas acumuladas) + radar de novedades de HOY (trend-jacking).
     vault = radar = ""
     try:
@@ -273,6 +280,7 @@ def playbook_block() -> str:
         + "\n=== fin playbook ===\n"
         + COMPETITOR_DEEP_DIVE
         + scout
+        + direction
         + autopsy
         + vault
         + radar
