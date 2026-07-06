@@ -151,8 +151,19 @@ MIENTRAS se muestra la demo. Por eso:
 ## Bloques especiales para los assets (los lee el sistema, ponelos EXACTO)
 Para el guión PRINCIPAL (el primero), agregá al final de TODO:
 
+El video principal puede ser de DOS tipos — **ALTERNÁ entre tandas** (a veces marca
+personal, a veces UGC; el UGC de cliente suele rendir MÁS porque es la prueba social):
+
+**(A) Marca personal (Nazareno, presentador):**
 `VEO_FRASE: <la frase EXACTA que dice Nazareno, en español argentino, de ~20-25 palabras (que dure unos 8s hablada a ritmo normal; ni muy corta —repite— ni muy larga —se corta—). Sin siglas: escribí "inteligencia artificial", no "IA".>`
 `VEO_LUGAR: <uno de: oficina | casa | cafe | escritorio>`  ← lugar habitual de grabación, rotalos entre tandas
+
+**(B) UGC — testimonio de un CLIENTE (dueño de PyME filmándose en el celu):** auténtico,
+casero, sin sonar a anuncio; cuenta en primera persona cómo el bot le cambió el negocio.
+`UGC_FRASE: <la frase EXACTA que dice el cliente, testimonio en 1ª persona, español argentino, ~20-25 palabras. Sin siglas.>`
+`UGC_PERSONA: <opcional — describí el cliente/rubro, ej: "una mujer de 40, dueña de un kiosco, en el mostrador". Si no, el sistema rota uno.>`
+
+Poné SOLO UNO de los dos bloques (A o B) por tanda.
 
 Si el guión usa una demo de chatbot, agregá un bloque de chat así (el sistema lo
 renderiza como WhatsApp real). Mensajes del cliente = `them`, del bot = `bot`:
@@ -227,7 +238,9 @@ class TikTokCreatorAgent(BaseAgent):
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         text = response_text or ""
-        text, clip_path = self._add_nazareno_clip(text)      # Veo 3.1 Fast (hook hablado)
+        text, clip_path = self._add_nazareno_clip(text)      # Veo 3.1 Fast (marca personal)
+        if not clip_path:
+            text, clip_path = self._add_ugc_clip(text)       # UGC: testimonio de cliente (Veo)
         text, mock_frames = self._add_chatbot_mockup(text)   # chat WhatsApp ANIMADO (frames)
         text = self._assemble_final(text, clip_path, mock_frames)  # short armado (ffmpeg)
         text = self._add_nazareno_still(text)                # thumbnail (fallback visual)
@@ -404,6 +417,31 @@ class TikTokCreatorAgent(BaseAgent):
             return text.rstrip() + block, str(fpath)
         except Exception as e:
             log.warning("tiktok_veo_clip_failed", error=str(e)[:300])
+            return text, None
+
+    # ── Clip UGC (testimonio de cliente, persona variada, Veo) ──
+    def _add_ugc_clip(self, text: str):
+        """Devuelve (texto, path_local_del_clip | None). Igual que Nazareno pero con
+        estética UGC y persona de cliente variada (ugc_video)."""
+        try:
+            from ..integrations import ugc_video
+            if not text or not ugc_video.enabled():
+                return text, None
+            mf = re.search(r"^[\s>*`\-]*UGC_FRASE\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
+            if not mf:
+                return text, None
+            frase = mf.group(1).strip().strip('"').strip("“”")
+            self._veo_frase = frase   # se reusa como subtítulos en el montaje
+            mp = re.search(r"^[\s>*`\-]*UGC_PERSONA\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
+            persona = mp.group(1).strip() if mp else None
+            clip = ugc_video.generate(frase, persona=persona)
+            if not clip:
+                return text, None
+            block = (f"\n\n---\n\n## 🎥 Clip UGC (testimonio de cliente, Veo)\n\n"
+                     f"Frase: *\"{frase}\"*\n\n`/media/{Path(clip).name}` — testimonio UGC 9:16.\n")
+            return text.rstrip() + block, clip
+        except Exception as e:
+            log.warning("tiktok_ugc_clip_failed", error=str(e)[:300])
             return text, None
 
     # ── Demo de chatbot (WhatsApp ANIMADO: mensajes que van llegando) ──
