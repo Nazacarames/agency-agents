@@ -323,9 +323,12 @@ def _parse_image_line(line: str):
     import re
 
     def _grab(label: str):
-        # captura el valor del campo hasta el próximo campo conocido o el fin de línea
+        # captura el valor del campo hasta el próximo campo conocido o el fin de línea.
+        # `(.*?)` (y no `.+?`): con un campo VACÍO (`TEXTO: | SUBTEXTO: ...`) el `.+?`
+        # no podía matchear vacío y se tragaba la etiqueta siguiente → se quemaba
+        # "SUBTEXTO:" como titular en la imagen publicada.
         m = re.search(
-            rf"\|\s*{label}\s*[:：]\s*(.+?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION|FORMATO|ESTILO)\s*[:：]|$)",
+            rf"\|\s*{label}\s*[:：]\s*(.*?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION|FORMATO|ESTILO)\s*[:：]|$)",
             line, re.IGNORECASE | re.DOTALL)
         return _clean_fragment(m.group(1)) or None if m else None
 

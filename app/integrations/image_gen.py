@@ -282,7 +282,10 @@ def _fit_font(draw, text: str, font_path: Path, max_w: int, max_h: int,
         # caracteres por línea aprox según ancho
         avg = max(draw.textlength("M", font=font), 1)
         per_line = max(6, int(max_w / avg))
-        lines = textwrap.wrap(text, width=per_line) or [text]
+        # break_long_words=False: una palabra larga ("DISTRIBUIDORA") no se corta al
+        # medio — si no entra, el loop achica la fuente hasta que entre entera.
+        lines = textwrap.wrap(text, width=per_line, break_long_words=False,
+                              break_on_hyphens=False) or [text]
         widest = max(draw.textlength(ln, font=font) for ln in lines)
         line_h = size * 1.12
         total_h = line_h * len(lines)
@@ -290,7 +293,8 @@ def _fit_font(draw, text: str, font_path: Path, max_w: int, max_h: int,
             return font, lines, line_h
         size -= 6
     font = ImageFont.truetype(str(font_path), min_size)
-    return font, textwrap.wrap(text, width=max(6, int(max_w / max(draw.textlength('M', font=font), 1)))) or [text], min_size * 1.12
+    return font, textwrap.wrap(text, width=max(6, int(max_w / max(draw.textlength('M', font=font), 1))),
+                               break_long_words=False, break_on_hyphens=False) or [text], min_size * 1.12
 
 
 def _grad_band(img, W: int, band_h: int, top: bool = False,
