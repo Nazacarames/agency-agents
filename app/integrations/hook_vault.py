@@ -10,6 +10,7 @@ Store: data/hook-vault.json  {"items": [...]}. Best-effort: si algo falla, [].
 from __future__ import annotations
 
 import json
+import random
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -139,9 +140,15 @@ def mark_used(item_id: str) -> Optional[Dict]:
 
 
 def block(n: int = 8) -> str:
-    """Bloque para inyectar a los agentes de contenido: los mejores ganchos del baúl."""
+    """Bloque para inyectar a los agentes de contenido: los mejores ganchos del baúl.
+    Top 5 por likes + el resto al azar: sin el sampleo, las plantillas sin likes
+    (la biblioteca curada) nunca rotarían en los prompts."""
     try:
-        items = list_hooks()[:n]
+        items = list_hooks()
+        top, rest = items[:5], items[5:]
+        if rest and n > len(top):
+            top += random.sample(rest, min(n - len(top), len(rest)))
+        items = top
         if not items:
             return ""
         lines = [f"- \"{i['hook']}\" (tipo {i.get('tipo','?')}"
