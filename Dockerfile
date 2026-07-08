@@ -42,7 +42,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ── Claude Code CLI (harness de los agentes, backend MiniMax vía ANTHROPIC_BASE_URL) ──
 # + Vercel CLI (lo usa el web_optimizer para deployar previews del sitio)
-RUN npm install -g @anthropic-ai/claude-code vercel && claude --version && vercel --version
+# + OpenCode CLI (harness alternativo con backend NVIDIA GLM/DeepSeek — gratis;
+#   lee las skills de .claude/skills tal cual, formato Claude-compatible)
+RUN npm install -g @anthropic-ai/claude-code vercel opencode-ai \
+    && claude --version && vercel --version && opencode --version
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
@@ -63,7 +66,11 @@ COPY vendor/ ./vendor/
 RUN cd /app/vendor/web-scraper && npm install || true
 
 # ── Skills de Claude Code (las cargan los agentes vía la tool Skill) ──
+# OpenCode también las lee (busca ~/.claude/skills como directorio compatible).
 COPY .claude/ /root/.claude/
+
+# ── Config global de OpenCode (provider NVIDIA; key vía {env:NVIDIA_API_KEY}) ──
+COPY opencode.json /root/.config/opencode/opencode.json
 
 # ── Hermes home (skills, agents, memory) ─────────────────────────────
 ENV HERMES_HOME=/home/automiq/.hermes

@@ -198,6 +198,9 @@ class Settings(BaseSettings):
     meta_ad_library_token: str = ""
     glm_model: str = "z-ai/glm-5.2"
     deepseek_model: str = "deepseek-ai/deepseek-v4-pro"
+    # OpenCode: harness headless (tools + skills de .claude/skills) sobre los
+    # modelos NVIDIA. Kill-switch: OPENCODE_ENABLED=false → NVIDIA directo.
+    opencode_enabled: bool = True
 
     # ── YouTube (Data API v3 — subir Shorts del canal de Nazareno) ──
     # Reusa la credencial OAuth de Google re-autorizada con scope youtube.upload.

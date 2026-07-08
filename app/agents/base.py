@@ -104,6 +104,20 @@ class BaseAgent(ABC):
         """Construye el mensaje user que dispara al agente."""
         ...
 
+    def _skills_preamble(self) -> str:
+        """Instrucción de skills + modo headless para los runs con harness
+        (OpenCode). Igual espíritu que el cc_prompt del camino Claude Code."""
+        parts = []
+        if self.claude_code_skill:
+            skills = [s.strip() for s in self.claude_code_skill.split(",") if s.strip()]
+            skills_txt = " y ".join(f"`{s}`" for s in skills)
+            parts.append(f"IMPORTANTE: cargá y seguí la(s) skill(s) {skills_txt} "
+                         "(usá la tool de skills) para resolver esta tarea.")
+        parts.append("Corrés HEADLESS (sin usuario): nunca preguntes ni esperes input — "
+                     "decidí con el contexto y seguí. Al terminar, IMPRIMÍ el entregable "
+                     "COMPLETO como tu respuesta final (no lo dejes solo en archivos).")
+        return "\n".join(parts) + "\n\n"
+
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         """Persistencia genérica best-effort: deja el output en
         data/<name>-report-YYYY-MM-DD.md para que /last lo sirva. Las subclases
@@ -218,10 +232,34 @@ class BaseAgent(ABC):
 
             response: Optional[MiniMaxResponse] = None
 
-            # 0) Backend LLM alternativo (NVIDIA: GLM/DeepSeek) — completion directa.
-            #    Tiene prioridad sobre Claude Code para los agentes que lo declaran;
-            #    si falla, response queda None y cae al flujo normal (CC/MiniMax).
-            if self.llm_provider and getattr(ctx.settings, "nvidia_api_key", ""):
+            # 0a) OpenCode (harness con tools+skills, backend NVIDIA GLM/DeepSeek).
+            #     Antes los agentes con llm_provider corrían por completion PELADA:
+            #     las skills y los WebFetch del prompt eran letra muerta. OpenCode
+            #     lee .claude/skills tal cual y les da bash/webfetch/skill reales.
+            if self.llm_provider and getattr(ctx.settings, "opencode_enabled", True) \
+                    and getattr(ctx.settings, "nvidia_api_key", ""):
+                try:
+                    from ..clients.opencode import run_opencode
+                    oc_prompt = self._skills_preamble() + user_msg
+                    oc_text = run_opencode(
+                        oc_prompt, settings=ctx.settings, provider=self.llm_provider,
+                        system_append=local_system, timeout=self.claude_code_timeout)
+                    response = MiniMaxResponse(
+                        text=oc_text, model=f"opencode:{self.llm_provider}",
+                        input_tokens=0, output_tokens=0,
+                        stop_reason="end_turn", raw={}, elapsed_ms=0,
+                    )
+                    log.info("agent_via_opencode", agent=self.name, run_id=ctx.run_id,
+                             provider=self.llm_provider)
+                except Exception as e:
+                    log.warning("opencode_unavailable_fallback", agent=self.name,
+                                run_id=ctx.run_id, error=str(e)[:200])
+                    response = None
+
+            # 0b) Backend LLM alternativo (NVIDIA: GLM/DeepSeek) — completion directa.
+            #     Fallback del harness; si también falla, cae al flujo normal (CC/MiniMax).
+            if self.llm_provider and response is None \
+                    and getattr(ctx.settings, "nvidia_api_key", ""):
                 try:
                     from ..clients.nvidia import complete_with_provider
                     response = complete_with_provider(

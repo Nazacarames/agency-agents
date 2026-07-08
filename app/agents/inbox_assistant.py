@@ -128,6 +128,8 @@ class InboxAssistantAgent(BaseAgent):
     max_tokens = 6000
     temperature = 0.6
     use_claude_code = False   # composición de texto pura → no consume como un run CC
+    llm_provider = "glm"      # OpenCode+GLM: harness con skills (gratis); fallback MiniMax
+    claude_code_skill = "humanizer"
 
     @property
     def system_prompt(self) -> str:

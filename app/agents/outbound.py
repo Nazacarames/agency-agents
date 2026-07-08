@@ -175,6 +175,8 @@ class OutboundAgent(BaseAgent):
     max_tokens = 8000
     temperature = 0.6
     use_claude_code = False   # composición de texto + envío determinístico (liviano)
+    llm_provider = "glm"      # OpenCode+GLM: harness con skills (gratis); fallback MiniMax
+    claude_code_skill = "cold-email,humanizer"
 
     @property
     def system_prompt(self) -> str:
