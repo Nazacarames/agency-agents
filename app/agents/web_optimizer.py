@@ -84,7 +84,7 @@ class WebOptimizerAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     deliver_to_discord = True
     use_claude_code = True
-    claude_code_skill = "marketing-landing,cro,ui-ux-pro-max,stop-slop"
+    claude_code_skill = "marketing-landing,cro,ui-ux-pro-max,humanizer"
     claude_code_timeout = 1800
     # Solo tools de edición: que NO pueda deployar/romper por su cuenta (de eso me ocupo en Python).
     claude_code_tools = ["Read", "Write", "Edit", "Glob", "Grep", "Skill", "WebFetch"]

@@ -194,7 +194,7 @@ class TikTokCreatorAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 12000
     use_claude_code = True
-    claude_code_skill = "marketing-redes,reels-scripting,hook-generator,stop-slop"
+    claude_code_skill = "marketing-redes,reels-scripting,hook-generator,humanizer"
     claude_code_timeout = 700
     llm_provider = "glm"   # GLM 5.2: guiones más vivos; fallback CC/MiniMax
 

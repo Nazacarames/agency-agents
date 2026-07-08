@@ -76,7 +76,7 @@ class ContentCreatorAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 12000  # 2026-06-12: subido de 5000 (truncamiento observado en producción)
     use_claude_code = True
-    claude_code_skill = "marketing-redes,hook-generator,post-formatter,content-matrix,image,copywriting,stop-slop"
+    claude_code_skill = "marketing-redes,hook-generator,post-formatter,content-matrix,image,copywriting,humanizer"
     claude_code_timeout = 700
     llm_provider = "glm"   # GLM 5.2: copy más vivo (bake-off 2026-07-04); fallback CC/MiniMax
 
