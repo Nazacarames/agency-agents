@@ -116,7 +116,11 @@ aparece como **PRUEBA**, jamás como pitch. La venta es consecuencia de la autor
   agentes de IA reales corriendo 24/7).
 - **Métrica norte: retención.** Gancho de 3s o el video muere.
 
-## Formatos (elegí 3 DISTINTOS por tanda)
+## Formatos (repertorio, NO checklist — elegí 3 DISTINTOS por tanda)
+Sos un creador, no una plantilla: si tenés una idea mejor que estos formatos (un
+experimento, una historia real de la agencia, humor del rubro, responder algo que
+comentaron), HACELA y decí en una línea por qué. Las reglas duras (no-anuncio, no
+prometer, gancho 3s) no se negocian; el resto es tu criterio.
 1. **Error/Mito** ("Si seguís contestando los WhatsApp a mano, estás perdiendo plata").
 2. **Micro-caso** ("Le puse un agente de IA a una inmobiliaria por 7 días. Esto pasó").
 3. **Construir en público** ("Así trabajan los 12 agentes que corren mi agencia").
@@ -254,6 +258,22 @@ class TikTokCreatorAgent(BaseAgent):
         p = Path(__file__).resolve().parent.parent.parent / "data" / "images" / fname
         return str(p) if p.exists() else None
 
+    @staticmethod
+    def _video_has_audio(path) -> bool:
+        """True si el mp4 tiene pista de audio (ffprobe). Si no se puede chequear,
+        asume que sí (no bloquear publicación por un fallo del probe)."""
+        if not path:
+            return True
+        try:
+            import subprocess
+            r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a",
+                                "-show_entries", "stream=index", "-of", "csv=p=0", str(path)],
+                               capture_output=True, timeout=30)
+            return bool(r.stdout.decode().strip())
+        except Exception as e:
+            log.warning("audio_probe_failed", error=str(e)[:100])
+            return True
+
     # ── Armado final del video (Veo + demo animada → 1 mp4) ──
     def _assemble_final(self, text: str, clip_path, mock_frames) -> str:
         try:
@@ -284,6 +304,13 @@ class TikTokCreatorAgent(BaseAgent):
                      f"`{url}` — short 9:16: Nazareno + chat animado (mensajes llegando), "
                      f"ensamblado automático.\n")
             text = text.rstrip() + block
+            # GUARD anti-mudo: si el short quedó SIN pista de audio (p.ej. el clip
+            # Veo vino sin voz), NO se publica a ningún lado — reel mudo = quema marca.
+            if not self._video_has_audio(self._media_to_path(url)):
+                log.warning("tiktok_video_muted_skip_publish", url=url)
+                return text.rstrip() + ("\n\n> ⚠️ **El video quedó SIN AUDIO** (el clip "
+                                        "del presentador vino sin voz). NO se publicó a "
+                                        "IG/TikTok/YouTube — revisar Veo/Omni.\n")
             text = self._maybe_upload_youtube(text, self._media_to_path(url))
             text = self._enqueue_ig_reel(text, url)
             text = self._maybe_post_tiktok(text, self._media_to_path(url), url)

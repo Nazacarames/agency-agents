@@ -140,7 +140,11 @@ def create_task(prompt: str, image_url: Optional[str] = None,
         img = image_b64 or (fetch_image_b64(image_url) if image_url else None)
         if img:
             instance["image"] = img
-    params: Dict[str, Any] = {"aspectRatio": aspect_ratio, "sampleCount": 1}
+    # generateAudio=True SIEMPRE: sin este parámetro Veo 3 devuelve el clip SIN pista
+    # de audio → la voz de Nazareno no existe y el short se publicaba MUDO (visto en
+    # el reel del 2026-07-06, cuando Omni falló y cayó acá).
+    params: Dict[str, Any] = {"aspectRatio": aspect_ratio, "sampleCount": 1,
+                              "generateAudio": True}
     if resolution:
         params["resolution"] = resolution
     if negative_prompt:
@@ -158,6 +162,12 @@ def create_task(prompt: str, image_url: Optional[str] = None,
         log.warning("veo_resolution_retry", resolution=resolution,
                     error=str(res["data"].get("error") or res["text"])[:200])
         params.pop("resolution", None)
+        res = _post({"instances": [instance], "parameters": params})
+    if (res["status"] >= 400 or "error" in res["data"]) and \
+            "generateaudio" in str(res["data"].get("error") or res["text"]).lower():
+        # modelo viejo sin soporte de audio → sin el parámetro (mejor un clip mudo
+        # detectado por el guard del caller que ningún clip)
+        params.pop("generateAudio", None)
         res = _post({"instances": [instance], "parameters": params})
     data = res["data"]
     if res["status"] >= 400 or "error" in data:

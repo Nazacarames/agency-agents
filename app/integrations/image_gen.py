@@ -39,6 +39,16 @@ _BODY_FONT = _FONTS / "DMSans.ttf"
 _NAVY = (15, 27, 51)
 _BLUE = (37, 99, 235)
 _WHITE = (255, 255, 255)
+_PAPER = (250, 248, 243)      # blanco cálido (estilo editorial)
+_INK = (17, 17, 20)           # negro tinta
+_HIGHLIGHT = (232, 245, 66)   # amarillo resaltador (estilo editorial)
+
+# Lienzo final EXACTO por aspect ratio pedido. Los providers no siempre respetan
+# el aspect (nano banana en v1 ignoraba imageConfig → historias 1024x1024 publicadas
+# cuadradas): acá se normaliza SIEMPRE con cover-crop al tamaño final real.
+# Feed = 4:5 (1080x1350, máximo espacio en pantalla) · historia = 9:16 (1080x1920).
+_CANVAS = {"1:1": (1080, 1080), "4:5": (1080, 1350), "3:4": (1080, 1350),
+           "9:16": (1080, 1920), "16:9": (1920, 1080)}
 
 # Rotación de PLANO (aprendido mirando Tiendanube/Shopify/MercadoLibre 2026-07-05:
 # rotan el encuadre; nosotros repetíamos "persona centrada" → feed monótono). Se
@@ -83,7 +93,9 @@ def _nano_banana(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
     token = veo_video._token()
     project = veo_video._project()
     model = getattr(s, "nano_image_model", "gemini-3-pro-image")
-    url = (f"https://aiplatform.googleapis.com/v1/projects/{project}"
+    # v1beta1: en v1 el imageConfig.aspectRatio se ignoraba en silencio → todas las
+    # imágenes salían 1024x1024 (historias cuadradas). v1beta1 sí lo soporta.
+    url = (f"https://aiplatform.googleapis.com/v1beta1/projects/{project}"
            f"/locations/global/publishers/google/models/{model}:generateContent")
     body = {
         "contents": [{"role": "user", "parts": [{"text": prompt[:2000]}]}],
@@ -222,7 +234,7 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
     used = ""
     for name, fn in _chain:
         try:
-            raws = fn(full_prompt, aspect_ratio or "1:1", n)
+            raws = fn(full_prompt, _provider_ar(aspect_ratio or "1:1", name), n)
         except Exception as e:
             log.warning("image_provider_failed", provider=name, error=str(e)[:200])
             raws = []
@@ -234,6 +246,9 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
 
     out: List[str] = []
     for raw in raws:
+        # SIEMPRE al lienzo final exacto (cover-crop): dimensiones correctas
+        # aunque el provider haya ignorado el aspect ratio pedido.
+        raw = _fit_canvas(raw, aspect_ratio or "1:1") or raw
         if text:
             raw = _overlay_text(raw, text, subtitle, hero=hero_text) or raw
         else:
@@ -247,6 +262,34 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
         _notify_discord(local_url, text, subtitle)
     log.info("image_gen_ok", generated=len(out), with_text=bool(text), provider=used)
     return out
+
+
+def _provider_ar(ar: str, provider: str) -> str:
+    """Aspect ratio soportado por cada provider (Imagen 4 y MiniMax no tienen 4:5;
+    el cover-crop al canvas final corrige la diferencia 3:4 → 4:5)."""
+    if ar == "4:5" and provider in ("vertex", "minimax"):
+        return "3:4"
+    return ar
+
+
+def _fit_canvas(img_bytes: bytes, aspect_ratio: str) -> Optional[bytes]:
+    """Cover-crop + resize al lienzo final exacto del formato (ej. 1080x1350).
+    Centrado apenas hacia arriba (los sujetos suelen estar en el tercio superior)."""
+    canvas = _CANVAS.get(aspect_ratio)
+    if not canvas:
+        return None
+    try:
+        from PIL import Image, ImageOps
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        if img.size == canvas:
+            return None
+        fitted = ImageOps.fit(img, canvas, method=Image.LANCZOS, centering=(0.5, 0.42))
+        out = io.BytesIO()
+        fitted.save(out, format="JPEG", quality=92)
+        return out.getvalue()
+    except Exception as e:
+        log.warning("fit_canvas_failed", error=str(e)[:150])
+        return None
 
 
 def _notify_discord(local_url: str, text: Optional[str], subtitle: Optional[str]) -> None:
@@ -420,6 +463,115 @@ def _overlay_text(img_bytes: bytes, text: str, subtitle: Optional[str] = None,
     except Exception as e:
         log.warning("overlay_text_failed", error=str(e)[:200])
         return None
+
+
+def _tokenize_highlight(text: str):
+    """Divide el titular en (palabra, resaltada). El agente marca la parte clave
+    entre *asteriscos*; si no marcó nada, se resaltan las últimas 1-2 palabras
+    (el remate suele ir al final)."""
+    import re as _re2
+    toks = []
+    # `\*[^*]+$`: el parser de la línea IMAGEN (`_clean_fragment`) recorta el `*`
+    # de cierre si el resaltado va al final del titular → tolerar marcador abierto.
+    for part in _re2.split(r"(\*[^*]+\*|\*[^*]+$)", text or ""):
+        if not part:
+            continue
+        hl = part.startswith("*") and len(part.strip("*")) > 0
+        for w in part.strip("*").split():
+            toks.append((w, hl))
+    if toks and not any(h for _, h in toks):
+        k = 2 if len(toks) >= 5 else 1
+        toks = [(w, i >= len(toks) - k) for i, (w, _) in enumerate(toks)]
+    return toks
+
+
+def render_editorial(text: str, subtitle: Optional[str] = None,
+                     aspect_ratio: str = "4:5") -> List[str]:
+    """Placa EDITORIAL 100% Pillow (sin IA): fondo blanco cálido, titular negro
+    gigante en sentence case, la frase clave con resaltador amarillo, bajada gris
+    y marca abajo. Basado en los ejemplos de referencia del usuario (2026-07-08):
+    tipografía nativa = nítida, legible y distinta a todo el feed de fotos.
+    Devuelve [/media/<file>.jpg] o []."""
+    head = (text or "").strip()
+    if not head:
+        return []
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        W, H = _CANVAS.get(aspect_ratio, _CANVAS["4:5"])
+        img = Image.new("RGB", (W, H), _PAPER)
+        draw = ImageDraw.Draw(img)
+        pad = int(W * 0.10)
+        max_w = W - 2 * pad
+
+        toks = _tokenize_highlight(head)
+        # tamaño más grande cuyo wrap entra en ancho y ~52% de alto
+        size, lines, line_h = 150, [], 0
+        while size >= 54:
+            font = ImageFont.truetype(str(_HEADLINE_FONT), size)
+            space_w = draw.textlength(" ", font=font)
+            lines, cur, cur_w = [], [], 0.0
+            for w, hl in toks:
+                wl = draw.textlength(w, font=font)
+                if cur and cur_w + space_w + wl > max_w:
+                    lines.append(cur)
+                    cur, cur_w = [(w, hl, wl)], wl
+                else:
+                    cur_w += (space_w if cur else 0) + wl
+                    cur.append((w, hl, wl))
+            if cur:
+                lines.append(cur)
+            line_h = int(size * 1.16)
+            if line_h * len(lines) <= H * 0.52 and all(
+                    sum(x[2] for x in ln) + space_w * (len(ln) - 1) <= max_w for ln in lines):
+                break
+            size -= 8
+        space_w = draw.textlength(" ", font=font)
+
+        sf, sub_lines, slh = None, [], 0
+        sub = (subtitle or "").strip()
+        if sub:
+            sf, sub_lines, slh = _fit_font(draw, sub, _BODY_FONT, max_w,
+                                           int(H * 0.12), start=46, min_size=28)
+            sub_lines = sub_lines[:3]
+
+        block_h = line_h * len(lines) + (int(H * 0.035) + int(slh * len(sub_lines)) if sub_lines else 0)
+        y = max(int(H * 0.14), int((H - block_h) * 0.42))
+        for ln in lines:
+            x = pad
+            for w, hl, wl in ln:
+                if hl:
+                    draw.rectangle([x - int(size * 0.06), y + int(size * 0.10),
+                                    x + wl + int(size * 0.10), y + int(size * 1.06)],
+                                   fill=_HIGHLIGHT)
+                draw.text((x, y), w, font=font, fill=_INK)
+                x += wl + space_w
+            y += line_h
+        if sub_lines:
+            y += int(H * 0.035)
+            for ln in sub_lines:
+                draw.text((pad, y), ln, font=sf, fill=(88, 90, 98))
+                y += slh
+
+        # marca abajo a la izquierda: AUTOMIQ navy + barrita azul
+        bf = ImageFont.truetype(str(_HEADLINE_FONT), max(int(W * 0.035), 30))
+        by = H - pad - bf.size
+        draw.text((pad, by), "AUTOMIQ", font=bf, fill=_NAVY)
+        bw = draw.textlength("AUTOMIQ", font=bf)
+        draw.rectangle([pad + bw + int(W * 0.015), by + int(bf.size * 0.28),
+                        pad + bw + int(W * 0.015) + int(W * 0.035),
+                        by + int(bf.size * 0.52)], fill=_BLUE)
+
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=94)
+        fname = f"{uuid.uuid4().hex}.jpg"
+        (_images_dir() / fname).write_bytes(out.getvalue())
+        local_url = f"/media/{fname}"
+        _notify_discord(local_url, head.replace("*", ""), sub)
+        log.info("image_gen_ok", generated=1, with_text=True, provider="editorial")
+        return [local_url]
+    except Exception as e:
+        log.warning("render_editorial_failed", error=str(e)[:200])
+        return []
 
 
 def _to_jpeg(img_bytes: bytes) -> Optional[bytes]:

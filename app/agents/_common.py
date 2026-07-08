@@ -243,15 +243,19 @@ def image_prompt_directive() -> str:
         "\n\nIMÁGENES (obligatorio): la cantidad la decidís VOS según tu planificación "
         "(1 por idea / 1 por post clave). No te limites a un número fijo. "
         "Por cada pieza agregá una línea que empiece EXACTO con `IMAGEN:` así:\n"
-        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | ESTILO: <foto|banner|tipografico|ilustracion|3d|minimal> | CAPTION: <caption COMPLETO del post>`\n"
-        "ESTILO (obligatorio VARIAR — nunca dos piezas seguidas del mismo): `foto` = editorial "
-        "del rubro (la base); `banner` = pieza de ad con producto/objeto héroe + aire para "
-        "titular; `tipografico` = fondo color block/gradiente audaz donde el TITULAR es la "
-        "imagen (TEXTO obligatorio y filoso); `ilustracion` = editorial con textura/carácter "
-        "para conceptos; `3d` = objeto clay/soft-3D del rubro sobre fondo limpio; `minimal` = "
-        "UN objeto + muchísimo aire + color inesperado (pattern-interrupt). Elegí el estilo "
-        "según la idea (dato duro → tipografico; concepto → ilustracion; feature → banner/3d; "
-        "historia humana → foto).\n"
+        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | ESTILO: <foto|editorial|banner|tipografico|ilustracion|3d|minimal> | CAPTION: <caption COMPLETO del post>`\n"
+        "ESTILO (obligatorio VARIAR — nunca dos piezas seguidas del mismo): `foto` = foto "
+        "documental real; `editorial` = placa BLANCA tipográfica premium (titular negro "
+        "gigante con la frase clave resaltada en amarillo — marcá esa parte entre "
+        "*asteriscos* en el TEXTO, ej. `TEXTO: La gente no lee, *escanea*`; acá el prompt "
+        "de IMAGEN se ignora, la tipografía ES la pieza; TEXTO obligatorio y FILOSO); "
+        "`banner` = pieza de ad con producto/objeto héroe + aire para titular; `tipografico` "
+        "= fondo color block/gradiente audaz con el titular gigante encima (TEXTO "
+        "obligatorio); `ilustracion` = ilustración con carácter (doodle a mano / editorial "
+        "con textura) para conceptos; `3d` = objeto clay/soft-3D sobre fondo limpio; "
+        "`minimal` = UN objeto + muchísimo aire + color inesperado (pattern-interrupt). "
+        "Elegí el estilo según la idea (verdad incómoda o dato → editorial/tipografico; "
+        "concepto → ilustracion; feature → banner/3d; historia humana → foto).\n"
         "TEXTO no siempre: ~1 de cada 3 piezas va SIN titular (dejá TEXTO vacío) cuando la "
         "imagen habla sola (foto documental fuerte, ilustración conceptual) — el copy vive en "
         "el CAPTION. En `tipografico` el TEXTO es la pieza: nunca lo omitas ahí.\n"
@@ -269,13 +273,18 @@ def image_prompt_directive() -> str:
         "COMO MUCHO 1 CARRUSEL educativo (3-5 placas que desarrollan UNA idea paso a paso) con:\n"
         "`CARRUSEL: <prompt placa 1> || <prompt placa 2> || <prompt placa 3> | CAPTION: <caption del carrusel>`\n"
         "(cada placa con su propia escena, mismo estilo visual entre placas para que se lea como serie).\n"
-        "ARTE (clave para que NO salgan genéricas): el <prompt> tiene que ser ESPECÍFICO y basado "
-        "en tu estudio de competencia. Describí un SUJETO y una ESCENA concreta del vertical/país real "
-        "(no abstracciones tipo 'businessman with laptop'), con estilo, composición, luz y mood "
-        "definidos. VARIÁ el estilo entre piezas (foto editorial, 3D render, ilustración con textura, "
-        "collage, isométrico…) — NO repitas el mismo 'flat vector, navy and royal blue, clean modern' "
-        "en todas. La paleta navy + royal blue de Automiq es el ancla de marca (usala como acento), "
-        "pero la dirección de arte tiene que diferenciarse de los clichés que viste.\n"
+        "ARTE (clave para que NO salgan genéricas ni monótonas): el <prompt> tiene que ser "
+        "ESPECÍFICO — un SUJETO y una ESCENA concreta, con estilo, composición, luz y mood "
+        "definidos (no abstracciones tipo 'businessman with laptop'). ⚠️ ANTI-MONOTONÍA: el "
+        "feed NO puede ser siempre 'una persona con tablet en un depósito'. Variá de verdad "
+        "entre piezas: el LUGAR (depósito, calle de barrio, mostrador, camioneta, casa del "
+        "dueño a la noche, bar), la HORA/LUZ (mañana dura, siesta, neón nocturno, contraluz), "
+        "el SUJETO (dueña, repartidor en moto, las manos, el producto solo, el local vacío), "
+        "el ÁNGULO y hasta el HUMOR (una escena exagerada/cómica del caos sin automatizar "
+        "vale oro). Metáforas visuales con objetos reales también (un teléfono enterrado en "
+        "papelitos de pedidos, una fila de cajas como dominó). La paleta navy + royal blue "
+        "de Automiq es el ancla de marca (como acento), pero la dirección de arte tiene que "
+        "diferenciarse de los clichés que viste.\n"
         "⛔ REGLA CRÍTICA — NADA DE TEXTO NI UI DENTRO DE LA IMAGEN: el generador NO sabe escribir "
         "(dibuja letras y números deformes/ilegibles). Por eso el <prompt> tiene que describir una "
         "ESCENA que funcione con CERO texto. PROHIBIDO pedir: capturas de pantalla / mockups de "
@@ -307,7 +316,7 @@ def _clean_fragment(s: str):
 _ESTILOS = {"foto": "foto", "photo": "foto", "banner": "banner",
             "tipografico": "tipografico", "tipográfico": "tipografico",
             "ilustracion": "ilustracion", "ilustración": "ilustracion",
-            "3d": "3d", "minimal": "minimal"}
+            "3d": "3d", "minimal": "minimal", "editorial": "editorial"}
 
 # Estilo → kind de image_gen (sufijos de generación). Foto usa el pipeline fotográfico.
 _ESTILO_KIND = {"banner": "banner", "tipografico": "banner", "minimal": "banner",
@@ -411,7 +420,7 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         # Rotación de ESTILO anti-monotonía: si el agente no marcó ESTILO, se asigna
         # de un mazo mezclado (foto pesa doble: sigue siendo la base de autenticidad).
         import random
-        deck = ["foto", "foto", "banner", "ilustracion", "tipografico", "minimal", "3d"]
+        deck = ["foto", "editorial", "banner", "ilustracion", "tipografico", "minimal", "3d"]
         random.shuffle(deck)
         blocks = []
         for i, (prompt, texto, sub, caption, formato, estilo) in enumerate(parsed, 1):
@@ -419,16 +428,23 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             # historias = el ritmo del drain diario: 1 pieza de feed + 2 historias).
             kind = formato or ("post" if i % 3 == 1 else "story")
             estilo = estilo or deck[(i - 1) % len(deck)]
-            # TIPOGRÁFICO sin titular no es nada → cae a banner.
-            if estilo == "tipografico" and not texto:
+            # TIPOGRÁFICO/EDITORIAL sin titular no son nada → caen a banner.
+            if estilo in ("tipografico", "editorial") and not texto:
                 estilo = "banner"
-            prompt = image_prompt.refine(prompt, formato or "post", estilo=estilo)
-            # Historia = pantalla completa vertical (9:16); si va 1:1 IG la muestra
-            # flotando con bandas negras. El feed sigue cuadrado.
-            aspect = "9:16" if kind == "story" else "1:1"
-            urls = image_gen.generate_image(prompt, aspect_ratio=aspect, n=1, text=texto,
-                                            subtitle=sub, kind=_ESTILO_KIND.get(estilo, "photo"),
-                                            hero_text=(estilo == "tipografico"))
+            # Historia = pantalla completa vertical (9:16); feed = 4:5 (1080x1350,
+            # el formato que más pantalla ocupa; image_gen normaliza al px exacto).
+            aspect = "9:16" if kind == "story" else "4:5"
+            if estilo == "editorial":
+                # placa tipográfica 100% Pillow (sin IA): el titular ES la pieza,
+                # con la frase clave marcada entre *asteriscos* resaltada.
+                urls = image_gen.render_editorial(texto, sub, aspect_ratio=aspect)
+            else:
+                prompt = image_prompt.refine(prompt, formato or "post", estilo=estilo)
+                urls = image_gen.generate_image(
+                    prompt, aspect_ratio=aspect, n=1,
+                    text=(texto or "").replace("*", "") or None,
+                    subtitle=sub, kind=_ESTILO_KIND.get(estilo, "photo"),
+                    hero_text=(estilo == "tipografico"))
             if not urls:
                 continue
             cap = texto or prompt[:90]
@@ -450,7 +466,7 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             car_urls = []
             for p in prompts:
                 u = image_gen.generate_image(
-                    image_prompt.refine(p, "post", estilo=car_estilo), aspect_ratio="1:1",
+                    image_prompt.refine(p, "post", estilo=car_estilo), aspect_ratio="4:5",
                     n=1, kind=_ESTILO_KIND.get(car_estilo, "photo"))
                 if u:
                     car_urls.append(u[0])
