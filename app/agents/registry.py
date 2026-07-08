@@ -39,3 +39,4 @@ from . import web_auditor      # noqa: F401, E402
 from . import web_optimizer    # noqa: F401, E402
 from . import inbox_assistant  # noqa: F401, E402
 from . import meeting_prep     # noqa: F401, E402
+from . import chief_of_staff   # noqa: F401, E402

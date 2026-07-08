@@ -47,6 +47,7 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
     "media_auditor": "0 17 * * *",        # 17:00 — auditoría de ads
     "growth_hacker": "0 18 * * *",        # 18:00 — growth / funnel
     "web_optimizer": "0 20 * * wed",      # mié 20:00 — mejora la landing + preview Vercel (semanal)
+    "chief_of_staff": "30 8 * * mon-fri", # 08:30 hábiles — brief ejecutivo: síntesis de todos los reportes + acciones del día (liviano: deepseek directo, sin CC)
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 

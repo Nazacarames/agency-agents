@@ -661,6 +661,7 @@ _AGENT_DESCRIPTIONS = {
     "inbox_assistant": "Lee la bandeja + redacta borradores",
     "meeting_prep": "Prepara reuniones con la memoria del cliente (brief, agente de test, demo, objeciones)",
     "web_optimizer": "Mejora la landing (CRO/SEO/diseño) y deploya un preview en Vercel; aprobás y publica",
+    "chief_of_staff": "Brief ejecutivo diario: sintetiza los reportes de todos + tus 3 acciones del día",
 }
 
 
