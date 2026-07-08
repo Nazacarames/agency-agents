@@ -204,6 +204,14 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
                         "with royal blue (#2563EB) accents. Absolutely NO text, letters, words, "
                         "numbers, captions, watermark or logos (they are composited later). "
                         "Leave clear negative space for the headline.")
+    elif kind == "comic":
+        # Cómic con globos de diálogo: acá el texto SÍ va dentro de la imagen (nano
+        # banana renderiza texto bien — verificado 2026-07-08). Sólo nano: los otros
+        # providers deforman las letras (el chain se recorta más abajo).
+        full_prompt += (". The speech bubble text must be rendered EXACTLY as written, "
+                        "correctly spelled in Spanish with accents, clean rounded comic "
+                        "lettering. No other text, no watermarks, no logos outside the "
+                        "speech bubbles.")
     elif kind == "art":
         # Ilustración/3D/tipográfico: el estilo viene completo del refinador; sólo
         # reforzamos el no-text y el aire para el titular.
@@ -230,6 +238,10 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
         "vertex": [("vertex", _vertex_imagen), ("minimax", _minimax_image)],
         "minimax": [("minimax", _minimax_image)],
     }.get(provider, [("nano", _nano_banana), ("vertex", _vertex_imagen), ("minimax", _minimax_image)])
+    if kind == "comic":
+        # sólo nano sabe escribir dentro de los globos; mejor sin pieza que con
+        # texto deforme publicado.
+        _chain = [(n, f) for n, f in _chain if n == "nano"] or _chain[:1]
     raws: List[bytes] = []
     used = ""
     for name, fn in _chain:
@@ -571,6 +583,109 @@ def render_editorial(text: str, subtitle: Optional[str] = None,
         return [local_url]
     except Exception as e:
         log.warning("render_editorial_failed", error=str(e)[:200])
+        return []
+
+
+def render_demo(business: str, messages: list, text: str,
+                subtitle: Optional[str] = None, aspect_ratio: str = "4:5") -> List[str]:
+    """Pieza DEMO/PRUEBA (aprendida de los ads ganadores del rubro 2026-07-08: todos
+    muestran el producto FUNCIONANDO): gradiente navy de marca + card con un chat de
+    WhatsApp REAL (chat_mockup, texto pixel-perfect) + titular arriba. 100% Pillow.
+    Devuelve [/media/<file>.jpg] o []."""
+    head = (text or "").replace("*", "").strip()
+    if not business or len(messages or []) < 2:
+        return []
+    try:
+        from PIL import Image, ImageDraw, ImageFilter, ImageFont
+        from . import chat_mockup
+        W, H = _CANVAS.get(aspect_ratio, _CANVAS["4:5"])
+        # fondo: gradiente vertical navy → azul profundo
+        img = Image.new("RGB", (W, H), _NAVY)
+        draw = ImageDraw.Draw(img)
+        for y in range(H):
+            t = y / H
+            r = int(_NAVY[0] + (30 - _NAVY[0]) * t)
+            g = int(_NAVY[1] + (58 - _NAVY[1]) * t)
+            b = int(_NAVY[2] + (130 - _NAVY[2]) * t)
+            draw.line([(0, y), (W, y)], fill=(r, g, b))
+
+        chat = chat_mockup._render_chat(business, messages[:6])
+        # recortar header + mensajes: última fila con burbuja (blanco/verde EXACTOS,
+        # es un PIL recién dibujado). OJO: excluir la input bar blanca del fondo
+        # (últimos ~130px) — si entra al scan, la card sale gigante y vacía.
+        cpx = chat.load()
+        crop_h = 620
+        for yy in range(chat.height - 140, 160, -8):
+            hit = any(cpx[xx, yy][:3] in ((255, 255, 255), (220, 248, 198))
+                      for xx in range(20, chat.width - 20, 16))
+            if hit:
+                crop_h = min(chat.height, yy + 40)
+                break
+        chat = chat.crop((0, 0, chat.width, max(600, crop_h)))
+
+        # ── titular arriba primero (para saber cuánto espacio queda a la card) ──
+        kf = ImageFont.truetype(str(_BODY_FONT), max(int(W * 0.026), 22))
+        pad = int(W * 0.08)
+        y0 = int(H * 0.055)
+        _draw_tracked(draw, "AUTOMIQ · DEMO REAL", kf, pad, y0, (150, 190, 255, 255),
+                      track=max(int(W * 0.005), 3))
+        yy = y0 + kf.size + int(H * 0.022)
+        if head:
+            hf, hlines, hlh = _fit_font(draw, head.upper(), _HEADLINE_FONT,
+                                        W - 2 * pad, int(H * 0.24),
+                                        start=110, min_size=44)
+            yy = _draw_lines(draw, hlines, hf, hlh, yy, W, pad, align="left")
+            if subtitle:
+                sf2, slines, slh = _fit_font(draw, subtitle.strip(), _BODY_FONT,
+                                             W - 2 * pad, int(H * 0.08), start=40, min_size=26)
+                yy += 6
+                for ln in slines[:2]:
+                    draw.text((pad, yy), ln, font=sf2, fill=(205, 222, 255))
+                    yy += slh
+
+        # ── card del chat en el espacio restante ──
+        cw = int(W * 0.80)
+        ch = int(chat.height * cw / chat.width)
+        max_ch = H - int(yy) - int(H * 0.06) - int(H * 0.05)   # entre texto y borde
+        if ch > max_ch:
+            # cortar en un GAP entre burbujas (fila de fondo limpio), no al medio
+            # de un mensaje: desde el máximo permitido, subir hasta una fila vacía.
+            limit = int(max_ch * chat.width / cw)
+            cut = limit
+            for yy2 in range(min(limit, chat.height) - 1, 200, -4):
+                if all(cpx[xx, yy2][:3] == chat_mockup._BG
+                       for xx in range(20, chat.width - 20, 24)):
+                    cut = yy2
+                    break
+            chat = chat.crop((0, 0, chat.width, max(600, cut)))
+            ch = int(chat.height * cw / chat.width)
+        chat = chat.resize((cw, ch), Image.LANCZOS)
+        radius = int(W * 0.03)
+        mask = Image.new("L", (cw, ch), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, cw, ch], radius=radius, fill=255)
+        cx = (W - cw) // 2
+        # centrada en el espacio libre bajo el texto
+        cy = int(yy) + int(H * 0.04) + max(0, (H - int(yy) - int(H * 0.09) - ch) // 2)
+        shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(shadow).rounded_rectangle(
+            [cx - 6, cy + 14, cx + cw + 6, cy + ch + 26], radius=radius, fill=(0, 0, 0, 130))
+        img = Image.alpha_composite(img.convert("RGBA"),
+                                    shadow.filter(ImageFilter.GaussianBlur(18)))
+        draw = ImageDraw.Draw(img)
+        draw.rounded_rectangle([cx - 5, cy - 5, cx + cw + 5, cy + ch + 5],
+                               radius=radius + 5, fill=(255, 255, 255, 255))
+        img.paste(chat, (cx, cy), mask)
+
+        out = io.BytesIO()
+        img.convert("RGB").save(out, format="JPEG", quality=92)
+        fname = f"{uuid.uuid4().hex}.jpg"
+        (_images_dir() / fname).write_bytes(out.getvalue())
+        local_url = f"/media/{fname}"
+        _notify_discord(local_url, head or f"Demo {business}", subtitle)
+        log.info("image_gen_ok", generated=1, with_text=bool(head), provider="demo")
+        return [local_url]
+    except Exception as e:
+        log.warning("render_demo_failed", error=str(e)[:200])
         return []
 
 

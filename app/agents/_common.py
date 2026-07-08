@@ -243,7 +243,7 @@ def image_prompt_directive() -> str:
         "\n\nIMÁGENES (obligatorio): la cantidad la decidís VOS según tu planificación "
         "(1 por idea / 1 por post clave). No te limites a un número fijo. "
         "Por cada pieza agregá una línea que empiece EXACTO con `IMAGEN:` así:\n"
-        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | ESTILO: <foto|editorial|banner|tipografico|ilustracion|3d|minimal> | CAPTION: <caption COMPLETO del post>`\n"
+        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | ESTILO: <foto|editorial|demo|comic|banner|tipografico|ilustracion|3d|minimal> | CAPTION: <caption COMPLETO del post>`\n"
         "ESTILO (obligatorio VARIAR — nunca dos piezas seguidas del mismo): `foto` = foto "
         "documental real; `editorial` = placa BLANCA tipográfica premium (titular negro "
         "gigante con la frase clave resaltada en amarillo — marcá esa parte entre "
@@ -253,9 +253,24 @@ def image_prompt_directive() -> str:
         "= fondo color block/gradiente audaz con el titular gigante encima (TEXTO "
         "obligatorio); `ilustracion` = ilustración con carácter (doodle a mano / editorial "
         "con textura) para conceptos; `3d` = objeto clay/soft-3D sobre fondo limpio; "
-        "`minimal` = UN objeto + muchísimo aire + color inesperado (pattern-interrupt). "
-        "Elegí el estilo según la idea (verdad incómoda o dato → editorial/tipografico; "
-        "concepto → ilustracion; feature → banner/3d; historia humana → foto).\n"
+        "`minimal` = UN objeto + muchísimo aire + color inesperado (pattern-interrupt); "
+        "`demo` = PRUEBA DE PRODUCTO: card con un chat de WhatsApp REAL del bot "
+        "funcionando sobre fondo de marca — el formato que más usan los ads ganadores "
+        "del rubro. Para `demo` agregá el campo CHAT así (mensajes cortos, del "
+        "vertical, `;;` separa): "
+        "`| CHAT: Distribuidora García ;; them|21:14|Hola, tienen stock de X? ;; "
+        "bot|21:14|Sí! Quedan 40 cajones. Te armo el pedido? ;; them|21:15|Dale, 10 "
+        "cajones ;; bot|21:15|Listo ✅ Pedido cargado, sale mañana` (2-6 mensajes; el "
+        "sistema lo renderiza pixel-perfect, NO lo dibuja la IA; el prompt de fondo se "
+        "ignora); `comic` = meme-cómic de 2 paneles ANTES(caos)/DESPUÉS(alivio) con "
+        "humor — en el prompt escribí las frases EXACTAS de los globos entre comillas, "
+        "cortitas (3-6 palabras, ej. \"Mis pedidos son un caos\" / \"Conecté mi WhatsApp "
+        "a la IA\"); acá NO va TEXTO (el chiste vive en los globos). Elegí el estilo "
+        "según la idea (verdad incómoda o dato → editorial/tipografico; mostrar el bot "
+        "en acción → demo; dolor cotidiano con humor → comic; concepto → ilustracion; "
+        "feature → banner/3d; historia humana → foto). Piezas POR VERTICAL rinden más "
+        "que genéricas (aprendido de la competencia): 'para distribuidoras', 'para "
+        "inmobiliarias' — el chat/escena del vertical concreto.\n"
         "TEXTO no siempre: ~1 de cada 3 piezas va SIN titular (dejá TEXTO vacío) cuando la "
         "imagen habla sola (foto documental fuerte, ilustración conceptual) — el copy vive en "
         "el CAPTION. En `tipografico` el TEXTO es la pieza: nunca lo omitas ahí.\n"
@@ -316,11 +331,27 @@ def _clean_fragment(s: str):
 _ESTILOS = {"foto": "foto", "photo": "foto", "banner": "banner",
             "tipografico": "tipografico", "tipográfico": "tipografico",
             "ilustracion": "ilustracion", "ilustración": "ilustracion",
-            "3d": "3d", "minimal": "minimal", "editorial": "editorial"}
+            "3d": "3d", "minimal": "minimal", "editorial": "editorial",
+            "demo": "demo", "comic": "comic"}
+
+
+def _parse_chat_field(raw: str):
+    """`CHAT: <negocio> ;; them|21:14|<msg> ;; bot|21:14|<msg> …`
+    → (negocio, [{"from","time","text"}]) o (None, [])."""
+    import re
+    parts = [p.strip() for p in (raw or "").split(";;") if p.strip()]
+    if len(parts) < 3:
+        return None, []
+    negocio, msgs = parts[0], []
+    for p in parts[1:]:
+        m = re.match(r"(them|bot)\s*\|\s*([0-9:]{3,5})\s*\|\s*(.+)", p, re.IGNORECASE)
+        if m:
+            msgs.append({"from": m.group(1).lower(), "time": m.group(2), "text": m.group(3).strip()})
+    return (negocio, msgs) if len(msgs) >= 2 else (None, [])
 
 # Estilo → kind de image_gen (sufijos de generación). Foto usa el pipeline fotográfico.
 _ESTILO_KIND = {"banner": "banner", "tipografico": "banner", "minimal": "banner",
-                "ilustracion": "art", "3d": "art"}
+                "ilustracion": "art", "3d": "art", "comic": "comic"}
 
 
 def _parse_image_line(line: str):
@@ -337,7 +368,7 @@ def _parse_image_line(line: str):
         # no podía matchear vacío y se tragaba la etiqueta siguiente → se quemaba
         # "SUBTEXTO:" como titular en la imagen publicada.
         m = re.search(
-            rf"\|\s*{label}\s*[:：]\s*(.*?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION|FORMATO|ESTILO)\s*[:：]|$)",
+            rf"\|\s*{label}\s*[:：]\s*(.*?)(?=\s*\|\s*(?:TEXTO|SUBTEXTO|CAPTION|FORMATO|ESTILO|CHAT)\s*[:：]|$)",
             line, re.IGNORECASE | re.DOTALL)
         return _clean_fragment(m.group(1)) or None if m else None
 
@@ -347,8 +378,9 @@ def _parse_image_line(line: str):
     fmt = (_grab("FORMATO") or "").lower()
     formato = {"post": "post", "historia": "story", "story": "story"}.get(fmt, "")
     estilo = _ESTILOS.get((_grab("ESTILO") or "").lower(), "")
+    chat = _grab("CHAT")
     prompt = line.split("|", 1)[0]
-    return _clean_fragment(prompt), texto, sub, caption, formato, estilo
+    return _clean_fragment(prompt), texto, sub, caption, formato, estilo, chat
 
 
 def _publish_summary(res: dict) -> str:
@@ -388,14 +420,15 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         # Parsear todas y descartar las vacías (p.ej. el label suelto `**IMAGEN:**`)
         parsed = []
         for raw in pat.findall(text):
-            prompt, texto, sub, caption, formato, estilo = _parse_image_line(raw.strip())
-            if len(prompt) >= 8:           # un prompt real, no un label vacío
-                parsed.append((prompt, texto, sub, caption, formato, estilo))
+            prompt, texto, sub, caption, formato, estilo, chat = _parse_image_line(raw.strip())
+            # el estilo demo no necesita prompt de fondo (la pieza es el chat real)
+            if len(prompt) >= 8 or (estilo == "demo" and chat):
+                parsed.append((prompt, texto, sub, caption, formato, estilo, chat))
         parsed = parsed[:max_images]
         carousel = None                    # (prompts[], caption, estilo) — máx 1 por corrida
         for raw in pat_car.findall(text):
             # `||` separa prompts; escaparlo para que _parse_image_line no corte ahí
-            first, texto, sub, caption, _f, car_estilo = _parse_image_line(
+            first, texto, sub, caption, _f, car_estilo, _chat = _parse_image_line(
                 raw.strip().replace("||", "\x1f"))
             prompts = [p.strip() for p in first.split("\x1f") if len(p.strip()) >= 8]
             if len(prompts) >= 2:
@@ -420,21 +453,32 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         # Rotación de ESTILO anti-monotonía: si el agente no marcó ESTILO, se asigna
         # de un mazo mezclado (foto pesa doble: sigue siendo la base de autenticidad).
         import random
-        deck = ["foto", "editorial", "banner", "ilustracion", "tipografico", "minimal", "3d"]
+        # demo NO va en el mazo automático (necesita el campo CHAT del agente)
+        deck = ["foto", "editorial", "comic", "banner", "ilustracion", "tipografico",
+                "minimal", "3d"]
         random.shuffle(deck)
         blocks = []
-        for i, (prompt, texto, sub, caption, formato, estilo) in enumerate(parsed, 1):
+        for i, (prompt, texto, sub, caption, formato, estilo, chat) in enumerate(parsed, 1):
             # FORMATO explícito del agente; si falta, 1 post cada 3 imágenes (1:2 con
             # historias = el ritmo del drain diario: 1 pieza de feed + 2 historias).
             kind = formato or ("post" if i % 3 == 1 else "story")
             estilo = estilo or deck[(i - 1) % len(deck)]
-            # TIPOGRÁFICO/EDITORIAL sin titular no son nada → caen a banner.
+            # TIPOGRÁFICO/EDITORIAL sin titular no son nada → caen a banner;
+            # DEMO sin chat tampoco.
             if estilo in ("tipografico", "editorial") and not texto:
+                estilo = "banner"
+            if estilo == "demo" and not chat:
                 estilo = "banner"
             # Historia = pantalla completa vertical (9:16); feed = 4:5 (1080x1350,
             # el formato que más pantalla ocupa; image_gen normaliza al px exacto).
             aspect = "9:16" if kind == "story" else "4:5"
-            if estilo == "editorial":
+            if estilo == "demo":
+                # prueba-de-producto: chat de WhatsApp REAL (Pillow) como card
+                negocio, msgs = _parse_chat_field(chat)
+                urls = (image_gen.render_demo(negocio, msgs, texto or "",
+                                              sub, aspect_ratio=aspect)
+                        if negocio else [])
+            elif estilo == "editorial":
                 # placa tipográfica 100% Pillow (sin IA): el titular ES la pieza,
                 # con la frase clave marcada entre *asteriscos* resaltada.
                 urls = image_gen.render_editorial(texto, sub, aspect_ratio=aspect)

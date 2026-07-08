@@ -129,6 +129,16 @@ _GRAPHIC_MODES = {
         "fondo de color plano inesperado, muchísimo aire, luz dura con sombra marcada. "
         "Quieto y silencioso a propósito: frena el scroll entre reels ruidosos."
     ),
+    "comic": (
+        "ESTILO CÓMIC (meme 2 paneles): tira cómica retro, papel crema, tinta negra a "
+        "mano, colores planos cálidos. Panel 1 = el ANTES (el caos, exagerado y gracioso); "
+        "panel 2 = el DESPUÉS (alivio). Un personaje simpático (puede ser un animal "
+        "antropomórfico dueño de PyME). EXCEPCIÓN a la regla de no-texto: acá los GLOBOS "
+        "DE DIÁLOGO SÍ llevan texto — cortito (3-6 palabras por globo), en español "
+        "rioplatense, y el prompt tiene que pedir que se renderice EXACTO y bien escrito "
+        "(copiá las frases de la idea cruda entre comillas). Nada de texto fuera de los "
+        "globos. Paneles apilados vertical para 9:16, lado a lado para feed."
+    ),
 }
 
 # Presets de dominio (know-how minado del skill banana-claude: una RECETA por tipo de

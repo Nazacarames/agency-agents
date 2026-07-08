@@ -25,7 +25,22 @@ log = get_logger("creative_direction")
 _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 _FILE = _DATA_DIR / "creative-direction.md"
 
-SEED_DIRECTION = """# Dirección de arte — formatos de imagen/ad que convierten (estudio 2026-07-06)
+SEED_DIRECTION = """# Dirección de arte — formatos de imagen/ad que convierten (estudio 2026-07-06 + Ad Library 2026-07-08)
+
+## Lo que hacen TODOS los ads ganadores del rubro (14 ads reales de Kommo/Ropofy/Zolutium/Siete AI, Ad Library 2026-07-08)
+- **Muestran el producto FUNCIONANDO**: un chat de WhatsApp legible con una conversación
+  real (cliente pide → bot resuelve) es LA prueba en todos los ads que escalan. Nosotros
+  lo tenemos nativo: estilo `demo` (chat pixel-perfect renderizado por código).
+- **Piezas POR VERTICAL**: Kommo corre el MISMO ad adaptado ("broadcast para clínicas" /
+  "para inmobiliarias"). Hablarle a UN rubro convierte más que el mensaje genérico.
+- **Antes/Después en una pieza**: Zolutium parte la imagen (caos con cables vs calma con
+  IA). El contraste visual cuenta la historia sin leer.
+- **Humor/meme con personaje**: el cómic del perro ("Mi agenda es un caos" → "Conecté mi
+  agenda a WhatsApp") es pattern-interrupt puro y no parece ad → estilo `comic`.
+- **Checklist de beneficios**: Ropofy/iOBOT listan features como filas con íconos. Para
+  nosotros va como CARRUSEL (una placa por beneficio), no apretado en una imagen.
+- **Ancla de precio + CTA visible** (solo para ADS pagos, NO para el feed orgánico):
+  "PLANES DESDE $97 USD" + botón. El orgánico nuestro sigue la regla no-anuncio.
 
 ## Los datos que mandan
 - El CREATIVO explica ~56% de la varianza de performance en Meta (subió desde 47% en 2023).
@@ -44,15 +59,21 @@ SEED_DIRECTION = """# Dirección de arte — formatos de imagen/ad que convierte
 ## Mix de formatos OBLIGATORIO (nunca dos piezas seguidas del mismo estilo)
 1. **FOTO editorial del rubro** (maker real en su depósito, reparto, mostrador) — la base
    de autenticidad, pero YA NO la única carta.
-2. **BANNER de ad** — producto/objeto/ícono fuerte o fondo potente + aire limpio para el
+2. **DEMO (prueba de producto)** — card con un chat de WhatsApp REAL del bot resolviendo
+   un caso del vertical. Lo que más usan los ads ganadores; nuestro chat es pixel-perfect.
+3. **EDITORIAL (placa blanca)** — titular negro gigante + frase clave con resaltador
+   amarillo. Para verdades incómodas y datos duros. Nítida, distinta a todo el feed.
+4. **CÓMIC meme 2 paneles** — antes(caos)/después(alivio) con personaje y humor; los
+   globos llevan el chiste. No parece ad; frena el pulgar.
+5. **BANNER de ad** — producto/objeto/ícono fuerte o fondo potente + aire limpio para el
    titular. Para ads y anuncios de features.
-3. **TIPOGRÁFICO** — fondo plano o gradiente audaz; el TITULAR es la imagen. Ideal para
+6. **TIPOGRÁFICO** — fondo plano o gradiente audaz; el TITULAR es la imagen. Ideal para
    frases filosas, datos duros, contrarian takes.
-4. **ILUSTRACIÓN con carácter** — editorial con textura/grano, flat moderno con manos
-   visibles del ilustrador. Para conceptos (caos→orden, tiempo recuperado).
-5. **3D con gusto** — objeto clay/soft-3D sobre fondo limpio de color. Para features y
+7. **ILUSTRACIÓN con carácter** — doodle a mano sobre papel crema o editorial con
+   textura/grano. Para conceptos (caos→orden, tiempo recuperado).
+8. **3D con gusto** — objeto clay/soft-3D sobre fondo limpio de color. Para features y
    metáforas de producto. NUNCA el 3D azul corporativo genérico.
-6. **MINIMAL pattern-interrupt** — UN solo objeto, muchísimo aire, color inesperado.
+9. **MINIMAL pattern-interrupt** — UN solo objeto, muchísimo aire, color inesperado.
    Para frenar el scroll entre reels ruidosos.
 
 ## Texto sobre la imagen: NO siempre
@@ -93,8 +114,10 @@ _DISTILL_SYSTEM = (
     "'## Mix de formatos OBLIGATORIO (nunca dos piezas seguidas del mismo estilo)', "
     "'## Texto sobre la imagen: NO siempre', '## Marcas y cuentas referentes', "
     "'## Clichés a EVITAR'. El mix tiene que mantener estos 6 estilos (podés ajustar "
-    "el cuándo-usarlos con lo nuevo): FOTO editorial del rubro, BANNER de ad, "
-    "TIPOGRÁFICO, ILUSTRACIÓN con carácter, 3D con gusto, MINIMAL pattern-interrupt. "
+    "el cuándo-usarlos con lo nuevo): FOTO editorial del rubro, DEMO (chat real del "
+    "producto), EDITORIAL (placa blanca con resaltador), CÓMIC meme 2 paneles, BANNER "
+    "de ad, TIPOGRÁFICO, ILUSTRACIÓN con carácter, 3D con gusto, MINIMAL "
+    "pattern-interrupt. "
     "Sé concreto y cuantitativo. NADA de relleno. Empezá con "
     "'# Dirección de arte — formatos de imagen/ad que convierten' y la fecha."
 )

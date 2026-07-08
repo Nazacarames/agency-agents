@@ -40,6 +40,7 @@ IG_HANDLES = {
     "eugeoller":      "euge.oller",     # 540k — negocios ES, storytelling
     "hubspot":        "hubspot",        # 654k — formatos B2B (memes/skits/carruseles)
     "manychat":       "manychat",       # nicho directo: bots de chat
+    "italoteotonio":  "prof.italoteotonio",  # 349k — IA práctica, infografías doodle (verificado 2026-07-08, ref. del usuario)
 }
 
 
