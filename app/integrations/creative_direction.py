@@ -25,9 +25,11 @@ log = get_logger("creative_direction")
 _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 _FILE = _DATA_DIR / "creative-direction.md"
 
-SEED_DIRECTION = """# Dirección de arte — formatos de imagen/ad que convierten (estudio 2026-07-06 + Ad Library 2026-07-08)
-
-## Lo que hacen TODOS los ads ganadores del rubro (14 ads reales de Kommo/Ropofy/Zolutium/Siete AI, Ad Library 2026-07-08)
+# Patrones minados de 14 ads REALES de la competencia directa (Kommo, Ropofy, Zolutium,
+# Siete AI — Ad Library, curados por el usuario 2026-07-08). Es verdad de campo, no
+# estudio automático → block() los inyecta SIEMPRE, aunque el re-estudio mensual haya
+# reescrito data/creative-direction.md.
+AD_LIBRARY_PATTERNS = """## Lo que hacen TODOS los ads ganadores del rubro (14 ads reales de Kommo/Ropofy/Zolutium/Siete AI, Ad Library 2026-07-08)
 - **Muestran el producto FUNCIONANDO**: un chat de WhatsApp legible con una conversación
   real (cliente pide → bot resuelve) es LA prueba en todos los ads que escalan. Nosotros
   lo tenemos nativo: estilo `demo` (chat pixel-perfect renderizado por código).
@@ -41,6 +43,9 @@ SEED_DIRECTION = """# Dirección de arte — formatos de imagen/ad que convierte
   nosotros va como CARRUSEL (una placa por beneficio), no apretado en una imagen.
 - **Ancla de precio + CTA visible** (solo para ADS pagos, NO para el feed orgánico):
   "PLANES DESDE $97 USD" + botón. El orgánico nuestro sigue la regla no-anuncio.
+"""
+
+SEED_DIRECTION = """# Dirección de arte — formatos de imagen/ad que convierten (estudio 2026-07-06)
 
 ## Los datos que mandan
 - El CREATIVO explica ~56% de la varianza de performance en Meta (subió desde 47% en 2023).
@@ -136,9 +141,11 @@ def load() -> str:
 
 
 def block() -> str:
-    """Bloque para inyectar a los agentes de contenido."""
+    """Bloque para inyectar a los agentes de contenido. Los patrones de la Ad Library
+    (curados por el usuario) van SIEMPRE, por encima del estudio vivo/override."""
     try:
         return ("\n\n=== DIRECCIÓN DE ARTE (formatos de imagen/ad — estudio vivo) ===\n"
+                + AD_LIBRARY_PATTERNS.strip() + "\n\n"
                 + load().strip() + "\n=== fin dirección de arte ===\n")
     except Exception:
         return ""
