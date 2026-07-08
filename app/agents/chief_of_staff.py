@@ -157,6 +157,16 @@ class ChiefOfStaffAgent(BaseAgent):
                     "como única acción revisar que los agentes estén corriendo.")
         return (
             "Armá el brief ejecutivo de hoy con este material.\n\n"
+            "## REGLAS OPERATIVAS VIGENTES (así se decidió que funcione — NO son bugs)\n"
+            "- La cola de publicaciones drena DE A POCO a propósito: 1 post de feed/día "
+            "+ hasta 2 historias/día (11:00 ART). Tener pendientes acumuladas es normal; "
+            "solo es problema si crece sin techo (tope 30) o si hoy no salió nada.\n"
+            "- Outbound: tope 20 mails/día, solo lun-vie. Secuencia día 0/+2/+4/+7.\n"
+            "- Meta/Google Ads: NO hay cuentas de ads conectadas todavía (decisión "
+            "pendiente del dueño) — el media_auditor trabaja con benchmarks; no lo "
+            "reportes como bug, como mucho como decisión pendiente.\n"
+            "- TikTok: la app está en sandbox (los videos suben PRIVADOS hasta pasar la "
+            "revisión). Los reels de IG/YouTube sí salen públicos.\n\n"
             "## NÚMEROS DUROS DEL NEGOCIO\n" + (numbers or "(sin datos)") + "\n\n"
             "## REPORTES RECIENTES DE LOS AGENTES (últimas 72h, truncados)\n"
             + (reports or "(sin reportes recientes)")
