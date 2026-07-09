@@ -12,6 +12,7 @@ Corre lun-vie 08:30 ART (después del radar de tendencias, antes del outbound).
 """
 from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block
@@ -30,10 +31,13 @@ COS_INSTRUCTIONS = """
 # Chief of Staff — Automiq
 
 ## Quién sos
-Sos el JEFE DE GABINETE del dueño de Automiq (una sola persona operando todo).
-Tu trabajo NO es producir contenido ni vender: es LEER todo lo que produjo el
-equipo de agentes, cruzarlo con los números del negocio y devolver UN brief que
-el dueño pueda leer en 2 minutos y saber exactamente qué hacer hoy.
+Sos el JEFE DE GABINETE y DIRECTOR DE OPERACIONES del dueño de Automiq (una sola
+persona operando todo). Tu trabajo NO es producir contenido ni vender, y NO es
+resumir: es GESTIONAR. Leés todo lo que produjo el equipo de agentes, lo cruzás
+con los números del negocio y con tu brief anterior, y devolvés un brief que
+convierte los datos en decisiones: plan de acción con dueño, seguimiento de lo
+que recomendaste (¿se hizo? ¿lo escalo?) y mejoras concretas al propio sistema
+de agentes (a quién agregarle una función, qué corregir, qué enfoque cambiar).
 
 ## Reglas de oro
 1. **Señal, no ruido**: si un reporte no aporta nada nuevo o accionable, NO lo
@@ -46,28 +50,66 @@ el dueño pueda leer en 2 minutos y saber exactamente qué hacer hoy.
    humano — va como misión sugerida.
 4. Si dos reportes se contradicen o algo huele a roto (agente que no corrió,
    métrica en cero, error repetido), decilo en Problemas con la causa probable.
-5. Español rioplatense, directo, sin humo.
+5. **Seguimiento con memoria**: compará contra tu brief anterior. Lo que
+   recomendaste y se hizo → celebralo en Avances. Lo que recomendaste y NADIE
+   tocó → o lo escalás (con más urgencia y el porqué) o lo descartás
+   explícitamente ("retiro X, ya no aplica porque..."). Nunca repitas la misma
+   recomendación en el mismo tono dos días seguidos.
+6. **Las mejoras al sistema salen de EVIDENCIA, no de imaginación**: proponé un
+   cambio a un agente solo si los datos lo muestran (métrica plana varios días,
+   el mismo problema en varios reportes, un hueco que ningún agente cubre, un
+   reporte que trae datos que nadie usa). Citá la evidencia. Máximo 3 y solo si
+   valen la pena; "sin mejoras esta vez" es una respuesta válida.
+7. Español rioplatense, directo, sin humo.
 
-## Formato OBLIGATORIO del brief (máx ~350 palabras)
+## Formato OBLIGATORIO del brief (máx ~600 palabras)
 # 📋 Brief — <fecha>
 
 ## ⚡ Lo que importa hoy
 (3-5 bullets con lo más relevante de TODO, con números)
 
 ## ✅ Avances
-(qué se logró desde el último brief, con números)
+(qué se logró desde el último brief, con números; incluí lo recomendado que se hizo)
 
 ## ⚠️ Problemas / frenado
 (qué está roto o estancado + causa probable + qué haría falta; si no hay, "Nada crítico.")
+
+## 📌 Seguimiento del brief anterior
+(qué pasó con cada recomendación pendiente: ✅ hecho / ⏫ escalo porque <razón> /
+🗑️ la retiro porque <razón>. Si no hay brief anterior, omití la sección.)
 
 ## 🎯 Tus 3 acciones de hoy
 1. <acción concreta> — <por qué importa, 1 línea>
 2. ...
 3. ...
 
+## 📈 Plan de acción (próximos 7 días)
+(3-6 ítems priorizados que muevan los números que hoy están flojos. Cada uno con
+dueño: 👤 humano / 🤖 <agente> / 🛠️ dev. Formato: **<ítem>** (dueño) — <resultado
+esperado medible>. Mantené continuidad con el plan del brief anterior: actualizá,
+no reinventes de cero cada día.)
+
+## 🔧 Mejoras al sistema de agentes
+(0-3, SOLO con evidencia. Cada una:
+**<agente o hueco>** — <qué cambiar: función nueva / corrección / enfoque distinto>
+· Evidencia: <el dato de los reportes/números que lo justifica>
+· Para implementar, pegale esto a Claude Code: "<instrucción de 1-3 líneas,
+  concreta y autosuficiente>"
+Si no hay nada con evidencia sólida: "Sin mejoras esta vez.")
+
 ## 🚀 Misiones sugeridas para los agentes
 (0-3; cada una con el texto EXACTO del objetivo, listo para pegar en el panel.
 Formato: **misión** → `<objetivo concreto y medible>` (agentes: <cuáles>))
+""".strip()
+
+WEEKLY_ADDON = """
+## 🧭 Revisión semanal (solo hoy viernes)
+Cerrá el brief con una sección extra mirando la semana completa:
+- **Qué está funcionando** → doblar la apuesta (con el número que lo prueba).
+- **Qué NO movió la aguja en toda la semana** → proponer matarlo o cambiarle el
+  enfoque de raíz (no "optimizarlo": un enfoque DISTINTO, decí cuál).
+- **La apuesta de la semana próxima**: UNA sola cosa que, si sale, cambia los
+  números. Con primer paso concreto para el lunes.
 """.strip()
 
 
@@ -108,6 +150,37 @@ def _recent_artifacts() -> str:
         return ""
 
 
+def _previous_brief() -> str:
+    """El brief anterior propio (para seguimiento y continuidad del plan)."""
+    try:
+        files = sorted(_DATA.glob("chief-of-staff-report-*.md"))
+        if not files:
+            return ""
+        txt = files[-1].read_text(encoding="utf-8", errors="replace").strip()
+        return txt[:3000]
+    except Exception as e:
+        log.warning("cos_prev_brief_failed", error=str(e)[:150])
+        return ""
+
+
+def _roster() -> str:
+    """Roster de agentes con capacidades y cadencia (para proponer mejoras)."""
+    try:
+        # lazy: registry importa este módulo — a nivel módulo sería circular
+        from .registry import list_agents
+        from ..scheduler import DEFAULT_SCHEDULES
+        lines = []
+        for a in list_agents():
+            if a.name == "chief_of_staff":
+                continue
+            cron = DEFAULT_SCHEDULES.get(a.name, "manual")
+            lines.append(f"- **{a.name}** (`{cron}`): {a.description}")
+        return "\n".join(lines)
+    except Exception as e:
+        log.warning("cos_roster_failed", error=str(e)[:150])
+        return ""
+
+
 def _hard_numbers() -> str:
     """Estado duro del negocio (best-effort, cada bloque por separado)."""
     blocks = []
@@ -137,10 +210,10 @@ def _hard_numbers() -> str:
 
 class ChiefOfStaffAgent(BaseAgent):
     name = "chief_of_staff"
-    description = "Lee los reportes de todos los agentes y entrega el brief ejecutivo: qué importa, qué está frenado y tus 3 acciones de hoy"
+    description = "Convierte los reportes de todos en gestión: brief ejecutivo, plan de acción con dueños, seguimiento de recomendaciones y mejoras propuestas al propio sistema de agentes"
     schedule = "30 8 * * mon-fri"
     timezone = "America/Buenos_Aires"
-    max_tokens = 4000
+    max_tokens = 6000
     temperature = 0.4
     llm_provider = "deepseek"   # razonamiento/síntesis (bake-off 2026-07-04); fallback MiniMax
 
@@ -155,8 +228,21 @@ class ChiefOfStaffAgent(BaseAgent):
             return ("No hay reportes recientes ni métricas disponibles (disco vacío o "
                     "primer arranque). Entregá un brief mínimo que lo diga y sugerí "
                     "como única acción revisar que los agentes estén corriendo.")
+        prev = _previous_brief()
+        roster = _roster()
+        extra = ""
+        if roster:
+            extra += ("\n## EL EQUIPO DE AGENTES (qué hace cada uno y cuándo corre — "
+                      "usalo para el plan de acción y las mejoras al sistema)\n"
+                      + roster + "\n")
+        if prev:
+            extra += ("\n## TU BRIEF ANTERIOR (para el seguimiento: qué se hizo, "
+                      "qué escalás, qué retirás)\n" + prev + "\n")
+        weekly = ""
+        if datetime.now(ZoneInfo(self.timezone)).weekday() == 4:  # viernes
+            weekly = "\n" + WEEKLY_ADDON + "\n"
         return (
-            "Armá el brief ejecutivo de hoy con este material.\n\n"
+            "Armá el brief ejecutivo de hoy con este material.\n" + weekly + "\n"
             "## REGLAS OPERATIVAS VIGENTES (así se decidió que funcione — NO son bugs)\n"
             "- La cola de publicaciones drena DE A POCO a propósito: 1 post de feed/día "
             "+ hasta 2 historias/día (11:00 ART). Tener pendientes acumuladas es normal; "
@@ -170,4 +256,5 @@ class ChiefOfStaffAgent(BaseAgent):
             "## NÚMEROS DUROS DEL NEGOCIO\n" + (numbers or "(sin datos)") + "\n\n"
             "## REPORTES RECIENTES DE LOS AGENTES (últimas 72h, truncados)\n"
             + (reports or "(sin reportes recientes)")
+            + extra
         )
