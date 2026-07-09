@@ -109,19 +109,67 @@ def _reengage_subject(lead: Dict[str, Any]) -> str:
     return subj if subj.lower().startswith("re:") else f"Re: {subj}"
 
 
+def _balanced_spans(s: str, open_ch: str, close_ch: str) -> List[tuple]:
+    """Spans [start, end) de estructuras balanceadas top-level, ignorando
+    brackets dentro de strings JSON."""
+    spans = []
+    depth, start, in_str, esc = 0, -1, False, False
+    for i, c in enumerate(s):
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+            continue
+        if c == '"':
+            in_str = True
+        elif c == open_ch:
+            if depth == 0:
+                start = i
+            depth += 1
+        elif c == close_ch and depth:
+            depth -= 1
+            if depth == 0 and start != -1:
+                spans.append((start, i + 1))
+                start = -1
+    return spans
+
+
 def _parse_json_array(text: str) -> List[Dict[str, Any]]:
+    """Extrae los emails redactados de la respuesta del modelo.
+
+    Con OpenCode+GLM la respuesta puede venir con narración alrededor, en
+    bloques ```json```, con saltos de línea CRUDOS dentro de los strings
+    (strict=False los tolera) o como objetos sueltos si el array vino roto.
+    El primer parser (find('[')..rfind(']') + loads estricto) devolvía [] en
+    todos esos casos → día entero con 0 mails enviados (2026-07-09).
+    """
     if not text:
         return []
-    fence = re.search(r"```(?:json)?\s*(.+?)```", text, re.DOTALL)
-    cand = fence.group(1) if fence else text
-    a, b = cand.find("["), cand.rfind("]")
-    if a == -1 or b == -1 or b <= a:
-        return []
-    try:
-        data = json.loads(cand[a:b + 1])
-        return data if isinstance(data, list) else []
-    except json.JSONDecodeError:
-        return []
+    cands = [m.group(1) for m in re.finditer(r"```(?:json)?\s*(.+?)```", text, re.DOTALL)]
+    cands.append(text)
+    for cand in cands:
+        for a, b in _balanced_spans(cand, "[", "]"):
+            try:
+                data = json.loads(cand[a:b], strict=False)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(data, list):
+                items = [d for d in data if isinstance(d, dict) and d.get("key")]
+                if items:
+                    return items
+    # Rescate: objetos {..} sueltos (array roto por una coma de más, etc.)
+    out = []
+    for a, b in _balanced_spans(text, "{", "}"):
+        try:
+            d = json.loads(text[a:b], strict=False)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(d, dict) and d.get("key") and d.get("body"):
+            out.append(d)
+    return out
 
 
 def _load_sent_log() -> Dict[str, Any]:
@@ -236,29 +284,66 @@ class OutboundAgent(BaseAgent):
         )
 
         # Bloque por lead: damos al modelo lo justo para personalizar + el step.
-        blocks: List[str] = []
-        for l in due_today:
-            step = l.get("next_step", 0)
-            prev = ""
-            if l.get("touches"):
-                last = l["touches"][-1]
-                prev = f" · último asunto enviado: \"{last.get('subject', '')}\""
-            blocks.append(
-                f"- key: {l['key']}\n"
-                f"  empresa: {l.get('company', '?')}\n"
-                f"  email: {l.get('email', '')}\n"
-                f"  decisor: {l.get('decisor', '') or '(s/d)'}\n"
-                f"  industria: {l.get('industria', '') or '(s/d)'}\n"
-                f"  web: {l.get('web', '') or '(s/d)'}\n"
-                f"  step: {step}  ({ls.STEP_LABEL.get(step, 'follow-up')}){prev}"
-            )
+        blocks = [self._lead_block(l) for l in due_today]
 
         return (
             f"Leads a contactar HOY ({len(due_today)}). Por cada uno redactá el email de SU "
-            f"step y devolvé el array JSON (copiá la `key` tal cual).\n\n"
+            f"step y devolvé el array JSON (copiá la `key` tal cual).\n"
+            "OJO: si cargás skills (cold-email, humanizer), usalas para la CALIDAD del "
+            "texto — el formato de salida sigue siendo EXCLUSIVAMENTE el array JSON de "
+            "las instrucciones, sin reporte ni markdown alrededor.\n\n"
             "=== LEADS ===\n" + "\n\n".join(blocks) + "\n"
             f"{pains}"
         )
+
+    @staticmethod
+    def _lead_block(l: Dict[str, Any]) -> str:
+        step = l.get("next_step", 0)
+        prev = ""
+        if l.get("touches"):
+            last = l["touches"][-1]
+            prev = f" · último asunto enviado: \"{last.get('subject', '')}\""
+        return (
+            f"- key: {l['key']}\n"
+            f"  empresa: {l.get('company', '?')}\n"
+            f"  email: {l.get('email', '')}\n"
+            f"  decisor: {l.get('decisor', '') or '(s/d)'}\n"
+            f"  industria: {l.get('industria', '') or '(s/d)'}\n"
+            f"  web: {l.get('web', '') or '(s/d)'}\n"
+            f"  step: {step}  ({ls.STEP_LABEL.get(step, 'follow-up')}){prev}"
+        )
+
+    def _redraft_missing(self, ctx: AgentContext, store: Dict[str, Any],
+                         missing_keys: List[str]) -> Dict[str, Dict[str, Any]]:
+        """Red de seguridad: si el harness (OpenCode/skills) no devolvió el email de
+        algunos leads, los re-redacta con UNA completion MiniMax directa (el camino
+        que envió durante semanas). Sin esto, un cambio de formato del modelo deja
+        el día en 0 mails en silencio."""
+        leads = [store.get("leads", {}).get(k) for k in missing_keys]
+        leads = [l for l in leads if l]
+        if not leads or ctx.minimax is None:
+            return {}
+        blocks = "\n\n".join(self._lead_block(l) for l in leads)
+        try:
+            resp = ctx.minimax.complete(
+                system=self.system_prompt,
+                messages=[{"role": "user", "content":
+                           f"Leads a contactar HOY ({len(leads)}). Por cada uno redactá el "
+                           "email de SU step y devolvé EXCLUSIVAMENTE el array JSON "
+                           "(copiá la `key` tal cual).\n\n=== LEADS ===\n" + blocks}],
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+            )
+            from ._common import sanitize_model_text
+            clean, _ = sanitize_model_text(resp.text)
+            items = _parse_json_array(clean)
+            got = {it["key"]: it for it in items
+                   if isinstance(it.get("key"), str) and it["key"] in set(missing_keys)}
+            log.info("outbound_redraft_minimax", asked=len(leads), got=len(got))
+            return got
+        except Exception as e:
+            log.error("outbound_redraft_failed", error=str(e)[:200])
+            return {}
 
     def _reengage(self, store, client, live, sent_log, today, cap, run_id):
         """Carril de reenganche: manda UN toque a los leads que respondieron y se
@@ -352,6 +437,11 @@ class OutboundAgent(BaseAgent):
             k = (it.get("key") or "").strip()
             if k in due_keys and k not in by_key:
                 by_key[k] = it
+
+        # Los que faltan se re-redactan por MiniMax directo (red de seguridad).
+        missing_keys = [k for k in ctx.args.get("_ob_due_keys", []) if k not in by_key]
+        if missing_keys:
+            by_key.update(self._redraft_missing(ctx, store, missing_keys))
 
         sent, preview, errors, missing = [], [], [], []
         for key in ctx.args.get("_ob_due_keys", []):
