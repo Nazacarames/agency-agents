@@ -57,7 +57,15 @@ class CalendarClient:
             token_uri=TOKEN_URI,
             scopes=GMAIL_SCOPES,
         )
-        self._service = build("calendar", "v3", credentials=creds, cache_discovery=False)
+        # Timeout explícito (mismo motivo que gmail_client): default None colgaba
+        # el thread del job para siempre.
+        try:
+            import httplib2
+            from google_auth_httplib2 import AuthorizedHttp
+            http = AuthorizedHttp(creds, http=httplib2.Http(timeout=60))
+            self._service = build("calendar", "v3", http=http, cache_discovery=False)
+        except ImportError:
+            self._service = build("calendar", "v3", credentials=creds, cache_discovery=False)
         return self._service
 
     def list_events(self, time_min: str, time_max: str, max_results: int = 250) -> list:

@@ -58,7 +58,7 @@ automatización, sistemas a medida, consultoría).
 
 WEB_OPTIMIZER_TASK = """
 Cargá y seguí las skills `marketing-landing` y `cro` (usá la tool Skill) para guiar el
-análisis CRO, `ui-ux-pro-max` para decisiones visuales/UX y `stop-slop` para que el copy
+análisis CRO, `ui-ux-pro-max` para decisiones visuales/UX y `humanizer` para que el copy
 no suene a IA. Nota: no tenés Bash — los scripts de búsqueda de `ui-ux-pro-max` no corren;
 buscá directo en sus `data/*.csv` con Grep.
 

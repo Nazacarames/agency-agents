@@ -107,8 +107,8 @@ def refresh() -> Dict:
     order = {"gancho": 0, "explicativo": 1, "ignorar": 2}
     items.sort(key=lambda i: order.get(i.get("tag", "explicativo"), 1))
     data = {"updated_at": datetime.now(timezone.utc).isoformat(), "items": items}
-    _DATA.mkdir(parents=True, exist_ok=True)
-    _FILE.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    from .jsonstore import write_json_atomic
+    write_json_atomic(_FILE, data, indent=1)
     n_hook = sum(1 for i in items if i.get("tag") == "gancho")
     log.info("trend_radar_ok", items=len(items), ganchos=n_hook)
     return {"ok": True, "items": len(items), "ganchos": n_hook}

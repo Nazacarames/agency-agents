@@ -25,7 +25,10 @@ class Container:
         self.settings = settings or get_settings()
         self._minimax: Optional[MiniMaxClient] = None
         self._discord: Optional[DiscordWebhook] = None
-        self._lock = asyncio.Lock()
+        # Un lock POR AGENTE: serializa cron + corridas manuales del panel/API.
+        # Sin esto, dos corridas simultáneas de outbound leían el mismo store y
+        # mandaban cold-emails DUPLICADOS (max_instances=1 solo cubre el cron).
+        self._agent_locks: Dict[str, asyncio.Lock] = {}
 
     # ── lazy init (evita fallar al startup si faltan credenciales) ──
 
@@ -85,8 +88,13 @@ class Container:
             triggered_by=triggered_by,
             args=args,
         )
-        # run() es sync porque MiniMaxClient es sync; lo corremos en threadpool
-        return await asyncio.to_thread(agent.run, ctx)
+        lock = self._agent_locks.setdefault(agent_name, asyncio.Lock())
+        if lock.locked():
+            log.warning("agent_run_queued_behind_lock", agent=agent_name,
+                        run_id=run_id, triggered_by=triggered_by)
+        async with lock:
+            # run() es sync porque MiniMaxClient es sync; lo corremos en threadpool
+            return await asyncio.to_thread(agent.run, ctx)
 
     async def run_scheduled(self, agent_name: str) -> None:
         """Schedule del pack automiq. Se ejecuta vía main._run_pack_agent."""

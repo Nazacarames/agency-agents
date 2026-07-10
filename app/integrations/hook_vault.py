@@ -62,8 +62,8 @@ def _load() -> Dict:
 
 
 def _save(store: Dict) -> None:
-    _DATA.mkdir(parents=True, exist_ok=True)
-    _FILE.write_text(json.dumps(store, ensure_ascii=False, indent=1), encoding="utf-8")
+    from .jsonstore import write_json_atomic
+    write_json_atomic(_FILE, store, indent=1)
 
 
 def ensure_seed() -> None:

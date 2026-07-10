@@ -16,9 +16,12 @@ from __future__ import annotations
 import re
 from typing import List, Dict, Optional
 
-# Detecta un lead por su heading: "## 🟢 Lead #1" o "## Lead #1" o "## Lead 1"
+# Detecta un lead por su heading: "## 🟢 Lead #1" o "## Lead #1" o "## Lead 1".
+# Separador OPCIONAL, igual que leads_store.py — con separador obligatorio un
+# heading "## Lead 3 Empresa" era ingestado por leads_store pero este parser
+# devolvía [] y el enriquecimiento se salteaba en silencio.
 _LEAD_HEADER_RE = re.compile(
-    r"^#{2,4}\s+(?:🟢\s+)?Lead\s*#?\s*(\d+)\s*[:\-—–]\s*(.*?)\s*$",
+    r"^#{2,4}\s+(?:🟢\s+)?Lead\s*#?\s*(\d+)\s*[:\-—–]?\s*(.*?)\s*$",
     re.IGNORECASE,
 )
 # Detecta líneas "| **campo** | valor |"

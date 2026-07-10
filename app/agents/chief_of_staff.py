@@ -129,7 +129,9 @@ def _recent_artifacts() -> str:
             if mt < cutoff:
                 continue
             # slug = nombre de archivo sin fecha ni sufijo tipo -report
-            slug = stem.split("-report")[0].split("-2026")[0].split("-2027")[0]
+            # (regex de fecha, no años hardcodeados: '-2026'/'-2027' rompía en 2028)
+            import re
+            slug = re.split(r"-\d{4}-\d{2}-\d{2}", stem.split("-report")[0])[0]
             if slug not in best or mt > best[slug][0]:
                 best[slug] = (mt, p)
         if not best:

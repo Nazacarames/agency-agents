@@ -38,23 +38,12 @@ _SYSTEM = (
 
 
 def _extract_json_array(text: str) -> Optional[list]:
-    if not text:
-        return None
-    # bloque ```json ... ``` o el primer [...] balanceado
-    m = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.DOTALL)
-    raw = m.group(1) if m else None
-    if raw is None:
-        i = text.find("[")
-        j = text.rfind("]")
-        if i >= 0 and j > i:
-            raw = text[i:j + 1]
-    if raw is None:
-        return None
-    try:
-        data = json.loads(raw)
-        return data if isinstance(data, list) else None
-    except Exception:
-        return None
+    """Parser robusto único (_common): tolera narración, fences, \\n crudos y
+    arrays rotos — el parse frágil de acá devolvía None y el plan caía al
+    fan-out genérico en silencio."""
+    from ..agents._common import extract_json_array
+    items = extract_json_array(text, required_key="agent")
+    return items or None
 
 
 def plan_objective(objective: str, roster: List[Dict[str, str]],

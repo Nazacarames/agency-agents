@@ -68,7 +68,6 @@ class Settings(BaseSettings):
     nano_image_model: str = "gemini-3-pro-image"
     vertex_image_model: str = "imagen-4.0-generate-001"
     image_model: str = "image-01"    # fallback MiniMax
-    image_aspect: str = "1:1"
     # Tope de seguridad: el agente decide CUÁNTAS imágenes generar según su
     # planificación (1 por idea/post). Esto sólo evita que un plan enorme dispare
     # costo/tiempo de MiniMax sin control.
@@ -132,13 +131,11 @@ class Settings(BaseSettings):
     booking_url: str = ""
 
     # ── Web Optimizer (mejora la landing y deploya preview en Vercel) ──
-    # El agente clona web_repo_url, mejora el sitio (CRO/SEO/diseño) y crea un
-    # deploy PREVIEW en Vercel para que apruebes antes de prod. Default OFF.
+    # El agente mejora el sitio (CRO/SEO/diseño) y crea un deploy PREVIEW en
+    # Vercel para que apruebes antes de prod. Default OFF.
     vercel_token: str = ""               # token de Vercel (deploy via CLI/API)
     vercel_team_id: str = ""             # team/org id (scope) en Vercel
     vercel_project: str = ""             # nombre o ID del proyecto en Vercel
-    web_repo_url: str = ""               # clone URL del sitio (con token si es privado)
-    web_branch_base: str = "main"        # rama base de producción
     # Si =True el agente promueve a PRODUCCIÓN solo; default False = sólo preview + aviso.
     web_auto_deploy: bool = False
 

@@ -13,11 +13,13 @@
       "models": {
         "z-ai/glm-5.2": {
           "name": "GLM 5.2",
-          "limit": { "context": 128000, "output": 16384 }
+          "limit": { "context": 128000, "output": 16384 },
+          "options": { "temperature": 0.65 }
         },
         "deepseek-ai/deepseek-v4-pro": {
           "name": "DeepSeek V4 Pro",
-          "limit": { "context": 128000, "output": 16384 }
+          "limit": { "context": 128000, "output": 16384 },
+          "options": { "temperature": 0.45 }
         }
       }
     }

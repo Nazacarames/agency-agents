@@ -54,8 +54,8 @@ def load_token() -> Dict[str, Any]:
 
 
 def save_token(tok: Dict[str, Any]) -> None:
-    _DATA.mkdir(parents=True, exist_ok=True)
-    _TOKEN_FILE.write_text(json.dumps(tok), encoding="utf-8")
+    from .jsonstore import write_json_atomic
+    write_json_atomic(_TOKEN_FILE, tok)
 
 
 def clear_token() -> None:

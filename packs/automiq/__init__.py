@@ -1,5 +1,5 @@
-"""Pack `automiq` — 8 agentes de la agencia Automiq como skills de Hermes."""
+﻿"""Pack `automiq` - lista canonica de agentes habilitados (gate de /run y el panel)."""
 
-from .loader import AGENTS, list_agents, get_agent, AGENT_NAMES
+from .loader import list_agents, AGENT_NAMES
 
-__all__ = ["AGENTS", "list_agents", "get_agent", "AGENT_NAMES"]
+__all__ = ["list_agents", "AGENT_NAMES"]

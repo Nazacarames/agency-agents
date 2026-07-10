@@ -109,67 +109,11 @@ def _reengage_subject(lead: Dict[str, Any]) -> str:
     return subj if subj.lower().startswith("re:") else f"Re: {subj}"
 
 
-def _balanced_spans(s: str, open_ch: str, close_ch: str) -> List[tuple]:
-    """Spans [start, end) de estructuras balanceadas top-level, ignorando
-    brackets dentro de strings JSON."""
-    spans = []
-    depth, start, in_str, esc = 0, -1, False, False
-    for i, c in enumerate(s):
-        if in_str:
-            if esc:
-                esc = False
-            elif c == "\\":
-                esc = True
-            elif c == '"':
-                in_str = False
-            continue
-        if c == '"':
-            in_str = True
-        elif c == open_ch:
-            if depth == 0:
-                start = i
-            depth += 1
-        elif c == close_ch and depth:
-            depth -= 1
-            if depth == 0 and start != -1:
-                spans.append((start, i + 1))
-                start = -1
-    return spans
-
-
 def _parse_json_array(text: str) -> List[Dict[str, Any]]:
-    """Extrae los emails redactados de la respuesta del modelo.
-
-    Con OpenCode+GLM la respuesta puede venir con narración alrededor, en
-    bloques ```json```, con saltos de línea CRUDOS dentro de los strings
-    (strict=False los tolera) o como objetos sueltos si el array vino roto.
-    El primer parser (find('[')..rfind(']') + loads estricto) devolvía [] en
-    todos esos casos → día entero con 0 mails enviados (2026-07-09).
-    """
-    if not text:
-        return []
-    cands = [m.group(1) for m in re.finditer(r"```(?:json)?\s*(.+?)```", text, re.DOTALL)]
-    cands.append(text)
-    for cand in cands:
-        for a, b in _balanced_spans(cand, "[", "]"):
-            try:
-                data = json.loads(cand[a:b], strict=False)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, list):
-                items = [d for d in data if isinstance(d, dict) and d.get("key")]
-                if items:
-                    return items
-    # Rescate: objetos {..} sueltos (array roto por una coma de más, etc.)
-    out = []
-    for a, b in _balanced_spans(text, "{", "}"):
-        try:
-            d = json.loads(text[a:b], strict=False)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(d, dict) and d.get("key") and d.get("body"):
-            out.append(d)
-    return out
+    """Extrae los emails redactados (parser robusto único en _common:
+    fences + spans balanceados + strict=False + rescate de objetos sueltos)."""
+    from ._common import extract_json_array
+    return extract_json_array(text, required_key="key")
 
 
 def _load_sent_log() -> Dict[str, Any]:
@@ -181,8 +125,11 @@ def _load_sent_log() -> Dict[str, Any]:
 
 def _save_sent_log(data: Dict[str, Any]) -> None:
     try:
+        from ..integrations.jsonstore import write_json_atomic
         _DATA_DIR.mkdir(exist_ok=True)
-        _SENT_LOG.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Atómico: si el proceso muere a mitad de escritura, un sent-log corrupto
+        # se leía como {} → se RE-MAILEABA a leads ya contactados.
+        write_json_atomic(_SENT_LOG, data, indent=2)
     except Exception as e:
         log.error("outbound_sentlog_save_failed", error=str(e))
 
@@ -206,7 +153,9 @@ def _latest_leadhunter_report() -> str:
     for p in cands:
         try:
             t = p.read_text(encoding="utf-8")
-            if len(t) > 200:
+            # El placeholder de un run fallido (~310 chars) pasaba el filtro de
+            # tamaño y TAPABA el reporte real de ayer → outbound ingería 0 leads.
+            if len(t) > 200 and "no devolvió output" not in t:
                 return t
         except Exception:
             continue
@@ -368,13 +317,16 @@ class OutboundAgent(BaseAgent):
                 continue
             subject = _reengage_subject(lead)
             body = _reengage_body(lead)
-            thread_id = ""
-            if lead.get("touches"):
-                lt = lead["touches"][-1]
-                thread_id = lt.get("thread_id") or ""
-                if not thread_id and lt.get("msg_id"):
-                    thread_id = client.thread_id_of(lt["msg_id"])
             try:
+                # thread_id_of DENTRO del try: un 404/401 de Gmail acá abortaba
+                # post_process entero → los reenganches ya enviados no se
+                # persistían y al día siguiente salían DUPLICADOS.
+                thread_id = ""
+                if lead.get("touches"):
+                    lt = lead["touches"][-1]
+                    thread_id = lt.get("thread_id") or ""
+                    if not thread_id and lt.get("msg_id"):
+                        thread_id = client.thread_id_of(lt["msg_id"])
                 mid = client.send_message(to=email, subject=subject, body=body,
                                           from_name=self._reengage_from_name(),
                                           thread_id=thread_id or None)
@@ -416,8 +368,11 @@ class OutboundAgent(BaseAgent):
         sent_map = sent_log.setdefault("emails", {})
 
         cap = int(ctx.settings.outbound_daily_cap)
+        # El cap diario es UNO solo para secuencia + reenganche (antes cada carril
+        # recibía el cap completo → hasta 2× el tope en un día: riesgo deliverability).
+        reeng_cap = max(0, cap - len(ctx.args.get("_ob_due_keys", []) or []))
         reeng_lines, reeng_errors, reeng_sent = self._reengage(
-            store, client, live, sent_log, today, cap, ctx.run_id)
+            store, client, live, sent_log, today, reeng_cap, ctx.run_id)
         ctx.args["_ob_reeng"] = reeng_lines
         ctx.args["_ob_reeng_err"] = reeng_errors
 

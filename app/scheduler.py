@@ -70,6 +70,7 @@ COMPETITOR_REFRESH_CRON = "0 8 * * sun"   # dom 08:00 — refresca el playbook d
 SCOUT_REFRESH_CRON = "0 9 * * sun"        # dom 09:00 — visual scout IG (Gemini mira reels reales)
 TREND_RADAR_CRON = "45 6 * * *"           # diario 06:45 — radar de tendencias; digest ~7 AM
 CREATIVE_STUDY_CRON = "0 10 1 * *"        # día 1 de cada mes 10:00 — re-estudia formatos de creativos
+HOUSEKEEPING_CRON = "30 4 * * *"          # diario 04:30 — retención del volumen (data/images + reportes viejos)
 
 
 class AgentScheduler:
@@ -105,6 +106,8 @@ class AgentScheduler:
                               _scheduled_trend_radar)
         self._register_simple("creative:study", CREATIVE_STUDY_CRON, DEFAULT_TIMEZONE,
                               _scheduled_creative_study)
+        self._register_simple("housekeeping", HOUSEKEEPING_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_housekeeping)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -272,6 +275,17 @@ async def _scheduled_creative_study() -> None:
         log.info("creative_study_scheduled_done", result=res)
     except Exception as e:
         log.error("creative_study_failed", error=str(e)[:200])
+
+
+async def _scheduled_housekeeping() -> None:
+    """Retención del volumen: borra media vieja no pendiente y reportes antiguos."""
+    import asyncio
+    from .integrations import housekeeping
+    try:
+        res = await asyncio.to_thread(housekeeping.cleanup)
+        log.info("housekeeping_scheduled_done", result=res)
+    except Exception as e:
+        log.error("housekeeping_failed", error=str(e)[:200])
 
 
 async def _scheduled_trend_radar() -> None:

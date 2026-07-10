@@ -37,6 +37,34 @@ class ClaudeCodeError(Exception):
     """El CLI de claude no está disponible o falló."""
 
 
+def run_cli_killtree(cmd, *, cwd, env, stdout_file, stderr_file, timeout: int) -> int:
+    """Corre un CLI (claude/opencode) matando el ÁRBOL de procesos en timeout.
+
+    subprocess.run mata solo el proceso directo: los hijos que el harness lanzó
+    vía su tool Bash (node, chromium, ffmpeg) quedaban huérfanos vivos tras un
+    timeout → acumulación → OOM del container (ya mató un servicio una vez).
+    En POSIX: process group propio + killpg. En Windows (solo dev): kill simple.
+    Lanza subprocess.TimeoutExpired en timeout. Devuelve el returncode.
+    """
+    kwargs = {"start_new_session": True} if os.name == "posix" else {}
+    proc = subprocess.Popen(cmd, cwd=cwd, env=env,
+                            stdout=stdout_file, stderr=stderr_file, **kwargs)
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        if os.name == "posix":
+            import signal
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                proc.kill()
+        else:
+            proc.kill()
+        proc.wait(timeout=30)
+        raise
+    return proc.returncode
+
+
 # strict=False permite caracteres de control crudos (saltos de línea sin escapar,
 # etc.) DENTRO de los strings JSON. El CLI con backend MiniMax a veces emite el
 # reporte con un \n real en vez de \\n → el json estricto lo rechaza ("Invalid
@@ -220,9 +248,9 @@ def run_claude_code(
     stderr_path = os.path.join(io_dir, "_cc_stderr.bin")
     try:
         with open(stdout_path, "wb") as fout, open(stderr_path, "wb") as ferr:
-            proc = subprocess.run(
+            returncode = run_cli_killtree(
                 cmd, cwd=workdir, env=env,
-                stdout=fout, stderr=ferr, timeout=timeout,
+                stdout_file=fout, stderr_file=ferr, timeout=timeout,
             )
         with open(stdout_path, "rb") as f:
             stdout_b = f.read()
@@ -247,11 +275,11 @@ def run_claude_code(
     stdout_s = stdout_b.decode("utf-8", errors="replace")
     stderr_s = stderr_b.decode("utf-8", errors="replace")
 
-    if proc.returncode != 0:
-        log.error("claude_code_failed", returncode=proc.returncode,
+    if returncode != 0:
+        log.error("claude_code_failed", returncode=returncode,
                   stderr=stderr_s[:500])
         raise ClaudeCodeError(
-            f"claude -p exit {proc.returncode}: {stderr_s[:300]}"
+            f"claude -p exit {returncode}: {stderr_s[:300]}"
         )
 
     out = stdout_s.strip()

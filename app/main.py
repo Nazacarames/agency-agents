@@ -13,32 +13,26 @@ El scheduler de APScheduler corre los trabajos programados.
 from __future__ import annotations
 
 import hmac
-import hashlib
 import json
 import re
-import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import pytz
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse, HTMLResponse, FileResponse, RedirectResponse, PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from . import __version__
-from .clients.minimax import MiniMaxClient, MiniMaxError
-from .clients.discord import DiscordWebhook, DiscordError
 from .config import get_settings
 from .container import get_container, reset_container
 from .log import configure_logging, get_logger
 from .scheduler import AgentScheduler, DEFAULT_SCHEDULES
-from packs.automiq import list_agents, get_agent as get_pack_agent
+from packs.automiq import list_agents
 from packs.automiq.tools import ALL_TOOLS
-from .agents.registry import get_agent as get_legacy_agent, list_agents as list_legacy_agents
 
 log = get_logger("api")
 
@@ -328,26 +322,29 @@ async def last_agent_output(name: str, request: Request):
     _verify_webhook_secret(request)
     if name not in list_agents():
         raise HTTPException(status_code=404, detail=f"agent {name} not in pack automiq")
-    today = datetime.now(pytz.timezone("America/Buenos_Aires")).strftime("%Y-%m-%d")
+    from .agents._common import today_ar
+    today = today_ar()
     data_dir = _data_dir()
 
-    patterns = {
-        "leadhunter": ("leadhunter-report-{d}.md", None, "leadhunter-leads-{d}.json"),
-        "content_creator": ("content-creator-report-{d}.md", None, "content-creator-report-{d}.json"),
-        "growth_hacker": ("growth-hacker-report-{d}.md", None, "growth-hacker-report-{d}.json"),
-        "creative_strategist": ("creative-strategist-report-{d}.md", None, "creative-strategist-report-{d}.json"),
-        "social_media": ("social-media-report-{d}.md", None, "social-media-report-{d}.json"),
-        "outbound": ("outbound-report-{d}.md", None, "outbound-report-{d}.json"),
-        "media_auditor": ("media-auditor-report-{d}.md", None, "media-auditor-report-{d}.json"),
-        "seo_specialist": ("seo-specialist-report-{d}.md", None, "seo-specialist-report-{d}.json"),
-        "web_auditor": ("web-auditor-report-{d}.md", None, "web-auditor-report-{d}.json"),
-        "inbox_assistant": ("inbox-assistant-report-{d}.md", None, None),
-        "meeting_prep": ("meeting-prep-report-{d}.md", None, None),
+    # El MD sale SIEMPRE del patrón genérico (post_process guarda en
+    # data/<name-con-guiones>-report-<fecha>.md); solo el JSON acompañante varía.
+    # (El dict anterior repetía 11 veces el default y arrastraba un slot `leads`
+    # que era None en todas las entradas → código muerto en la respuesta.)
+    slug = name.replace("_", "-")
+    md_tpl = f"{slug}-report-{{d}}.md"
+    json_patterns = {
+        "leadhunter": "leadhunter-leads-{d}.json",
+        "content_creator": "content-creator-report-{d}.json",
+        "growth_hacker": "growth-hacker-report-{d}.json",
+        "creative_strategist": "creative-strategist-report-{d}.json",
+        "social_media": "social-media-report-{d}.json",
+        "outbound": "outbound-report-{d}.json",
+        "media_auditor": "media-auditor-report-{d}.json",
+        "seo_specialist": "seo-specialist-report-{d}.json",
+        "web_auditor": "web-auditor-report-{d}.json",
     }
-    # Default robusto para agentes sin patrón explícito (post_process genérico
-    # guarda en data/<name-con-guiones>-report-<fecha>.md). Evita el KeyError/500.
-    default_tpl = (f"{name.replace('_', '-')}-report-{{d}}.md", None, None)
-    md_tpl, leads_tpl, json_tpl = patterns.get(name, default_tpl)
+    json_tpl = json_patterns.get(name)
+    leads_tpl = None   # slot legacy: se mantiene la forma de la respuesta (leads_md: null)
 
     md_path = data_dir / md_tpl.format(d=today)
     if not md_path.exists():
@@ -667,13 +664,14 @@ _AGENT_DESCRIPTIONS = {
 
 def _agent_last_output(name: str) -> Dict[str, Any]:
     """Última corrida del agente según los reportes en data/."""
+    from .agents._common import today_ar
     prefix = f"{name.replace('_', '-')}-report-"
-    files = sorted(_data_dir().glob(f"{prefix}*.md"))
+    files = list(_data_dir().glob(f"{prefix}*.md"))
     if not files:
         return {"has_output": False, "last_date": None}
-    last = files[-1]
+    last = max(files)   # mismo prefijo + fecha zero-padded → max = más reciente, sin sort completo
     m = re.search(r"(\d{4}-\d{2}-\d{2})", last.stem)
-    today = datetime.now(pytz.timezone("America/Buenos_Aires")).strftime("%Y-%m-%d")
+    today = today_ar()
     date = m.group(1) if m else None
     return {"has_output": True, "last_date": date, "today": date == today}
 
@@ -690,16 +688,22 @@ async def api_login(body: LoginBody):
 @app.get("/api/agents")
 async def api_agents(request: Request):
     _verify_webhook_secret(request)
-    out = []
-    for n in list_agents():
-        info = _agent_last_output(n)
-        out.append({
-            "name": n,
-            "description": _AGENT_DESCRIPTIONS.get(n, ""),
-            "schedule": DEFAULT_SCHEDULES.get(n),
-            **info,
-        })
-    return {"agents": out}
+
+    def _listing():
+        # 14 globs de data/ = I/O de disco: al threadpool, no en el event loop
+        # (cada poll del panel lo dispara).
+        out = []
+        for n in list_agents():
+            info = _agent_last_output(n)
+            out.append({
+                "name": n,
+                "description": _AGENT_DESCRIPTIONS.get(n, ""),
+                "schedule": DEFAULT_SCHEDULES.get(n),
+                **info,
+            })
+        return out
+
+    return {"agents": await run_in_threadpool(_listing)}
 
 
 @app.post("/api/agents/{name}/run")
@@ -1230,8 +1234,12 @@ async def api_generate_image(body: ImageBody, request: Request):
         raise HTTPException(status_code=400, detail="generación de imágenes deshabilitada (sin MINIMAX_API_KEY)")
     if not (body.prompt or "").strip():
         raise HTTPException(status_code=400, detail="prompt vacío")
-    urls = image_gen.generate_image(body.prompt, body.aspect_ratio or "1:1", body.n or 1,
-                                    text=body.text, subtitle=body.subtitle)
+    # generate_image hace httpx SÍNCRONO (hasta 180s por request al proveedor) +
+    # Pillow: en el event loop congelaba /healthz y la plataforma mataba el
+    # container. Al threadpool, igual que /api/publish.
+    urls = await run_in_threadpool(
+        image_gen.generate_image, body.prompt, body.aspect_ratio or "1:1", body.n or 1,
+        text=body.text, subtitle=body.subtitle)
     if not urls:
         raise HTTPException(status_code=502, detail="no se pudo generar la imagen (proveedor)")
     return {"ok": True, "urls": urls}
@@ -1495,9 +1503,13 @@ async def api_demo_chat(body: DemoChatBody, request: Request):
 
     def _run() -> str:
         from .clients.minimax import MiniMaxClient
+        from .agents._common import sanitize_model_text
         with MiniMaxClient(get_settings()) as mc:
             r = mc.complete(_DEMO_SYSTEM, history, max_tokens=350, temperature=0.7)
-            return (r.text or "").strip()
+            # Este texto va DIRECTO a un visitante de la landing: sanitizar CJK
+            # acá (base.run no interviene en este path).
+            clean, _ = sanitize_model_text((r.text or "").strip())
+            return clean
 
     try:
         reply = await run_in_threadpool(_run)
@@ -1546,7 +1558,9 @@ def _lead_auto_reply(name: str, email: str, company: str, message: str) -> None:
         with MiniMaxClient(s) as mc:
             r = mc.complete(sys_prompt, [{"role": "user", "content": user_msg}],
                             max_tokens=400, temperature=0.6)
-            body_txt = (r.text or "").strip()
+            # Mail REAL a un lead inbound: sanitizar CJK (no pasa por base.run).
+            from .agents._common import sanitize_model_text
+            body_txt, _ = sanitize_model_text((r.text or "").strip())
     except Exception as e:
         log.warning("lead_reply_llm_failed", error=str(e)[:200])
     if not body_txt:

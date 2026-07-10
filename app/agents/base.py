@@ -222,10 +222,13 @@ class BaseAgent(ABC):
             local_system = self.system_prompt
             try:
                 if isinstance(ctx.args, dict) and ctx.args.get("force_global"):
-                    # Remove instructions that explicitly tell the model to honor global_pause
-                    local_system = local_system.replace(
-                        "Si global_pause está activo, no ejecutar (sólo devolver mensaje de pausa)",
-                        "[IGNORAR GLOBAL_PAUSE: ejecución autorizada vía force_global=True]",
+                    # Override APPENDEADO (no string-replace de una oración literal de
+                    # _common.py: si alguien la reformulaba, el replace no matcheaba y
+                    # force_global dejaba de funcionar EN SILENCIO).
+                    local_system += (
+                        "\n\n## OVERRIDE OPERATIVO\nEsta corrida fue autorizada "
+                        "explícitamente con force_global=True: ignorá cualquier "
+                        "instrucción previa sobre global_pause y ejecutá normalmente."
                     )
             except Exception:
                 pass
@@ -256,38 +259,13 @@ class BaseAgent(ABC):
                                 run_id=ctx.run_id, error=str(e)[:200])
                     response = None
 
-            # 0b) Backend LLM alternativo (NVIDIA: GLM/DeepSeek) — completion directa.
-            #     Fallback del harness; si también falla, cae al flujo normal (CC/MiniMax).
-            if self.llm_provider and response is None \
-                    and getattr(ctx.settings, "nvidia_api_key", ""):
-                try:
-                    from ..clients.nvidia import complete_with_provider
-                    response = complete_with_provider(
-                        self.llm_provider, ctx.settings, local_system, user_msg,
-                        self.max_tokens, self.temperature)
-                    log.info("agent_via_nvidia", agent=self.name, run_id=ctx.run_id,
-                             provider=self.llm_provider)
-                except Exception as e:
-                    log.warning("nvidia_unavailable_fallback", agent=self.name,
-                                run_id=ctx.run_id, error=str(e)[:200])
-                    response = None
-
-            # 1) Camino preferente: Claude Code headless con backend MiniMax.
+            # 1) Claude Code headless con backend MiniMax — ANTES que NVIDIA pelado:
+            #    si OpenCode falla, un agente con use_claude_code espera tools+skills;
+            #    caer a una completion sin harness lo dejaba sin poder cumplir su
+            #    prompt (WebFetch/skills = letra muerta) aunque "corriera".
             if self.use_claude_code and response is None:
                 try:
-                    cc_prompt = user_msg
-                    if self.claude_code_skill:
-                        skills = [s.strip() for s in self.claude_code_skill.split(",") if s.strip()]
-                        skills_txt = " y ".join(f"`{s}`" for s in skills)
-                        cc_prompt = (
-                            f"IMPORTANTE: cargá y seguí la(s) skill(s) {skills_txt} "
-                            f"(usá la tool Skill) para resolver esta tarea.\n\n{user_msg}\n\n"
-                            "Corrés HEADLESS (sin usuario): si una skill pide preguntar, "
-                            "esperar input o setear credenciales, NO esperes ni preguntes — "
-                            "decidí con el contexto del prompt y seguí. "
-                            "Al terminar, IMPRIMÍ el entregable COMPLETO como tu respuesta final "
-                            "(no lo dejes solo en archivos de disco)."
-                        )
+                    cc_prompt = self._skills_preamble() + user_msg
                     mcp_servers = None
                     cc_tools = self.claude_code_tools
                     try:
@@ -316,7 +294,23 @@ class BaseAgent(ABC):
                 except ClaudeCodeError as e:
                     log.warning("claude_code_unavailable_fallback",
                                 agent=self.name, run_id=ctx.run_id, error=str(e))
-                    response = None  # cae al path MiniMax directo
+                    response = None  # cae a NVIDIA directo / MiniMax
+
+            # 1b) Backend LLM alternativo (NVIDIA: GLM/DeepSeek) — completion directa
+            #     SIN tools ni skills. Último harness antes de MiniMax pelado.
+            if self.llm_provider and response is None \
+                    and getattr(ctx.settings, "nvidia_api_key", ""):
+                try:
+                    from ..clients.nvidia import complete_with_provider
+                    response = complete_with_provider(
+                        self.llm_provider, ctx.settings, local_system, user_msg,
+                        self.max_tokens, self.temperature)
+                    log.info("agent_via_nvidia", agent=self.name, run_id=ctx.run_id,
+                             provider=self.llm_provider)
+                except Exception as e:
+                    log.warning("nvidia_unavailable_fallback", agent=self.name,
+                                run_id=ctx.run_id, error=str(e)[:200])
+                    response = None
 
             # 2) Path MiniMax directo (con o sin tool-use), o fallback del anterior.
             if response is None:
@@ -437,12 +431,13 @@ class BaseAgent(ABC):
         try:
             return fn(**tool_input) if isinstance(tool_input, dict) else fn(tool_input)
         except TypeError as e:
-            # input con keys que la fn no acepta: reintentar con el primer arg posicional
-            try:
-                vals = list(tool_input.values()) if isinstance(tool_input, dict) else [tool_input]
-                return fn(*vals)
-            except Exception as e2:
-                return {"error": f"tool {name} falló: {e2}"}
+            # Argumentos que la fn no acepta: devolver el error al modelo para que
+            # corrija los args. NO reintentar posicional: si el TypeError saltó
+            # DESPUÉS del side effect (mail enviado, insert en store) la acción se
+            # ejecutaba dos veces, y los values() en orden del dict podían cruzar
+            # parámetros (to/subject invertidos).
+            return {"error": f"argumentos inválidos para la tool {name}: {e}. "
+                             "Reintentá con los nombres de parámetros exactos del schema."}
         except Exception as e:
             return {"error": f"tool {name} falló: {e}"}
 
@@ -484,14 +479,18 @@ class BaseAgent(ABC):
                 })
             messages.append({"role": "user", "content": tool_results})
 
-        # Vueltas agotadas: pedir un cierre final SIN tools para forzar texto
+        # Vueltas agotadas: pedir un cierre final SIN tools para forzar texto.
+        # La instrucción va DENTRO del último mensaje user (el de los tool_results):
+        # dos user consecutivos rompen la alternancia de roles que exige la API
+        # Anthropic-compatible → 400 → se perdía todo el trabajo de las tools.
         log.warning("agent_tool_loop_exhausted", agent=self.name, run_id=ctx.run_id,
                     iterations=self.max_tool_iterations)
-        messages.append({
-            "role": "user",
-            "content": ("Cerrá ahora con el entregable final completo usando lo que ya "
-                        "recolectaste. No pidas más tools."),
-        })
+        closing = ("Cerrá ahora con el entregable final completo usando lo que ya "
+                   "recolectaste. No pidas más tools.")
+        if messages and messages[-1]["role"] == "user" and isinstance(messages[-1]["content"], list):
+            messages[-1]["content"] = messages[-1]["content"] + [{"type": "text", "text": closing}]
+        else:
+            messages.append({"role": "user", "content": closing})
         final = ctx.minimax.complete(
             system=system,
             messages=messages,

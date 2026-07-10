@@ -335,8 +335,8 @@ class LeadHunterAgent(BaseAgent):
         return ("\n\n" + "\n\n".join(parts)) if parts else ""
 
     def build_user_message(self, ctx: AgentContext) -> str:
-        tz = pytz.timezone("America/Buenos_Aires")
-        today = datetime.now(tz).strftime("%Y-%m-%d")
+        from ._common import today_ar
+        today = today_ar()
         # Respectar un override explícito pasado en args.force_global
         force = False
         try:
@@ -418,9 +418,10 @@ class LeadHunterAgent(BaseAgent):
         - El envío a Discord lo hace BaseAgent.run(); acá sólo dejamos los
           archivos listos en disco y disparamos un push best-effort al repo.
         """
-        tz = pytz.timezone("America/Buenos_Aires")
-        today = datetime.now(tz).strftime("%Y-%m-%d")
-        now_iso = datetime.now(tz).isoformat()
+        from ._common import now_ar
+        now = now_ar()
+        today = now.strftime("%Y-%m-%d")
+        now_iso = now.isoformat()
         data_dir = Path(__file__).resolve().parent.parent.parent / "data"
         data_dir.mkdir(exist_ok=True)
 

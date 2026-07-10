@@ -163,10 +163,14 @@ def create_task(prompt: str, image_url: Optional[str] = None,
                     error=str(res["data"].get("error") or res["text"])[:200])
         params.pop("resolution", None)
         res = _post({"instances": [instance], "parameters": params})
-    if (res["status"] >= 400 or "error" in res["data"]) and \
-            "generateaudio" in str(res["data"].get("error") or res["text"]).lower():
-        # modelo viejo sin soporte de audio → sin el parámetro (mejor un clip mudo
-        # detectado por el guard del caller que ningún clip)
+    if (res["status"] >= 400 or "error" in res["data"]) and "generateAudio" in params:
+        # Modelo/endpoint que rechaza el pedido con generateAudio presente → retry
+        # sin el parámetro ante CUALQUIER error (antes solo si el texto contenía el
+        # literal 'generateaudio': otro wording mataba el fallback Veo entero justo
+        # cuando Omni ya había fallado). Mejor un clip mudo detectado por el guard
+        # anti-mudo del caller que ningún clip.
+        log.warning("veo_audio_retry",
+                    error=str(res["data"].get("error") or res["text"])[:200])
         params.pop("generateAudio", None)
         res = _post({"instances": [instance], "parameters": params})
     data = res["data"]

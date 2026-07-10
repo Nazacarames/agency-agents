@@ -54,7 +54,15 @@ def _credentials():
 
 def _service():
     from googleapiclient.discovery import build
-    return build("youtube", "v3", credentials=_credentials(), cache_discovery=False)
+    # Timeout largo (sube videos de varios MB) pero NO infinito: el default None
+    # colgaba el thread para siempre ante un socket muerto.
+    try:
+        import httplib2
+        from google_auth_httplib2 import AuthorizedHttp
+        http = AuthorizedHttp(_credentials(), http=httplib2.Http(timeout=300))
+        return build("youtube", "v3", http=http, cache_discovery=False)
+    except ImportError:
+        return build("youtube", "v3", credentials=_credentials(), cache_discovery=False)
 
 
 def channel_info() -> Dict[str, Any]:

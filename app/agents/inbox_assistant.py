@@ -100,23 +100,11 @@ Si no hay horario confirmado, dejá `confirm:false` y `datetime_iso:""`.
 
 
 def _parse_llm_json(text: str) -> List[Dict[str, Any]]:
-    """Extrae el array JSON de la respuesta del LLM de forma robusta."""
-    if not text:
-        return []
-    # Quitar fences ```json ... ```
-    fence = re.search(r"```(?:json)?\s*(.+?)```", text, re.DOTALL)
-    candidate = fence.group(1) if fence else text
-    # Tomar desde el primer [ hasta el último ]
-    start = candidate.find("[")
-    end = candidate.rfind("]")
-    if start == -1 or end == -1 or end <= start:
-        return []
-    blob = candidate[start : end + 1]
-    try:
-        data = json.loads(blob)
-        return data if isinstance(data, list) else []
-    except json.JSONDecodeError:
-        return []
+    """Extrae el array JSON de la respuesta del LLM (parser robusto único en
+    _common: el parse frágil de acá era el mismo que dejó a outbound un día
+    entero en 0 mails con OpenCode+GLM — narración alrededor, \\n crudos)."""
+    from ._common import extract_json_array
+    return extract_json_array(text, required_key="thread_id")
 
 
 class InboxAssistantAgent(BaseAgent):
@@ -341,6 +329,29 @@ class InboxAssistantAgent(BaseAgent):
         when = (ev.get("start") or dt_iso or "").replace("T", " ")[:16]
         return meet_link, when
 
+    def _reformat_via_minimax(self, ctx: AgentContext, raw: str) -> List[Dict[str, Any]]:
+        """Convierte una salida no-parseable al array JSON del contrato (1 intento)."""
+        raw = (raw or "").strip()
+        if not raw or ctx.minimax is None:
+            return []
+        try:
+            resp = ctx.minimax.complete(
+                system=("Sos un conversor de formato. Te paso la salida de otro modelo que "
+                        "debía devolver un array JSON con objetos "
+                        '{"thread_id","should_reply","reason","reply","book"} pero vino en '
+                        "otro formato. Extraé esos datos y devolvé EXCLUSIVAMENTE el array "
+                        "JSON válido, sin texto adicional. Si no hay datos, devolvé []."),
+                messages=[{"role": "user", "content": raw[:20000]}],
+                max_tokens=self.max_tokens,
+                temperature=0.1,
+            )
+            items = _parse_llm_json(resp.text)
+            log.info("inbox_reformat_minimax", got=len(items))
+            return items
+        except Exception as e:
+            log.error("inbox_reformat_failed", error=str(e)[:200])
+            return []
+
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         status = ctx.args.get("_inbox_status") if isinstance(ctx.args, dict) else None
 
@@ -350,6 +361,11 @@ class InboxAssistantAgent(BaseAgent):
 
         lookup: Dict[str, Dict[str, Any]] = ctx.args.get("_inbox_threads", {})
         items = _parse_llm_json(response_text)
+        if not items:
+            # Red de seguridad (mismo espíritu que _redraft_missing de outbound):
+            # las respuestas suelen estar redactadas en el texto, solo que en un
+            # formato que no parsea → UNA pasada de MiniMax lo re-formatea.
+            items = self._reformat_via_minimax(ctx, response_text)
         if not items:
             log.warning("inbox_no_json_parsed", run_id=ctx.run_id)
             summary = (

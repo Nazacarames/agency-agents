@@ -168,7 +168,16 @@ class GmailClient:
             token_uri=TOKEN_URI,
             scopes=GMAIL_SCOPES,
         )
-        self._service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+        # Timeout explícito: el default de httplib2 es None → un socket colgado en
+        # un send bloqueaba el thread del job PARA SIEMPRE y, con max_instances=1,
+        # todos los crons siguientes del agente se salteaban hasta el redeploy.
+        try:
+            import httplib2
+            from google_auth_httplib2 import AuthorizedHttp
+            http = AuthorizedHttp(creds, http=httplib2.Http(timeout=60))
+            self._service = build("gmail", "v1", http=http, cache_discovery=False)
+        except ImportError:
+            self._service = build("gmail", "v1", credentials=creds, cache_discovery=False)
         return self._service
 
     # ── lectura ──

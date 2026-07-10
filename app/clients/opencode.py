@@ -24,7 +24,7 @@ from typing import Optional
 
 from ..config import Settings
 from ..log import get_logger
-from .claude_code import _largest_text_artifact
+from .claude_code import _largest_text_artifact, run_cli_killtree
 
 log = get_logger("opencode")
 
@@ -83,11 +83,27 @@ def _extract_text(out: str) -> str:
                     continue
                 if isinstance(ev, dict):
                     t = (ev.get("text") or (ev.get("part") or {}).get("text") or "")
-                    if t and (ev.get("type") in ("text", "message", None) or True):
+                    # SOLO eventos de texto del mensaje (type text/message o sin
+                    # type). Antes un `or True` anulaba el filtro y se concatenaba
+                    # el text de eventos de tools/steps → entregable contaminado.
+                    if t and ev.get("type") in ("text", "message", None):
                         texts.append(t)
             if texts:
                 return "".join(texts).strip()
     return _ANSI_RE.sub("", out).strip()
+
+
+def _has_json_payload(text: str) -> bool:
+    """¿El texto impreso ya contiene un array/objeto JSON sustancial? Si sí, es
+    probablemente el entregable de un agente con contrato estructurado (outbound/
+    inbox) y NO hay que pisarlo con un .md que la skill dejó en el workdir."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    if t.startswith(("[", "{")):
+        return True
+    m = re.search(r"\[\s*\{", t)
+    return bool(m)
 
 
 def run_opencode(
@@ -102,6 +118,10 @@ def run_opencode(
 
     `opencode run` no tiene flag de system prompt → se antepone al mensaje (los
     modelos chat lo respetan bien como bloque inicial marcado).
+
+    Sampling: el CLI tampoco acepta temperature/max_tokens por corrida — la
+    temperatura se fija POR MODELO en opencode.json (glm 0.65 copy, deepseek
+    0.45 razonamiento, aproximando los valores de los agentes que los usan).
     """
     if not opencode_available():
         raise OpenCodeError("CLI `opencode` no encontrado en PATH")
@@ -127,8 +147,9 @@ def run_opencode(
            "-m", model_ref(provider, settings)]
     try:
         with open(stdout_path, "wb") as fout, open(stderr_path, "wb") as ferr:
-            proc = subprocess.run(cmd, cwd=workdir, env=env,
-                                  stdout=fout, stderr=ferr, timeout=timeout)
+            returncode = run_cli_killtree(cmd, cwd=workdir, env=env,
+                                          stdout_file=fout, stderr_file=ferr,
+                                          timeout=timeout)
         with open(stdout_path, "rb") as f:
             stdout_s = f.read().decode("utf-8", errors="replace")
         with open(stderr_path, "rb") as f:
@@ -140,14 +161,16 @@ def run_opencode(
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
-    if proc.returncode != 0:
-        log.error("opencode_failed", returncode=proc.returncode, stderr=stderr_s[:400])
-        raise OpenCodeError(f"opencode exit {proc.returncode}: {stderr_s[:300]}")
+    if returncode != 0:
+        log.error("opencode_failed", returncode=returncode, stderr=stderr_s[:400])
+        raise OpenCodeError(f"opencode exit {returncode}: {stderr_s[:300]}")
 
     text = _extract_text(stdout_s)
-    # igual que claude_code: si dejó un entregable más completo en un archivo, usarlo
+    # igual que claude_code: si dejó un entregable más completo en un archivo,
+    # usarlo — SALVO que lo impreso ya sea un payload JSON (contrato estructurado
+    # de outbound/inbox: un .md de la skill NO debe pisar el array parseable).
     art = (artifact or "").strip()
-    if art and len(art) > max(int(len(text) * 1.2), 1000):
+    if art and len(art) > max(int(len(text) * 1.2), 1000) and not _has_json_payload(text):
         log.info("opencode_artifact_recovered", printed=len(text), artifact=len(art))
         text = art
     if not text:

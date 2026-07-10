@@ -467,17 +467,21 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             # DEMO sin chat tampoco.
             if estilo in ("tipografico", "editorial") and not texto:
                 estilo = "banner"
-            if estilo == "demo" and not chat:
-                estilo = "banner"
+            # DEMO sin chat O con chat que no parsea (separador `;` en vez de `;;`,
+            # rol distinto de them/bot) → banner: mejor una pieza genérica que
+            # descartar la publicación planificada en silencio.
+            negocio_demo, msgs_demo = (None, [])
+            if estilo == "demo":
+                negocio_demo, msgs_demo = _parse_chat_field(chat) if chat else (None, [])
+                if not negocio_demo:
+                    estilo = "banner"
             # Historia = pantalla completa vertical (9:16); feed = 4:5 (1080x1350,
             # el formato que más pantalla ocupa; image_gen normaliza al px exacto).
             aspect = "9:16" if kind == "story" else "4:5"
             if estilo == "demo":
                 # prueba-de-producto: chat de WhatsApp REAL (Pillow) como card
-                negocio, msgs = _parse_chat_field(chat)
-                urls = (image_gen.render_demo(negocio, msgs, texto or "",
-                                              sub, aspect_ratio=aspect)
-                        if negocio else [])
+                urls = image_gen.render_demo(negocio_demo, msgs_demo, texto or "",
+                                             sub, aspect_ratio=aspect)
             elif estilo == "editorial":
                 # placa tipográfica 100% Pillow (sin IA): el titular ES la pieza,
                 # con la frase clave marcada entre *asteriscos* resaltada.
@@ -573,6 +577,88 @@ def sanitize_model_text(text: str) -> tuple:
     cleaned = _re.sub(r"[ \t]{2,}", " ", cleaned)
     cleaned = _re.sub(r" +([,.;:!?])", r"\1", cleaned)
     return cleaned, removed
+
+
+# ── Fecha/hora ART (única fuente: los reportes se nombran y buscan con esta fecha) ──
+
+def now_ar():
+    """datetime actual en America/Buenos_Aires."""
+    from datetime import datetime
+    import pytz
+    return datetime.now(pytz.timezone("America/Buenos_Aires"))
+
+
+def today_ar() -> str:
+    """'YYYY-MM-DD' de hoy en ART."""
+    return now_ar().strftime("%Y-%m-%d")
+
+
+# ── Extracción de JSON de respuestas de modelos ──────────────────────────────
+# Con harness (OpenCode/Claude Code) la respuesta puede venir con narración
+# alrededor, en bloques ```json```, con saltos de línea CRUDOS dentro de los
+# strings (json estricto los rechaza) o como array roto. El parse ingenuo
+# (find('[')..rfind(']') + loads estricto) dejó a outbound un día entero en
+# 0 mails (2026-07-09). Este es el parser único para TODOS los agentes.
+
+def _balanced_spans(s: str, open_ch: str, close_ch: str):
+    """Spans [start, end) de estructuras balanceadas top-level, ignorando
+    brackets dentro de strings JSON."""
+    spans = []
+    depth, start, in_str, esc = 0, -1, False, False
+    for i, c in enumerate(s):
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+            continue
+        if c == '"':
+            in_str = True
+        elif c == open_ch:
+            if depth == 0:
+                start = i
+            depth += 1
+        elif c == close_ch and depth:
+            depth -= 1
+            if depth == 0 and start != -1:
+                spans.append((start, i + 1))
+                start = -1
+    return spans
+
+
+def extract_json_array(text: str, required_key: str = "") -> list:
+    """Extrae una lista de dicts de la respuesta del modelo, tolerante a
+    narración/fences/saltos de línea crudos/arrays rotos. Si `required_key`
+    se pasa, sólo cuentan los dicts que la tengan (filtra arrays ajenos)."""
+    import json as _json
+    if not text:
+        return []
+    def _ok(d):
+        return isinstance(d, dict) and (not required_key or d.get(required_key))
+    cands = [m.group(1) for m in _re.finditer(r"```(?:json)?\s*(.+?)```", text, _re.DOTALL)]
+    cands.append(text)
+    for cand in cands:
+        for a, b in _balanced_spans(cand, "[", "]"):
+            try:
+                data = _json.loads(cand[a:b], strict=False)
+            except _json.JSONDecodeError:
+                continue
+            if isinstance(data, list):
+                items = [d for d in data if _ok(d)]
+                if items:
+                    return items
+    # Rescate: objetos {..} sueltos (array roto por una coma de más, etc.)
+    out = []
+    for a, b in _balanced_spans(text, "{", "}"):
+        try:
+            d = _json.loads(text[a:b], strict=False)
+        except _json.JSONDecodeError:
+            continue
+        if _ok(d) and (required_key or len(d) > 1):
+            out.append(d)
+    return out
 
 
 # ── Handoff entre agentes (sinergia / pipeline) ──────────────────────────────
