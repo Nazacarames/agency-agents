@@ -959,6 +959,35 @@ async def api_del_growth(obj_id: str, request: Request):
     return {"ok": True}
 
 
+# ── Mesa redonda (debate entre agentes) + notas entre agentes ──
+
+@app.post("/api/roundtable")
+async def api_roundtable(request: Request, background: BackgroundTasks):
+    """Dispara la mesa redonda on-demand (corre en background, ~2-4 min;
+    el resultado llega al canal de Discord del chief y a /last como reporte)."""
+    _verify_webhook_secret(request)
+    from .integrations import roundtable
+
+    async def _run():
+        import asyncio
+        try:
+            res = await asyncio.to_thread(roundtable.run_roundtable)
+            log.info("roundtable_manual_done", result=res)
+        except Exception as e:
+            log.error("roundtable_manual_failed", error=str(e)[:200])
+
+    background.add_task(_run)
+    return {"queued": True, "eta": "2-4 min", "delivery": "Discord (canal chief) + data/"}
+
+
+@app.get("/api/agent-notes")
+async def api_agent_notes(request: Request):
+    """Notas vigentes entre agentes (colaboración) — para el panel/debug."""
+    _verify_webhook_secret(request)
+    from .integrations import agent_inbox
+    return {"notes": await run_in_threadpool(agent_inbox.peek_all)}
+
+
 # ── Lecciones por agente (loop de mejora continua) ──
 
 @app.get("/api/lessons")

@@ -137,6 +137,66 @@ class BaseAgent(ABC):
 
     # ── Memoria de la agencia (contexto + aprendizaje) ──
 
+    def _collab_block(self) -> str:
+        """Colaboración entre agentes: notas que le dejaron + cómo dejar las suyas
+        y cómo registrar aprendizajes. Es el mecanismo por el que los agentes se
+        potencian entre sí y mejoran con el tiempo."""
+        try:
+            from ..integrations import agent_inbox
+            from .registry import list_agents as _all
+            names = ", ".join(a.name for a in _all() if a.name != self.name)
+            parts = ["## 🤝 COLABORACIÓN ENTRE AGENTES"]
+            notes = agent_inbox.pop_for(self.name)
+            if notes:
+                parts.append("### Notas que te dejaron tus compañeros (usalas HOY si aplican)")
+                for n in notes:
+                    when = (n.get("created_at") or "")[:10]
+                    parts.append(f"- [de **{n['from']}**, {when}] {n['note']}")
+            parts.append(
+                "### Cómo colaborar (hacelo cuando aporte de verdad)\n"
+                f"- Si descubriste algo que le sirve a OTRO agente ({names}), dejáselo "
+                "con una línea propia: `NOTA_PARA(<agente>): <dato concreto y accionable>` "
+                "(máx 3 por corrida; la recibe en su próxima corrida).\n"
+                "- Si esta corrida te dejó un aprendizaje DURABLE (qué funcionó, qué falló, "
+                "qué patrón se repite), registralo con: `LECCION: <aprendizaje en 1 frase>` "
+                "(máx 2; se te inyecta en el futuro y gana peso si se repite). "
+                "No registres obviedades ni cosas de un solo día."
+            )
+            return "\n".join(parts)
+        except Exception as e:
+            log.warning("collab_block_failed", agent=self.name, error=str(e)[:120])
+            return ""
+
+    def _harvest_collab(self, text: str, ctx: AgentContext) -> None:
+        """Cosecha NOTA_PARA(...) y LECCION: del output del agente (texto CRUDO,
+        antes de que el post_process lo reescriba). Best-effort."""
+        if not text:
+            return
+        try:
+            import re as _re2
+            from ..integrations import agent_inbox, memory_store as ms
+            from .registry import list_agents as _all
+            valid = {a.name for a in _all()}
+            sent = 0
+            for m in _re2.finditer(r"^[\s>*`\-]*NOTA_PARA\(([a-z_]+)\)\s*[:：]\s*(.+)$",
+                                   text, _re2.IGNORECASE | _re2.MULTILINE):
+                to, note = m.group(1).lower(), m.group(2).strip().strip("`*")
+                if to in valid and to != self.name and len(note) >= 10 and sent < 3:
+                    if agent_inbox.leave(self.name, to, note):
+                        sent += 1
+            learned = 0
+            for m in _re2.finditer(r"^[\s>*`\-]*LECCI[OÓ]N\s*[:：]\s*(.+)$",
+                                   text, _re2.IGNORECASE | _re2.MULTILINE):
+                lesson = m.group(1).strip().strip("`*")
+                if 15 <= len(lesson) <= 300 and learned < 2:
+                    ms.record_outcome(self.name, lesson)
+                    learned += 1
+            if sent or learned:
+                log.info("collab_harvested", agent=self.name, run_id=ctx.run_id,
+                         notes=sent, lessons=learned)
+        except Exception as e:
+            log.warning("collab_harvest_failed", agent=self.name, error=str(e)[:120])
+
     def _augment_with_memory(self, user_msg: str, ctx: AgentContext) -> str:
         """Inyecta contexto de empresa + lecciones + memoria del cliente al prompt."""
         from ..integrations import memory_store as ms
@@ -147,6 +207,9 @@ class BaseAgent(ABC):
         lessons = ms.lessons_for(self.name)
         if lessons:
             blocks.append("## " + lessons)
+        collab = self._collab_block()
+        if collab:
+            blocks.append(collab)
         # cliente objetivo (args.client_id) → su memoria acumulada
         cid = ctx.args.get("client_id") if isinstance(ctx.args, dict) else None
         if cid:
@@ -344,6 +407,9 @@ class BaseAgent(ABC):
             if cjk_removed:
                 log.warning("sanitized_cjk_chars", agent=self.name,
                             run_id=ctx.run_id, removed=cjk_removed)
+            # Colaboración: cosechar NOTA_PARA/LECCION del texto CRUDO — varios
+            # post_process reescriben el output y las líneas se perderían.
+            self._harvest_collab(clean_text, ctx)
             output = self.post_process(clean_text, ctx)
             # Si la corrida apuntaba a un cliente, guardar el report en su memoria
             # (así "una vez que guardás un cliente, el report y la info recaudada

@@ -71,6 +71,7 @@ SCOUT_REFRESH_CRON = "0 9 * * sun"        # dom 09:00 — visual scout IG (Gemin
 TREND_RADAR_CRON = "45 6 * * *"           # diario 06:45 — radar de tendencias; digest ~7 AM
 CREATIVE_STUDY_CRON = "0 10 1 * *"        # día 1 de cada mes 10:00 — re-estudia formatos de creativos
 HOUSEKEEPING_CRON = "30 4 * * *"          # diario 04:30 — retención del volumen (data/images + reportes viejos)
+ROUNDTABLE_CRON = "30 7 * * mon"          # lun 07:30 — mesa redonda del equipo (debate); el brief de 08:30 la lee
 
 
 class AgentScheduler:
@@ -108,6 +109,8 @@ class AgentScheduler:
                               _scheduled_creative_study)
         self._register_simple("housekeeping", HOUSEKEEPING_CRON, DEFAULT_TIMEZONE,
                               _scheduled_housekeeping)
+        self._register_simple("roundtable", ROUNDTABLE_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_roundtable)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -275,6 +278,18 @@ async def _scheduled_creative_study() -> None:
         log.info("creative_study_scheduled_done", result=res)
     except Exception as e:
         log.error("creative_study_failed", error=str(e)[:200])
+
+
+async def _scheduled_roundtable() -> None:
+    """Mesa redonda semanal: los agentes debaten y lo acordado se reparte como
+    notas/lecciones que cada uno recibe en su próxima corrida."""
+    import asyncio
+    from .integrations import roundtable
+    try:
+        res = await asyncio.to_thread(roundtable.run_roundtable)
+        log.info("roundtable_scheduled_done", result=res)
+    except Exception as e:
+        log.error("roundtable_scheduled_failed", error=str(e)[:200])
 
 
 async def _scheduled_housekeeping() -> None:
