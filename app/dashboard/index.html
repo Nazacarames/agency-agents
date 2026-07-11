@@ -594,6 +594,16 @@
           <button class="btn btn-sm" id="lBtn" style="margin-top:10px">Enseñar al agente</button>
         </div>
         <div id="lessonsList"></div>
+
+        <div class="sec-head" style="margin-top:26px"><h2>Notas a los agentes</h2><span class="faint" style="font-size:12px">Directiva puntual del dueño: le llega al agente en su próxima corrida (una sola vez) y pisa lo que haya dejado la mesa redonda u otro agente.</span></div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="row">
+            <div style="flex:1;min-width:160px"><label>Agente</label><select id="nAgent" class="inp"></select></div>
+            <div style="flex:3;min-width:240px"><label>Nota / directiva</label><input id="nNote" class="inp" placeholder="No frenes el cold-email: mejorá el copy y adjuntá la video-auditoría"/></div>
+          </div>
+          <button class="btn btn-sm" id="nBtn" style="margin-top:10px">Dejar nota</button>
+        </div>
+        <div id="notesList"></div>
       </section>
 
       <!-- CEO -->
@@ -1854,10 +1864,10 @@ async function loadMemory(){
     else banner.style.display='none';
     CACHE.memory=m.memory||[]; el('memList').innerHTML = renderMemory(m.memory||[]);
   }catch(e){ el('memList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
-  // agentes para el select de lecciones
+  // agentes para los selects de lecciones y notas
   const sel=el('lAgent');
-  if(!sel.options.length){ try{ const d=CACHE.agents||await api('/api/agents'); sel.innerHTML=d.agents.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replace(/_/g,' '))+'</option>').join(''); }catch(e){} }
-  loadGrowth(); loadLessons();
+  if(!sel.options.length){ try{ const d=CACHE.agents||await api('/api/agents'); const opts=d.agents.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replace(/_/g,' '))+'</option>').join(''); sel.innerHTML=opts; el('nAgent').innerHTML=opts; }catch(e){} }
+  loadGrowth(); loadLessons(); loadNotes();
 }
 function renderMemory(items){
   if(!items.length) return '<div class="card empty">Sin contexto cargado. Agregá arriba o corré el seed desde Obsidian.</div>';
@@ -1927,6 +1937,25 @@ el('lBtn').addEventListener('click', async ()=>{
   catch(e){ toast('Error: '+e.message); }
 });
 async function delLesson(id){ if(!confirm('¿Borrar esta lección?'))return; try{ await api('/api/lessons/'+id,{method:'DELETE'}); toast('Lección borrada'); loadLessons(); }catch(e){ toast('Error: '+e.message); } }
+
+// ── Notas a los agentes (buzón de colaboración) ──
+async function loadNotes(){
+  try{ const d=await api('/api/agent-notes'); const ns=(d.notes||[]).slice().reverse();
+    el('notesList').innerHTML = ns.length ? '<div class="tbl-wrap"><table><thead><tr><th>De</th><th>Para</th><th>Nota</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>'+
+      ns.map(n=>`<tr><td><span class="badge ${n.from==='dueño'?'blue':'grey'}">${esc(n.from)}</span></td><td><b>${esc((n.to||'').replace(/_/g,' '))}</b></td>
+        <td class="muted" style="font-size:13px">${esc(n.note)}</td>
+        <td>${n.delivered?'<span class="badge ok">entregada</span>':'<span class="badge warn">pendiente</span>'}</td>
+        <td class="faint" style="white-space:nowrap">${esc((n.created_at||'').slice(0,10))}</td></tr>`).join('')+'</tbody></table></div>'
+      : '<div class="card empty">Sin notas en el buzón. Los agentes también se dejan notas entre ellos con NOTA_PARA(agente).</div>';
+  }catch(e){ el('notesList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
+}
+el('nBtn').addEventListener('click', async ()=>{
+  const to=el('nAgent').value, note=el('nNote').value.trim();
+  if(note.length<10){ toast('Escribí la nota (mín. 10 caracteres)'); return; }
+  try{ await api('/api/agent-notes',{method:'POST',body:JSON.stringify({to,note})});
+    el('nNote').value=''; toast('✅ Nota dejada — le llega en su próxima corrida'); loadNotes(); }
+  catch(e){ toast('Error: '+e.message); }
+});
 
 // ── Memoria de un cliente (modal) ──
 async function viewClientMemory(id){
