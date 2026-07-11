@@ -34,6 +34,15 @@ MODERATOR = "chief_of_staff"
 _TURN_MAX_TOKENS = 700
 _SYNTH_MAX_TOKENS = 1500
 
+# Reglas del dueño: NO se debaten. La mesa propone mejoras, no apagar canales.
+OWNER_RULES = (
+    "## REGLAS DEL DUEÑO (NO debatibles — encuadrá tus propuestas dentro de esto)\n"
+    "- El envío de cold-emails NO se frena NUNCA. Si un canal rinde poco, se propone "
+    "CÓMO mejorarlo (copy, segmentación, activos, timing) — no apagarlo.\n"
+    "- Los experimentos nuevos (WhatsApp, video, etc.) van EN PARALELO a lo que ya "
+    "corre, nunca en reemplazo.\n"
+)
+
 
 def _complete(agent, system: str, user: str, max_tokens: int) -> str:
     """Completion con el provider del agente (NVIDIA) y fallback MiniMax."""
@@ -90,7 +99,7 @@ def run_roundtable(topic: Optional[str] = None) -> Dict:
             continue
         user = (
             f"# MESA REDONDA SEMANAL DEL EQUIPO — {today}\n\n"
-            f"TEMA: {tema}\n\n{material}\n\n"
+            f"TEMA: {tema}\n\n{OWNER_RULES}\n{material}\n\n"
             "## LO QUE DIJERON ANTES QUE VOS\n" + _thread_txt() + "\n\n"
             "## TU TURNO (Ronda 1)\n"
             f"Hablás como **{name}**, desde TU especialidad. En ≤150 palabras: "
@@ -112,7 +121,7 @@ def run_roundtable(topic: Optional[str] = None) -> Dict:
             continue
         user = (
             f"# MESA REDONDA SEMANAL — {today} (Ronda 2)\n\n"
-            f"TEMA: {tema}\n\n## EL DEBATE HASTA ACÁ\n" + _thread_txt() + "\n\n"
+            f"TEMA: {tema}\n\n{OWNER_RULES}\n## EL DEBATE HASTA ACÁ\n" + _thread_txt() + "\n\n"
             f"## TU TURNO\nSos **{name}**. En ≤100 palabras respondé a los demás: "
             "qué acordás, qué refutás (con argumento), y tu posición FINAL para la "
             "síntesis. Si te convencieron, decilo y ajustá tu propuesta."
@@ -132,9 +141,12 @@ def run_roundtable(topic: Optional[str] = None) -> Dict:
     except Exception:
         chief = None
     synth_user = (
-        f"# MESA REDONDA — {today}\nTEMA: {tema}\n\n## DEBATE COMPLETO\n"
+        f"# MESA REDONDA — {today}\nTEMA: {tema}\n\n{OWNER_RULES}\n## DEBATE COMPLETO\n"
         + _thread_txt() + "\n\n"
-        "## TU ROL: MODERADOR\nSintetizá la mesa en este formato EXACTO:\n"
+        "## TU ROL: MODERADOR\n"
+        "Si el debate propuso frenar/apagar un canal, corregilo en la síntesis: "
+        "reencuadralo como mejora en paralelo (regla del dueño).\n"
+        "Sintetizá la mesa en este formato EXACTO:\n"
         "# 🗣️ Mesa redonda — " + today + "\n"
         "## 💬 El debate en 5 líneas\n(qué se discutió y dónde chocaron)\n"
         "## ✅ Acuerdos de la semana\n(máx 3, concretos y medibles, con dueño)\n"

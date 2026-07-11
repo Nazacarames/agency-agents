@@ -988,6 +988,25 @@ async def api_agent_notes(request: Request):
     return {"notes": await run_in_threadpool(agent_inbox.peek_all)}
 
 
+class AgentNoteBody(BaseModel):
+    to: str
+    note: str
+
+
+@app.post("/api/agent-notes")
+async def api_leave_agent_note(body: AgentNoteBody, request: Request):
+    """El operador deja una nota a un agente (llega en su próxima corrida como
+    'nota del dueño' — pisa/corrige lo que haya dejado la mesa u otro agente)."""
+    _verify_webhook_secret(request)
+    if body.to not in list_agents():
+        raise HTTPException(status_code=404, detail=f"agente desconocido: {body.to}")
+    if len((body.note or "").strip()) < 10:
+        raise HTTPException(status_code=400, detail="nota demasiado corta")
+    from .integrations import agent_inbox
+    ok = await run_in_threadpool(agent_inbox.leave, "dueño", body.to, body.note.strip())
+    return {"ok": ok}
+
+
 # ── Lecciones por agente (loop de mejora continua) ──
 
 @app.get("/api/lessons")
