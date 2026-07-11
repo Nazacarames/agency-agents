@@ -72,6 +72,7 @@ TREND_RADAR_CRON = "45 6 * * *"           # diario 06:45 — radar de tendencias
 CREATIVE_STUDY_CRON = "0 10 1 * *"        # día 1 de cada mes 10:00 — re-estudia formatos de creativos
 HOUSEKEEPING_CRON = "30 4 * * *"          # diario 04:30 — retención del volumen (data/images + reportes viejos)
 ROUNDTABLE_CRON = "30 7 * * mon"          # lun 07:30 — mesa redonda del equipo (debate); el brief de 08:30 la lee
+PRACTICE_RESEARCH_CRON = "0 7 1,15 * *"   # día 1 y 15, 07:00 — research web de mejores prácticas → lecciones
 
 
 class AgentScheduler:
@@ -111,6 +112,8 @@ class AgentScheduler:
                               _scheduled_housekeeping)
         self._register_simple("roundtable", ROUNDTABLE_CRON, DEFAULT_TIMEZONE,
                               _scheduled_roundtable)
+        self._register_simple("practice:research", PRACTICE_RESEARCH_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_practice_research)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -278,6 +281,17 @@ async def _scheduled_creative_study() -> None:
         log.info("creative_study_scheduled_done", result=res)
     except Exception as e:
         log.error("creative_study_failed", error=str(e)[:200])
+
+
+async def _scheduled_practice_research() -> None:
+    """Research web quincenal de mejores prácticas → lecciones inyectadas a los agentes."""
+    import asyncio
+    from .integrations import practice_research
+    try:
+        res = await asyncio.to_thread(practice_research.refresh)
+        log.info("practice_research_scheduled_done", result=res)
+    except Exception as e:
+        log.error("practice_research_scheduled_failed", error=str(e)[:200])
 
 
 async def _scheduled_roundtable() -> None:

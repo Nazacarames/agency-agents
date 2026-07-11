@@ -55,16 +55,21 @@ Tu trabajo: por cada lead, redactar el email que corresponde a SU step.
 - NUNCA inventes precios, plazos ni datos del lead que no estén en el material.
 
 ## Cómo cambia el mensaje según el step
-- **step 0 (primer toque)** ≤ 90 palabras, que se sienta escrito a mano 1-a-1 (NO masivo):
-  1. **Apertura ESPECÍFICA** de SU negocio (su rubro + un dolor concreto y creíble: "vi que
-     atienden consultas por WhatsApp en [empresa] — cuando entran 30 mensajes a la vez es
-     imposible contestar todos a tiempo"). Nada genérico tipo "espero que estés bien".
+- **step 0 (primer toque)** ≤ 90 palabras, que se sienta escrito a mano 1-a-1 (NO masivo).
+  Regla de oro (respaldada por datos 2026: los mails que citan una señal ESPECÍFICA del
+  prospecto responden 5x más que los genéricos):
+  1. **Apertura con SU señal**: usá el dato más específico que tengas del lead (el campo
+     `dolor`/`evidencia` del material, un hallazgo de la auditoría web, su rubro + escenario
+     concreto). "Vi que [dato observable de SU negocio]" > cualquier frase genérica.
   2. **1 beneficio medible** (Big Domino, con número si es creíble): "un agente de IA contesta
      al toque 24/7, califica al cliente y te lo carga al CRM — recuperás las ventas que hoy se
      pierden por no contestar a tiempo".
-  3. **CTA de baja fricción y ON-BRAND**: ofrecé MOSTRARLO, no "una reunión". Ej: "¿te mando
-     un ejemplo del agente funcionando por WhatsApp, armado para [empresa]? Son 2 minutos." o
-     "¿15 min el miércoles o el jueves y te lo muestro en vivo?". Dar 1 acción clarísima.
+  3. **CTA = la DEMO del lead**: si el lead trae `demo`, el CTA es mirar esa demo: "te armé
+     una demo de cómo respondería un agente en [empresa] — son 20 segundos: [demo]". Los
+     mails con demo personalizada agendan 40-50% más reuniones que los de texto solo. Si el
+     lead trae demo, mencioná la palabra "demo" también en el subject (ej: "demo para
+     [empresa]"). Si NO hay demo, ofrecé armarla: "¿te mando un ejemplo del agente
+     funcionando por WhatsApp, armado para [empresa]?".
 - **step 1 (follow-up 1)** ≤ 55 palabras: breve, subí un dato/beneficio NUEVO (no repitas),
   re-ofrecé el ejemplo por WhatsApp. Asunto "Re: <asunto anterior>".
 - **step 2 (follow-up 2)** ≤ 40 palabras: un ángulo distinto o mini-prueba ("a [rubro similar]
@@ -141,11 +146,12 @@ def _wa_link(phone: str) -> str:
 
 
 def _wa_line(w: dict) -> str:
-    """Línea de la cola WhatsApp con link clickeable + decisor."""
+    """Línea de la cola WhatsApp con link clickeable + decisor + demo para pegar."""
     link = _wa_link(w.get("phone", ""))
     who = f" · {w['decisor']}" if w.get("decisor") else ""
     tail = f" → {link}" if link else ""
-    return f"• **{w['company']}** — `{w.get('phone','')}`{tail}{who}"
+    demo = f"\n  ↳ 🎬 demo para mandarle: {w['demo']}" if w.get("demo") else ""
+    return f"• **{w['company']}** — `{w.get('phone','')}`{tail}{who}{demo}"
 
 
 def _latest_leadhunter_report() -> str:
@@ -214,11 +220,22 @@ class OutboundAgent(BaseAgent):
         ctx.args["_ob_due_keys"] = [l["key"] for l in due_today]
         ctx.args["_ob_over_cap"] = over_cap
         ctx.args["_ob_ingest"] = ingest_stats
-        ctx.args["_ob_wa_queue"] = [
-            {"company": l.get("company", "?"), "phone": l.get("phone", ""),
-             "decisor": l.get("decisor", "")}
-            for l in ls.whatsapp_queue(store)[:15]
-        ]
+        wa_queue = []
+        base_url_wa = (ctx.settings.public_base_url or "").rstrip("/")
+        for l in ls.whatsapp_queue(store)[:15]:
+            item = {"company": l.get("company", "?"), "phone": l.get("phone", ""),
+                    "decisor": l.get("decisor", "")}
+            # demo lista para pegar en el WhatsApp (facilitar > vender en el 1er mensaje)
+            if base_url_wa:
+                try:
+                    from ..integrations import lead_demo
+                    path = lead_demo.ensure_demo(l)
+                    if path:
+                        item["demo"] = base_url_wa + path
+                except Exception:
+                    pass
+            wa_queue.append(item)
+        ctx.args["_ob_wa_queue"] = wa_queue
 
         if not due_today:
             ctx.args["_ob_status"] = "nothing_due"
@@ -231,6 +248,20 @@ class OutboundAgent(BaseAgent):
             titulo="Dolores detectados por la auditoría web (usalos para personalizar)",
             max_chars=3000,
         )
+
+        # Demo personalizada por lead (activo N3: +40-50% reuniones según research):
+        # se genera UNA vez por lead (Pillow, instantáneo) y el mail la linkea.
+        base_url = (ctx.settings.public_base_url or "").rstrip("/")
+        if base_url:
+            from ..integrations import lead_demo
+            for l in due_today:
+                if l.get("next_step", 0) == 0:
+                    try:
+                        path = lead_demo.ensure_demo(l)
+                        if path:
+                            l["demo_url"] = base_url + path
+                    except Exception as e:
+                        log.warning("lead_demo_failed", key=l.get("key"), error=str(e)[:120])
 
         # Bloque por lead: damos al modelo lo justo para personalizar + el step.
         blocks = [self._lead_block(l) for l in due_today]
@@ -252,6 +283,7 @@ class OutboundAgent(BaseAgent):
         if l.get("touches"):
             last = l["touches"][-1]
             prev = f" · último asunto enviado: \"{last.get('subject', '')}\""
+        demo = f"\n  demo: {l['demo_url']}" if l.get("demo_url") else ""
         return (
             f"- key: {l['key']}\n"
             f"  empresa: {l.get('company', '?')}\n"
@@ -259,7 +291,7 @@ class OutboundAgent(BaseAgent):
             f"  decisor: {l.get('decisor', '') or '(s/d)'}\n"
             f"  industria: {l.get('industria', '') or '(s/d)'}\n"
             f"  web: {l.get('web', '') or '(s/d)'}\n"
-            f"  step: {step}  ({ls.STEP_LABEL.get(step, 'follow-up')}){prev}"
+            f"  step: {step}  ({ls.STEP_LABEL.get(step, 'follow-up')}){prev}{demo}"
         )
 
     def _redraft_missing(self, ctx: AgentContext, store: Dict[str, Any],

@@ -24,9 +24,11 @@ _LEAD_HEADER_RE = re.compile(
     r"^#{2,4}\s+(?:🟢\s+)?Lead\s*#?\s*(\d+)\s*[:\-—–]?\s*(.*?)\s*$",
     re.IGNORECASE,
 )
-# Detecta líneas "| **campo** | valor |"
+# Detecta líneas "| **campo** | valor |" — negrita OPCIONAL: si el modelo escribe
+# "| empresa | X |" sin **, antes parseaba 0 campos y format_leads_md reescribía
+# el detalle con tablas VACÍAS (visto en los reportes del 09-10/07).
 _FIELD_RE = re.compile(
-    r"^\|\s*\*\*([^*]+)\*\*\s*\|\s*(.+?)\s*\|",
+    r"^\|\s*\*{0,2}([^|*]+?)\*{0,2}\s*\|\s*(.+?)\s*\|",
     re.IGNORECASE,
 )
 
@@ -55,17 +57,24 @@ def parse_leads(md_text: str) -> List[Dict]:
         if fm:
             key = fm.group(1).strip().lower().replace(" ", "_")
             val = fm.group(2).strip()
+            # saltar encabezado "| Campo | Valor |" y separadores "|---|---|"
+            if key in ("campo", "") or not key.strip("-—– ") or not val.strip("-—– "):
+                continue
             current["campos"][key] = val
     if current:
         leads.append(current)
 
-    # Normalizar: aplanar campos comunes a nivel top para conveniencia
+    # Normalizar: aplanar campos comunes a nivel top para conveniencia.
+    # `campos` COMPLETO se conserva: el detalle del modelo trae campos extra
+    # (dolor, evidencia, timing, fuente) que son el oro para personalizar el
+    # outbound — antes se tiraban al regenerar el MD.
     out: List[Dict] = []
     for lead in leads:
         campos = lead.get("campos", {})
         out.append({
             "numero": lead.get("numero"),
             "titulo": lead.get("titulo", ""),
+            "campos": campos,
             "empresa": campos.get("empresa", ""),
             "web": campos.get("web", ""),
             "ciudad": campos.get("ubicación") or campos.get("ubicacion") or campos.get("ciudad", ""),
@@ -100,6 +109,11 @@ def format_leads_md(leads: List[Dict], today: str, base_md: str) -> str:
     """
     if not leads:
         return base_md
+    # Si el parse vino mayormente VACÍO (formato de tabla distinto al esperado),
+    # NO reescribir: se destruía el detalle del modelo con tablas vacías.
+    with_fields = [l for l in leads if l.get("campos")]
+    if len(with_fields) < max(1, len(leads) // 2):
+        return base_md
 
     # Construir el bloque enriquecido
     enriched_blocks: List[str] = []
@@ -111,18 +125,10 @@ def format_leads_md(leads: List[Dict], today: str, base_md: str) -> str:
             block = f"## 🟢 Lead #{n} — {titulo}\n"
         else:
             block = f"## 🟢 Lead #{n}\n"
-        # Tabla con los campos existentes
-        campos = [
-            ("empresa", lead.get("empresa", "")),
-            ("industria", lead.get("industria", "")),
-            ("ubicación", lead.get("ciudad", "")),
-            ("web", lead.get("web", "")),
-            ("fit_score", lead.get("fit_score", "")),
-            ("contacto (raw)", lead.get("contacto_raw", "")),
-            ("contacto_tipo", lead.get("contacto_tipo", "")),
-            ("contacto_verified", lead.get("contacto_verified_raw", "false")),
-            ("decisor", lead.get("decisor", "")),
-        ]
+        # Tabla con TODOS los campos que el modelo escribió (dolor/evidencia/
+        # timing incluidos — antes solo sobrevivían 9 conocidos), en su orden.
+        campos = [(k.replace("_", " "), v) for k, v in (lead.get("campos") or {}).items()
+                  if v and k.lower() not in ("campo",)]
         block += "\n| Campo | Valor |\n|---|---|\n"
         for k, v in campos:
             if v:

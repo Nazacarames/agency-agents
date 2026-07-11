@@ -959,6 +959,41 @@ async def api_del_growth(obj_id: str, request: Request):
     return {"ok": True}
 
 
+# ── Demo personalizada por lead (activo N3 del outbound) ──
+
+@app.get("/d/{key}", response_class=HTMLResponse)
+async def lead_demo_page(key: str):
+    """Página PÚBLICA de la demo personalizada (va linkeada en el cold-email).
+    La vista es señal de compra: se registra y avisa por Discord (speed-to-lead)."""
+    from .integrations import lead_demo
+
+    d = await run_in_threadpool(lead_demo.record_view, key)
+    if not d:
+        raise HTTPException(status_code=404, detail="demo no encontrada")
+    if d.get("first_view"):
+        # 🔥 el lead está mirando SU demo AHORA: avisar al canal de ventas
+        def _alert():
+            try:
+                from .clients.discord import DiscordWebhook
+                s = get_settings()
+                if s.discord_configured:
+                    dw = DiscordWebhook(s)
+                    dw.send_agent_output(
+                        agent_name="🔥 Demo abierta",
+                        text=(f"**{d.get('company')}** acaba de abrir su demo personalizada "
+                              f"(/d/{key}).\nEs LA ventana para escribirle por WhatsApp — "
+                              "el benchmark es responder en <5 min."),
+                        run_id=f"demo-{key}",
+                        url=s.discord_webhook_for("outbound"),
+                        color=0xF1C40F,
+                    )
+                    dw.close()
+            except Exception as e:
+                log.warning("demo_alert_failed", error=str(e)[:150])
+        await run_in_threadpool(_alert)
+    return HTMLResponse(lead_demo.render_page(d))
+
+
 # ── Mesa redonda (debate entre agentes) + notas entre agentes ──
 
 @app.post("/api/roundtable")
