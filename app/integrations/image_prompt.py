@@ -46,7 +46,10 @@ _SYSTEM = (
     "4. La paleta navy + royal blue de Automiq va como ACENTO dentro de la escena real "
     "(una remera, un detalle, la luz), NO como fondo plano de color.\n"
     "5. Gente argentina real y creíble para el rubro (no modelos de stock genéricos), con "
-    "ROPA DE TRABAJO LISA y SIN logos de marcas ajenas (nada de North Face, Nike, etc.).\n"
+    "ROPA DE TRABAJO LISA y SIN logos de marcas ajenas (nada de North Face, Nike, etc.). "
+    "VARIÁ LAS PERSONAS entre piezas: dueñas mujeres, repartidores jóvenes, parejas de "
+    "socios, un cliente en el mostrador — PROHIBIDO que el protagonista sea siempre 'hombre "
+    "de mediana edad con barba mirando el celular'.\n"
     "6. LA PERSONA SIEMPRE HACIENDO UNA ACCIÓN FÍSICA concreta del trabajo (cargando cajones "
     "en la camioneta, apilando mercadería, manejando el autoelevador, revisando stock con una "
     "tablet entre las estanterías, empujando un carro). PROHIBIDAS las poses pasivas de retrato "
@@ -129,6 +132,20 @@ _GRAPHIC_MODES = {
         "fondo de color plano inesperado, muchísimo aire, luz dura con sombra marcada. "
         "Quieto y silencioso a propósito: frena el scroll entre reels ruidosos."
     ),
+    "surreal": (
+        "ESTILO SURREAL AI-NATIVO (para frenar el scroll): escena FOTORREALISTA pero "
+        "IMPOSIBLE del rubro, tratada como si fuera un documental serio. Jugá con UNA "
+        "sola idea de ESCALA o física rota, clara y legible en 1 segundo: una camioneta "
+        "de reparto andando por una cordillera de cajas de cartón gigantes; un dueño de "
+        "PyME en miniatura caminando sobre un teléfono del tamaño de una cancha; las "
+        "estanterías del depósito convertidas en rascacielos al atardecer con autos "
+        "abajo; un globo de chat verde como objeto FÍSICO gigante que dos empleados "
+        "cargan como si fuera un mueble; una fila de cajones flotando en formación "
+        "perfecta hacia la camioneta. Texturas hiperreales, luz cinematográfica real, "
+        "cámara de cine (35mm, DOF). La gracia es que parezca una foto REAL de algo "
+        "imposible — nada de look 3D/render plástico, y siempre con los objetos REALES "
+        "del rubro (cajas, camioneta, mostrador, teléfono)."
+    ),
     "comic": (
         "ESTILO CÓMIC (meme 2 paneles): tira cómica retro, papel crema, tinta negra a "
         "mano, colores planos cálidos. Panel 1 = el ANTES (el caos, exagerado y gracioso); "
@@ -178,6 +195,64 @@ _MODE_HINTS = {
 }
 
 
+# Rotación DETERMINÍSTICA de escenas para el modo "persona" (anti-monotonía real:
+# pedirle variedad al LLM no alcanza — regresa al arquetipo 'hombre con barba en el
+# depósito mirando el celular'. Acá la escena base cambia SÍ o SÍ en cada pieza,
+# con el índice persistido en data/art-rotation.json).
+_SCENES = [
+    "una DUEÑA de distribuidora (mujer, 35-50) atendiendo el mostrador de su local, "
+    "mañana luminosa, clientes esperando detrás",
+    "un repartidor JOVEN en moto con caja de reparto, calle de barrio argentina con "
+    "comercios, media tarde, movimiento urbano real",
+    "SOLO MANOS (sin cara) cargando cajones apilados en la caja de una camioneta "
+    "utilitaria en la vereda, luz dura de mediodía",
+    "un almacenero detrás de un mostrador DESBORDADO de mercadería variada, luz cálida "
+    "de local de barrio, hora pico",
+    "el galpón vacío y ordenado DE NOCHE con las últimas luces prendidas, nadie en "
+    "cuadro, mood cinematográfico de cierre de jornada",
+    "DOS SOCIOS (hombre y mujer) haciendo inventario juntos entre estanterías, uno "
+    "dicta y el otro anota, luz natural de tarde, complicidad",
+    "un chofer subiendo a la camioneta de reparto al AMANECER, primera luz naranja, "
+    "la persiana del depósito a medio abrir detrás",
+    "un corralón/ferretería: la dueña mostrándole un producto pesado a un cliente en "
+    "el mostrador de madera, luz de ventana lateral",
+    "la mesa de un BAR: el dueño de la PyME desayunando con el cuaderno de pedidos "
+    "abierto, café y medialunas, luz de mañana por la vidriera",
+    "un mercado mayorista bullicioso: gente con carros, torres de cajones de "
+    "mercadería, gran angular con profundidad y movimiento",
+]
+
+_ROTATION_FILE = None  # lazy: Path al lado de data/
+
+
+def _scene_block() -> str:
+    """Devuelve la escena base de esta pieza y avanza el índice persistido."""
+    global _ROTATION_FILE
+    import json
+    from pathlib import Path
+    if _ROTATION_FILE is None:
+        _ROTATION_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "art-rotation.json"
+    idx = 0
+    try:
+        idx = int(json.loads(_ROTATION_FILE.read_text()).get("persona", 0))
+    except Exception:
+        pass
+    scene = _SCENES[idx % len(_SCENES)]
+    try:
+        from .jsonstore import write_json_atomic
+        write_json_atomic(_ROTATION_FILE, {"persona": (idx + 1) % len(_SCENES)})
+    except Exception:
+        pass
+    return (
+        "ROTACIÓN ANTI-MONOTONÍA (OBLIGATORIA): ambientá esta pieza en LA SIGUIENTE "
+        f"escena: {scene}. Mantené el CONCEPTO/mensaje de la idea cruda, pero el "
+        "lugar, el sujeto y la luz son LOS DE ESTA ESCENA — salvo que la idea cruda "
+        "exija un lugar/sujeto específico distinto del típico depósito (si la idea "
+        "cruda es 'otra persona en un depósito con el celular', ignorála y usá la "
+        "escena de acá)."
+    )
+
+
 def _detect_mode(raw: str) -> str:
     low = (raw or "").lower()
     for mode, hints in _MODE_HINTS.items():
@@ -214,7 +289,7 @@ def refine(raw_prompt: str, formato: str = "post", estilo: str = "") -> str:
     else:
         system = _SYSTEM
         mode = _detect_mode(raw)
-        mode_block = _MODES.get(mode, "")
+        mode_block = _MODES.get(mode, "") or _scene_block()
         user = (f"Idea cruda ({formato}) para una imagen de Automiq:\n{raw}\n\n"
                 + (mode_block + "\n\n" if mode_block else "")
                 + "Devolvé el prompt fotográfico final en inglés (un párrafo).")

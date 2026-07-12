@@ -607,6 +607,7 @@ class ImageBody(BaseModel):
     n: Optional[int] = 1
     text: Optional[str] = None          # titular a componer encima (texto exacto)
     subtitle: Optional[str] = None
+    kind: Optional[str] = "photo"       # photo|banner|art|comic (sufijo de generación)
 
 
 class PublishBody(BaseModel):
@@ -1322,7 +1323,7 @@ async def api_generate_image(body: ImageBody, request: Request):
     # container. Al threadpool, igual que /api/publish.
     urls = await run_in_threadpool(
         image_gen.generate_image, body.prompt, body.aspect_ratio or "1:1", body.n or 1,
-        text=body.text, subtitle=body.subtitle)
+        text=body.text, subtitle=body.subtitle, kind=body.kind or "photo")
     if not urls:
         raise HTTPException(status_code=502, detail="no se pudo generar la imagen (proveedor)")
     return {"ok": True, "urls": urls}

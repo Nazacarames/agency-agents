@@ -243,7 +243,7 @@ def image_prompt_directive() -> str:
         "\n\nIMÁGENES (obligatorio): la cantidad la decidís VOS según tu planificación "
         "(1 por idea / 1 por post clave). No te limites a un número fijo. "
         "Por cada pieza agregá una línea que empiece EXACTO con `IMAGEN:` así:\n"
-        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | ESTILO: <foto|editorial|demo|comic|banner|tipografico|ilustracion|3d|minimal> | CAPTION: <caption COMPLETO del post>`\n"
+        "`IMAGEN: <prompt EN INGLÉS del fondo> | TEXTO: <titular corto en español> | SUBTEXTO: <bajada opcional> | FORMATO: <post|historia> | ESTILO: <foto|editorial|demo|comic|banner|tipografico|ilustracion|3d|minimal|surreal> | CAPTION: <caption COMPLETO del post>`\n"
         "ESTILO (obligatorio VARIAR — nunca dos piezas seguidas del mismo): `foto` = foto "
         "documental real; `editorial` = placa BLANCA tipográfica premium (titular negro "
         "gigante con la frase clave resaltada en amarillo — marcá esa parte entre "
@@ -265,15 +265,22 @@ def image_prompt_directive() -> str:
         "ignora); `comic` = meme-cómic de 2 paneles ANTES(caos)/DESPUÉS(alivio) con "
         "humor — en el prompt escribí las frases EXACTAS de los globos entre comillas, "
         "cortitas (3-6 palabras, ej. \"Mis pedidos son un caos\" / \"Conecté mi WhatsApp "
-        "a la IA\"); acá NO va TEXTO (el chiste vive en los globos). Elegí el estilo "
+        "a la IA\"); acá NO va TEXTO (el chiste vive en los globos); `surreal` = escena "
+        "FOTORREALISTA pero IMPOSIBLE del rubro tratada como documental — UNA idea de "
+        "escala/física rota legible en 1 segundo (una camioneta de reparto cruzando una "
+        "cordillera de cajas gigantes; las estanterías del depósito como rascacielos al "
+        "atardecer; un globo de chat verde FÍSICO que dos empleados cargan como un "
+        "mueble) — es el formato AI-nativo que más frena el scroll (estudiá cuentas "
+        "tipo AI KID): usalo para conceptos grandes. Elegí el estilo "
         "según la idea (verdad incómoda o dato → editorial/tipografico; mostrar el bot "
         "en acción → demo; dolor cotidiano con humor → comic; concepto → ilustracion; "
+        "metáfora grande → surreal; "
         "feature → banner/3d; historia humana → foto). Piezas POR VERTICAL rinden más "
         "que genéricas (aprendido de la competencia): 'para distribuidoras', 'para "
         "inmobiliarias' — el chat/escena del vertical concreto.\n"
-        "TEXTO no siempre: ~1 de cada 3 piezas va SIN titular (dejá TEXTO vacío) cuando la "
-        "imagen habla sola (foto documental fuerte, ilustración conceptual) — el copy vive en "
-        "el CAPTION. En `tipografico` el TEXTO es la pieza: nunca lo omitas ahí.\n"
+        "TEXTO OBLIGATORIO en TODAS las piezas salvo `comic` y `demo` (ahí el texto vive en "
+        "los globos/el chat): una imagen sin titular en el feed no comunica nada — el que "
+        "scrollea no lee el caption si la imagen no lo frenó antes.\n"
         "⚠️ TODA la línea (incluido el CAPTION completo) va en UNA SOLA LÍNEA física: donde "
         "quieras un salto de línea dentro del caption escribí la secuencia literal \\n (barra "
         "invertida + n) — el sistema la convierte en salto real al publicar. NUNCA cortes la "
@@ -286,8 +293,12 @@ def image_prompt_directive() -> str:
         "recordatorio, encuesta). Proporción sana: 1 post por cada 2-3 historias. "
         "Si no marcás FORMATO, el sistema asigna 1 post cada 3 imágenes. Además podés proponer "
         "COMO MUCHO 1 CARRUSEL educativo (3-5 placas que desarrollan UNA idea paso a paso) con:\n"
-        "`CARRUSEL: <prompt placa 1> || <prompt placa 2> || <prompt placa 3> | CAPTION: <caption del carrusel>`\n"
-        "(cada placa con su propia escena, mismo estilo visual entre placas para que se lea como serie).\n"
+        "`CARRUSEL: <prompt placa 1> >> <titular placa 1> || <prompt placa 2> >> <titular placa 2> || <prompt placa 3> >> <titular placa 3> | ESTILO: <editorial|foto|ilustracion|surreal> | CAPTION: <caption del carrusel>`\n"
+        "El TITULAR de cada placa (después de `>>`) es OBLIGATORIO — un carrusel sin texto "
+        "no enseña nada; se compone encima con tipografía real. La placa 1 es la TAPA: su "
+        "titular es el hook. Con ESTILO `editorial` las placas son 100% tipográficas (el "
+        "prompt de placa puede ser una palabra). Cada placa con su propia escena, mismo "
+        "estilo visual entre placas para que se lea como serie.\n"
         "ARTE (clave para que NO salgan genéricas ni monótonas): el <prompt> tiene que ser "
         "ESPECÍFICO — un SUJETO y una ESCENA concreta, con estilo, composición, luz y mood "
         "definidos (no abstracciones tipo 'businessman with laptop'). ⚠️ ANTI-MONOTONÍA: el "
@@ -332,7 +343,7 @@ _ESTILOS = {"foto": "foto", "photo": "foto", "banner": "banner",
             "tipografico": "tipografico", "tipográfico": "tipografico",
             "ilustracion": "ilustracion", "ilustración": "ilustracion",
             "3d": "3d", "minimal": "minimal", "editorial": "editorial",
-            "demo": "demo", "comic": "comic"}
+            "demo": "demo", "comic": "comic", "surreal": "surreal"}
 
 
 def _parse_chat_field(raw: str):
@@ -351,7 +362,7 @@ def _parse_chat_field(raw: str):
 
 # Estilo → kind de image_gen (sufijos de generación). Foto usa el pipeline fotográfico.
 _ESTILO_KIND = {"banner": "banner", "tipografico": "banner", "minimal": "banner",
-                "ilustracion": "art", "3d": "art", "comic": "comic"}
+                "ilustracion": "art", "3d": "art", "comic": "comic", "surreal": "art"}
 
 
 def _parse_image_line(line: str):
@@ -455,7 +466,7 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         import random
         # demo NO va en el mazo automático (necesita el campo CHAT del agente)
         deck = ["foto", "editorial", "comic", "banner", "ilustracion", "tipografico",
-                "minimal", "3d"]
+                "minimal", "3d", "surreal"]
         random.shuffle(deck)
         blocks = []
         for i, (prompt, texto, sub, caption, formato, estilo, chat) in enumerate(parsed, 1):
@@ -513,9 +524,16 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             prompts, car_caption, car_estilo = carousel
             car_urls = []
             for p in prompts:
-                u = image_gen.generate_image(
-                    image_prompt.refine(p, "post", estilo=car_estilo), aspect_ratio="4:5",
-                    n=1, kind=_ESTILO_KIND.get(car_estilo, "photo"))
+                # `>> <titular>` por placa: se compone encima con Pillow (sin él, la
+                # placa salía pelada — un carrusel sin texto no enseña nada).
+                p, _, slide_txt = (x.strip() for x in p.partition(">>"))
+                if car_estilo == "editorial" and slide_txt:
+                    u = image_gen.render_editorial(slide_txt, None, aspect_ratio="4:5")
+                else:
+                    u = image_gen.generate_image(
+                        image_prompt.refine(p, "post", estilo=car_estilo), aspect_ratio="4:5",
+                        n=1, text=slide_txt.replace("*", "") or None,
+                        kind=_ESTILO_KIND.get(car_estilo, "photo"))
                 if u:
                     car_urls.append(u[0])
             if len(car_urls) >= 2:
