@@ -51,6 +51,11 @@ def sync() -> dict:
     def _mark(name: str) -> None:
         seen.add(name)
         uploaded.append(name)
+        # estado incremental: si un deploy mata el sync a mitad de camino, lo ya
+        # subido no se vuelve a subir (files.create duplicaría por nombre)
+        if len(uploaded) % 20 == 0:
+            st["uploaded"] = uploaded[-_MAX_STATE:]
+            write_json_atomic(_STATE, st)
 
     counts = {"imagenes": 0, "videos": 0, "reportes": 0, "backup": 0}
 
@@ -73,15 +78,37 @@ def sync() -> dict:
             elif not drive_client.enabled():
                 break  # scope caído: no insistir con el resto
 
-    # ── reportes de agentes ──
+    # ── reportes de agentes (los preps de reunión van a su carpeta propia) ──
     for p in sorted(_DATA.glob("*-report-*.md")):
         if p.name in seen:
             continue
-        if drive_client.upload_file(p, ["Automiq", "Reportes", month], mime="text/markdown"):
+        folder = (["Automiq", "Reuniones"] if p.name.startswith("meeting-prep-")
+                  else ["Automiq", "Reportes", month])
+        if drive_client.upload_file(p, folder, mime="text/markdown"):
             _mark(p.name)
             counts["reportes"] += 1
         elif not drive_client.enabled():
             break
+
+    # ── agenda de reuniones legible (se regenera y pisa en cada sync) ──
+    try:
+        from . import meetings_store
+        meets = meetings_store.list_meetings()
+        if meets and drive_client.enabled():
+            lines = [f"# Agenda de reuniones — Automiq (actualizada {now.strftime('%Y-%m-%d %H:%M')})", ""]
+            for m in meets:
+                extra = "".join(
+                    f" · {m[k]}" for k in ("location",) if m.get(k)
+                ) + (f" — {m['notes']}" if m.get("notes") else "")
+                lines.append(f"- **{(m.get('scheduled_at') or '?')[:16]}** · "
+                             f"{m.get('title') or 'Reunión'} · "
+                             f"{m.get('client_name') or 's/cliente'} · "
+                             f"{m.get('status') or ''}{extra}")
+            if drive_client.upload_text("agenda-reuniones.md", "\n".join(lines),
+                                        ["Automiq", "Reuniones"]):
+                counts["reuniones"] = 1
+    except Exception as e:
+        log.warning("drive_meetings_failed", error=str(e)[:200])
 
     # ── backup diario de stores (zip con todos los data/*.json) ──
     zip_path = _DATA / f"data-backup-{now.strftime('%Y-%m-%d')}.zip"

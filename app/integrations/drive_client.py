@@ -113,6 +113,35 @@ def _folder_id(parts: List[str]) -> Optional[str]:
     return parent
 
 
+def upload_text(name: str, text: str, folder_parts: List[str],
+                mime: str = "text/markdown") -> Optional[str]:
+    """Sube (o PISA si ya existe por nombre) un archivo de texto generado.
+    Para docs vivos que se regeneran (ej. la agenda de reuniones). Best-effort."""
+    if not enabled():
+        return None
+    try:
+        with _lock:
+            from googleapiclient.http import MediaInMemoryUpload
+            svc = _build_service()
+            folder = _folder_id(folder_parts)
+            media = MediaInMemoryUpload(text.encode("utf-8"), mimetype=mime)
+            safe = name.replace("'", "\\'")
+            q = f"name = '{safe}' and '{folder}' in parents and trashed = false"
+            found = svc.files().list(q=q, fields="files(id)", pageSize=1).execute().get("files", [])
+            if found:
+                f = svc.files().update(fileId=found[0]["id"], media_body=media,
+                                       fields="id,webViewLink").execute()
+            else:
+                f = svc.files().create(body={"name": name, "parents": [folder]},
+                                       media_body=media, fields="id,webViewLink").execute()
+            log.info("drive_text_uploaded", name=name, folder="/".join(folder_parts))
+            return f.get("webViewLink", "")
+    except Exception as e:
+        if not _mark_scope_error(e):
+            log.warning("drive_text_failed", name=name, error=str(e)[:200])
+        return None
+
+
 def upload_file(local_path: str | Path, folder_parts: List[str],
                 mime: Optional[str] = None) -> Optional[str]:
     """Sube un archivo a la carpeta indicada. Devuelve el webViewLink o None.
