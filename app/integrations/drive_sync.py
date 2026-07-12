@@ -94,8 +94,10 @@ def sync() -> dict:
     try:
         from . import meetings_store
         meets = meetings_store.list_meetings()
-        if meets and drive_client.enabled():
+        if drive_client.enabled():
             lines = [f"# Agenda de reuniones — Automiq (actualizada {now.strftime('%Y-%m-%d %H:%M')})", ""]
+            if not meets:
+                lines.append("_Sin reuniones registradas._")
             for m in meets:
                 extra = "".join(
                     f" · {m[k]}" for k in ("location",) if m.get(k)
