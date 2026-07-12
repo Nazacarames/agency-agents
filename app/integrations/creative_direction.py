@@ -43,6 +43,20 @@ AD_LIBRARY_PATTERNS = """## Lo que hacen TODOS los ads ganadores del rubro (14 a
   nosotros va como CARRUSEL (una placa por beneficio), no apretado en una imagen.
 - **Ancla de precio + CTA visible** (solo para ADS pagos, NO para el feed orgánico):
   "PLANES DESDE $97 USD" + botón. El orgánico nuestro sigue la regla no-anuncio.
+
+## El patrón @ai._kid / Claura (competidor directo, medido con datos reales 2026-07-12)
+Cuenta 100% IA de nuestro MISMO nicho (27k followers). Sus 4 posts top son TODOS
+carruseles; sus reels flopean (0-130 likes) — copiar la máquina de carruseles, no el
+spam de reels. La fórmula del carrusel que les explota (top: 4.900 likes y 10.554
+comentarios):
+- **Hook en 1ª persona con NÚMERO concreto y contraste**: "Publico 600 reels al mes y
+  grabo cero", "Armé toda mi agencia adentro de Claude Code: 220 skills".
+- **El cuerpo es EL SISTEMA paso a paso** (flujo numerado, herramientas con nombre),
+  no teoría ni tips genéricos: el lector se lleva algo replicable.
+- **CTA comment-gate**: "Comentá X y te mando [el prompt/la guía/el calendario]" →
+  los comentarios superan a los likes (10.554💬 vs 4.900❤) y el algoritmo lo premia
+  distribuyéndolo. En nuestros carruseles: pedir UNA palabra concreta y prometer un
+  entregable real (checklist, demo, guía).
 """
 
 SEED_DIRECTION = """# Dirección de arte — formatos de imagen/ad que convierten (estudio 2026-07-06)

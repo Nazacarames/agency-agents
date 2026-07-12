@@ -32,7 +32,7 @@ _NICHOS = {
     "stevenbartlett": "negocios", "hormozi": "negocios", "codiesanchez": "negocios",
     "garyvee": "negocios", "neuromodernos": "ia", "romualdfons": "marketing",
     "eugeoller": "negocios", "hubspot": "saas/b2b", "manychat": "bots/pymes",
-    "italoteotonio": "ia",
+    "italoteotonio": "ia", "aikid": "ia",
 }
 
 _NOTE_PROMPT = (

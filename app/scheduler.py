@@ -74,6 +74,7 @@ HOUSEKEEPING_CRON = "30 4 * * *"          # diario 04:30 — retención del volu
 ROUNDTABLE_CRON = "30 7 * * mon"          # lun 07:30 — mesa redonda del equipo (debate); el brief de 08:30 la lee
 PRACTICE_RESEARCH_CRON = "0 7 1,15 * *"   # día 1 y 15, 07:00 — research web de mejores prácticas → lecciones
 DRIVE_SYNC_CRON = "0 5 * * *"             # diario 05:00 — contenido/reportes/backup de stores a Google Drive
+COMMENT_WATCH_CRON = "15 */2 * * *"       # cada 2h — comentarios nuevos en nuestros posts (comment-gate → Discord)
 
 
 class AgentScheduler:
@@ -117,6 +118,8 @@ class AgentScheduler:
                               _scheduled_practice_research)
         self._register_simple("drive:sync", DRIVE_SYNC_CRON, DEFAULT_TIMEZONE,
                               _scheduled_drive_sync)
+        self._register_simple("comments:watch", COMMENT_WATCH_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_comment_watch)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -329,6 +332,17 @@ async def _scheduled_drive_sync() -> None:
         log.info("drive_sync_scheduled_done", result=res)
     except Exception as e:
         log.error("drive_sync_failed", error=str(e)[:200])
+
+
+async def _scheduled_comment_watch() -> None:
+    """Comentarios nuevos en nuestros posts de IG → Discord (comment-gate = leads)."""
+    import asyncio
+    from .integrations import comment_watch
+    try:
+        res = await asyncio.to_thread(comment_watch.check)
+        log.info("comment_watch_scheduled_done", result=res)
+    except Exception as e:
+        log.error("comment_watch_failed", error=str(e)[:200])
 
 
 async def _scheduled_trend_radar() -> None:

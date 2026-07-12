@@ -41,6 +41,7 @@ IG_HANDLES = {
     "hubspot":        "hubspot",        # 654k — formatos B2B (memes/skits/carruseles)
     "manychat":       "manychat",       # nicho directo: bots de chat
     "italoteotonio":  "prof.italoteotonio",  # 349k — IA práctica, infografías doodle (verificado 2026-07-08, ref. del usuario)
+    "aikid":          "ai._kid",         # 27k — Claura: agencia 100% IA, ES, nicho EXACTO; sus carruseles-sistema con comment-gate explotan (verificado 2026-07-12, ref. del usuario)
 }
 
 
