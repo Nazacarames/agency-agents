@@ -1329,6 +1329,15 @@ async def api_generate_image(body: ImageBody, request: Request):
     return {"ok": True, "urls": urls}
 
 
+@app.post("/api/drive/sync")
+async def api_drive_sync(request: Request):
+    """Dispara la subida a Drive (contenido/reportes/backup) sin esperar al cron diario."""
+    _verify_webhook_secret(request)
+    from .integrations import drive_sync
+    res = await run_in_threadpool(drive_sync.sync)
+    return res
+
+
 @app.get("/api/publish/status")
 async def api_publish_status(request: Request):
     _verify_webhook_secret(request)

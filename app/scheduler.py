@@ -73,6 +73,7 @@ CREATIVE_STUDY_CRON = "0 10 1 * *"        # día 1 de cada mes 10:00 — re-estu
 HOUSEKEEPING_CRON = "30 4 * * *"          # diario 04:30 — retención del volumen (data/images + reportes viejos)
 ROUNDTABLE_CRON = "30 7 * * mon"          # lun 07:30 — mesa redonda del equipo (debate); el brief de 08:30 la lee
 PRACTICE_RESEARCH_CRON = "0 7 1,15 * *"   # día 1 y 15, 07:00 — research web de mejores prácticas → lecciones
+DRIVE_SYNC_CRON = "0 5 * * *"             # diario 05:00 — contenido/reportes/backup de stores a Google Drive
 
 
 class AgentScheduler:
@@ -114,6 +115,8 @@ class AgentScheduler:
                               _scheduled_roundtable)
         self._register_simple("practice:research", PRACTICE_RESEARCH_CRON, DEFAULT_TIMEZONE,
                               _scheduled_practice_research)
+        self._register_simple("drive:sync", DRIVE_SYNC_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_drive_sync)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -315,6 +318,17 @@ async def _scheduled_housekeeping() -> None:
         log.info("housekeeping_scheduled_done", result=res)
     except Exception as e:
         log.error("housekeeping_failed", error=str(e)[:200])
+
+
+async def _scheduled_drive_sync() -> None:
+    """Sube a Drive el contenido/reportes nuevos + backup diario de los stores."""
+    import asyncio
+    from .integrations import drive_sync
+    try:
+        res = await asyncio.to_thread(drive_sync.sync)
+        log.info("drive_sync_scheduled_done", result=res)
+    except Exception as e:
+        log.error("drive_sync_failed", error=str(e)[:200])
 
 
 async def _scheduled_trend_radar() -> None:

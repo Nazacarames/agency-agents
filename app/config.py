@@ -121,6 +121,7 @@ class Settings(BaseSettings):
     gmail_refresh_token: str = ""
     gmail_user_id: str = "me"            # "me" = la cuenta dueña del token
     gmail_enabled: bool = True
+    drive_sync_enabled: bool = True      # subida diaria de contenido/reportes/backups a Drive
     inbox_max_threads: int = 8           # cuántos hilos no-leídos procesar por run
     inbox_lookback_days: int = 7         # ventana de antigüedad para considerar un hilo
     # ⚠️ Si inbox_auto_send=True, el Inbox Assistant RESPONDE solo (no borradores),

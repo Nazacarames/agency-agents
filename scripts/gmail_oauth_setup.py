@@ -32,6 +32,9 @@ SCOPES = [
     # Calendar.events → el Inbox Assistant crea reuniones con Google Meet y manda el
     # link al prospecto. Habilitá también "Google Calendar API" en Cloud Console.
     "https://www.googleapis.com/auth/calendar.events",
+    # Drive (solo archivos creados por la app) → drive_sync sube contenido/reportes/
+    # backups a carpetas. Habilitá también "Google Drive API" en Cloud Console.
+    "https://www.googleapis.com/auth/drive.file",
 ]
 
 
