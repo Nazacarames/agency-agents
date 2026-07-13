@@ -274,6 +274,13 @@ def playbook_block() -> str:
         radar = trend_radar.block()
     except Exception:
         pass
+    # Estudio de video del competidor (Gemini mira sus reels — semanal).
+    reels = ""
+    try:
+        from . import reel_study
+        reels = reel_study.block()
+    except Exception:
+        pass
     return (
         "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo) ===\n"
         + load_playbook().strip()
@@ -285,6 +292,7 @@ def playbook_block() -> str:
         + vault
         + radar
         + trends
+        + reels
         + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
         "plataforma, robá las tácticas del dossier adaptadas a distribuidoras argentinas, "
         "surfeá las tendencias que están subiendo, y evitá los clichés visuales listados."

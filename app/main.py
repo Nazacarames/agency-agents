@@ -1030,7 +1030,28 @@ async def lead_demo_page(key: str):
             except Exception as e:
                 log.warning("demo_alert_failed", error=str(e)[:150])
         await run_in_threadpool(_alert)
-    return HTMLResponse(lead_demo.render_page(d))
+    return HTMLResponse(lead_demo.render_page(d, key=key))
+
+
+@app.post("/d/{key}/chat")
+async def lead_demo_chat(key: str, request: Request):
+    """Chat EN VIVO de la demo pública: el visitante habla con el agente (que actúa
+    como asistente de la empresa del lead, o vende Automiq en la demo genérica).
+    Público a propósito (el lead no tiene secret); rate-limit por IP+key adentro."""
+    from .integrations import lead_demo
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON inválido")
+    messages = body.get("messages") or []
+    if not isinstance(messages, list) or len(messages) > 40:
+        raise HTTPException(status_code=400, detail="messages inválido")
+    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+          or (request.client.host if request.client else "?"))
+    reply = await run_in_threadpool(lead_demo.chat_reply, key, messages, ip)
+    if reply is None:
+        raise HTTPException(status_code=404, detail="demo no encontrada")
+    return {"reply": reply}
 
 
 # ── Mesa redonda (debate entre agentes) + notas entre agentes ──
@@ -1373,6 +1394,15 @@ async def api_drive_sync(request: Request):
     _verify_webhook_secret(request)
     from .integrations import drive_sync
     res = await run_in_threadpool(drive_sync.sync)
+    return res
+
+
+@app.post("/api/reels/study")
+async def api_reel_study(request: Request, n: int = 2):
+    """Gemini mira los n reels top no estudiados del competidor (sin esperar al cron)."""
+    _verify_webhook_secret(request)
+    from .integrations import reel_study
+    res = await run_in_threadpool(reel_study.study, max(1, min(n, 4)))
     return res
 
 

@@ -75,6 +75,7 @@ ROUNDTABLE_CRON = "30 7 * * mon"          # lun 07:30 — mesa redonda del equip
 PRACTICE_RESEARCH_CRON = "0 7 1,15 * *"   # día 1 y 15, 07:00 — research web de mejores prácticas → lecciones
 DRIVE_SYNC_CRON = "0 5 * * *"             # diario 05:00 — contenido/reportes/backup de stores a Google Drive
 COMMENT_WATCH_CRON = "15 */2 * * *"       # cada 2h — comentarios nuevos en nuestros posts (comment-gate → Discord)
+REEL_STUDY_CRON = "30 6 * * mon"          # lun 06:30 — Gemini mira reels del competidor → prompts/lecciones
 
 
 class AgentScheduler:
@@ -120,6 +121,8 @@ class AgentScheduler:
                               _scheduled_drive_sync)
         self._register_simple("comments:watch", COMMENT_WATCH_CRON, DEFAULT_TIMEZONE,
                               _scheduled_comment_watch)
+        self._register_simple("reels:study", REEL_STUDY_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_reel_study)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -321,6 +324,17 @@ async def _scheduled_housekeeping() -> None:
         log.info("housekeeping_scheduled_done", result=res)
     except Exception as e:
         log.error("housekeeping_failed", error=str(e)[:200])
+
+
+async def _scheduled_reel_study() -> None:
+    """Gemini mira los reels top no estudiados del competidor → prompts/lecciones."""
+    import asyncio
+    from .integrations import reel_study
+    try:
+        res = await asyncio.to_thread(reel_study.study, 2)
+        log.info("reel_study_scheduled_done", result=res)
+    except Exception as e:
+        log.error("reel_study_failed", error=str(e)[:200])
 
 
 async def _scheduled_drive_sync() -> None:
