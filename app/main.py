@@ -12,6 +12,7 @@ El scheduler de APScheduler corre los trabajos programados.
 """
 from __future__ import annotations
 
+import hashlib
 import hmac
 import json
 import re
@@ -313,6 +314,43 @@ async def lead_webhook(payload: LeadWebhookPayload, request: Request,
     }
     background.add_task(_run_pack_agent, "leadhunter", enrichment_args, run_id, "webhook:lead")
     return {"status": "queued", "run_id": run_id, "agent": "leadhunter"}
+
+
+# ── Webhook de Meta (Instagram comment-gate → auto-DM) ──
+# GET: handshake de verificación de Meta (echo de hub.challenge si el verify
+# token coincide). POST: eventos en tiempo real (comentarios en nuestros posts);
+# si META_APP_SECRET está seteado se valida la firma X-Hub-Signature-256.
+# No usa X-Webhook-Secret porque Meta no manda headers custom.
+
+@app.get("/webhook/meta")
+async def meta_webhook_verify(request: Request):
+    settings = get_settings()
+    q = request.query_params
+    if (settings.meta_webhook_verify_token
+            and q.get("hub.mode") == "subscribe"
+            and hmac.compare_digest(q.get("hub.verify_token", ""),
+                                    settings.meta_webhook_verify_token)):
+        return PlainTextResponse(q.get("hub.challenge", ""))
+    raise HTTPException(status_code=403, detail="verify token inválido")
+
+
+@app.post("/webhook/meta")
+async def meta_webhook_receive(request: Request, background: BackgroundTasks):
+    settings = get_settings()
+    body = await request.body()
+    if settings.meta_app_secret:
+        sig = request.headers.get("X-Hub-Signature-256", "")
+        expected = "sha256=" + hmac.new(settings.meta_app_secret.encode(),
+                                        body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            raise HTTPException(status_code=401, detail="firma inválida")
+    try:
+        payload = json.loads(body)
+    except Exception:
+        return {"status": "ignored"}
+    from .integrations import comment_gate
+    background.add_task(comment_gate.handle_event, payload)
+    return {"status": "ok"}
 
 
 # ── Last output (manual pull del MD+JSON a PC) ──

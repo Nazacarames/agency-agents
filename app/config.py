@@ -85,6 +85,11 @@ class Settings(BaseSettings):
     # El token cae a meta_page_token si no se setea uno específico.
     meta_ad_account_id: str = ""
     meta_ads_token: str = ""         # System User token con ads_read (SECRET)
+    # Webhooks de Meta (comment-gate auto-DM). El verify token es el string que
+    # se pega en App Dashboard → Webhooks al suscribir el callback; el app secret
+    # (opcional pero recomendado) valida la firma X-Hub-Signature-256 de cada POST.
+    meta_webhook_verify_token: str = ""   # (SECRET) sólo en env vars
+    meta_app_secret: str = ""             # (SECRET) App Secret de la app de Meta
     # URL pública del backend, para que la Graph API pueda DESCARGAR la imagen
     # (las imágenes viven en /media/<file>). Ej: https://...up.railway.app
     public_base_url: str = ""

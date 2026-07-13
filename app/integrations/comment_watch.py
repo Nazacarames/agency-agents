@@ -27,6 +27,21 @@ _GATE_WORDS = re.compile(r"\b(demo|story|guia|guía|prompt|checklist|info|quiero
 _MAX_SEEN = 4000
 
 
+def mark_seen(comment_ids: List[str]) -> None:
+    """Marca comment_ids como vistos (los usa comment_gate: el webhook ya los
+    atendió en tiempo real → el vigía cada 2h no debe re-alertarlos)."""
+    if not comment_ids:
+        return
+    try:
+        st = json.loads(_STATE.read_text(encoding="utf-8"))
+    except Exception:
+        st = {"seen": []}
+    seen = set(st.get("seen", []))
+    st["seen"] = (list(st.get("seen", [])) +
+                  [c for c in comment_ids if c not in seen])[-_MAX_SEEN:]
+    write_json_atomic(_STATE, st)
+
+
 def check(n_posts: int = 12) -> Dict[str, int]:
     """Revisa comentarios nuevos y alerta a Discord. Devuelve contadores."""
     if not enabled():
