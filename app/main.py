@@ -1397,6 +1397,31 @@ async def api_drive_sync(request: Request):
     return res
 
 
+@app.post("/api/data/restore")
+async def api_data_restore(request: Request):
+    """Disaster recovery: restaura los stores desde un zip de backup de Drive
+    (el que arma drive_sync: data/*.json con nombres planos). Body = zip crudo."""
+    _verify_webhook_secret(request)
+    import io
+    import zipfile
+    body = await request.body()
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(body))
+    except Exception:
+        raise HTTPException(status_code=400, detail="body no es un zip válido")
+    dest = _data_dir()
+    dest.mkdir(parents=True, exist_ok=True)
+    restored = []
+    for name in zf.namelist():
+        base = Path(name).name
+        if not base.endswith(".json") or base != name:
+            continue  # sólo stores planos (sin rutas: evita zip-slip)
+        (dest / base).write_bytes(zf.read(name))
+        restored.append(base)
+    log.info("data_restore", files=len(restored))
+    return {"restored": len(restored), "files": restored}
+
+
 @app.post("/api/reels/study")
 async def api_reel_study(request: Request, n: int = 2):
     """Gemini mira los n reels top no estudiados del competidor (sin esperar al cron)."""
