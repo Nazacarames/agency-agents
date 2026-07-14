@@ -204,6 +204,9 @@ class Settings(BaseSettings):
     # OpenCode: harness headless (tools + skills de .claude/skills) sobre los
     # modelos NVIDIA. Kill-switch: OPENCODE_ENABLED=false → NVIDIA directo.
     opencode_enabled: bool = True
+    # Hermes (hermes-agent, Nous Research): harness PRINCIPAL de todos los
+    # agentes desde 2026-07-14. Kill-switch: HERMES_ENABLED=false → cadena vieja.
+    hermes_enabled: bool = True
 
     # ── YouTube (Data API v3 — subir Shorts del canal de Nazareno) ──
     # Reusa la credencial OAuth de Google re-autorizada con scope youtube.upload.

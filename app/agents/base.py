@@ -298,11 +298,35 @@ class BaseAgent(ABC):
 
             response: Optional[MiniMaxResponse] = None
 
+            # 0) Hermes (hermes-agent, Nous Research) — harness PRINCIPAL de TODOS
+            #    los agentes desde 2026-07-14. Backend: MiniMax-M3, o NVIDIA para
+            #    los agentes con llm_provider. Si falla, cae a la cadena de siempre
+            #    (OpenCode → Claude Code → NVIDIA directo → MiniMax) sin regresión.
+            if getattr(ctx.settings, "hermes_enabled", True):
+                try:
+                    from ..clients.hermes import run_hermes
+                    h_text = run_hermes(
+                        self._skills_preamble() + user_msg,
+                        settings=ctx.settings, llm_provider=self.llm_provider,
+                        system_append=local_system, timeout=self.claude_code_timeout)
+                    response = MiniMaxResponse(
+                        text=h_text, model=f"hermes:{self.llm_provider or 'minimax'}",
+                        input_tokens=0, output_tokens=0,
+                        stop_reason="end_turn", raw={}, elapsed_ms=0,
+                    )
+                    log.info("agent_via_hermes", agent=self.name, run_id=ctx.run_id,
+                             provider=self.llm_provider or "minimax")
+                except Exception as e:
+                    log.warning("hermes_unavailable_fallback", agent=self.name,
+                                run_id=ctx.run_id, error=str(e)[:200])
+                    response = None
+
             # 0a) OpenCode (harness con tools+skills, backend NVIDIA GLM/DeepSeek).
             #     Antes los agentes con llm_provider corrían por completion PELADA:
             #     las skills y los WebFetch del prompt eran letra muerta. OpenCode
             #     lee .claude/skills tal cual y les da bash/webfetch/skill reales.
-            if self.llm_provider and getattr(ctx.settings, "opencode_enabled", True) \
+            if self.llm_provider and response is None \
+                    and getattr(ctx.settings, "opencode_enabled", True) \
                     and getattr(ctx.settings, "nvidia_api_key", ""):
                 try:
                     from ..clients.opencode import run_opencode
