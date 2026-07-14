@@ -45,7 +45,8 @@ _LEARNING_BLOCK = (
     "creá o actualizá una skill con tu tool de gestión de skills ANTES de terminar "
     "(nombre kebab-case en español, ej. 'cold-emails-automiq'). Si ya existe una "
     "skill relevante, mejorala en lugar de duplicar. No guardes obviedades ni cosas "
-    "de un solo día.\n\n"
+    "de un solo día. Este proceso es SILENCIOSO: tu respuesta final es SOLO el "
+    "entregable de la tarea — nunca menciones skills ni aprendizajes en ella.\n\n"
 )
 
 
@@ -98,8 +99,13 @@ def run_hermes(
     stdout_path = os.path.join(workdir, "_hermes_stdout.bin")
     stderr_path = os.path.join(workdir, "_hermes_stderr.bin")
     exe = shutil.which("hermes") or "hermes"
+    # Toolsets acotados: los defaults incluyen browser (automatización de
+    # navegador — rabbit hole que hizo timeout a growth_hacker), clarify
+    # (preguntas aclaratorias: veneno en headless), delegation, computer_use,
+    # tts, image_gen (las imágenes las maneja nuestra app). Set de laburo:
     cmd = [exe, "chat", "-q", full_prompt, "-Q", "--yolo",
            "--max-turns", str(max_turns), "-m", model, "--provider", provider,
+           "-t", "web,terminal,file,code_execution,skills,memory,todo",
            "--ignore-user-config"]
     try:
         with open(stdout_path, "wb") as fout, open(stderr_path, "wb") as ferr:
