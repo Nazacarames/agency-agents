@@ -124,8 +124,11 @@ def run_hermes(
         shutil.rmtree(workdir, ignore_errors=True)
 
     if returncode != 0:
-        log.error("hermes_failed", returncode=returncode, stderr=stderr_s[:400])
-        raise HermesError(f"hermes exit {returncode}: {stderr_s[:300]}")
+        # Con -Q el error real suele quedar en stdout (stderr trae solo el
+        # session_id) → loguear ambos para poder diagnosticar en prod.
+        log.error("hermes_failed", returncode=returncode, stderr=stderr_s[:400],
+                  stdout_tail=stdout_s[-600:])
+        raise HermesError(f"hermes exit {returncode}: {(stdout_s[-200:] or stderr_s[:200])}")
 
     text = _extract_text(stdout_s)
     # igual que opencode: si dejó un entregable más completo en un archivo,
