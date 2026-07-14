@@ -148,6 +148,16 @@ def study(n: int = 2) -> Dict[str, int]:
             sections.append(analysis)
             studied.add(m["id"])
             log.info("reel_studied", id=m["id"], likes=m.get("like_count", 0))
+            # Cosechar la "Lección de edición" al almacén de lecciones (se reinyecta
+            # en cada short nuestro vía creative_learnings — retroalimentación).
+            try:
+                import re as _re
+                from . import creative_learnings
+                ml = _re.search(r"Lección de edición[^:：]*[:：]\s*\**\s*(.+)", analysis)
+                if ml:
+                    creative_learnings.add(ml.group(1).strip(), "reel_study", "video")
+            except Exception:
+                pass
 
     if not sections:
         return {"ok": False, "estudiados": 0}

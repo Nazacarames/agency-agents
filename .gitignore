@@ -89,3 +89,7 @@ Thumbs.db
 
 # visual scout scratch (sheets/captions descargados; se regeneran)
 data/scout/
+
+# estado runtime del lazo creativo (vive en el volume, no en git)
+data/creative-learnings.json
+data/art-rotation.json

@@ -311,6 +311,22 @@ class TikTokCreatorAgent(BaseAgent):
                 return text.rstrip() + ("\n\n> ⚠️ **El video quedó SIN AUDIO** (el clip "
                                         "del presentador vino sin voz). NO se publicó a "
                                         "IG/TikTok/YouTube — revisar Veo/Omni.\n")
+            # QA con Gemini: MIRA el short final (video + audio + texto en pantalla)
+            # antes de publicar. Describe, puntúa y deja la lección en
+            # creative_learnings (se reinyecta en las próximas tandas). Sólo bloquea
+            # la publicación si salió claramente roto.
+            qa = self._video_qa(self._media_to_path(url))
+            if qa:
+                probs = "".join(f"\n> - {p}" for p in (qa.get("problemas") or [])[:4])
+                text = text.rstrip() + (
+                    f"\n\n## 👁️ QA de Gemini (miró el short)\n\n"
+                    f"> **Puntaje {qa.get('puntaje', '?')}/10** — "
+                    f"{qa.get('descripcion', '')}" + probs + "\n")
+                if int(qa.get("puntaje") or 10) <= 3 and qa.get("publicable") is False:
+                    log.warning("tiktok_video_qa_blocked", puntaje=qa.get("puntaje"))
+                    return text.rstrip() + ("\n\n> ⚠️ **El QA de Gemini bloqueó la "
+                                            "publicación** (short claramente roto). "
+                                            "No salió a IG/TikTok/YouTube — revisar.\n")
             text = self._maybe_upload_youtube(text, self._media_to_path(url))
             text = self._enqueue_ig_reel(text, url)
             text = self._maybe_post_tiktok(text, self._media_to_path(url), url)
@@ -318,6 +334,49 @@ class TikTokCreatorAgent(BaseAgent):
         except Exception as e:
             log.warning("tiktok_assemble_failed", error=str(e)[:300])
             return text
+
+    def _video_qa(self, video_path):
+        """Gemini MIRA el short final (imagen + audio + texto en el tiempo) y devuelve
+        el veredicto (dict) o None. Cosecha la lección en creative_learnings — el lazo
+        de retroalimentación de video. Best-effort: nunca rompe el armado."""
+        try:
+            import json as _json
+            import re as _re
+            from ..config import get_settings
+            from ..integrations import vision, creative_learnings
+            if not video_path or not getattr(get_settings(), "video_qa_enabled", True):
+                return None
+            frase = (getattr(self, "_veo_frase", "") or "").replace('"', "'")[:200]
+            prompt = (
+                "Sos el director creativo de Automiq (agencia argentina de IA para "
+                "PyMEs). Este short 9:16 NUESTRO está por publicarse en IG/TikTok. "
+                f"Frase del presentador: \"{frase}\".\n\n"
+                "MIRALO completo (imagen + audio + texto en pantalla) y evaluá DURO:\n"
+                "1) ¿El hook (0-3s) frena el scroll?\n"
+                "2) ¿La voz se entiende, suena natural y argentina (no robótica ni con "
+                "acento raro), y dice la frase UNA sola vez sin trabarse?\n"
+                "3) ¿Subtítulos/carteles legibles, bien escritos y sincronizados?\n"
+                "4) ¿La demo (chat) se lee bien y se entiende qué hace el bot?\n"
+                "5) Defectos visuales de IA (cara deforme, manos raras, glitches).\n\n"
+                "Devolvé SOLO un JSON (sin markdown):\n"
+                "{\"puntaje\": <1-10>, \"publicable\": <true|false>, "
+                "\"descripcion\": \"qué se ve y se escucha, 2 frases\", "
+                "\"problemas\": [\"...\"], "
+                "\"leccion\": \"UNA regla corta y general para el próximo short (o \\\"\\\")\"}"
+            )
+            out = vision.describe_video(str(video_path), prompt, max_tokens=700)
+            m = _re.search(r"\{.*\}", out or "", _re.DOTALL)
+            if not m:
+                return None
+            v = _json.loads(m.group(0))
+            if (v.get("leccion") or "").strip():
+                creative_learnings.add(v["leccion"], "qa_video", "video")
+            log.info("tiktok_video_qa", puntaje=v.get("puntaje"),
+                     publicable=v.get("publicable"))
+            return v
+        except Exception as e:
+            log.warning("tiktok_video_qa_failed", error=str(e)[:200])
+            return None
 
     def _enqueue_ig_reel(self, text: str, video_url: str) -> str:
         """Publica el short como REEL de Instagram EN EL MOMENTO (junto con la subida
@@ -428,12 +487,23 @@ class TikTokCreatorAgent(BaseAgent):
             base = (s.public_base_url or "").rstrip("/")
             refs = [f"{base}{p}" for p in NAZA_REFERENCE_PATHS] if base else None
             # Gemini Omni primero (mejor dicción/acento/lip-sync, cara por referencia);
-            # es preview → si falla o filtra, cae a Veo 3.1 Fast (sin regresión).
+            # es preview → si falla o filtra, cae a Veo 3.1 FULL (calidad, GA
+            # verificado 2026-07-14) y recién después a Veo 3.1 Fast (sin regresión).
             from ..integrations import omni_video
             motor = "Gemini Omni"
             res = omni_video.generate_and_wait(
                 nazareno_veo_prompt(frase, lugar), reference_image_urls=refs,
                 negative_prompt=_VEO_NEG, timeout_s=300)
+            if not res.get("b64") and getattr(s, "veo_model_quality", ""):
+                motor = "Veo 3.1"
+                try:
+                    res = veo_video.generate_and_wait(
+                        nazareno_veo_prompt(frase, lugar), reference_image_urls=refs,
+                        aspect_ratio="9:16", negative_prompt=_VEO_NEG, timeout_s=420,
+                        poll=12, model=s.veo_model_quality)
+                except Exception as e:
+                    log.warning("veo_quality_failed", error=str(e)[:200])
+                    res = {}
             if not res.get("b64"):
                 motor = "Veo 3.1 Fast"
                 res = veo_video.generate_and_wait(

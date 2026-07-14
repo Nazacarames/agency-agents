@@ -280,18 +280,26 @@ def refine(raw_prompt: str, formato: str = "post", estilo: str = "") -> str:
     if len(raw) < 8 or not getattr(s, "image_prompt_refine", True):
         return raw_prompt
     estilo = (estilo or "").lower()
+    # Lecciones del QA visual (Gemini mirando NUESTRAS imágenes publicadas) — el lazo
+    # de retroalimentación: lo aprendido ayer se aplica en el prompt de hoy.
+    lecciones = ""
+    try:
+        from . import creative_learnings
+        lecciones = creative_learnings.block("imagen", n=8)
+    except Exception:
+        pass
     if estilo in _GRAPHIC_MODES:
         system = _SYSTEM_GRAPHIC
         mode = estilo
         user = (f"Idea cruda ({formato}) para una pieza de Automiq:\n{raw}\n\n"
-                + _GRAPHIC_MODES[estilo] + "\n\n"
+                + _GRAPHIC_MODES[estilo] + "\n\n" + lecciones
                 + "Devolvé el prompt final en inglés (un párrafo).")
     else:
         system = _SYSTEM
         mode = _detect_mode(raw)
         mode_block = _MODES.get(mode, "") or _scene_block()
         user = (f"Idea cruda ({formato}) para una imagen de Automiq:\n{raw}\n\n"
-                + (mode_block + "\n\n" if mode_block else "")
+                + (mode_block + "\n\n" if mode_block else "") + lecciones
                 + "Devolvé el prompt fotográfico final en inglés (un párrafo).")
 
     # 1) GLM vía NVIDIA (mejor redactor, gratis)

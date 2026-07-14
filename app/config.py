@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     # → fallback "vertex" (Imagen 4) → "minimax" (image-01). Todo con la misma credencial.
     image_provider: str = "nano"
     nano_image_model: str = "gemini-3-pro-image"
+    # QA visual con Gemini (2026-07-14): mira cada imagen/short generado contra el
+    # brief, regenera si es floja y cosecha lecciones (creative_learnings) que se
+    # reinyectan al crear. IMAGE_QA_ENABLED=false / VIDEO_QA_ENABLED=false apagan.
+    image_qa_enabled: bool = True
+    video_qa_enabled: bool = True
     vertex_image_model: str = "imagen-4.0-generate-001"
     image_model: str = "image-01"    # fallback MiniMax
     # Tope de seguridad: el agente decide CUÁNTAS imágenes generar según su
@@ -182,6 +187,10 @@ class Settings(BaseSettings):
     vertex_project: str = ""          # default = project_id del JSON de la SA
     vertex_location: str = "us-central1"
     veo_model: str = "veo-3.1-fast-generate-001"  # Veo 3.1 Fast GA (sin allowlist). Full: "veo-3.1-generate-001"
+    # Modelo de CALIDAD para el clip del presentador (la cara de la marca): Veo 3.1
+    # full (GA, verificado 2026-07-14). Cadena: Omni → este → veo_model (fast).
+    # Vacío = saltear (queda Omni → fast como antes).
+    veo_model_quality: str = "veo-3.1-generate-001"
     google_api_key: str = ""          # legacy/fallback (org bloquea keys → normalmente vacío)
 
     # ── NVIDIA (backend LLM alternativo: GLM 5.2 / DeepSeek V4 Pro) ──

@@ -256,6 +256,16 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
     if not raws:
         return []
 
+    # QA visual: Gemini mira la imagen contra el brief (describe, puntúa, corrige).
+    qa_desc = ""
+    if getattr(s, "image_qa_enabled", True):
+        try:
+            fn_used = dict(_chain)[used]
+            raws, qa_desc = _qa_and_retry(raws, full_prompt, kind, fn_used,
+                                          _provider_ar(aspect_ratio or "1:1", used))
+        except Exception as e:
+            log.warning("image_qa_failed", error=str(e)[:200])
+
     out: List[str] = []
     for raw in raws:
         # SIEMPRE al lienzo final exacto (cover-crop): dimensiones correctas
@@ -271,7 +281,7 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
         (_images_dir() / fname).write_bytes(raw)
         local_url = f"/media/{fname}"
         out.append(local_url)
-        _notify_discord(local_url, text, subtitle)
+        _notify_discord(local_url, text, subtitle, qa=qa_desc)
     log.info("image_gen_ok", generated=len(out), with_text=bool(text), provider=used)
     return out
 
@@ -304,7 +314,8 @@ def _fit_canvas(img_bytes: bytes, aspect_ratio: str) -> Optional[bytes]:
         return None
 
 
-def _notify_discord(local_url: str, text: Optional[str], subtitle: Optional[str]) -> None:
+def _notify_discord(local_url: str, text: Optional[str], subtitle: Optional[str],
+                    qa: str = "") -> None:
     """Espeja la imagen recién generada a Discord (best-effort, no rompe nada)."""
     s = get_settings()
     if not getattr(s, "discord_images_enabled", True) or not s.discord_configured:
@@ -317,6 +328,8 @@ def _notify_discord(local_url: str, text: Optional[str], subtitle: Optional[str]
             return  # sin URL pública Discord no puede mostrarla
         title = (text or "Imagen generada")[:256]
         desc = subtitle or ""
+        if qa:
+            desc = (desc + "\n\n" if desc else "") + f"👁️ QA Gemini: {qa[:300]}"
         dw = DiscordWebhook(s)
         dw.send("", embed=DiscordEmbed(title=f"🎨 {title}", description=desc,
                                        image_url=url, color=0x2563EB),
@@ -687,6 +700,95 @@ def render_demo(business: str, messages: list, text: str,
     except Exception as e:
         log.warning("render_demo_failed", error=str(e)[:200])
         return []
+
+
+# ── QA visual con Gemini (el sistema MIRA lo que genera antes de usarlo) ──
+# Pedido del usuario 2026-07-14: "que gemini describa bien como son las fotos...
+# tiene que hacer que sean mejores las imagenes... que todo se retroalimente".
+# Gemini describe y puntúa la imagen contra el brief; si es floja (<7) se regenera
+# UNA vez con la corrección y se queda la mejor; la lección va a creative_learnings
+# (que image_prompt.refine reinyecta en cada imagen futura).
+_QA_PROMPT = (
+    "Sos el director de arte de Automiq (agencia argentina de IA para PyMEs). Esta "
+    "imagen la generó una IA para publicarse en redes con este brief:\n\"{brief}\"\n"
+    "Tipo de pieza: {kind}.\n\n"
+    "Evaluala DURO, como si se publicara ya:\n"
+    "1) Fidelidad al brief (¿es la escena/concepto pedido?).\n"
+    "2) Defectos de IA: manos/caras deformes, texto o letras (PROHIBIDAS salvo pieza "
+    "tipo comic con globos), objetos imposibles, look plástico/render barato.\n"
+    "3) Composición para redes: aire para un titular, sujeto no clavado en el centro.\n"
+    "4) Look real y del rubro argentino (no stock genérico ni 3D corporativo).\n\n"
+    "Devolvé SOLO un JSON (sin markdown):\n"
+    "{{\"puntaje\": <1-10>, \"descripcion\": \"qué se ve, en 1-2 frases\", "
+    "\"problemas\": [\"...\"], "
+    "\"mejora_prompt\": \"frase corta EN INGLÉS para AGREGAR al prompt y corregir lo peor (o \\\"\\\")\", "
+    "\"leccion\": \"UNA regla corta y GENERAL en español para futuras imágenes (o \\\"\\\")\"}}"
+)
+
+
+def _qa_verdict(raw: bytes, full_prompt: str, kind: str) -> Optional[dict]:
+    """Gemini mira la imagen y devuelve el veredicto parseado. None si no se pudo."""
+    import json as _json
+    import os
+    import re as _re
+    import tempfile
+    from . import vision
+    if not vision.enabled():
+        return None
+    fd, tmp = tempfile.mkstemp(suffix=".jpg")
+    try:
+        os.write(fd, raw)
+        os.close(fd)
+        out = vision.describe([tmp], _QA_PROMPT.format(
+            brief=full_prompt[:700].replace('"', "'"), kind=kind), max_tokens=700)
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    m = _re.search(r"\{.*\}", out or "", _re.DOTALL)
+    if not m:
+        return None
+    try:
+        v = _json.loads(m.group(0))
+        v["puntaje"] = int(v.get("puntaje") or 0)
+        return v
+    except Exception:
+        return None
+
+
+def _qa_and_retry(raws: List[bytes], full_prompt: str, kind: str, fn, ar: str):
+    """QA de la primera imagen; si es floja y hay corrección, regenera UNA vez y se
+    queda la mejor. Devuelve (raws, descripcion_qa). Best-effort."""
+    v = _qa_verdict(raws[0], full_prompt, kind)
+    if not v:
+        return raws, ""
+    desc = (v.get("descripcion") or "").strip()
+    try:
+        from . import creative_learnings
+        if (v.get("leccion") or "").strip() and v["puntaje"] < 9:
+            creative_learnings.add(v["leccion"], "qa_imagen", "imagen")
+    except Exception:
+        pass
+    log.info("image_qa", puntaje=v["puntaje"], problemas=len(v.get("problemas") or []))
+    mejora = (v.get("mejora_prompt") or "").strip()
+    # sólo reintentar con 1 imagen (n>1 = carrusel externo, no mezclar tandas)
+    if v["puntaje"] >= 7 or not mejora or len(raws) != 1:
+        return raws, desc
+    try:
+        raws2 = fn(f"{full_prompt} {mejora[:300]}", ar, 1)
+    except Exception as e:
+        log.warning("image_qa_regen_failed", error=str(e)[:150])
+        return raws, desc
+    if not raws2:
+        return raws, desc
+    v2 = _qa_verdict(raws2[0], full_prompt, kind) or {}
+    p2 = int(v2.get("puntaje") or 0)
+    if p2 >= v["puntaje"]:
+        log.info("image_qa_retry_kept", antes=v["puntaje"], despues=p2)
+        return raws2, (v2.get("descripcion") or "").strip() or desc
+    log.info("image_qa_retry_discarded", antes=v["puntaje"], despues=p2)
+    return raws, desc
 
 
 def _to_jpeg(img_bytes: bytes) -> Optional[bytes]:

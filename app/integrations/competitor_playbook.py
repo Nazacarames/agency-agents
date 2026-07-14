@@ -281,6 +281,13 @@ def playbook_block() -> str:
         reels = reel_study.block()
     except Exception:
         pass
+    # Lecciones del QA de Gemini sobre NUESTRO output (imágenes y shorts propios).
+    learnings = ""
+    try:
+        from . import creative_learnings
+        learnings = creative_learnings.block(n=12)
+    except Exception:
+        pass
     return (
         "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo) ===\n"
         + load_playbook().strip()
@@ -293,6 +300,7 @@ def playbook_block() -> str:
         + radar
         + trends
         + reels
+        + learnings
         + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
         "plataforma, robá las tácticas del dossier adaptadas a distribuidoras argentinas, "
         "surfeá las tendencias que están subiendo, y evitá los clichés visuales listados."

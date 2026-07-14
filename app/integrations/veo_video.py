@@ -56,8 +56,8 @@ def _location() -> str:
     return get_settings().vertex_location or "us-central1"
 
 
-def _model() -> str:
-    return get_settings().veo_model or "veo-3.0-fast-generate-001"
+def _model(override: Optional[str] = None) -> str:
+    return override or get_settings().veo_model or "veo-3.0-fast-generate-001"
 
 
 def _build_creds():
@@ -89,10 +89,10 @@ def _token() -> str:
         return _creds.token
 
 
-def _base() -> str:
+def _base(model: Optional[str] = None) -> str:
     loc = _location()
     return (f"https://{loc}-aiplatform.googleapis.com/v1/projects/{_project()}"
-            f"/locations/{loc}/publishers/google/models/{_model()}")
+            f"/locations/{loc}/publishers/google/models/{_model(model)}")
 
 
 def _headers() -> Dict[str, str]:
@@ -116,7 +116,8 @@ def create_task(prompt: str, image_url: Optional[str] = None,
                 aspect_ratio: str = "9:16",
                 negative_prompt: str = "",
                 reference_image_urls: Optional[list] = None,
-                resolution: Optional[str] = "1080p") -> str:
+                resolution: Optional[str] = "1080p",
+                model: Optional[str] = None) -> str:
     """Lanza la generación. Devuelve el operation_name (para pollear).
 
     - reference_image_urls: lista de URLs (hasta 3). Modo Veo 3.1 "reference image"
@@ -152,7 +153,7 @@ def create_task(prompt: str, image_url: Optional[str] = None,
 
     def _post(body: Dict[str, Any]) -> Dict[str, Any]:
         with httpx.Client(timeout=90) as c:
-            r = c.post(f"{_base()}:predictLongRunning", json=body, headers=_headers())
+            r = c.post(f"{_base(model)}:predictLongRunning", json=body, headers=_headers())
         return {"status": r.status_code, "data": r.json() if r.content else {},
                 "text": r.text[:300]}
 
@@ -180,7 +181,7 @@ def create_task(prompt: str, image_url: Optional[str] = None,
     name = data.get("name")
     if not name:
         raise RuntimeError(f"veo sin operation name: {str(data)[:300]}")
-    log.info("veo_task_created", op=name, model=_model(), resolution=params.get("resolution"),
+    log.info("veo_task_created", op=name, model=_model(model), resolution=params.get("resolution"),
              refs=len(instance.get("referenceImages", [])), firstframe="image" in instance)
     return name
 
@@ -196,11 +197,11 @@ def _extract_b64(resp: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def query_task(operation_name: str) -> Dict[str, Any]:
+def query_task(operation_name: str, model: Optional[str] = None) -> Dict[str, Any]:
     """Estado de la operación (Vertex: fetchPredictOperation). {done, b64?, gcsUri?, error?}."""
     body = {"operationName": operation_name}
     with httpx.Client(timeout=60) as c:
-        r = c.post(f"{_base()}:fetchPredictOperation", json=body, headers=_headers())
+        r = c.post(f"{_base(model)}:fetchPredictOperation", json=body, headers=_headers())
     data = r.json() if r.content else {}
     if r.status_code >= 400:
         return {"done": False, "error": data.get("error") or {"status": r.status_code}}
@@ -232,13 +233,15 @@ def generate_and_wait(prompt: str, image_url: Optional[str] = None,
                       aspect_ratio: str = "9:16", negative_prompt: str = "",
                       timeout_s: int = 600, poll: int = 12,
                       reference_image_urls: Optional[list] = None,
-                      resolution: Optional[str] = "1080p") -> Dict[str, Any]:
+                      resolution: Optional[str] = "1080p",
+                      model: Optional[str] = None) -> Dict[str, Any]:
     """Crea la tarea y espera (bloqueante) hasta el video. Devuelve {operation, b64|gcsUri}."""
     op = create_task(prompt, image_url, image_b64, aspect_ratio, negative_prompt,
-                     reference_image_urls=reference_image_urls, resolution=resolution)
+                     reference_image_urls=reference_image_urls, resolution=resolution,
+                     model=model)
     deadline = time.time() + timeout_s
     while time.time() < deadline:
-        q = query_task(op)
+        q = query_task(op, model=model)
         if q.get("done"):
             if q.get("b64") or q.get("gcsUri"):
                 log.info("veo_done", op=op, gcs=bool(q.get("gcsUri")))
