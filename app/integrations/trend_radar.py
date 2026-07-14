@@ -1,8 +1,9 @@
 """
-trend_radar — la PÁGINA DE TENDENCIAS: todos los días revisa fuentes reales del nicho
-(Anthropic, OpenAI, IA para negocios, WhatsApp/Meta, e-commerce AR), etiqueta cada
-novedad como `potencial de gancho` / `explicativo` / `ignorar` (Gemini), rankea las 5
-con más potencial y manda el resumen por Discord a las 7 AM.
+trend_radar — la PÁGINA DE TENDENCIAS: todos los días busca NOTICIAS recientes (últimos
+7 días, modo news de Tavily) del nicho REAL de Automiq (PyMEs argentinas, distribuidoras,
+WhatsApp/ventas, costos PyME, IA aplicada), etiqueta cada novedad como `potencial de
+gancho` / `explicativo` / `ignorar` (Gemini), rankea las 5 con más potencial y manda el
+resumen por Discord a las 7 AM.
 
 Distinto de trends.py (momentum de búsquedas vía TrendsMCP): esto son NOTICIAS del día
 para trend-jacking en los guiones. Store: data/trend-radar.json. Best-effort siempre.
@@ -10,6 +11,7 @@ para trend-jacking en los guiones. Store: data/trend-radar.json. Best-effort sie
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,26 +24,40 @@ log = get_logger("trend_radar")
 _DATA = Path(__file__).resolve().parent.parent.parent / "data"
 _FILE = _DATA / "trend-radar.json"
 
-# Las fuentes que se revisan cada mañana (query → etiqueta de fuente).
+# Las fuentes que se revisan cada mañana (query, etiqueta, solo_medios_AR).
+# Nicho REAL: dueños de PyMEs argentinas (distribuidoras, comercios, inmobiliarias)
+# y lo que Automiq les vende (bots de WhatsApp, automatización de ventas/atención).
+# Las queries locales se restringen a medios argentinos: el modo news de Tavily
+# ignora el idioma y sin esto devuelve noticias yanquis (verificado 2026-07-14).
+_AR_DOMAINS = ["infobae.com", "lanacion.com.ar", "clarin.com", "ambito.com",
+               "cronista.com", "iprofesional.com", "iproup.com", "forbesargentina.com"]
+
 SOURCES = [
-    ("Anthropic Claude news announcement", "Anthropic"),
-    ("OpenAI announcement news this week", "OpenAI"),
-    ("inteligencia artificial novedades empresas", "IA / negocios"),
-    ("WhatsApp Business API novedades", "WhatsApp/Meta"),
-    ("ecommerce argentina novedades tiendanube mercado libre", "E-commerce AR"),
-    ("AI agents automation small business news", "Agentes IA"),
-    ("viral marketing AI video trend tiktok", "Contenido/TikTok"),
+    ("inteligencia artificial pymes", "IA / PyMEs AR", True),
+    ("automatización ventas atención al cliente empresas", "Automatización AR", True),
+    ("WhatsApp Business novedades empresas", "WhatsApp/Meta", False),
+    ("distribuidoras mayoristas comercio", "Distribuidoras", True),
+    ("costos pymes empleo comercios", "Dolor PyME", True),
+    ("comercio electrónico pymes tiendanube mercado libre", "E-commerce AR", True),
+    ("agentes de inteligencia artificial para negocios", "Agentes IA", False),
+    ("lanzamiento OpenAI Anthropic Google inteligencia artificial", "Big IA", False),
 ]
 
 _TAG_PROMPT = (
-    "Sos el radar de tendencias de una agencia argentina que hace TikToks/Reels sobre IA "
-    "y bots de WhatsApp para PyMEs. Abajo hay novedades numeradas (título + snippet). "
-    "Para CADA una devolvé UNA línea con este formato EXACTO:\n"
+    "Sos el radar de tendencias de Automiq: agencia argentina que vende automatización "
+    "con IA (bots de WhatsApp que responden clientes, toman pedidos y agendan) a PyMEs "
+    "argentinas: distribuidoras mayoristas, comercios, inmobiliarias. El contenido son "
+    "TikToks/Reels para DUEÑOS de esas PyMEs. Abajo hay novedades numeradas "
+    "(fecha + título + snippet). Para CADA una devolvé UNA línea con este formato EXACTO:\n"
     "<número>|<etiqueta>|<idea de gancho o vacío>\n"
-    "Etiquetas posibles: gancho (sirve para un video con potencial viral YA), "
-    "explicativo (sirve para contenido educativo), ignorar (viejo, irrelevante o humo). "
-    "Si es 'gancho', la idea de gancho va en español rioplatense, filosa, máx 12 palabras. "
-    "Nada más que esas líneas. NOVEDADES:\n"
+    "Etiquetas posibles:\n"
+    "- ignorar: página de producto, landing SEO, homepage, listado genérico, nota vieja, "
+    "o cualquier cosa que un dueño de PyME argentina no frenaría a mirar.\n"
+    "- gancho: SOLO si es una novedad concreta y reciente que cruza DIRECTO con el nicho "
+    "(plata, ventas, costos, WhatsApp, empleo, IA aplicable a una PyME). La idea de gancho: "
+    "español rioplatense, filosa, máx 12 palabras, conectando la noticia con lo que vende Automiq.\n"
+    "- explicativo: sirve para contenido educativo del nicho aunque no sea viral.\n"
+    "Sé DURO: ante la duda, ignorar. Nada más que esas líneas. NOVEDADES:\n"
 )
 
 
@@ -52,24 +68,61 @@ def load_radar() -> Dict:
         return {}
 
 
-def _collect() -> List[Dict]:
-    """Busca las fuentes y junta items únicos {title, url, snippet, source}."""
+def _news_search(q: str, n: int, ar_only: bool = False) -> List[Dict]:
+    """NOTICIAS recientes (Tavily topic=news, últimos 7 días, con fecha).
+    ar_only restringe a medios argentinos. Fallback: web_search genérico."""
+    key = os.environ.get("TAVILY_API_KEY", "")
+    if key:
+        try:
+            import httpx
+            body = {"api_key": key, "query": q, "max_results": n,
+                    "topic": "news", "days": 7, "search_depth": "basic"}
+            if ar_only:
+                body["include_domains"] = _AR_DOMAINS
+            r = httpx.post("https://api.tavily.com/search", json=body, timeout=20.0)
+            if r.status_code < 400:
+                out = [{"title": (it.get("title") or "").strip(), "url": it.get("url", ""),
+                        "snippet": (it.get("content") or "")[:220],
+                        "date": (it.get("published_date") or "")[:16]}
+                       for it in (r.json().get("results") or [])[:n]]
+                if out:
+                    return out
+        except Exception as e:
+            log.warning("trend_radar_news_failed", q=q[:40], error=str(e)[:120])
     try:
         from packs.automiq.tools.web_search import web_search
+        return [{"title": (r.get("title") or "").strip(), "url": r.get("url", ""),
+                 "snippet": (r.get("snippet") or "")[:220], "date": ""}
+                for r in (web_search(q, n) or [])[:n]]
     except Exception as e:
         log.warning("trend_radar_no_search", error=str(e)[:150])
         return []
+
+
+def _is_stale(date_str: str) -> bool:
+    """True si la fecha parsea y tiene más de 10 días (con include_domains Tavily
+    ignora el parámetro days y devuelve notas viejas — verificado 2026-07-14).
+    Sin fecha no se descarta: el etiquetador decide."""
+    try:
+        d = datetime.strptime(date_str.strip(), "%a, %d %b %Y").replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - d).days > 10
+    except Exception:
+        return False
+
+
+def _collect() -> List[Dict]:
+    """Busca las fuentes y junta items únicos {title, url, snippet, date, source}."""
     items: List[Dict] = []
     seen = set()
-    for q, src in SOURCES:
+    for q, src, ar_only in SOURCES:
         try:
-            for r in (web_search(q, 4) or [])[:4]:
-                t = (r.get("title") or "").strip()
-                if not t or t.lower() in seen:
+            for r in _news_search(q, 4, ar_only):
+                t = r["title"]
+                if not t or t.lower() in seen or _is_stale(r.get("date", "")):
                     continue
                 seen.add(t.lower())
-                items.append({"title": t, "url": r.get("url", ""),
-                              "snippet": (r.get("snippet") or "")[:220], "source": src})
+                r["source"] = src
+                items.append(r)
         except Exception as e:
             log.warning("trend_radar_query_failed", q=q[:40], error=str(e)[:120])
     return items
@@ -81,7 +134,7 @@ def _tag(items: List[Dict]) -> List[Dict]:
         from . import vision
         if not vision.enabled():
             return items
-        blob = "\n".join(f"{i+1}. {it['title']} — {it['snippet']}"
+        blob = "\n".join(f"{i+1}. [{it.get('date') or 'sin fecha'}] {it['title']} — {it['snippet']}"
                          for i, it in enumerate(items))
         out = vision.synthesize(blob, _TAG_PROMPT, max_tokens=1600) or ""
         for line in out.splitlines():
@@ -114,10 +167,27 @@ def refresh() -> Dict:
     return {"ok": True, "items": len(items), "ganchos": n_hook}
 
 
+def _top_hooks(items: List[Dict], n: int) -> List[Dict]:
+    """Los mejores 'gancho' sin repetir la misma historia (dedup por idea de gancho)."""
+    out: List[Dict] = []
+    seen = set()
+    for i in items:
+        if i.get("tag") != "gancho":
+            continue
+        k = (i.get("hook_idea") or i.get("title") or "").strip().lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(i)
+        if len(out) >= n:
+            break
+    return out
+
+
 def send_digest() -> Dict:
     """Manda el top 5 'potencial de gancho' por Discord (el resumen de las 7 AM)."""
     data = load_radar()
-    top = [i for i in data.get("items", []) if i.get("tag") == "gancho"][:5]
+    top = _top_hooks(data.get("items", []), 5)
     if not top:
         return {"ok": False, "reason": "sin ganchos hoy"}
     try:
@@ -143,12 +213,17 @@ def block(n: int = 5) -> str:
     """Bloque para los agentes: las novedades de HOY con potencial de gancho."""
     try:
         data = load_radar()
-        top = [i for i in data.get("items", []) if i.get("tag") == "gancho"][:n]
+        top = _top_hooks(data.get("items", []), n)
         if not top:
             return ""
-        lines = [f"- {t['title']}" + (f" → gancho: \"{t['hook_idea']}\"" if t.get("hook_idea") else "")
+        lines = [f"- ({t.get('source', '?')}) {t['title']}"
+                 + (f" → gancho: \"{t['hook_idea']}\"" if t.get("hook_idea") else "")
                  for t in top]
-        return ("\n\n=== RADAR DE HOY (novedades con potencial de gancho — trend-jacking) ===\n"
-                + "\n".join(lines) + "\n=== fin radar ===\n")
+        return ("\n\n=== RADAR DE HOY (noticias REALES del nicho — trend-jacking) ===\n"
+                + "\n".join(lines)
+                + "\nUSALO: si alguna cruza natural con la pieza que estás armando, abrí el "
+                "hook con esa novedad ('¿viste que...?') y aterrizala en el dolor del dueño "
+                "de PyME. Cuando hay ganchos acá, al menos UNA pieza del día tiene que "
+                "surfear el radar.\n=== fin radar ===\n")
     except Exception:
         return ""

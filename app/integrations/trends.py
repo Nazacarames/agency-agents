@@ -4,8 +4,8 @@ inyecta al playbook de los agentes de contenido (content/social/tiktok/creative)
 
 Lo más accionable para nosotros es el MOMENTUM de nuestros temas (get_growth): saber
 qué está subiendo/bajando en búsquedas → los agentes priorizan en hooks/copy lo que
-sube. El zeitgeist global (get_top_trends) va como referencia de trend-jacking, con la
-advertencia de no forzarlo.
+sube. (El zeitgeist global se sacó: era genérico y no cruzaba con el nicho; el
+trend-jacking de noticias lo cubre trend_radar.py.)
 
 Refresh SEMANAL (free tier 100 req/mes). Best-effort: si falla, no rompe nada.
 """
@@ -56,24 +56,15 @@ def refresh() -> dict:
         if isinstance(g, dict) and g.get("direction"):
             lines.append(f"- {kw}: {_arrow(g.get('direction'), g.get('growth'))}")
             momentum += 1
-    zeit = []
-    for rank_term in (tc.top_trends("Google Trends", limit=8) or [])[:8]:
-        if isinstance(rank_term, (list, tuple)) and len(rank_term) >= 2:
-            zeit.append(str(rank_term[1]))
-
-    if momentum == 0 and not zeit:
+    if momentum == 0:
         log.warning("trends_refresh_empty")
         return {"ok": False, "reason": "sin datos"}
 
-    block = ["=== TENDENCIAS AHORA (datos reales, " + today + ") ==="]
-    if lines:
-        block.append("Momentum de NUESTROS temas (búsqueda Google, últimos 3 meses):")
-        block += lines
-        block.append("Regla: priorizá en el hook/copy los temas que están SUBIENDO; a los que "
-                     "bajan bajales el volumen (no los abandones).")
-    if zeit:
-        block.append("\nZeitgeist global del momento (solo para trend-jacking si CRUZA natural "
-                     "con automatización/PyMEs — NO lo fuerces): " + ", ".join(zeit))
+    block = ["=== TENDENCIAS AHORA (datos reales, " + today + ") ===",
+             "Momentum de NUESTROS temas (búsqueda Google, últimos 3 meses):"]
+    block += lines
+    block.append("Regla: priorizá en el hook/copy los temas que están SUBIENDO; a los que "
+                 "bajan bajales el volumen (no los abandones).")
     block.append("=== fin tendencias ===")
     text = "\n".join(block)
     try:
@@ -82,8 +73,8 @@ def refresh() -> dict:
     except Exception as e:
         log.error("trends_save_failed", error=str(e)[:150])
         return {"ok": False, "reason": "no se pudo guardar"}
-    log.info("trends_refresh_ok", momentum=momentum, zeitgeist=len(zeit))
-    return {"ok": True, "momentum": momentum, "zeitgeist": len(zeit)}
+    log.info("trends_refresh_ok", momentum=momentum)
+    return {"ok": True, "momentum": momentum}
 
 
 def load_block() -> str:

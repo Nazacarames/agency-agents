@@ -88,11 +88,3 @@ def growth(keyword: str, source: str = "google search", period: str = "3M") -> O
         res = d.get("results") or []
         return res[0] if res else d
     return None
-
-
-def top_trends(type_: str = "Google Trends", limit: int = 10) -> List[Any]:
-    """Top trends de un tipo ('Google Trends', 'Google News Top News', ...)."""
-    d = _tool("get_top_trends", {"type": type_, "limit": limit})
-    if isinstance(d, dict):
-        return d.get("data") or []
-    return []
