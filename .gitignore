@@ -22,6 +22,7 @@ data/deploy-*.json
 data/render-*.json
 data/agent-output-*.json
 data/runs/
+data/.hermes/
 data/*.txt
 data/samples/
 data/prompts/

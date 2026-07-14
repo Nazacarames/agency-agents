@@ -19,6 +19,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Optional
 
 from ..config import Settings
@@ -27,6 +28,25 @@ from .claude_code import _largest_text_artifact, run_cli_killtree
 from .opencode import _extract_text, _has_json_payload
 
 log = get_logger("hermes")
+
+# HERMES_HOME en el VOLUMEN persistente (/app/data en Railway): las skills que
+# los agentes crean/mejoran y la memoria de Hermes sobreviven corridas y deploys.
+# Sin esto, el home del Dockerfile es efímero y el aprendizaje se pierde.
+_HERMES_HOME = Path(__file__).resolve().parent.parent.parent / "data" / ".hermes"
+
+# El review automático de skills/memoria de Hermes corre en un thread daemon
+# DESPUÉS de responder → en modo one-shot el proceso sale antes y no aprende.
+# Por eso el aprendizaje se pide EXPLÍCITO dentro del turno (skill_manage).
+_LEARNING_BLOCK = (
+    "## APRENDIZAJE CONTINUO (Hermes)\n"
+    "Tus skills persisten entre corridas y las comparten todos los agentes de "
+    "Automiq. Si esta tarea te dejó un aprendizaje PROCEDURAL durable (cómo hacer "
+    "mejor un tipo de tarea concreto, un patrón que funciona, un gotcha a evitar), "
+    "creá o actualizá una skill con tu tool de gestión de skills ANTES de terminar "
+    "(nombre kebab-case en español, ej. 'cold-emails-automiq'). Si ya existe una "
+    "skill relevante, mejorala en lugar de duplicar. No guardes obviedades ni cosas "
+    "de un solo día.\n\n"
+)
 
 
 class HermesError(Exception):
@@ -62,12 +82,17 @@ def run_hermes(
     if provider == "minimax" and not settings.minimax_api_key:
         raise HermesError("sin MINIMAX_API_KEY")
 
-    full_prompt = prompt
+    full_prompt = _LEARNING_BLOCK + prompt
     if system_append:
         full_prompt = (f"## INSTRUCCIONES DE SISTEMA (tu rol y reglas — cumplilas SIEMPRE)\n"
-                       f"{system_append}\n\n## TAREA\n{prompt}")
+                       f"{system_append}\n\n{_LEARNING_BLOCK}## TAREA\n{prompt}")
 
     env = dict(os.environ)
+    try:
+        _HERMES_HOME.mkdir(parents=True, exist_ok=True)
+        env["HERMES_HOME"] = str(_HERMES_HOME)
+    except Exception as e:
+        log.warning("hermes_home_fallback_ephemeral", error=str(e)[:120])
 
     workdir = tempfile.mkdtemp(prefix="hermes_run_")
     stdout_path = os.path.join(workdir, "_hermes_stdout.bin")
