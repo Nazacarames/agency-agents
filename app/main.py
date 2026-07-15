@@ -1422,6 +1422,32 @@ async def api_data_restore(request: Request):
     return {"restored": len(restored), "files": restored}
 
 
+@app.post("/api/data/restore-media")
+async def api_data_restore_media(request: Request):
+    """Disaster recovery: restaura imágenes/videos del volumen (data/images, lo que
+    sirve /media/) desde un zip. Contraparte de /api/data/restore. Body = zip crudo."""
+    _verify_webhook_secret(request)
+    import io
+    import zipfile
+    body = await request.body()
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(body))
+    except Exception:
+        raise HTTPException(status_code=400, detail="body no es un zip válido")
+    dest = _data_dir() / "images"
+    dest.mkdir(parents=True, exist_ok=True)
+    ok_ext = {".jpg", ".jpeg", ".png", ".webp", ".mp4"}
+    restored = []
+    for name in zf.namelist():
+        base = Path(name).name
+        if base != name or Path(base).suffix.lower() not in ok_ext:
+            continue  # sólo archivos planos de media (sin rutas: evita zip-slip)
+        (dest / base).write_bytes(zf.read(name))
+        restored.append(base)
+    log.info("data_restore_media", files=len(restored))
+    return {"restored": len(restored), "files": restored}
+
+
 @app.post("/api/reels/study")
 async def api_reel_study(request: Request, n: int = 2):
     """Gemini mira los n reels top no estudiados del competidor (sin esperar al cron)."""
