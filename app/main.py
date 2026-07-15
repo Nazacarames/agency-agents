@@ -1810,6 +1810,50 @@ def _lead_auto_reply(name: str, email: str, company: str, message: str) -> None:
         log.warning("lead_auto_reply_failed", error=str(e)[:200])
 
 
+_AI_SOURCES = ("chatgpt", "openai", "perplexity", "gemini", "copilot", "claude", "you.com", "bing")
+
+
+@app.post("/api/web/ai-visit")
+async def api_web_ai_visit(request: Request):
+    """Público (beacon de la landing): registra visitas que llegan desde asistentes
+    de IA (referrer chatgpt/perplexity/gemini/...) para medir el GEO."""
+    try:
+        body = json.loads((await request.body()) or b"{}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="body inválido")
+    ref = str(body.get("ref") or "")[:300].lower()
+    src = next((s for s in _AI_SOURCES if s in ref), None)
+    if not src:
+        return {"ok": False}  # no es tráfico de IA: no se guarda
+    from datetime import timezone as _tz
+    from .integrations.jsonstore import write_json_atomic
+    path = _data_dir() / "ai-visits.json"
+    try:
+        store = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        store = {"visits": []}
+    store["visits"].append({"ts": datetime.now(_tz.utc).isoformat(),
+                            "source": src, "path": str(body.get("path") or "/")[:200]})
+    store["visits"] = store["visits"][-5000:]
+    write_json_atomic(path, store)
+    return {"ok": True}
+
+
+@app.get("/api/web/ai-visits")
+async def api_web_ai_visits(request: Request):
+    """Resumen del tráfico desde asistentes de IA (GEO): total y por fuente/página."""
+    _verify_webhook_secret(request)
+    from collections import Counter
+    try:
+        visits = json.loads((_data_dir() / "ai-visits.json").read_text(encoding="utf-8"))["visits"]
+    except Exception:
+        visits = []
+    return {"total": len(visits),
+            "por_fuente": dict(Counter(v["source"] for v in visits)),
+            "por_pagina": dict(Counter(v["path"] for v in visits)),
+            "ultimas": visits[-20:]}
+
+
 @app.post("/api/web/lead")
 async def api_web_lead(body: WebLeadBody, request: Request, background: BackgroundTasks):
     """Público (CORS de la landing). El visitante pide que lo contactemos:
