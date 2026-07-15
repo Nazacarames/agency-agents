@@ -353,6 +353,19 @@ def delete_item(item_id: str) -> bool:
         return len(store["items"]) < before
 
 
+def retry_item(item_id: str) -> bool:
+    """Vuelve un item failed a pending (ej: falló por media faltante ya restaurada)."""
+    with _LOCK:
+        store = load_store()
+        for it in store["items"]:
+            if it.get("id") == item_id and it.get("status") == "failed":
+                it["status"] = "pending"
+                it["error"] = None
+                save_store(store)
+                return True
+        return False
+
+
 def summary() -> Dict[str, Any]:
     store = load_store()
     return {

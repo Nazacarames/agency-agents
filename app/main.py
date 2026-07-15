@@ -1525,6 +1525,16 @@ async def api_publish_queue_delete(item_id: str, request: Request):
     return {"ok": pq.delete_item(item_id)}
 
 
+@app.post("/api/publish/queue/{item_id}/retry")
+async def api_publish_queue_retry(item_id: str, request: Request):
+    """Reencola un item failed (vuelve a pending; lo toma el próximo drain)."""
+    _verify_webhook_secret(request)
+    from .integrations import publish_queue as pq
+    if not pq.retry_item(item_id):
+        raise HTTPException(status_code=404, detail="item failed no encontrado")
+    return {"ok": True}
+
+
 # ── Finanzas / facturación / métricas (panel de gestión) ──
 
 @app.get("/api/finance")
