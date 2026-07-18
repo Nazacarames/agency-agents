@@ -260,65 +260,165 @@ def chat_reply(key: str, messages: List[Dict[str, str]], client_ip: str = "?") -
 
 def render_page(d: Dict[str, Any], wa_number: str = "5491127713231",
                 key: str = "") -> str:
-    """HTML de la página pública de demo (marca Automiq, mobile-first).
-    Con `key` incluye el chat EN VIVO contra el agente de la demo."""
-    company = d.get("company", "tu negocio")
+    """HTML de la página pública de demo: un teléfono con WhatsApp donde la
+    conversación del vertical se REPRODUCE animada (cliente escribe → typing →
+    el agente resuelve) y al terminar el mismo hilo queda EN VIVO contra el
+    agente real (con `key`). El visitante ve la simulación de SU agente."""
+    import html as _html
+
+    company = (d.get("company") or "tu negocio").strip()
+    c_html = _html.escape(company)
+    initial = _html.escape((company[:1] or "A").upper())
     img = d.get("image", "")
+    convo = _CONVOS[_vertical_for(d.get("industria", ""))]
+    convo_js = json.dumps(convo, ensure_ascii=False)
     wa_text = f"Hola! Vi la demo del agente de IA para {company} y quiero saber más"
     wa_link = f"https://wa.me/{wa_number}?text=" + wa_text.replace(" ", "%20")
-    chat = ""
-    if key:
-        chat = f"""
-<h2 style="font-size:19px;margin:34px 0 4px">Probalo vos mismo, en vivo 👇</h2>
-<div class="sub" style="margin-bottom:12px">Escribile como si fueras un cliente de {company}.</div>
-<div id="chat">
-  <div id="msgs"><div class="b bot">¡Hola! 👋 Soy el asistente de {company}. ¿En qué te puedo ayudar?</div></div>
-  <form id="f"><input id="inp" autocomplete="off" maxlength="400"
-    placeholder="Escribí tu consulta..."><button type="submit">➤</button></form>
-</div>
-<style>
-#chat{{background:#0e1c33;border:1px solid #1e3355;border-radius:18px;overflow:hidden;text-align:left}}
-#msgs{{padding:14px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}}
-.b{{padding:9px 13px;border-radius:14px;font-size:14.5px;line-height:1.4;max-width:85%;white-space:pre-wrap}}
-.bot{{background:#1b2c4a;align-self:flex-start;border-bottom-left-radius:4px}}
-.me{{background:#136a4a;align-self:flex-end;border-bottom-right-radius:4px}}
-#f{{display:flex;border-top:1px solid #1e3355}}
-#inp{{flex:1;background:transparent;border:0;color:#eef2f7;padding:13px 14px;font-size:15px;outline:none}}
-#f button{{background:#22c55e;border:0;color:#04140a;font-size:17px;padding:0 18px;cursor:pointer}}
-</style>
-<script>
-var H=[],M=document.getElementById('msgs'),F=document.getElementById('f'),I=document.getElementById('inp');
-function add(t,c){{var e=document.createElement('div');e.className='b '+c;e.textContent=t;
-M.appendChild(e);M.scrollTop=M.scrollHeight;return e}}
-F.onsubmit=function(ev){{ev.preventDefault();var t=I.value.trim();if(!t||H.busy)return;
-I.value='';add(t,'me');H.push({{role:'user',text:t}});H.busy=1;var w=add('...','bot');
-fetch(location.pathname+'/chat',{{method:'POST',headers:{{'Content-Type':'application/json'}},
-body:JSON.stringify({{messages:H.slice(-16)}})}}).then(function(r){{return r.json()}})
-.then(function(j){{var r=j.reply||'Se me trabó el sistema, probá de nuevo 🙏';
-w.textContent=r;H.push({{role:'assistant',text:r}});H.busy=0}})
-.catch(function(){{w.textContent='Se cortó la conexión, probá de nuevo 🙏';H.busy=0}})}};
-</script>"""
+    og_img = f'\n<meta property="og:image" content="{_html.escape(img)}">' if img else ""
     return f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Así atendería un agente de IA en {company} — Automiq</title>
+<meta name="theme-color" content="#070d1a">
+<title>El agente de IA de {c_html} — simulación en vivo · Automiq</title>
+<meta property="og:title" content="Así atiende el agente de IA de {c_html}">
+<meta property="og:description" content="Simulación en vivo: miralo responder y después escribile vos.">{og_img}
 <style>
-body{{margin:0;background:#0b1526;color:#eef2f7;font-family:-apple-system,Segoe UI,Roboto,sans-serif}}
-.wrap{{max-width:520px;margin:0 auto;padding:28px 18px 60px;text-align:center}}
-.logo{{font-weight:800;letter-spacing:.06em;color:#7dd3fc;font-size:14px;margin-bottom:18px}}
-h1{{font-size:24px;line-height:1.25;margin:0 0 6px}}
-h2{{margin:0}}
-.sub{{color:#9db2c8;font-size:15px;margin-bottom:22px}}
-img{{width:100%;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.45)}}
-.cta{{display:block;margin:26px auto 10px;background:#22c55e;color:#04140a;font-weight:700;
-font-size:17px;padding:15px 22px;border-radius:14px;text-decoration:none}}
-.mini{{color:#7b8ea6;font-size:12px;margin-top:16px}}
-</style></head><body><div class="wrap">
-<div class="logo">AUTOMIQ</div>
-<h1>Así atendería un agente de IA en {company}</h1>
-<div class="sub">Responde al toque, 24/7, arma el pedido y lo carga al sistema — mientras vos dormís.</div>
-<img src="{img}" alt="Demo del agente de IA respondiendo por WhatsApp en {company}">
-{chat}
-<a class="cta" href="{wa_link}">Quiero esto en {company} → WhatsApp</a>
-<div class="mini">Demo ilustrativa generada para {company} · automiq.agency</div>
-</div></body></html>"""
+*{{box-sizing:border-box}}
+body{{margin:0;background:#070d1a;color:#eef2f7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
+background-image:radial-gradient(60% 40% at 50% -5%,rgba(43,91,232,.22),transparent 70%),
+radial-gradient(45% 30% at 85% 100%,rgba(34,211,238,.08),transparent 70%)}}
+.page{{max-width:480px;margin:0 auto;padding:22px 16px 46px;text-align:center}}
+.top{{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}}
+.logo{{font-weight:800;letter-spacing:.05em;font-size:15px;color:#eef2f7}}
+.logo b{{color:#22d3ee}}
+.badge{{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.08em;
+color:#4ade80;border:1px solid rgba(74,222,128,.35);background:rgba(74,222,128,.08);
+padding:5px 10px;border-radius:999px}}
+.dot{{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse 1.6s infinite}}
+@keyframes pulse{{0%,100%{{box-shadow:0 0 0 0 rgba(74,222,128,.5)}}60%{{box-shadow:0 0 0 6px rgba(74,222,128,0)}}}}
+h1{{font-size:clamp(23px,6.4vw,30px);line-height:1.2;margin:0 0 8px;letter-spacing:-.02em}}
+h1 em{{font-style:normal;background:linear-gradient(90deg,#22d3ee,#3b82f6);
+-webkit-background-clip:text;background-clip:text;color:transparent}}
+.sub{{color:#9db2c8;font-size:15px;line-height:1.45;margin:0 auto 20px;max-width:40ch}}
+.phone{{max-width:390px;margin:0 auto;border-radius:30px;overflow:hidden;text-align:left;
+border:1px solid #223a5e;background:#0b141a;
+box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 6px rgba(15,26,46,.9),0 0 60px rgba(43,91,232,.12)}}
+.wa-head{{display:flex;align-items:center;gap:10px;background:#1f2c34;padding:11px 14px}}
+.avatar{{width:38px;height:38px;border-radius:50%;flex:none;display:flex;align-items:center;
+justify-content:center;font-weight:800;font-size:17px;color:#fff;
+background:linear-gradient(135deg,#2b5be8,#22d3ee)}}
+.who{{flex:1;min-width:0}}
+.who b{{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.who span{{font-size:12px;color:#8696a0}}
+.who span.typing{{color:#4ade80}}
+.wa-ico{{display:flex;gap:16px;color:#aebac1}}
+.wa-ico svg{{width:19px;height:19px;fill:currentColor}}
+.wa-chat{{height:min(52vh,430px);min-height:330px;overflow-y:auto;padding:12px 10px 14px;
+display:flex;flex-direction:column;gap:5px;background:#0b141a;
+background-image:radial-gradient(rgba(255,255,255,.028) 1px,transparent 1.2px);background-size:16px 16px}}
+.day{{align-self:center;background:#182229;color:#8696a0;font-size:11px;font-weight:600;
+padding:4px 10px;border-radius:8px;margin-bottom:4px}}
+.enc{{align-self:center;background:#182229;color:#d8b46a;font-size:11px;line-height:1.35;
+padding:5px 12px;border-radius:8px;margin-bottom:8px;max-width:88%;text-align:center}}
+.m{{max-width:80%;padding:7px 9px 6px;border-radius:9px;font-size:14.2px;line-height:1.38;
+white-space:pre-wrap;position:relative;animation:in .22s ease both}}
+@keyframes in{{from{{opacity:0;transform:translateY(9px) scale(.97)}}to{{opacity:1;transform:none}}}}
+.in{{background:#202c33;align-self:flex-start;border-top-left-radius:2px}}
+.out{{background:#005c4b;align-self:flex-end;border-top-right-radius:2px}}
+.meta{{float:right;margin:8px -2px -4px 8px;font-size:10.5px;color:#8696a0;
+display:flex;align-items:center;gap:3px}}
+.ck{{width:14px;height:9px;fill:#53bdeb}}
+.ck.one{{fill:#8696a0}}
+.sys{{align-self:center;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);
+color:#7dd3fc;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;
+margin-top:10px;animation:in .3s ease both}}
+.tw{{display:flex;gap:4px;padding:11px 12px;background:#202c33;border-radius:9px;
+border-top-left-radius:2px;align-self:flex-start;animation:in .2s ease both}}
+.tw i{{width:7px;height:7px;border-radius:50%;background:#8696a0;animation:tp 1.1s infinite}}
+.tw i:nth-child(2){{animation-delay:.18s}}.tw i:nth-child(3){{animation-delay:.36s}}
+@keyframes tp{{0%,60%,100%{{transform:none;opacity:.45}}30%{{transform:translateY(-4px);opacity:1}}}}
+.wa-bar{{display:flex;align-items:center;gap:8px;background:#1f2c34;padding:8px 10px}}
+#inp{{flex:1;background:#2a3942;border:0;border-radius:999px;color:#eef2f7;padding:11px 16px;
+font-size:15px;outline:none;min-width:0}}
+#inp::placeholder{{color:#8696a0}}
+#inp:disabled{{opacity:.6}}
+#send{{width:44px;height:44px;flex:none;border:0;border-radius:50%;background:#22c55e;
+color:#04140a;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s}}
+#send:disabled{{opacity:.4;cursor:default}}
+#send svg{{width:20px;height:20px;fill:currentColor;margin-left:2px}}
+.cta{{display:block;margin:24px auto 0;max-width:390px;text-decoration:none;
+background:linear-gradient(120deg,#22c55e,#16a34a);color:#04140a;font-weight:800;font-size:17px;
+padding:15px 20px;border-radius:16px;box-shadow:0 12px 34px rgba(34,197,94,.28)}}
+.cta span{{display:block;font-weight:500;font-size:12.5px;margin-top:3px;color:rgba(4,20,10,.75)}}
+.proof{{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;color:#9db2c8;
+font-size:12.5px;margin-top:16px}}
+.mini{{color:#63748c;font-size:12px;margin-top:20px}}
+.mini a{{color:#7dd3fc;text-decoration:none}}
+</style></head><body><div class="page">
+<div class="top"><div class="logo">autom<b>iq</b></div>
+<div class="badge"><span class="dot"></span>SIMULACIÓN EN VIVO</div></div>
+<h1>Así atiende el <em>agente de IA</em> de {c_html}</h1>
+<p class="sub">Un cliente escribe a cualquier hora. El agente responde, resuelve y cierra la venta — solo. Miralo:</p>
+<div class="phone">
+  <div class="wa-head">
+    <div class="avatar">{initial}</div>
+    <div class="who"><b>{c_html}</b><span id="st">en línea</span></div>
+    <div class="wa-ico"><svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.8 21 3 13.2 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg></div>
+  </div>
+  <div class="wa-chat" id="msgs">
+    <div class="day">HOY</div>
+    <div class="enc">🔒 Los mensajes están cifrados de extremo a extremo</div>
+  </div>
+  <form class="wa-bar" id="f">
+    <input id="inp" autocomplete="off" maxlength="400" disabled placeholder="Reproduciendo simulación…">
+    <button type="submit" id="send" disabled aria-label="Enviar"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
+  </form>
+</div>
+<a class="cta" href="{wa_link}">Quiero este agente en {c_html} →
+<span>Te lo armamos con TUS datos reales · diagnóstico gratis de 30 min</span></a>
+<div class="proof"><span>⚡ Responde en segundos</span><span>🕐 Atiende 24/7</span><span>✅ Carga todo al sistema</span></div>
+<div class="mini">Demo generada para {c_html} · <a href="https://automiq.agency">automiq.agency</a></div>
+</div>
+<script>
+var CONVO={convo_js},LIVE={json.dumps(bool(key))};
+var M=document.getElementById('msgs'),ST=document.getElementById('st'),
+F=document.getElementById('f'),I=document.getElementById('inp'),S=document.getElementById('send'),
+H=[],busy=0;
+var CK1='<svg class="ck one" viewBox="0 0 16 11"><path d="M11.1.9L4.4 7.6 1.9 5.1.5 6.5l3.9 3.9L12.5 2.3z"/></svg>';
+var CK2='<svg class="ck" viewBox="0 0 16 11"><path d="M11.1.9L4.4 7.6 1.9 5.1.5 6.5l3.9 3.9L12.5 2.3zM15.5 2.3L14.1.9 7.9 7.1l1.4 1.4z"/></svg>';
+function scroll(){{M.scrollTop=M.scrollHeight}}
+function bubble(text,cls,time,ticks){{var e=document.createElement('div');e.className='m '+cls;
+e.textContent=text;var mt=document.createElement('span');mt.className='meta';
+mt.innerHTML=time+(ticks||'');e.appendChild(mt);M.appendChild(e);scroll();return e}}
+function typing(on){{var t=document.getElementById('tw');
+if(on&&!t){{t=document.createElement('div');t.className='tw';t.id='tw';
+t.innerHTML='<i></i><i></i><i></i>';M.appendChild(t);scroll();
+ST.textContent='escribiendo…';ST.className='typing'}}
+if(!on&&t){{t.remove();ST.textContent='en línea';ST.className=''}}}}
+function now(){{var d=new Date();return('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}}
+function play(i){{
+if(i>=CONVO.length){{return setTimeout(golive,700)}}
+var m=CONVO[i];
+if(m.from==='bot'){{typing(1);setTimeout(function(){{typing(0);
+bubble(m.text,'in',m.time);play(i+1)}},1050+Math.min(m.text.length*14,1400))}}
+else{{bubble(m.text,'out',m.time,CK2);setTimeout(function(){{play(i+1)}},850)}}
+}}
+function golive(){{
+if(!LIVE){{return}}
+var c=document.createElement('div');c.className='sys';
+c.textContent='✨ Tu turno: escribile como si fueras un cliente';
+M.appendChild(c);scroll();
+I.disabled=false;S.disabled=false;I.placeholder='Escribí un mensaje…';
+}}
+F.onsubmit=function(ev){{ev.preventDefault();var t=I.value.trim();if(!t||busy)return;
+I.value='';busy=1;
+var b=bubble(t,'out',now(),CK1);H.push({{role:'user',text:t}});
+typing(1);
+fetch(location.pathname+'/chat',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+body:JSON.stringify({{messages:H.slice(-16)}})}}).then(function(r){{return r.json()}})
+.then(function(j){{var r=j.reply||'Se me trabó el sistema, probá de nuevo 🙏';
+typing(0);b.querySelector('.meta').innerHTML=b.querySelector('.meta').textContent+CK2;
+bubble(r,'in',now());H.push({{role:'assistant',text:r}});busy=0}})
+.catch(function(){{typing(0);bubble('Se cortó la conexión, probá de nuevo 🙏','in',now());busy=0}})}};
+setTimeout(function(){{play(0)}},900);
+</script></body></html>"""
