@@ -127,6 +127,16 @@ def get_demo(key: str) -> Optional[Dict[str, Any]]:
     return _load()["demos"].get(key)
 
 
+def list_demos() -> List[Dict[str, Any]]:
+    """Resumen de todas las demos (para /admin/demos): vistas = señal de compra."""
+    return [
+        {"key": k, "url": f"/d/{k}", "company": d.get("company"),
+         "industria": d.get("industria"), "views": d.get("views", 0),
+         "last_view": d.get("last_view"), "created_at": d.get("created_at")}
+        for k, d in _load()["demos"].items()
+    ]
+
+
 def record_view(key: str) -> Optional[Dict[str, Any]]:
     """Marca una vista (señal de compra): contador + nota en el lead + True si es la 1ª."""
     data = _load()

@@ -1000,6 +1000,33 @@ async def api_del_growth(obj_id: str, request: Request):
 
 # ── Demo personalizada por lead (activo N3 del outbound) ──
 
+@app.get("/admin/demos")
+async def admin_demos_list(request: Request):
+    """Lista las demos por lead con sus vistas (señal de compra) y URLs."""
+    _verify_webhook_secret(request)
+    from .integrations import lead_demo
+    return {"status": "ok", "demos": await run_in_threadpool(lead_demo.list_demos)}
+
+
+@app.post("/admin/demos")
+async def admin_demos_create(request: Request):
+    """Crea (o reusa) una demo a mano para cualquier prospecto:
+    body {company, industria?} → URL pública /d/<key>."""
+    _verify_webhook_secret(request)
+    body = await request.json()
+    company = (body.get("company") or "").strip()
+    if not company:
+        raise HTTPException(status_code=400, detail="falta company")
+    from .integrations import lead_demo
+    url = await run_in_threadpool(lead_demo.ensure_demo, {
+        "company": company, "key": f"manual-{company.lower()}",
+        "industria": body.get("industria", ""),
+    })
+    if not url:
+        raise HTTPException(status_code=500, detail="no se pudo generar la demo")
+    return {"status": "ok", "url": url}
+
+
 @app.get("/d/{key}", response_class=HTMLResponse)
 async def lead_demo_page(key: str):
     """Página PÚBLICA de la demo personalizada (va linkeada en el cold-email).
