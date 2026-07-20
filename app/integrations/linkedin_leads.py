@@ -13,6 +13,8 @@ Best-effort en todo: si no hay búsqueda/Gemini, no rompe nada.
 """
 from __future__ import annotations
 
+import re
+import unicodedata
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -36,12 +38,50 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _norm(s: str) -> str:
+    """Minúsculas y sin acentos, para comparar nombres de empresa."""
+    return "".join(c for c in unicodedata.normalize("NFD", (s or "").lower())
+                   if unicodedata.category(c) != "Mn")
+
+
+# Palabras que NO identifican a una empresa (aparecen en miles). Si de un nombre
+# sólo quedan éstas, no hay con qué verificar el match y no arriesgamos.
+_GENERIC = {
+    "grupo", "distribuidora", "distribuciones", "distribucion", "comercial",
+    "industrias", "industria", "manufacturas", "productos", "servicios", "empresa",
+    "sociedad", "hermanos", "hnos", "srl", "sas", "cia", "compania", "argentina",
+    "inmobiliaria", "propiedades", "transporte", "logistica", "mayorista", "del",
+    "las", "los", "para",
+    # rubros: describen a qué se dedica, no cuál empresa es
+    "metalurgica", "metalurgia", "metalmecanica", "quimica", "quimicos", "plasticos",
+    "alimentos", "alimenticia", "textil", "automotores", "repuestos", "ferreteria",
+    "construcciones", "construccion", "ingenieria", "tecnologia", "sistemas",
+    "soluciones", "insumos", "materiales", "equipos", "maquinarias", "envases",
+}
+
+
+def _company_tokens(company: str) -> List[str]:
+    """Tokens que de verdad identifican a la empresa (su marca), sin genéricos."""
+    raw = re.split(r"[^a-z0-9]+", _norm(company))
+    return [t for t in raw if len(t) >= 3 and t not in _GENERIC]
+
+
 def find_profile(company: str, decisor: str = "") -> Dict[str, str]:
-    """Busca el perfil público de LinkedIn del decisor. {} si no hay match confiable."""
+    """Busca el perfil público de LinkedIn del decisor. {} si no hay match confiable.
+
+    El buscador devuelve CUALQUIER perfil parecido, así que hay que verificarlo:
+    sin esto "Distlook Tucumán" matcheaba con el socio gerente de "Tucumán Kiosco",
+    y le habríamos mandado una invitación personalizada al tipo equivocado firmada
+    con el nombre real del dueño. Exigimos que la marca aparezca en el resultado,
+    o que coincida el nombre del decisor.
+    """
     try:
         from packs.automiq.tools.web_search import web_search
     except Exception:
         return {}
+    tokens = _company_tokens(company)
+    if not tokens and not decisor:
+        return {}  # sin nada verificable, no adivinamos
     queries = []
     if decisor and company:
         queries.append(f'site:linkedin.com/in "{decisor}" {company}')
@@ -54,8 +94,15 @@ def find_profile(company: str, decisor: str = "") -> Dict[str, str]:
                 if "linkedin.com/in/" not in url:
                     continue
                 title = (r.get("title") or "").replace("| LinkedIn", "").strip()
-                # si buscamos por nombre del decisor, exigir que aparezca en el título
-                if decisor and decisor.split()[0].lower() not in title.lower() and q is queries[0]:
+                # La marca tiene que estar en el TITULAR del perfil ("Gerente en X"),
+                # no en el snippet: el snippet trae texto suelto de la página y hacía
+                # pasar cualquier cosa. Preferimos perder leads antes que mandarle una
+                # invitación personalizada al tipo equivocado con el nombre del dueño.
+                ok = bool(tokens) and tokens[0] in _norm(title)
+                # ...o si buscábamos por nombre y el nombre coincide.
+                if not ok and decisor:
+                    ok = _norm(decisor.split()[0]) in _norm(title)
+                if not ok:
                     continue
                 return {"url": url, "title": title[:120]}
         except Exception as e:
@@ -97,6 +144,19 @@ def enrich(limit: int = 10) -> Dict[str, int]:
     """Enriquece leads SIN perfil de LinkedIn (los más nuevos primero): busca el perfil
     y genera nota+DM. Corre tras el ingest de outbound y a demanda desde el panel."""
     from . import leads_store as ls
+    # Si el buscador no está disponible (cuota agotada, sin key, DDG bloqueado),
+    # web_search devuelve [] igual que si no hubiera resultados — y marcar
+    # not_found es PERMANENTE: el lead queda excluido de futuros intentos. Antes
+    # de concluir nada, comprobamos que el buscador realmente responda.
+    try:
+        from packs.automiq.tools.web_search import web_search as _ws
+        if not _ws("site:linkedin.com/in gerente", 1):
+            log.warning("li_enrich_sin_buscador")
+            return {"revisados": 0, "con_perfil": 0, "sin_perfil": 0,
+                    "error": "buscador sin respuesta (¿cuota agotada?) — no se marcó nada"}
+    except Exception as e:
+        log.warning("li_enrich_sin_buscador", error=str(e)[:120])
+        return {"revisados": 0, "con_perfil": 0, "sin_perfil": 0, "error": "buscador no disponible"}
     store = ls.load_store()
     candidates = [l for l in store.get("leads", {}).values()
                   if not l.get("linkedin") and l.get("li_state") != "not_found"
