@@ -150,10 +150,13 @@ def enrich(limit: int = 10) -> Dict[str, int]:
     # de concluir nada, comprobamos que el buscador realmente responda.
     try:
         from packs.automiq.tools.web_search import web_search as _ws
-        if not _ws("site:linkedin.com/in gerente", 1):
+        probe = _ws('site:linkedin.com/in "gerente"', 3) or []
+        # No alcanza con que devuelva ALGO: DuckDuckGo contesta cualquier cosa aunque
+        # el operador site: no funcione. Exigimos un perfil de LinkedIn de verdad.
+        if not any("linkedin.com/in/" in (r.get("url") or "") for r in probe):
             log.warning("li_enrich_sin_buscador")
             return {"revisados": 0, "con_perfil": 0, "sin_perfil": 0,
-                    "error": "buscador sin respuesta (¿cuota agotada?) — no se marcó nada"}
+                    "error": "el buscador no devuelve perfiles (¿cuota agotada?) — no se marcó nada"}
     except Exception as e:
         log.warning("li_enrich_sin_buscador", error=str(e)[:120])
         return {"revisados": 0, "con_perfil": 0, "sin_perfil": 0, "error": "buscador no disponible"}
@@ -162,12 +165,13 @@ def enrich(limit: int = 10) -> Dict[str, int]:
                   if not l.get("linkedin") and l.get("li_state") != "not_found"
                   and l.get("state") not in ("descartado", "cliente")]
     candidates.sort(key=lambda l: l.get("first_seen") or "", reverse=True)
-    found = not_found = 0
-    for lead in candidates[:max(1, limit)]:
+    revisados = candidates[:max(1, limit)]
+    found = 0
+    sin_perfil: List[str] = []
+    for lead in revisados:
         prof = find_profile(lead.get("company", ""), lead.get("decisor", ""))
         if not prof:
-            ls.update_lead(lead["key"], {"li_state": "not_found"})
-            not_found += 1
+            sin_perfil.append(lead["key"])   # se persiste al final, no acá
             continue
         lead["li_headline"] = prof.get("title", "")
         msgs = craft_messages(lead)
@@ -178,8 +182,17 @@ def enrich(limit: int = 10) -> Dict[str, int]:
         })
         found += 1
         log.info("li_enriched", company=lead.get("company", "")[:40], url=prof["url"][:80])
-    return {"revisados": min(len(candidates), limit), "con_perfil": found,
-            "sin_perfil": not_found}
+    # Que fallen TODOS es señal de buscador caído, no de que ninguno tenga LinkedIn:
+    # como not_found es permanente, en ese caso no marcamos nada y se reintenta mañana.
+    if found == 0 and len(sin_perfil) > 1:
+        log.warning("li_enrich_todos_fallaron", n=len(sin_perfil))
+        return {"revisados": len(revisados), "con_perfil": 0, "sin_perfil": 0,
+                "error": "0 de %d encontrados — se asume falla del buscador, no se marcó nada"
+                         % len(sin_perfil)}
+    for key in sin_perfil:
+        ls.update_lead(key, {"li_state": "not_found"})
+    return {"revisados": len(revisados), "con_perfil": found,
+            "sin_perfil": len(sin_perfil)}
 
 
 def today_list(limit: int = 12) -> List[Dict[str, Any]]:
