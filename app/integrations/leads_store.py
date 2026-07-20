@@ -479,8 +479,11 @@ def due_for_touch(
             continue
         if _is_due(lead.get("next_touch_at"), today):
             out.append(lead)
-    # Primero los más nuevos en la secuencia (primer toque) para priorizar volumen fresco.
-    out.sort(key=lambda l: (l.get("next_step", 0), l.get("first_seen", "")))
+    # Primero los MÁS VENCIDOS: con el cap diario la cola se satura, y ordenar por step
+    # hacía que los steps altos nunca llegaran (los últimos follow-ups salían con 21 días
+    # de atraso, rompiendo la cadencia 0/2/4/7). A igual vencimiento, primero el step más
+    # alto: se terminan las secuencias abiertas antes de empezar otras nuevas.
+    out.sort(key=lambda l: (l.get("next_touch_at") or "", -l.get("next_step", 0)))
     return out
 
 

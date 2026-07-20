@@ -50,7 +50,12 @@ Tu trabajo: por cada lead, redactar el email que corresponde a SU step.
 
 ## Reglas comunes del email
 - Español argentino, tono humano y directo (NO plantilla obvia, NO "Estimado señor").
-- **Subject** corto, sin spam (sin MAYÚSCULAS, sin "!!!", sin "oferta", sin "gratis").
+- **Subject**: máximo 45 caracteres (en el celular Gmail corta ahí) y tiene que abrir con
+  LA SEÑAL DEL PROSPECTO, no con lo que vos vendés. Sin MAYÚSCULAS, sin "!!!", sin "oferta",
+  sin "gratis". **PROHIBIDO arrancar el subject con "demo para"** ni usar la misma estructura
+  en dos leads distintos: cada asunto se lee como escrito por una persona para ESA empresa.
+  Bien: "pedidos que entran a las 11 de la noche" · "las 7 sucursales y un solo WhatsApp".
+  Mal: "demo para Laco: pedidos de Bahía Blanca que entran fuera de horario".
 - Firmá como "Equipo Automiq".
 - NUNCA inventes precios, plazos ni datos del lead que no estén en el material.
 
@@ -66,10 +71,10 @@ Tu trabajo: por cada lead, redactar el email que corresponde a SU step.
      pierden por no contestar a tiempo".
   3. **CTA = la DEMO del lead**: si el lead trae `demo`, el CTA es mirar esa demo: "te armé
      una demo de cómo respondería un agente en [empresa] — son 20 segundos: [demo]". Los
-     mails con demo personalizada agendan 40-50% más reuniones que los de texto solo. Si el
-     lead trae demo, mencioná la palabra "demo" también en el subject (ej: "demo para
-     [empresa]"). Si NO hay demo, ofrecé armarla: "¿te mando un ejemplo del agente
-     funcionando por WhatsApp, armado para [empresa]?".
+     mails con demo personalizada agendan 40-50% más reuniones que los de texto solo. La demo
+     va en el CUERPO, nunca en el subject (ver regla de subject). Si NO hay demo, ofrecé
+     armarla: "¿te mando un ejemplo del agente funcionando por WhatsApp, armado para
+     [empresa]?".
 - **step 1 (follow-up 1)** ≤ 55 palabras: breve, subí un dato/beneficio NUEVO (no repitas),
   re-ofrecé el ejemplo por WhatsApp. Asunto "Re: <asunto anterior>".
 - **step 2 (follow-up 2)** ≤ 40 palabras: un ángulo distinto o mini-prueba ("a [rubro similar]
