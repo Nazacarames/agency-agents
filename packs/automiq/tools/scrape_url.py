@@ -6,20 +6,16 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List
 
-import httpx
-
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+from . import _http
 
 
-def scrape_url(url: str, timeout: float = 12.0, max_chars: int = 8000) -> Dict[str, Any]:
+def scrape_url(url: str, timeout: float = 20.0, max_chars: int = 8000) -> Dict[str, Any]:
     """Devuelve {url, status, text, title, links}.
 
     Trunca el texto a `max_chars` para no reventar el contexto del modelo.
     """
     try:
-        r = httpx.get(url, headers={"User-Agent": UA, "Accept-Language": "es-AR,es;q=0.9"},
-                      timeout=timeout, follow_redirects=True)
+        r = _http.get(url, timeout=timeout)
         if r.status_code >= 400:
             return {"url": url, "status": r.status_code, "error": f"HTTP {r.status_code}"}
     except Exception as e:

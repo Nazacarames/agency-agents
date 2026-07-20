@@ -10,10 +10,7 @@ import re
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
-import httpx
-
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+from . import _http
 
 _PHONE_RE = re.compile(
     r"(?:\+?54[\s\-]?)?(?:0?11[\s\-]?)?(?:15[\s\-]?)?(\(?\d{2,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})"
@@ -43,14 +40,13 @@ def _is_email(addr: str) -> bool:
 
 def _try(url: str, timeout: float) -> Optional[str]:
     try:
-        r = httpx.get(url, headers={"User-Agent": UA, "Accept-Language": "es-AR,es;q=0.9"},
-                      timeout=timeout, follow_redirects=True)
+        r = _http.get(url, timeout=timeout)
         return None if r.status_code >= 400 else r.text
     except Exception:
         return None
 
 
-def validate_site(domain_or_url: str, timeout: float = 10.0) -> Dict[str, Any]:
+def validate_site(domain_or_url: str, timeout: float = 20.0) -> Dict[str, Any]:
     if not domain_or_url:
         return {"error": "empty_domain"}
     url = domain_or_url.strip()
