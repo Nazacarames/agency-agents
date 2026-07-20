@@ -432,7 +432,10 @@ def update_lead(key: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not lead:
             return None
         for k in ("company", "email", "phone", "channel", "state", "next_step",
-                  "reengaged_at",
+                  # next_touch_at editable: sin esto un toque MANUAL a un lead caliente
+                  # no se puede reconciliar con la secuencia (queda sin follow-ups o
+                  # recibe uno automático encima).
+                  "next_touch_at", "reengaged_at",
                   # outbound asistido por LinkedIn (perfil del decisor + nota/DM + estado)
                   "linkedin", "li_headline", "li_note", "li_dm", "li_state", "li_at"):
             if k in fields and fields[k] is not None:

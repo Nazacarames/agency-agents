@@ -536,6 +536,7 @@ class LeadBody(BaseModel):
     channel: Optional[str] = None
     state: Optional[str] = None
     next_step: Optional[int] = None
+    next_touch_at: Optional[str] = None
     reengaged_at: Optional[str] = None
 
 
