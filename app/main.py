@@ -1944,17 +1944,16 @@ async def api_diag_hermes(request: Request):
             for k in _HERMES_SEARCH_KEYS:
                 _os.environ.pop(k, None)
             _os.environ["SEARXNG_URL"] = entorno["SEARXNG_URL"]
-            from tools.web_tools import (_get_backend, _get_search_backend,
-                                         _load_web_config, _env_value)
+            import tools.web_tools as _wt
+            # getattr y no import directo: la versión de Hermes del contenedor NO
+            # es la misma que la de desarrollo (_env_value no existe allá) y un
+            # ImportError tumbaba TODO el diagnóstico por un campo opcional.
+            _ev = getattr(_wt, "_env_value", None)
             out["busqueda"] = {
-                "backend_elegido": _get_backend(),
-                "backend_search": _get_search_backend(),
-                "config_yaml_web": _load_web_config(),
-                # Si Hermes SIGUE viendo la key después de sacarla del entorno, es
-                # que la lee de su propio .env en HERMES_HOME → sacarla del env del
-                # hijo no sirve para nada y hay que borrarla de ahí.
-                "tavily_visible_pese_a_borrarla": bool(_env_value("TAVILY_API_KEY")),
-                "searxng_visible": bool(_env_value("SEARXNG_URL")),
+                "backend_elegido": _wt._get_backend(),
+                "backend_search": _wt._get_search_backend(),
+                "config_yaml_web": _wt._load_web_config(),
+                "tavily_visible_pese_a_borrarla": bool(_ev("TAVILY_API_KEY")) if _ev else None,
             }
         finally:
             for k, v in previo.items():
@@ -1965,6 +1964,42 @@ async def api_diag_hermes(request: Request):
     except Exception as e:
         out["busqueda"] = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
     return out
+
+
+@app.post("/api/diag/hermes-probe")
+async def api_diag_hermes_probe(request: Request):
+    """Sonda: le pide a Hermes UNA búsqueda y devuelve qué hizo.
+
+    Existe porque diagnosticar esto a fuerza de corridas de leadhunter cuesta
+    10 min por intento. Acá el ciclo es ~1 min y se ve el stdout crudo del CLI:
+    si el modelo llama a `web_search`, si el toolset `web` siquiera existe en la
+    versión de Hermes del contenedor, y qué error tira si falla.
+    """
+    _verify_webhook_secret(request)
+    body = await request.json() if await request.body() else {}
+    toolsets = body.get("toolsets", "web")
+    pregunta = body.get("prompt",
+                        "Buscá en la web 'distribuidora mayorista Rosario' y listá "
+                        "los 3 primeros títulos con su URL. Usá tu tool de búsqueda.")
+    from .clients.hermes import run_hermes, HermesError
+    antes = _contar_shim()
+    try:
+        texto = await run_in_threadpool(
+            run_hermes, pregunta, settings=get_settings(),
+            timeout=int(body.get("timeout", 180)), max_turns=int(body.get("max_turns", 5)),
+            toolsets=toolsets, agente="probe")
+        return {"ok": True, "toolsets": toolsets, "busquedas_al_shim": _contar_shim() - antes,
+                "salida": texto[:2000]}
+    except HermesError as e:
+        return {"ok": False, "toolsets": toolsets, "busquedas_al_shim": _contar_shim() - antes,
+                "error": str(e)[:1500]}
+
+
+_SHIM_CALLS = {"n": 0}
+
+
+def _contar_shim() -> int:
+    return _SHIM_CALLS["n"]
 
 
 @app.get("/api/searx/{token}/{agente}/search")
@@ -1995,6 +2030,7 @@ async def api_searx_shim(token: str, agente: str, q: str = "", format: str = "js
         return {"query": q, "number_of_results": 0, "results": []}
     from packs.automiq.tools.web_search import web_search as _ws
     hits = await run_in_threadpool(_ws, q, 10)
+    _SHIM_CALLS["n"] += 1
     log.info("searx_shim", agente=agente, query=q[:80], results=len(hits))
     return {
         "query": q,
