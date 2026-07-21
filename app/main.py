@@ -1966,6 +1966,36 @@ async def api_diag_hermes(request: Request):
     return out
 
 
+@app.get("/api/diag/agent-prompt/{name}")
+async def api_diag_agent_prompt(name: str, request: Request):
+    """El prompt EXACTO que arma base.py para un agente, sin correrlo.
+
+    La sonda con el system_prompt + user_message hace 14 búsquedas; el agente
+    real hace 0. Hay que ver qué le agrega base.py en el medio (memoria de
+    empresa, lecciones, notas de otros agentes) en vez de seguir adivinando.
+    """
+    _verify_webhook_secret(request)
+    from .agents.registry import get_agent
+    from .agents.base import AgentContext
+    agente = get_agent(name)
+    container = get_container()
+    ctx = AgentContext(settings=get_settings(), minimax=container.minimax, discord=None,
+                       run_id="diag", triggered_by="diag", args={"force_global": True})
+
+    def _armar():
+        base_msg = agente.build_user_message(ctx)
+        completo = agente._augment_with_memory(base_msg, ctx)
+        return {
+            "system": agente.system_prompt,
+            "user_sin_memoria": base_msg,
+            "user_completo": agente._skills_preamble() + completo,
+            "chars": {"system": len(agente.system_prompt), "user_base": len(base_msg),
+                      "user_completo": len(completo),
+                      "agregado_por_memoria": len(completo) - len(base_msg)},
+        }
+    return await run_in_threadpool(_armar)
+
+
 @app.post("/api/diag/hermes-probe")
 async def api_diag_hermes_probe(request: Request):
     """Sonda: le pide a Hermes UNA búsqueda y devuelve qué hizo.
@@ -1986,6 +2016,7 @@ async def api_diag_hermes_probe(request: Request):
     try:
         texto = await run_in_threadpool(
             run_hermes, pregunta, settings=get_settings(),
+            system_append=body.get("system_append") or None,
             timeout=int(body.get("timeout", 180)), max_turns=int(body.get("max_turns", 5)),
             toolsets=toolsets, agente="probe")
         return {"ok": True, "toolsets": toolsets, "busquedas_al_shim": _contar_shim() - antes,
