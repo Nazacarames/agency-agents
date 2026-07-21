@@ -102,27 +102,38 @@ def status() -> Dict[str, object]:
 
     src, dest = _source_dir(), _dest_dir()
     del_repo = {p.name for p in src.iterdir() if p.is_dir()} if src and src.is_dir() else set()
-    aprendidas = []
+
+    # NO se puede separar por estructura lo que Hermes trae de fábrica de lo que
+    # aprendió: su catálogo tiene skills planas (dogfood, yuanbao) y categorías
+    # anidadas (email/, github/), igual que las escritas por los agentes. Un
+    # intento anterior clasificaba por "tiene SKILL.md en la raíz" y reportaba 26
+    # aprendidas cuando el ciclo había escrito una.
+    # Lo que SÍ es evidencia dura de que el aprendizaje está vivo: escrituras
+    # recientes. El catálogo de fábrica queda con la fecha del build de la imagen.
+    ahora = datetime.now(timezone.utc)
+    no_del_repo = []
     try:
         for p in sorted(dest.iterdir()):
             if not p.is_dir() or p.name in del_repo:
                 continue
-            sk = p / "SKILL.md"
-            aprendidas.append({
-                "nombre": p.name,
-                "bytes": sk.stat().st_size if sk.is_file() else 0,
-                "modificada": datetime.fromtimestamp(
-                    sk.stat().st_mtime, timezone.utc).isoformat() if sk.is_file() else None,
-            })
+            mods = [f.stat().st_mtime for f in p.rglob("*.md") if f.is_file()]
+            if not mods:
+                continue
+            mt = datetime.fromtimestamp(max(mods), timezone.utc)
+            no_del_repo.append({"nombre": p.name, "modificada": mt.isoformat(),
+                                "dias": round((ahora - mt).total_seconds() / 86400, 1)})
     except Exception as e:
         return {"ok": False, "error": str(e)[:200]}
-    aprendidas.sort(key=lambda a: a["modificada"] or "", reverse=True)
+    no_del_repo.sort(key=lambda a: a["modificada"], reverse=True)
+    recientes = [a for a in no_del_repo if a["dias"] <= 7]
     return {
         "ok": True,
         "hermes_cli": bool(_sh.which("hermes")),
         "home": str(dest.parent),
         "del_repo": len(del_repo),
-        "aprendidas": len(aprendidas),
-        # Las más recientes primero: si la de arriba es de hoy, el ciclo aprendió hoy.
-        "aprendidas_detalle": aprendidas[:15],
+        "no_del_repo": len(no_del_repo),
+        # La señal: si esto es 0, hace una semana que ningún agente escribe nada.
+        "escritas_ultimos_7d": len(recientes),
+        "ultima_escritura": no_del_repo[0]["modificada"] if no_del_repo else None,
+        "detalle_reciente": no_del_repo[:10],
     }
