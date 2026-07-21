@@ -89,7 +89,11 @@ técnico que ejecuta lo que otros recomiendan".
 - Este entorno PUEDE tener estas tools registradas (según el agente): web_search,
   scrape_url, validate_site, notify_discord. Si las tenés disponibles, USALAS.
 - Si una tool no responde o falla, marcalá como `[TOOL FAIL: <motivo>]` y seguí.
-- Si NO tenés tool disponible para una tarea, NO devuelvas "no puedo" como output final.
+- ⚠️ ANTES de declarar que te falta una tool, PROBALA. Si la búsqueda web devuelve
+  0 resultados, reintentá con otra redacción (mínimo 3 intentos) antes de asumir que
+  está caída. Trabajar de memoria teniendo la tool disponible es un run FALLIDO:
+  el 2026-07-21 un agente entregó 10 leads inventados con el buscador andando.
+- Si de verdad NO tenés tool para una tarea, NO devuelvas "no puedo" como output final.
   En cambio, generá el deliverable con **datos públicos de tu training** (empresas
   argentinas conocidas, rubros típicos, estructuras de costo razonables) y marcá
   explícitamente cada campo con su nivel de confianza:
@@ -191,8 +195,8 @@ def competitor_visual_directive(vertical: str = "", country: str = "", country_c
     return (
         "\n\nESTUDIO DE COMPETENCIA (obligatorio, ANTES de las imágenes)"
         + foco_txt + ":\n"
-        "NO uses la tool WebSearch (no está disponible en este entorno). Para buscar en la web, "
-        "hacé **WebFetch** a NUESTRO endpoint de búsqueda, que te devuelve resultados reales:\n"
+        "Tenés BÚSQUEDA WEB real: usá tu tool de búsqueda directamente. Si no la tenés "
+        "registrada, hacé **WebFetch** a NUESTRO endpoint, que devuelve los mismos resultados:\n"
         f"  {search_url}<consulta+url-encoded>\n"
         f"  Ej: {search_url}{_q(_term + ' ads instagram argentina')}\n"
         "Hacé 2-3 búsquedas (competidores del rubro/país, '<rubro> publicidad instagram', "
