@@ -52,7 +52,10 @@ _EMAIL_RE = re.compile(
 )
 # Filtro: emails "trampa" típicos de sites (noreply, example, etc.)
 _BAD_EMAIL_SUBSTR = ("example.com", "noreply", "no-reply", "sentry.io", "wixpress",
-                     "wordpress", ".png", ".jpg", ".svg")
+                     "wordpress", ".png", ".jpg", ".svg",
+                     # dominios placeholder del hosting: el sitio los deja en la
+                     # plantilla y no los lee nadie (visto en dimafer.com.ar)
+                     "hostingersite.com", "temporary.link", "sitepreview")
 
 
 @dataclass
@@ -118,6 +121,53 @@ def _parece_argentino(d: str) -> bool:
     if d.startswith(_AR_PREFIJOS[1:]):
         d = d.lstrip("0")
     return any(d.startswith(a) for a in _AR_AREAS)
+
+
+def site_contactos(domain_or_url: str, timeout: float = DEFAULT_TIMEOUT) -> dict:
+    """Teléfonos Y emails publicados en el sitio. Una sola pasada de red.
+
+    Los emails importan tanto o más que los teléfonos: el outbound en frío sale
+    por mail. Un email inventado (el modelo arma `info@<dominio>` por patrón, que
+    es su error más típico) no falla visible — rebota, y los rebotes queman la
+    reputación del dominio de envío.
+    """
+    vacio = {"telefonos": set(), "emails": set()}
+    if not domain_or_url:
+        return vacio
+    url = domain_or_url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    parsed = urlparse(url)
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    tels: set = set()
+    mails: set = set()
+    for path in ("", "/contacto", "/contact", "/contactanos"):
+        html = _try_fetch(base + path, timeout=timeout)
+        if not html:
+            continue
+        for m in re.finditer(r"(?:wa\.me/|api\.whatsapp\.com/send\?phone=|tel:)\+?(\d{8,15})", html):
+            tels.add(m.group(1))
+        for m in re.finditer(r"\+54[\s\-]?[\d\s\-]{8,16}", html):
+            d = re.sub(r"[^\d]", "", m.group(0))
+            if 10 <= len(d) <= 13:
+                tels.add(d)
+        # mailto: del HTML crudo — muchos sitios muestran el mail como imagen o
+        # lo ofuscan en el texto, pero el href sigue estando.
+        for m in re.finditer(r"mailto:([^\"'?>\s]+)", html):
+            if _is_real_email(m.group(1)):
+                mails.add(m.group(1).lower())
+        try:
+            texto = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+        except Exception:
+            texto = html
+        for m in _PHONE_RE.finditer(texto):
+            d = re.sub(r"[^\d]", "", m.group(0))
+            if 10 <= len(d) <= 13 and _parece_argentino(d):
+                tels.add(d)
+        for m in _EMAIL_RE.finditer(texto):
+            if _is_real_email(m.group(0)):
+                mails.add(m.group(0).lower())
+    return {"telefonos": tels, "emails": mails}
 
 
 def site_phone_digits(domain_or_url: str, timeout: float = DEFAULT_TIMEOUT) -> set:

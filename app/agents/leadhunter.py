@@ -431,7 +431,7 @@ class LeadHunterAgent(BaseAgent):
         número del SITIO manda sobre el que escribió el modelo.
         """
         import re as _re
-        from ..integrations.site_validator import site_phone_digits
+        from ..integrations.site_validator import site_contactos
 
         # Solo sitios PROPIOS de la empresa: un perfil de IG o un link de Maps no
         # publica el teléfono en el HTML y solo ensucia el bloque con "no pude leer".
@@ -449,10 +449,12 @@ class LeadHunterAgent(BaseAgent):
         reales: dict = {}
         for d in dominios:
             try:
-                reales[d] = site_phone_digits(d, timeout=8.0)
+                reales[d] = site_contactos(d, timeout=8.0)
             except Exception:
-                reales[d] = set()
-        colas_reales = {self._cola(x) for s in reales.values() for x in s} - {""}
+                reales[d] = {"telefonos": set(), "emails": set()}
+        colas_reales = {self._cola(x) for v in reales.values()
+                        for x in v["telefonos"]} - {""}
+        mails_reales = {e.lower() for v in reales.values() for e in v["emails"]}
 
         # Dedupe por dígitos, no por string: el mismo número aparece en la tabla
         # y en el detalle con distinta puntuación ("...1978 (" vs "...1978").
@@ -463,30 +465,56 @@ class LeadHunterAgent(BaseAgent):
             if 10 <= len(d) <= 15 and d not in vistos:
                 vistos.add(d)
                 reportados.append((crudo, d))
-        if not reportados:
+        # Emails del reporte, sin los nuestros (aparecen en firmas y ejemplos).
+        mails_reportados, vistos_m = [], set()
+        for m in _re.finditer(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", texto):
+            e = m.group(0).lower().rstrip(".,;)")
+            if e not in vistos_m and "automiq" not in e:
+                vistos_m.add(e)
+                mails_reportados.append(e)
+
+        if not reportados and not mails_reportados:
             return ""
 
         ok, mal = [], []
         for crudo, d in reportados:
             (ok if self._cola(d) in colas_reales else mal).append(crudo)
+        mails_ok = [e for e in mails_reportados if e in mails_reales]
+        mails_mal = [e for e in mails_reportados if e not in mails_reales]
 
-        lineas = ["## ✅ Verificación automática de teléfonos", ""]
-        lineas.append(f"Contrastados contra los sitios citados: **{len(ok)} de "
-                      f"{len(reportados)}** aparecen textualmente en la web de la empresa.")
+        lineas = ["## ✅ Verificación automática de contactos", ""]
+        if reportados:
+            lineas.append(f"**Teléfonos:** {len(ok)} de {len(reportados)} aparecen "
+                          f"textualmente en la web de la empresa.")
+        if mails_reportados:
+            lineas.append(f"**Emails:** {len(mails_ok)} de {len(mails_reportados)} "
+                          f"están publicados en el sitio.")
         if mal:
-            lineas += ["", "> [!warning] NO uses estos números sin chequear",
-                       "> No figuran en ningún sitio del reporte — el modelo los "
-                       "transcribió mal o los dedujo. Un WhatsApp a un número "
-                       "equivocado no rebota: se pierde en silencio.", ""]
-            for crudo in mal:
-                lineas.append(f"- ❌ `{crudo}`")
-            lineas += ["", "**Los que sí están publicados en esos sitios:**"]
-            for d, nums in reales.items():
-                if nums:
-                    lineas.append(f"- `{d}` → " + ", ".join(f"`+{n}`" for n in sorted(nums)[:4]))
-        for d, nums in reales.items():
-            if not nums:
-                lineas.append(f"- ❔ `{d}` — no pude leer el sitio (bloqueo o sin teléfono publicado)")
+            lineas += ["", "> [!warning] Teléfonos que NO figuran en ningún sitio citado",
+                       "> El modelo los transcribió mal o los dedujo. Un WhatsApp a un "
+                       "número equivocado no rebota: se pierde en silencio.", ""]
+            lineas += [f"- ❌ `{c}`" for c in mal]
+        if mails_mal:
+            lineas += ["", "> [!danger] Emails SIN verificar — no los uses en outbound",
+                       "> No están publicados en el sitio. El error típico del modelo es "
+                       "ARMARLOS por patrón (`info@<dominio>`). Un mail inventado rebota, "
+                       "y los rebotes queman la reputación del dominio de envío: un lote "
+                       "así puede mandarte a spam para TODOS los envíos siguientes.", ""]
+            lineas += [f"- ❌ `{e}`" for e in mails_mal]
+        publicados = [(d, v) for d, v in reales.items() if v["telefonos"] or v["emails"]]
+        if (mal or mails_mal) and publicados:
+            lineas += ["", "**Lo que sí está publicado en esos sitios (usá esto):**"]
+            for d, v in publicados:
+                partes = []
+                if v["telefonos"]:
+                    partes.append(", ".join(f"`+{n}`" for n in sorted(v["telefonos"])[:3]))
+                if v["emails"]:
+                    partes.append(", ".join(f"`{e}`" for e in sorted(v["emails"])[:3]))
+                lineas.append(f"- `{d}` → " + " · ".join(partes))
+        ilegibles = [d for d, v in reales.items() if not v["telefonos"] and not v["emails"]]
+        if ilegibles:
+            lineas += ["", "No pude leer estos sitios (bloqueo o sin contacto publicado): "
+                       + ", ".join(f"`{d}`" for d in ilegibles)]
         return "\n".join(lineas) + "\n\n---\n\n"
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
