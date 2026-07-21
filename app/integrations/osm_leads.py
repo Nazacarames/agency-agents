@@ -70,7 +70,7 @@ PERFILES: Dict[str, List[str]] = {
     # (3% vs 1% de distribución, dato real del pipeline) y el que menos trae por
     # nombre — las fábricas se llaman por su apellido, no "Fábrica de X".
     "manufactura": [r"[Pp]l[áa]sticos|[Ee]nvases", r"[Mm]etal[úu]rgica|[Aa]utopartes",
-                    r"[Ff][áa]brica|[Ii]ndustrias", r"[Ff]undici[óo]n|[Mm]atricer[íi]a",
+                    r"[Ii]ndustrias", r"[Ff]undici[óo]n|[Mm]atricer[íi]a",
                     r"[Ff]rigor[íi]fico|[Aa]limenticia", r"[Tt]extil|[Cc]urtiembre",
                     r"[Mm]aderera|[Aa]serradero", r"[Qq]u[íi]mica|[Pp]inturas",
                     r"[Cc]art[óo]n|[Pp]apelera", r"[Mm]aquinaria|[Aa]groindustria"],
@@ -86,7 +86,11 @@ _GRANDES = re.compile(
     r"la an[óo]nima|fate|pirelli|bridgestone|shell|axion|petrobras|remax|re\/max|"
     # sumadas tras ver el primer pool real (2026-07-21): mayoristas grandes que
     # el regex de nombre traía igual porque se llaman "Mayorista ..."
-    r"yaguar|jaguar|maxiconsumo|vital|diarco|makro|nini|parodi)\b",
+    r"yaguar|jaguar|maxiconsumo|vital|diarco|makro|nini|parodi|"
+    # sumadas tras ampliar manufactura: multinacionales y grandes industriales
+    # que el regex de nombre traía igual ("Fábrica Holcim")
+    r"holcim|vacal[íi]n|loma negra|cementos|petroqu[íi]mica|siderar|acindar|"
+    r"antares|bimbo|fargo|dan[óo]ne|nestl[ée]|unilever|procter|impsa|pescarmona)\b",
     re.I)
 
 # NO son empresas: reparticiones públicas, escuelas, cámaras. El regex de nombre
@@ -95,12 +99,26 @@ _GRANDES = re.compile(
 _NO_EMPRESA = re.compile(
     r"^\s*(direcci[óo]n|municipalidad|secretar[íi]a|ministerio|subsecretar[íi]a|"
     r"delegaci[óo]n|comuna|instituto|escuela|universidad|facultad|hospital|"
-    r"terminal|estaci[óo]n|c[áa]mara|sindicato|cooperativa de trabajo)\b", re.I)
+    r"terminal|estaci[óo]n|c[áa]mara|sindicato|cooperativa de trabajo|"
+    # gremios y obras sociales: aparecen con "industrias" en el nombre
+    # ("Federación Trabajadores de Industrias...") y no son empresas
+    r"federaci[óo]n|obra social|asociaci[óo]n|mutual|fundaci[óo]n|colegio)\b", re.I)
 
 # Dominios que descalifican: estado/educación, y redes sociales como "sitio".
 # Si el único "sitio" es un Facebook no podemos verificar contacto ni investigar.
+# Ruido que el regex de nombre arrastra: en español "fábrica" nombra teatros
+# ("La Fábrica" Sala de Teatro), centros culturales, bares y pizzerías. Nada de
+# eso es una PyME industrial y le hace perder turnos al agente descartándolas.
+_RUIDO = re.compile(
+    r"(teatro|cultural|museo|club|bar|resto|restaurant|pizza|helader[íi]a|"
+    r"panader[íi]a|caf[ée]|hotel|gimnasio|peluquer[íi]a|kiosco|farmacia|"
+    r"sala de|centro de|espacio)", re.I)
+
 _DOMINIOS_MALOS = (".gob.ar", ".gov.ar", ".edu.ar", ".mil.ar", "facebook.", "instagram.",
-                   "twitter.", "x.com", "linkedin.", "wa.me", "wixsite.com", "blogspot.")
+                   "twitter.", "x.com", "linkedin.", "wa.me", "wixsite.com", "blogspot.",
+                   "sites.google.com", "pedidosya.", "rappi.", "tripadvisor.",
+                   # .org.ar es casi siempre gremio, cámara u ONG en AR
+                   ".org.ar", ".org/")
 
 
 def _consultar(query: str, timeout: float = 180.0) -> List[Dict[str, Any]]:
@@ -171,14 +189,17 @@ def _normalizar(el: Dict[str, Any], vertical: str) -> Optional[Dict[str, Any]]:
     web = (t.get("website") or t.get("contact:website") or "").strip()
     if not nombre or not web:
         return None
-    if _GRANDES.search(nombre) or _NO_EMPRESA.match(nombre):
+    if _GRANDES.search(nombre) or _NO_EMPRESA.match(nombre) or _RUIDO.search(nombre):
         return None
     # "supermayorista el turco" en el campo website: hay tags mal cargados en OSM.
     if not re.match(r"^https?://", web):
         if "." not in web or " " in web:
             return None
         web = "https://" + web
-    if any(d in web.lower() for d in _DOMINIOS_MALOS):
+    dominio = web.lower()
+    # El RUIDO también se busca en el dominio: el Teatro Colón figura como
+    # "Colón Fábrica" (el nombre no lo delata, teatrocolon.org.ar sí).
+    if any(d in dominio for d in _DOMINIOS_MALOS) or _RUIDO.search(dominio):
         return None
     tel = (t.get("phone") or t.get("contact:phone") or "").split(";")[0].strip()
     return {

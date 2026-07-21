@@ -1,16 +1,6 @@
 {
- "actualizado": "2026-07-21T18:19:59.531173+00:00",
+ "actualizado": "2026-07-21T20:29:36.504743+00:00",
  "empresas": [
-  {
-   "empresa": "Distribuidora del Sur",
-   "web": "http://www.wix.com/empquique/pluchinoled",
-   "telefono": "",
-   "email": "",
-   "ciudad": "",
-   "provincia": "",
-   "vertical": "distribucion",
-   "fuente": "OpenStreetMap"
-  },
   {
    "empresa": "Distribuidora Racer S.R.L.",
    "web": "https://racer.com.ar/",
@@ -44,7 +34,7 @@
   {
    "empresa": "Marozzi distribuidora",
    "web": "http://www.bateriasmarozzi.com.ar/",
-   "telefono": "+54 3492 43 3895",
+   "telefono": "+54 03492 433895",
    "email": "distribuidorastar2@distribuidorastar.com.ar",
    "ciudad": "Rafaela",
    "provincia": "",
@@ -54,7 +44,7 @@
   {
    "empresa": "Distribuidora Báez",
    "web": "http://www.distribuidorabaez.com.ar",
-   "telefono": "+54 9 3781 40 2028",
+   "telefono": "0378115402028",
    "email": "info@distribuidorabaez.com.ar",
    "ciudad": "",
    "provincia": "",
@@ -84,7 +74,7 @@
   {
    "empresa": "Lubri-Lean Lubricantes - Distribuidora",
    "web": "http://www.lubri-lean.com",
-   "telefono": "+54 3755 40 4853",
+   "telefono": "+54  03755 404853",
    "email": "info@lubri-lean.com",
    "ciudad": "Oberá",
    "provincia": "",
@@ -97,26 +87,6 @@
    "telefono": "+54 3755 421316",
    "email": "abarca@abarcaonline.com",
    "ciudad": "Guaraní",
-   "provincia": "",
-   "vertical": "distribucion",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Fratelli Distribuidora",
-   "web": "https://m.facebook.com/fratelli.bariloche",
-   "telefono": "",
-   "email": "",
-   "ciudad": "",
-   "provincia": "",
-   "vertical": "distribucion",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Distribuidora Mauri",
-   "web": "https://www.facebook.com/Distribuidora-Mauri-1661022334148755",
-   "telefono": "+54 9 249 456-4049",
-   "email": "",
-   "ciudad": "",
    "provincia": "",
    "vertical": "distribucion",
    "fuente": "OpenStreetMap"
@@ -174,7 +144,7 @@
   {
    "empresa": "Mayorista Mascotas Distribuidora Gerardo Hodulich",
    "web": "http://mayoristamascotas.com.ar/",
-   "telefono": "+54 353 452 7929",
+   "telefono": "0353 4527929",
    "email": "",
    "ciudad": "",
    "provincia": "",
@@ -184,7 +154,7 @@
   {
    "empresa": "HRM Distribuidora",
    "web": "http://www.hrmdistribuidora.com.ar/",
-   "telefono": "+54 353 452 3773",
+   "telefono": "0353 4523773",
    "email": "",
    "ciudad": "",
    "provincia": "",
@@ -194,7 +164,7 @@
   {
    "empresa": "Acme Distribuidora",
    "web": "https://www.acmedistribuidora.com.ar/",
-   "telefono": "+54 353 452 4415",
+   "telefono": "353 4524415",
    "email": "",
    "ciudad": "",
    "provincia": "",
@@ -372,28 +342,8 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Distribuidora Caleuche",
-   "web": "https://distribuidoracaleuche.blogspot.com/",
-   "telefono": "+54 297 242-9353",
-   "email": "caleuche@live.com.ar",
-   "ciudad": "San Martín de los Andes",
-   "provincia": "",
-   "vertical": "distribucion",
-   "fuente": "OpenStreetMap"
-  },
-  {
    "empresa": "Empresa Distribuidora de Energía Norte",
    "web": "https://www.edensa.com.ar/",
-   "telefono": "",
-   "email": "",
-   "ciudad": "",
-   "provincia": "",
-   "vertical": "distribucion",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Distribuidora Echeverría",
-   "web": "https://www.instagram.com/echeverria.dee/",
    "telefono": "",
    "email": "",
    "ciudad": "",
@@ -502,36 +452,6 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Mayorista El Regional",
-   "web": "https://es-la.facebook.com/Mayoristaelregional/",
-   "telefono": "+54 223 465 1284",
-   "email": "",
-   "ciudad": "",
-   "provincia": "",
-   "vertical": "distribucion",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Mayorista Diarco",
-   "web": "https://diarco.com.ar/",
-   "telefono": "",
-   "email": "",
-   "ciudad": "Berazategui",
-   "provincia": "",
-   "vertical": "distribucion",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Supermercado Mayorista Jaguar",
-   "web": "http://yaguar.com",
-   "telefono": "+54 3489 425000",
-   "email": "",
-   "ciudad": "Campana",
-   "provincia": "",
-   "vertical": "distribucion",
-   "fuente": "OpenStreetMap"
-  },
-  {
    "empresa": "Mayorista Hergo",
    "web": "https://hergo.com.ar/",
    "telefono": "+54 223 465 3434",
@@ -552,79 +472,149 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Almacén de Envases",
-   "web": "https://almacendeenvases.com/",
-   "telefono": "+54 223 4741904",
-   "email": "almacendeenvases@gmail.com",
+   "empresa": "Fábrica Holcim",
+   "web": "https://www.holcim.com.ar/",
+   "telefono": "+54 351 498 1800",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fábrica Lacteos Vacalín",
+   "web": "https://www.vacalin.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "\"La Fábrica\" Sala de Teatro UNICEN",
+   "web": "https://sites.google.com/view/teatrolafabrica/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Tandil",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Familia Grión Fábrica",
+   "web": "https://familiagrion.com/",
+   "telefono": "+543525464960",
+   "email": "",
+   "ciudad": "Colonia Caroya",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Centro cultural IMPA La Fábrica",
+   "web": "http://impalafabrica.org.ar/",
+   "telefono": "+54 11 2075-6708",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Cervecería Antares - Bar de la Fábrica",
+   "web": "http://www.cervezaantares.com/",
+   "telefono": "",
+   "email": "",
    "ciudad": "Mar del Plata",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Industria de envases",
-   "web": "http://www.zaplast.com.ar/",
-   "telefono": "+54 3487 42-5014",
-   "email": "",
-   "ciudad": "Zarate",
-   "provincia": "",
-   "vertical": "manufactura",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Schott Envases Argentina",
-   "web": "https://www.schott.com/",
+   "empresa": "fábrica de pizzas",
+   "web": "http://www.fabricadepizzas.com.ar",
    "telefono": "",
    "email": "",
-   "ciudad": "Munro",
+   "ciudad": "",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Grupo Autopartes",
-   "web": "http://grupo-autopartes.com.ar/",
+   "empresa": "Fabrica Pc",
+   "web": "https://fabricapc.com.ar/",
+   "telefono": "+54 351 472 9366",
+   "email": "rvlevet@gmail.com",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fabrica S.R.L",
+   "web": "https://www.fabricasrl.com.ar/",
+   "telefono": "+54 362 4434400",
+   "email": "empresa@fabricasrl.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fabrica de Colchones Astrid",
+   "web": "https://www.colchonesastrid.com.ar/",
+   "telefono": "+54 11 4638-3151",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Industrias Cormetal",
+   "web": "https://cormetal.com.ar/",
+   "telefono": "+54 353 461 0900",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Santa Rita Fábrica de Pastas",
+   "web": "https://fabrica-de-pastas-santa-rita.negocio.site",
+   "telefono": "+54 353 565 6047",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fabrica Open Candy",
+   "web": "https://www.sweetsa.com.ar",
    "telefono": "",
    "email": "",
-   "ciudad": "San Miguel de Tucumán",
+   "ciudad": "Santo Tomé",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Metalúrgica Alem SRL",
-   "web": "http://www.metalurgicaalem.com.ar",
-   "telefono": "+54 3754 422611",
+   "empresa": "Fábrica de Pizzas",
+   "web": "https://www.pedidosya.com.ar/restaurantes/santa-fe/fabrica-de-pizzas-santa-fe-5ed9a8cd-e384-464d-9b2f-31d1406ce08e-menu",
+   "telefono": "+54 9 0342 456-2246",
    "email": "",
-   "ciudad": "Leandro N. Alem",
+   "ciudad": "Santa Fe",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Metalurgica Finke",
-   "web": "https://metalurgicafinke.com/",
-   "telefono": "+54 3755 470864",
-   "email": "metalurgicafinke@hotmail.com",
-   "ciudad": "Aristóbulo del Valle",
-   "provincia": "",
-   "vertical": "manufactura",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Metalúrgica VZ",
-   "web": "https://www.metalurgicavz.com.ar",
-   "telefono": "+54 3472 444909",
-   "email": "",
-   "ciudad": "Marcos Juárez",
-   "provincia": "",
-   "vertical": "manufactura",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "MAD SRL Autopartes y Accesorios",
-   "web": "http://www.madsrl.com.ar/",
-   "telefono": "+54 353 453 5182",
+   "empresa": "Federación Trabajadores de Industrias de Alimentación",
+   "web": "https://stia.org.ar/",
+   "telefono": "+54 11 4305-2722",
    "email": "",
    "ciudad": "",
    "provincia": "",
@@ -632,9 +622,9 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Grabado de Autopartes",
-   "web": "https://turnos.sgaba.com.ar/",
-   "telefono": "08004440018",
+   "empresa": "Obra social del personal de industrias químicas y petroquímicas",
+   "web": "https://www.ospiqyp.org.ar/",
+   "telefono": "",
    "email": "",
    "ciudad": "",
    "provincia": "",
@@ -642,11 +632,21 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Metalurgica El Talar",
-   "web": "https://www.metalurgicaeltalar.com.ar",
-   "telefono": "+54 11 4740-6068",
+   "empresa": "Fabrica De Fideos Rivoli",
+   "web": "https://fideosrivoli.com/",
+   "telefono": "",
    "email": "",
-   "ciudad": "",
+   "ciudad": "Banda del Río Salí",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fábrica Barker - Loma Negra",
+   "web": "http://www.lomanegra.com.ar/nuestras-unidades/fabrica-barker/",
+   "telefono": "+54 (02292) 489-095/6/7",
+   "email": "",
+   "ciudad": "Villa Cacique - Barker",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
@@ -662,51 +662,351 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Metalurgica San Pedro",
-   "web": "http://www.metalurgicasanpedro.com.ar/",
-   "telefono": "+54 3743 493179",
-   "email": "info@metalurgicasanpedro.com.ar",
-   "ciudad": "Capioví",
+   "empresa": "Venta de Casas Pre-Fabricadas",
+   "web": "https://viviendasrolon.com.ar/",
+   "telefono": "+54 3489 427557",
+   "email": "",
+   "ciudad": "Campana",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "VF Metalúrgica",
-   "web": "http://www.vfmetalurgica.com.ar",
-   "telefono": "+543755424206",
-   "email": "vfmetalurgicaobera@gmail.com",
-   "ciudad": "Oberá",
-   "provincia": "",
-   "vertical": "manufactura",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Reciclar Autopartes",
-   "web": "http://reciclarautopartes.ar/",
+   "empresa": "Colón Fábrica",
+   "web": "https://teatrocolon.org.ar/es/colon-fabrica",
    "telefono": "",
    "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fabrica Scalter SRL",
+   "web": "https://scaltersrl.com.ar/",
+   "telefono": "+54 237 466 6165",
+   "email": "",
+   "ciudad": "Paso del Rey",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fábrica Oblak Hermanos",
+   "web": "https://www.oblak.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "La Fábrica",
+   "web": "https://www.lafabrica.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Industrias Saladillo S.A.",
+   "web": "https://www.industriassaladillo.com.ar/",
+   "telefono": "+54 230 4496789",
+   "email": "ventas@industriassaladillo.com.ar",
+   "ciudad": "Fátima",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Industrias Lácteas El Rosquinense",
+   "web": "https://www.elrosquinense.com/",
+   "telefono": "+54 3401 47 0409",
+   "email": "",
+   "ciudad": "Cañada Rosquín",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Industrias Parasol S. A.",
+   "web": "https://www.parisol.com.ar/",
+   "telefono": "+54 11 4919 4242",
+   "email": "",
+   "ciudad": "CABA",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Polo Textil Mercado Central",
+   "web": "https://polotextilmc.com.ar",
+   "telefono": "+54 11 5217-5393",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Textilandia Sweater",
+   "web": "https://maurosergioshop.com.ar/ayuda/la-empresa/",
+   "telefono": "+54 223 4650318",
+   "email": "",
+   "ciudad": "Mar del Plata",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Textil Triunvirato",
+   "web": "https://textiltriunvirato.com.ar/",
+   "telefono": "+54 11 4522-8787",
+   "email": "ventas@textiltriunvirato.com.ar",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Baldo Textile",
+   "web": "https://baltotextile.com.ar/inicio.html",
+   "telefono": "+54 230 4463200",
+   "email": "",
+   "ciudad": "Fátima",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mundo Textil S.A.",
+   "web": "http://www.mundotextilsa.com.ar/",
+   "telefono": "+54 230 4496497",
+   "email": "info@mundotextilsa.com.ar",
+   "ciudad": "Fátima",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Curtiembre CBR",
+   "web": "http://www.courosbomretiro.com.br",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Nonogasta",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Parque La Curtiembre",
+   "web": "https://www.lapazentrerios.tur.ar/paseos/parque-la-curtiembre/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Maderera Campana",
+   "web": "https://www.madereracampana.com.ar/",
+   "telefono": "+54 3489 42 3845",
+   "email": "",
+   "ciudad": "Campana",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Maderera Pringles",
+   "web": "http://www.madererapringles.com.ar",
+   "telefono": "+54 2922 463485",
+   "email": "madererapringles@gmail.com",
+   "ciudad": "Coronel Pringles",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Aserradero Ruff",
+   "web": "https://www.aserraderoruff.com",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Aristóbulo del Valle",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Aserradero Alfredo Zimmermann",
+   "web": "https://www.maderera-zimmermann.com",
+   "telefono": "+54 3743 41 0019",
+   "email": "diegokeller@hotmail.com",
+   "ciudad": "Ruíz de Montoya",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Aserradero Tierra Roja S.A.",
+   "web": "https://amayadap.com/portfolio-item/tierra-roja-sa/",
+   "telefono": "+54 3751 480793",
+   "email": "tierrarojasa@hotmail.com",
+   "ciudad": "Montecarlo",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Aserradero Pindapoy",
+   "web": "https://aserradero-pindapoy.negocio.site/?utm_source=gmb&utm_medium=referral",
+   "telefono": "+54 376 5080526",
+   "email": "",
+   "ciudad": "Pindapoy",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Aserradero Dadone",
+   "web": "http://dadonehdh.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Maderera Rocholl",
+   "web": "https://www.rocholl.com.ar/",
+   "telefono": "+54 3755 421782",
+   "email": "info@rocholl.com.ar",
    "ciudad": "Guaraní",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Unión Obrera Metalúrgica",
-   "web": "https://uom.org.ar/",
+   "empresa": "La Papelera del Oeste",
+   "web": "https://www.lapapeleradeloeste.com/",
    "telefono": "",
    "email": "",
-   "ciudad": "Neuquén",
+   "ciudad": "",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Sica Metalúrgica Argentina S.A.",
-   "web": "https://sica.net.ar/",
-   "telefono": "+54 3496 42 4242",
+   "empresa": "Papelera SEVENPACK",
+   "web": "https://sevenpack.com.ar",
+   "telefono": "+54 11 4861-9658",
+   "email": "sevenpack1@gmail.com",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Papelera Plastimar",
+   "web": "https://papeleraplastimar.com.ar/",
+   "telefono": "+11 4545 6755",
+   "email": "papeleraplastimar@gmail.com",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "La Papelera",
+   "web": "https://www.lapapeleravm.com/",
+   "telefono": "+54 353 413 0710",
    "email": "",
-   "ciudad": "Esperanza",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Papelera Contemporáne",
+   "web": "https://papeleracontemporanea.com/",
+   "telefono": "+54 11 5627 4079",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Pioneer Argentina Papelera",
+   "web": "http://www.pioneerpapelera.com.ar/",
+   "telefono": "+54 11 4522-1238",
+   "email": "info@pioneerpapelera.com.ar",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Papelera Samseng",
+   "web": "http://www.papelerasamseng.com/",
+   "telefono": "(011) 4588-8415/4588-8417",
+   "email": "info@papelerasamseng.com",
+   "ciudad": "Fátima",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mundo Limpio Papelera & Descartables",
+   "web": "https://www.mundolimpiodigital.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Papelera del Mar",
+   "web": "https://www.papeleradelmar.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Papelera Gaso",
+   "web": "https://www.papeleragaso.com",
+   "telefono": "",
+   "email": "ventas@papeleragaso.com",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "LYB maquinarias",
+   "web": "https://lybmaquinarias.com.ar",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Ulla Maquinarias",
+   "web": "http://www.ulla.com.ar/ulla-maquinarias/",
+   "telefono": "+54 9 358 412 6438",
+   "email": "",
+   "ciudad": "",
    "provincia": "",
    "vertical": "manufactura",
    "fuente": "OpenStreetMap"
@@ -717,16 +1017,6 @@
    "telefono": "",
    "email": "",
    "ciudad": "",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Dirección de Tránsito y Transporte",
-   "web": "http://www.bahiablanca.gov.ar/conduce/",
-   "telefono": "+54 291 455 8978",
-   "email": "",
-   "ciudad": "Bahía Blanca",
    "provincia": "",
    "vertical": "logistica",
    "fuente": "OpenStreetMap"
@@ -747,26 +1037,6 @@
    "telefono": "+54 376 445-8558",
    "email": "posadas@transportesnaider.com",
    "ciudad": "Posadas",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Subsecretaría de Tránsito y Transporte",
-   "web": "http://www.bariloche.gov.ar/tramite2014.php?tramite=1",
-   "telefono": "",
-   "email": "",
-   "ciudad": "",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "CNRT Control del Transporte",
-   "web": "https://www.cnrt.gob.ar",
-   "telefono": "",
-   "email": "",
-   "ciudad": "",
    "provincia": "",
    "vertical": "logistica",
    "fuente": "OpenStreetMap"
@@ -797,16 +1067,6 @@
    "telefono": "",
    "email": "",
    "ciudad": "Real del Padre",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Ministerio del Interior y Transporte",
-   "web": "http://www.mininterior.gov.ar",
-   "telefono": "+54 11 4339-0800",
-   "email": "",
-   "ciudad": "Ciudad Autónoma de Buenos Aires",
    "provincia": "",
    "vertical": "logistica",
    "fuente": "OpenStreetMap"
@@ -852,26 +1112,6 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Centro Municipal de Capacitación de Transporte y Transito",
-   "web": "http://www2.cordoba.gov.ar/portal/index.php/secretaria-de-servicios-publicos/direccion-centro-de-capacitacion-de-transporte-y-transito/",
-   "telefono": "+54 351 434 8509",
-   "email": "",
-   "ciudad": "",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Subsecretaría de Transporte Y Licencias",
-   "web": "https://licencias.serviciosmerlo.net/",
-   "telefono": "+54 220 482 6041",
-   "email": "",
-   "ciudad": "Merlo",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
    "empresa": "Transporte Libertador S.A.",
    "web": "https://translibertador.com/",
    "telefono": "+54 230 444 0666",
@@ -902,36 +1142,6 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Planta de Verificación y Habilitación de Transporte",
-   "web": "https://www.buenosaires.gob.ar/tramites/verificacion-y-habilitacion-de-transporte",
-   "telefono": "",
-   "email": "",
-   "ciudad": "Ciudad Autónoma de Buenos Aires",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Dirección Provincial de Transporte",
-   "web": "https://transporte.neuquen.gov.ar/",
-   "telefono": "",
-   "email": "",
-   "ciudad": "Neuquén",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Sindicato de Choferes de Camiones y Empleados del Transporte de Cargas de Neuquén",
-   "web": "https://www.camionerosnqn.com.ar/",
-   "telefono": "",
-   "email": "",
-   "ciudad": "Cutral Có",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
    "empresa": "Transporte Imaz",
    "web": "https://www.transporteimaz.com.ar/",
    "telefono": "+54 299 477-4106",
@@ -942,41 +1152,11 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Cámara Patagónica de Empresas de Autotransporte de Cargas",
-   "web": "https://www.capeac.com.ar/",
-   "telefono": "",
-   "email": "",
-   "ciudad": "Cipolletti",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Junta de Seguridad del Transporte",
-   "web": "https://www.argentina.gob.ar/jst",
-   "telefono": "",
-   "email": "",
-   "ciudad": "Ciudad Autónoma de Buenos Aires",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
    "empresa": "Transporte Espinosa",
    "web": "https://www.transporteespinosa.com/contacto",
    "telefono": "+54 11 4919 9938",
    "email": "",
    "ciudad": "Ciudad Autónoma de Buenos Aires",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Dirección de Tránsito y Transporte",
-   "web": "https://gralfernandezoro.gob.ar/gobierno-ciudad",
-   "telefono": "+54 299 418-6934",
-   "email": "transito@gralfernandezoro.gob.ar",
-   "ciudad": "General Fernández Oro",
    "provincia": "",
    "vertical": "logistica",
    "fuente": "OpenStreetMap"
@@ -1042,183 +1222,993 @@
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso Payún",
-   "web": "https://www.expresopayun.com/",
+   "empresa": "Fapersa ICSA",
+   "web": "https://fapersa.com/",
    "telefono": "",
    "email": "",
-   "ciudad": "Malargüe",
-   "provincia": "",
-   "vertical": "logistica",
+   "ciudad": "Santa Fe",
+   "provincia": "Santa Fe",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso El Carrizal",
-   "web": "http://www.ecsa.com.ar/",
+   "empresa": "Alpargatas S.A.",
+   "web": "http://www.alpargatas.com.ar/",
    "telefono": "",
    "email": "",
    "ciudad": "",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Mb Logística - Autoelevadores - Fletes - Grúas de Auxilio",
-   "web": "https://www.auxiliorwcircolani.com/",
-   "telefono": "+54 353 406 5634",
+   "empresa": "Gabor S.A.",
+   "web": "http://gabor.com.ar/",
+   "telefono": "",
    "email": "",
    "ciudad": "",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso Rivadavia",
-   "web": "https://www.expresorivadavia.com/",
-   "telefono": "+543814268130",
-   "email": "info@expresorivadavia.com",
-   "ciudad": "Pacará Pintado",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Logística y Servicios Integrales S.A.",
-   "web": "http://www.lservicios.com.ar/",
-   "telefono": "+54 230 449 6605",
-   "email": "comercial_lysi@speedy.com.ar",
-   "ciudad": "Fátima",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Celsur logística - Plataforma Logística Pilar 1",
-   "web": "http://celsur.com.ar/",
-   "telefono": "+54 230 4496460",
-   "email": "comercial@celsur.com.ar",
-   "ciudad": "Pilar",
-   "provincia": "",
-   "vertical": "logistica",
-   "fuente": "OpenStreetMap"
-  },
-  {
-   "empresa": "Zarcam Logística - CD Zarcam Pilar 10",
-   "web": "https://www.zarcam.com.ar/",
-   "telefono": "+54 230 4496502",
+   "empresa": "Piero SAIC",
+   "web": "https://www.piero.com.ar/",
+   "telefono": "",
    "email": "",
-   "ciudad": "Fátima",
+   "ciudad": "",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Stock Logística",
-   "web": "https://stocklogistica.com/",
-   "telefono": "+54 11 3658-0129",
-   "email": "administracion@stocklogistica.com",
-   "ciudad": "Villa Ballester",
+   "empresa": "Cheff SRL",
+   "web": "https://www.chefsrl.com/",
+   "telefono": "+54 11 4639-9009",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Logística Tortoriello",
-   "web": "https://www.tortoriello.com.ar/sitio/",
+   "empresa": "Establecimiento Don Guillermo",
+   "web": "https://www.donguillermosrl.com.ar/",
+   "telefono": "+54 3751 421904",
+   "email": "ventas@donguillermosrl.com.ar",
+   "ciudad": "Santiago de Liniers",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Zaplast S.A.",
+   "web": "http://www.zaplast.com.ar/",
+   "telefono": "+54 3487 425014",
+   "email": "",
+   "ciudad": "Zarate",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Molino de Yerba Mate - Secadero Guatambu",
+   "web": "https://aguantadora.com.ar/",
+   "telefono": "+54 3751480373",
+   "email": "info@aguantadora.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "UV VIS Metrolab S.A.",
+   "web": "http://metrolab.com.ar",
+   "telefono": "+54 11 4302-8433",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Bolsaplast",
+   "web": "https://bolsaplast.com.ar/",
+   "telefono": "+54 376 4434466",
+   "email": "",
+   "ciudad": "Posadas",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Maderas Laharrague",
+   "web": "http://www.victoriamaderas.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Montecarlo",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sanchez Sanchez Semillas",
+   "web": "https://www.sanchezsemillas.com.ar/",
+   "telefono": "+542644921841",
+   "email": "info@sanchezsemillas.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Tahersa Ind y Com Matrices",
+   "web": "http://www.tahersa.com",
+   "telefono": "+542494450840",
+   "email": "tahersa@tahersa.com",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "J&M Seguridad y Sistemas S.A.",
+   "web": "http://www.seguridadysistemas.com.ar/inicio.html",
+   "telefono": "",
+   "email": "info@seguridadysistemas.com.ar",
+   "ciudad": "Bragado",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "AADEE",
+   "web": "https://www.aadee.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Motor Parts S.A.",
+   "web": "https://www.mparts.com.ar/",
+   "telefono": "3492 407700",
+   "email": "ventas@mpi.com.ar",
+   "ciudad": "Lehmann",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Natural Sur",
+   "web": "https://naturalsur.com.ar/",
+   "telefono": "+54 223 483-1853",
+   "email": "",
+   "ciudad": "Mar del Plata",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "NC Mecanizados",
+   "web": "http://www.ncmecanizados.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Plastimi S.R.L.",
+   "web": "http://www.plastimi.com.ar",
+   "telefono": "+54 376 4457333",
+   "email": "ventas@plastimisrl.com.ar",
+   "ciudad": "Posadas",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Manufactura de Fibras Sintéticas S.A.",
+   "web": "https://www.mafissa.com.ar/",
+   "telefono": "+54 221 4961096",
+   "email": "",
+   "ciudad": "Lisandro Olmos",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mandiocas Fritas cManfrith",
+   "web": "http://productosmanfrith.com.ar/",
+   "telefono": "+54 3743 477383",
+   "email": "",
+   "ciudad": "Puerto Rico",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Block SRL",
+   "web": "https://blocks.com.ar/contactos/",
+   "telefono": "+54 376 4680970",
+   "email": "",
+   "ciudad": "Cerro Azul",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Ventiladores Titanio",
+   "web": "http://www.industriastitanio.com",
+   "telefono": "",
+   "email": "titanio@express.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Industrial Marcos",
+   "web": "https://www.industrialmarcos.com/",
+   "telefono": "+54 3755 425590",
+   "email": "indmarcos@yahoo.com.ar",
+   "ciudad": "Oberá",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Corblock SAIC",
+   "web": "https://www.corblock.com/",
+   "telefono": "+54 351 498 1310",
+   "email": "",
+   "ciudad": "Malagueño",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Calisa SA",
+   "web": "https://www.grupomotta.com/",
+   "telefono": "+54 343 487 6044",
+   "email": "",
+   "ciudad": "General Racedo",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Resortes Bélico",
+   "web": "http://www.resortesbelico.com.ar",
+   "telefono": "+54 11 4767-9132",
+   "email": "info@resortesbelico.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "PQN Casa Central",
+   "web": "https://pqnlimpieza.com/",
+   "telefono": "+54 236 43-11573",
+   "email": "",
+   "ciudad": "Junin",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Metalizaciones Rioplatenses",
+   "web": "http://www.metalizacionesrioplatenses.com.ar/",
+   "telefono": "011 5885-8888",
+   "email": "",
+   "ciudad": "General Rodriguez",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Laboratorios SL S.A.",
+   "web": "https://subiton.com/",
+   "telefono": "+54 11 5272 4060",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Pindo S.A.",
+   "web": "https://pindosa.com.ar/",
+   "telefono": "+54 3757 480213",
+   "email": "",
+   "ciudad": "Puerto Esperanza",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "LIPSIA S.A.",
+   "web": "https://lipsia.com.ar/",
+   "telefono": "+54 11 5217 8500",
+   "email": "info@lipsia.com.ar",
+   "ciudad": "Puerto Esperanza",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Lonera Vega",
+   "web": "https://www.loneravega.com.ar/",
+   "telefono": "+54 351 529 6829",
+   "email": "",
+   "ciudad": "Córdoba",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Ruberlac",
+   "web": "https://www.ruberlac.com.ar/",
+   "telefono": "+54 3743 420961",
+   "email": "contacto@ruberlac.com.ar",
+   "ciudad": "Puerto Rico",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Grupo Da Rosa",
+   "web": "https://www.grupodarosa.com.ar/",
+   "telefono": "+54 3755 461024",
+   "email": "",
+   "ciudad": "San Vicente",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sola y Brusa S.A",
+   "web": "http://www.solaybrusa.com/site/es/",
+   "telefono": "+54 342 4930141",
+   "email": "info@solaybrusa.com",
+   "ciudad": "Franck",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Feno-Dion",
+   "web": "https://www.qui-pa.com/",
+   "telefono": "+54 11 4441 1490",
+   "email": "ventas@qui-pa.com",
+   "ciudad": "San Justo",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Yerba Verdeflor",
+   "web": "https://yerbaverdeflor.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Córdoba",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "La Bocata Patagonia Food",
+   "web": "http://labocata.com.ar/patagonia-food-2/",
    "telefono": "",
    "email": "",
    "ciudad": "Cipolletti",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso Ríos del Sur",
-   "web": "https://www.expresoriosdelsur.com.ar/",
+   "empresa": "SAG Envasadora",
+   "web": "https://sagenvasadoras.com.ar/",
+   "telefono": "+54 9 353 4089851 / +54 9 353 4194761",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Juntamas SA",
+   "web": "https://juntamasmetal.com.ar/",
+   "telefono": "0353 4533529",
+   "email": "",
+   "ciudad": "Villa Maria",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Tecno Energy",
+   "web": "https://tecnoenergy.com.ar/",
+   "telefono": "353 4137556",
+   "email": "",
+   "ciudad": "Villa Nueva",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "VDU Equipamientos",
+   "web": "https://vdusrl.com/",
+   "telefono": "0353 4911198",
+   "email": "",
+   "ciudad": "Villa Nueva",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Banchio Hnos. SA Metalquímica",
+   "web": "http://www.metalquimicabanchio.com.ar/",
+   "telefono": "0353 4524906",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Nucleo Encendido SRL",
+   "web": "http://www.nucleoencendido.com/",
+   "telefono": "0351 5890300",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Triventar  Arquitectura Premoldeada",
+   "web": "http://www.triventar.com.ar/",
+   "telefono": "0351 2947761",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Promaíz S.A.",
+   "web": "https://www.promaiz.com.ar/",
+   "telefono": "0358 5618853",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Frigorifico Finexcor",
+   "web": "https://www.finexcor.com.ar/",
    "telefono": "",
    "email": "",
-   "ciudad": "Cipolletti",
+   "ciudad": "Bernal",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso Tokio",
-   "web": "http://expresotokio.com/",
-   "telefono": "+54 11 5921 5634",
+   "empresa": "Atenea Piscinas",
+   "web": "https://ateneapiscinas.com.ar",
+   "telefono": "+54 9 3764 77-7443",
+   "email": "info@ateneapiscinas.com.ar",
+   "ciudad": "Candelaria",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Agro Aceitunera",
+   "web": "https://agroaceitunera.com.ar/",
+   "telefono": "+54  11 5173 0600",
    "email": "",
-   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "ciudad": "Aimogasta",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso Santa Rita",
-   "web": "http://www.santaritatransporte.com.ar/",
-   "telefono": "+54 11 4919 0360",
+   "empresa": "Sanchez & Piccioni S. A.",
+   "web": "https://www.sanypic.com.ar/",
+   "telefono": "",
    "email": "",
-   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "ciudad": "",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso Tokio",
-   "web": "https://expresotokio.com.ar/",
-   "telefono": "+54 11 5921 5634",
+   "empresa": "Maderzu",
+   "web": "http://maderzu.com.ar/",
+   "telefono": "+54 3751 49-5059",
    "email": "",
-   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "ciudad": "9 de Julio",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso Carena",
-   "web": "https://www.expresocarena.com.ar",
-   "telefono": "+54 11 4919 9191",
+   "empresa": "Klimiuk Infusiones",
+   "web": "https://www.klimiukinfusiones.com/",
+   "telefono": "+54 3755 670004",
+   "email": "info@klimiukinfusiones.com",
+   "ciudad": "Campo Viera",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "La Tranquera",
+   "web": "https://comprarmate.com/tienda/yerbas/la-tranquera/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Los Helechos",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sudamérica Embalajes",
+   "web": "https://www.sudamericaembalajesweb.com.ar/",
+   "telefono": "+54 3754 423003",
+   "email": "info@sudamericaembalajes.com.ar",
+   "ciudad": "Leandro N. Alem",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sedami Sedas Misioneras",
+   "web": "https://www.sedamishopping.com.ar/",
+   "telefono": "+54 3751 57-9000",
+   "email": "sedamistore@gmail.com",
+   "ciudad": "9 de Julio",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Nicieza & Taverna",
+   "web": "https://www.nth.com.ar/es/",
+   "telefono": "+54 2346 431295",
+   "email": "",
+   "ciudad": "Chivilcoy",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Montreal Nutrition",
+   "web": "https://montrealnutrition.com.ar",
+   "telefono": "+54 9 (223) 449-8537",
+   "email": "montrealnutritionventas@gmail.com",
+   "ciudad": "General Pirán",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Cooperativa de Productores Jardín América Flor de Jardín",
+   "web": "https://flordejardin.com.ar/",
+   "telefono": "+54 3743 460277",
+   "email": "info@flordejardin.com.ar",
+   "ciudad": "Jardín América",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "ETMA",
+   "web": "https://es.etma.com.ar/",
+   "telefono": "+54 3492 430294",
+   "email": "info@etma.com.ar",
+   "ciudad": "Rafaela",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "TECNOCROM",
+   "web": "http://tecnocrom.com.ar/",
+   "telefono": "+54 342 4748555",
+   "email": "info@tecnocrom.com.ar",
+   "ciudad": "Santo Tomé",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "San Ignacio",
+   "web": "https://sanignacio.com.ar/arg.html",
+   "telefono": "+54 342 49 50 900",
+   "email": "info@sanignacio.com.ar",
+   "ciudad": "Sauce Viejo",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Provefarma",
+   "web": "https://www.provefarma.com.ar",
+   "telefono": "",
+   "email": "consultas@provefarma.com.ar",
+   "ciudad": "Sauce Viejo",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Provimi",
+   "web": "https://www.provimiargentina.com.ar/",
+   "telefono": "+54 3462 431480",
+   "email": "info_provimi_argentina@cargill.com",
+   "ciudad": "Venado Tuerto",
+   "provincia": "Santa Fe",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Ezeta",
+   "web": "https://ezeta.com",
+   "telefono": "+54 11 77000011",
+   "email": "",
+   "ciudad": "Carlos Spegazzini",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Viento Sur",
+   "web": "http://www.vientosurfabrica.com.ar/",
+   "telefono": "+54 343 4246577",
+   "email": "ventas@vientosurfabrica.com.ar",
+   "ciudad": "Paraná",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "AVA",
+   "web": "https://www.conservasava.com.ar/",
+   "telefono": "",
+   "email": "comercial@conservasava.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Lona Truck",
+   "web": "https://www.lonatruck.com",
+   "telefono": "+54 3754 421602",
+   "email": "lonatruck@gmail.com",
+   "ciudad": "Leandro N. Alem",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Lynch Cocinas",
+   "web": "https://www.lynchcocinas.com",
+   "telefono": "",
+   "email": "",
+   "ciudad": "El Talar",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Eriochem",
+   "web": "https://eriochem.com.ar/",
+   "telefono": "+54 343 4979125",
+   "email": "info@erio.com.ar",
+   "ciudad": "Colonia Avellaneda",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Air Liquide",
+   "web": "https://ar.airliquide.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Criadero El Carmen",
+   "web": "https://criaderoelcarmen.com.ar/",
+   "telefono": "+54 358 4930634",
+   "email": "contacto@criaderoelcarmen.com.ar",
+   "ciudad": "General Cabrera",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Acquatron S.A.",
+   "web": "https://www.acquatron.com.ar/",
+   "telefono": "011 4919-7172",
+   "email": "info@acquatron.com.ar",
+   "ciudad": "CABA",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Precintos Argentinos",
+   "web": "https://www.precintos.com.ar/",
+   "telefono": "011 6410-7552",
    "email": "",
    "ciudad": "CABA",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso El Tuyú",
-   "web": "https://www.expresoeltuyu.com.ar/",
-   "telefono": "+54 11 4919 6099",
+   "empresa": "Avíos",
+   "web": "https://www.aviosweb.com/",
+   "telefono": "011 4873-1745",
    "email": "",
    "ciudad": "CABA",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Oferrari Logística & Servicios",
-   "web": "https://www.oferrarisrl.com/",
+   "empresa": "Astillero Navegar",
+   "web": "https://www.astilleronavegar.com.ar",
    "telefono": "",
-   "email": "cipolletti@oferrarisrl.com",
-   "ciudad": "Cipolletti",
+   "email": "info@astilleronavegar.com.ar",
+   "ciudad": "Gualeguay",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso Oro Negro",
-   "web": "https://www.expresooronegro.com/",
-   "telefono": "+54 11 5091-9000",
-   "email": "traficoci@expresooronegro.com;refrigeradoci1@expresooronegro.com",
-   "ciudad": "Cipolletti",
+   "empresa": "WTA Cristales",
+   "web": "https://wta.com.ar/",
+   "telefono": "",
+   "email": "info@wta.com.ar",
+   "ciudad": "Berisso",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   },
   {
-   "empresa": "Expreso NuevoValle",
-   "web": "https://www.expresonuevovalle.com.ar/",
-   "telefono": "+54 299 479-2802",
+   "empresa": "Pessot",
+   "web": "https://www.pessot.com",
+   "telefono": "+54 3564 445920",
    "email": "",
-   "ciudad": "Cipolletti",
+   "ciudad": "San Francisco",
    "provincia": "",
-   "vertical": "logistica",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Gramont",
+   "web": "https://www.gramont.com.ar/",
+   "telefono": "+54 2284 351715",
+   "email": "ventas@gramont.com.ar",
+   "ciudad": "Olavarría",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Taeda S.A.",
+   "web": "https://taedasa.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Montecarlo",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Argenti Lemon",
+   "web": "https://argentilemon.com",
+   "telefono": "+54 381 4268300",
+   "email": "argentilemon@argentilemon.com",
+   "ciudad": "Banda del Río Salí",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sierra Pura",
+   "web": "https://sierrapura.com.ar",
+   "telefono": "11 7650-0003",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Quimiguay Córdoba",
+   "web": "https://www.quimiguay.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Mi Granja",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Galaxie SA - Secado Spray",
+   "web": "https://galaxiesd.com/",
+   "telefono": "(+54-11) 4204-7019",
+   "email": "info@galaxie.com.ar",
+   "ciudad": "Sarandí",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Tadeo Czerveny",
+   "web": "https://www.tadeoczerweny.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Gálvez",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Grupo Henn",
+   "web": "https://grupohenn.com",
+   "telefono": "+54 376 4424157",
+   "email": "hhenn@grupohenn.com",
+   "ciudad": "Mocoretá",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sur Técnica (De SisTrans S.A.)",
+   "web": "https://surtecnica.ar/",
+   "telefono": "+54 261 7195557",
+   "email": "",
+   "ciudad": "Guaymallén",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fabincal Córdoba S.A.",
+   "web": "https://fabincal.com.ar/",
+   "telefono": "0351-152550661",
+   "email": "",
+   "ciudad": "La Calera",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Vidalac - Planta Paraná",
+   "web": "https://www.vidalac.com/",
+   "telefono": "",
+   "email": "vidalac@vidalac.com",
+   "ciudad": "Paraná",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Frigorífico Forres Beltrán",
+   "web": "https://www.frigorificoforres.com.ar/",
+   "telefono": "385 490-2352",
+   "email": "ffb-institucional@frigorificoforres.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Trafigura Argentina - Refinería Ricardo Elicabe",
+   "web": "https://www.trafigura.com/locations/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Bahía Blanca",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Planta Santa Isabel Renault Argentina S.A.",
+   "web": "https://group.renault.com/groupe/implantations/nos-implantations-industrielles/usine-cordoba/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Pescio - Yesos Especiales",
+   "web": "http://www.pescio.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Unipar - Bahia Blanca",
+   "web": "https://unipar.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Cerro Negro",
+   "web": "https://cerronegro.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Punta Alvear - Cargill Argentina S.A.",
+   "web": "https://www.cargillargentina.com.ar",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "AFA (Agricultores Federados Argentinos)",
+   "web": "https://afascl.coop/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Bell Ville",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Lácteos San Francisco",
+   "web": "http://lacteossanfrancisco.com.ar/",
+   "telefono": "+54 9 (2392) 52-5167",
+   "email": "contacto@lacteossanfrancisco.com.ar",
+   "ciudad": "Salliqueló",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Trelau",
+   "web": "https://www.quesostrelau.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Trenque Lauquen",
+   "provincia": "Buenos Aires",
+   "vertical": "manufactura",
    "fuente": "OpenStreetMap"
   }
  ]
