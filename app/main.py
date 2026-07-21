@@ -1890,13 +1890,29 @@ async def api_diag_gsc(request: Request):
         sa = json.loads(_gs().google_service_account_json).get("client_email", "")
     except Exception:
         pass
-    return {"service_account": sa,
-            "propiedades": [{"siteUrl": s.get("siteUrl"),
-                             "permiso": s.get("permissionLevel")} for s in sitios],
-            "listo": bool(sitios),
-            "ayuda": ("" if sitios else
-                      "Search Console → Configuración → Usuarios y permisos → "
-                      f"Agregar usuario → {sa} (permiso: Restringido)")}
+    urls = [s.get("siteUrl", "") for s in sitios]
+    # Ver ALGUNA propiedad no alcanza: tiene que ser la del dominio real. La de
+    # vercel.app es otro hostname y devolvería métricas de un sitio que nadie visita.
+    correcta = [u for u in urls if sc._CANONICAL in u]
+    out = {"service_account": sa,
+           "propiedades": [{"siteUrl": s.get("siteUrl"),
+                            "permiso": s.get("permissionLevel")} for s in sitios],
+           "listo": bool(correcta)}
+    if not sitios:
+        out["ayuda"] = ("Search Console → Configuración → Usuarios y permisos → "
+                        f"Agregar usuario → {sa} (permiso: Restringido)")
+    elif not correcta:
+        out["ayuda"] = (f"ve {len(urls)} propiedad(es) pero ninguna de {sc._CANONICAL}: "
+                        f"{urls}. Agregala en la propiedad del dominio real.")
+    else:
+        # Prueba de fuego: que los datos lleguen, no solo el permiso.
+        snap = sc.snapshot()
+        out["datos"] = ({"sitio": snap.get("sitio"), "periodo": snap.get("periodo"),
+                         "totales": snap.get("totales"),
+                         "consultas_subiendo": len(snap.get("subiendo") or []),
+                         "a_tiro_de_pagina1": len(snap.get("a_tiro_de_pagina1") or [])}
+                        if snap.get("ok") else {"error": snap.get("error")})
+    return out
 
 
 @app.get("/api/diag/hermes")

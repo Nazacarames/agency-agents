@@ -35,6 +35,13 @@ _API = "https://searchconsole.googleapis.com/webmasters/v3/sites"
 _LAG_DAYS = 3
 _WINDOW = 28
 
+# El dominio real del sitio. La landing vive en Vercel y su hostname interno
+# (automiq-landing-astro.vercel.app) está dado de alta como propiedad SEPARADA en
+# Search Console. Sin este filtro, si la service account llega a tener acceso a
+# las dos, puede elegir la de Vercel y devolver métricas de un hostname que nadie
+# visita — con toda la pinta de ser datos válidos.
+_CANONICAL = "automiq.agency"
+
 
 def enabled() -> bool:
     # GSC_SITE_URL es OPCIONAL: si no está, se descubre solo (ver _resolve_site).
@@ -75,8 +82,18 @@ def _resolve_site(sess) -> str:
             "la service account no tiene ninguna propiedad: agregá su client_email "
             "como usuario en Search Console (Configuración → Usuarios y permisos)")
     urls = [e.get("siteUrl", "") for e in entries]
-    dominio = [u for u in urls if u.startswith("sc-domain:")]
-    elegida = (dominio or urls)[0]
+    # Tiene que ser el dominio REAL, no cualquier propiedad que la SA vea. La
+    # landing vive en Vercel y su hostname interno (automiq-landing-astro.
+    # vercel.app) es una propiedad SEPARADA en Search Console: elegirla daría
+    # métricas de un hostname que nadie visita, con pinta de datos válidos.
+    propias = [u for u in urls if _CANONICAL in u]
+    if not propias:
+        raise PermissionError(
+            f"la service account ve {len(urls)} propiedad(es) pero ninguna de "
+            f"{_CANONICAL}: {urls}. Agregala como usuario en la propiedad de "
+            f"{_CANONICAL} (la de vercel.app no sirve: es otro hostname)")
+    dominio = [u for u in propias if u.startswith("sc-domain:")]
+    elegida = (dominio or propias)[0]
     log.info("gsc_site_descubierta", elegida=elegida, disponibles=len(urls))
     return elegida
 
