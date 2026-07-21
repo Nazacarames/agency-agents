@@ -320,7 +320,7 @@ class BaseAgent(ABC):
                             self._skills_preamble() + user_msg,
                             settings=ctx.settings, llm_provider=prov,
                             system_append=local_system, timeout=self.claude_code_timeout,
-                            max_turns=self.hermes_max_turns)
+                            max_turns=self.hermes_max_turns, agente=self.name)
                         response = MiniMaxResponse(
                             text=h_text, model=f"hermes:{prov or 'minimax'}",
                             input_tokens=0, output_tokens=0,

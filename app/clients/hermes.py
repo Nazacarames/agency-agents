@@ -75,7 +75,7 @@ _HERMES_SEARCH_KEYS = ("TAVILY_API_KEY", "EXA_API_KEY", "PARALLEL_API_KEY",
                        "BRAVE_SEARCH_API_KEY")
 
 
-def _wire_search_backend(env: dict, settings: Settings) -> None:
+def _wire_search_backend(env: dict, settings: Settings, agente: str = "") -> None:
     """Apunta el `web_search` de Hermes a nuestra cascada vía el shim SearXNG.
 
     Hermes elige UN backend y NO reintenta con otro si falla. Con Tavily seteada
@@ -89,7 +89,8 @@ def _wire_search_backend(env: dict, settings: Settings) -> None:
     if not getattr(settings, "webhook_secret", ""):
         return
     port = os.environ.get("PORT", "8000")
-    env["SEARXNG_URL"] = f"http://127.0.0.1:{port}/api/searx/{settings.webhook_secret}"
+    env["SEARXNG_URL"] = (f"http://127.0.0.1:{port}/api/searx/"
+                          f"{settings.webhook_secret}/{agente or 'desconocido'}")
     for k in _HERMES_SEARCH_KEYS:
         env.pop(k, None)
 
@@ -104,6 +105,7 @@ def run_hermes(
     max_turns: int = 15,
     cwd: Optional[str] = None,
     toolsets: Optional[str] = None,
+    agente: str = "",
 ) -> str:
     """Corre `hermes chat -q` headless y devuelve el texto final.
 
@@ -134,7 +136,7 @@ def run_hermes(
     except Exception as e:
         log.warning("hermes_home_fallback_ephemeral", error=str(e)[:120])
 
-    _wire_search_backend(env, settings)
+    _wire_search_backend(env, settings, agente)
 
     # El stdout/stderr van SIEMPRE a un temp propio: si `cwd` es un proyecto real,
     # escribir los .bin adentro lo ensuciaría y el rmtree del final lo borraría.

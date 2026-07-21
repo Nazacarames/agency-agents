@@ -265,6 +265,8 @@ class WebOptimizerAgent(BaseAgent):
                 timeout=self.claude_code_timeout,
                 cwd=root,
                 toolsets="web,file,skills,memory,todo",
+                max_turns=self.hermes_max_turns,
+                agente=self.name,
             )
             log.info("webopt_via_hermes", run_id=ctx.run_id)
         except Exception as e:
