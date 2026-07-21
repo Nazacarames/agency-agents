@@ -343,6 +343,20 @@ class LeadHunterAgent(BaseAgent):
                 )
         except Exception:
             pass
+        # Candidatas reales de OpenStreetMap. Van DESPUÉS de las empresas ya
+        # contactadas para poder excluirlas: el descubrimiento pasa a ser código,
+        # no una decisión del modelo (que medido no buscaba nunca).
+        try:
+            from ..integrations import osm_leads, leads_store as _ls
+            try:
+                ya = set(_ls.known_companies(_ls.load_store(), limit=300))
+            except Exception:
+                ya = set()
+            bloque = osm_leads.bloque_prompt(25, excluir=ya)
+            if bloque:
+                parts.append(bloque.strip())
+        except Exception as e:
+            log.warning("leadhunter_osm_failed", error=str(e)[:200])
         return ("\n\n" + "\n\n".join(parts)) if parts else ""
 
     def build_user_message(self, ctx: AgentContext) -> str:
@@ -375,16 +389,13 @@ class LeadHunterAgent(BaseAgent):
             f"{self._learning_block(ctx)}\n\n"
             "Sos un agente de prospecting B2B. Cargá y seguí la skill `prospecting` "
             "(usá la tool Skill si está disponible).\n\n"
-            "✅ TENÉS BÚSQUEDA WEB REAL (Google vía Serper). Usala como PRIMER paso de "
-            "cada lead: es la diferencia entre descubrir PyMEs que no conocés y adivinar "
-            "dominios a mano. Si una búsqueda devuelve 0 resultados, probá otra redacción "
-            "antes de asumir que no anda.\n"
-            "1. DESCUBRIMIENTO: buscá con consultas específicas por rubro + ciudad/provincia "
-            "(ej. 'distribuidora mayorista limpieza Rosario', 'fábrica autopartes parque "
-            "industrial Córdoba'). Complementá con WebFetch sobre directorios y guías "
-            "sectoriales argentinas: cámaras industriales por provincia, guías de parques "
-            "industriales, Páginas Amarillas/Doradas AR por rubro+ciudad, asociaciones "
-            "sectoriales. Extraé nombres de empresa + su web oficial.\n"
+            "✅ TENÉS BÚSQUEDA WEB REAL (Google vía Serper) para enriquecer: decisor, "
+            "noticias, señales de dolor, vacantes. Usala sin miedo.\n"
+            "1. DESCUBRIMIENTO: arrancá por las CANDIDATAS que te paso abajo (son reales y "
+            "ya vienen con sitio). Si necesitás más, buscá por rubro + ciudad (ej. "
+            "'distribuidora mayorista limpieza Rosario') o mirá directorios sectoriales "
+            "argentinos con WebFetch: cámaras industriales por provincia, guías de parques "
+            "industriales, asociaciones del rubro.\n"
             "2. CALIFICACIÓN: con WebFetch abrí el sitio de cada candidata y confirmá rubro, "
             "tamaño aproximado (25–100 empleados) y decisor.\n"
             "3. VERIFICACIÓN de contacto: buscá en el sitio (home, /contacto, /quienes-somos, "

@@ -1,0 +1,1225 @@
+{
+ "actualizado": "2026-07-21T18:19:59.531173+00:00",
+ "empresas": [
+  {
+   "empresa": "Distribuidora del Sur",
+   "web": "http://www.wix.com/empquique/pluchinoled",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Racer S.R.L.",
+   "web": "https://racer.com.ar/",
+   "telefono": "+54 362 4448448",
+   "email": "",
+   "ciudad": "Resistencia",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Arbell Distribuidora Puerto Rico",
+   "web": "http://micronetmnes.blospot.com.ar",
+   "telefono": "+54 3743 519679",
+   "email": "",
+   "ciudad": "Puerto Rico",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Liderma",
+   "web": "https://www.lidherma.com",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Santa Fe",
+   "provincia": "Santa Fe",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Marozzi distribuidora",
+   "web": "http://www.bateriasmarozzi.com.ar/",
+   "telefono": "+54 3492 43 3895",
+   "email": "distribuidorastar2@distribuidorastar.com.ar",
+   "ciudad": "Rafaela",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Báez",
+   "web": "http://www.distribuidorabaez.com.ar",
+   "telefono": "+54 9 3781 40 2028",
+   "email": "info@distribuidorabaez.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Yñigo Genio",
+   "web": "http://www.ynigogenio.com",
+   "telefono": "",
+   "email": "distribuidora@ynigogenio.com",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Jota Be SA",
+   "web": "https://www.distribuidorajotabe.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Posadas",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Lubri-Lean Lubricantes - Distribuidora",
+   "web": "http://www.lubri-lean.com",
+   "telefono": "+54 3755 40 4853",
+   "email": "info@lubri-lean.com",
+   "ciudad": "Oberá",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Abarca SRL",
+   "web": "https://abarcaonline.com/",
+   "telefono": "+54 3755 421316",
+   "email": "abarca@abarcaonline.com",
+   "ciudad": "Guaraní",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Fratelli Distribuidora",
+   "web": "https://m.facebook.com/fratelli.bariloche",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Mauri",
+   "web": "https://www.facebook.com/Distribuidora-Mauri-1661022334148755",
+   "telefono": "+54 9 249 456-4049",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sipea Distribuciones",
+   "web": "https://sipeadistribuciones.com/",
+   "telefono": "+54 9 342 489-3359",
+   "email": "info@sipeadistribuciones.com",
+   "ciudad": "Santa Fe",
+   "provincia": "Santa Fe",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Castro Distribuidora",
+   "web": "https://www.castrodistribuidora.com.ar/",
+   "telefono": "+542617170710",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Integral Distribuciones",
+   "web": "https://www.libreriaintegral.com/",
+   "telefono": "+542644226461",
+   "email": "integraldistribuciones@hotmail.com",
+   "ciudad": "San Juan",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "SB Distribuciones",
+   "web": "https://www.sbdistribuciones.com.ar/",
+   "telefono": "+54 11 4755-3482",
+   "email": "",
+   "ciudad": "San Andrés",
+   "provincia": "Buenos Aires",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora HJ",
+   "web": "https://distribuidorahj.com.ar/",
+   "telefono": "+54 2227 42-4653",
+   "email": "info@distribuidorahj.com.ar",
+   "ciudad": "Lobos",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mayorista Mascotas Distribuidora Gerardo Hodulich",
+   "web": "http://mayoristamascotas.com.ar/",
+   "telefono": "+54 353 452 7929",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "HRM Distribuidora",
+   "web": "http://www.hrmdistribuidora.com.ar/",
+   "telefono": "+54 353 452 3773",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Acme Distribuidora",
+   "web": "https://www.acmedistribuidora.com.ar/",
+   "telefono": "+54 353 452 4415",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Total Distribuciones",
+   "web": "http://www.totaldistribuciones.com.ar",
+   "telefono": "",
+   "email": "info@totaldistribuciones.com.ar",
+   "ciudad": "Gobernador Agrónomo Valentín Virasoro",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Suñe",
+   "web": "http://sunedistribuciones.com.ar/",
+   "telefono": "+54 342 4690 429",
+   "email": "",
+   "ciudad": "Santa Fe",
+   "provincia": "Santa Fe",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Benedetich Distribuciones",
+   "web": "https://benedetichdistribuciones.es.tl/Home.htm",
+   "telefono": "",
+   "email": "carlosbenedetich@hotmail.com",
+   "ciudad": "Paraná",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "MERCOSUR distribuciones",
+   "web": "https://mercosurdistribuciones.com.ar/",
+   "telefono": "+54 3751 420259",
+   "email": "consultas@mercosurdistribuciones.com.ar",
+   "ciudad": "Eldorado",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Total Distribuciones",
+   "web": "https://somostotal.com.ar/",
+   "telefono": "+54 3755426400",
+   "email": "",
+   "ciudad": "Oberá",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Empresa Distribuidora de Electricidad de Santiago del Estero",
+   "web": "https://www.edese.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Santiago del Estero",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Planta distribuidora de combustibles",
+   "web": "http://www.naocombustibles.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Oeste",
+   "web": "https://www.doeste.com.ar/",
+   "telefono": "+54 2342 42-5937",
+   "email": "",
+   "ciudad": "Bragado",
+   "provincia": "Buenos Aires",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Mayjo",
+   "web": "https://mayjo.com.ar/",
+   "telefono": "+54 9 11 5962-5786",
+   "email": "",
+   "ciudad": "Parque San Martín",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Sur S.R.L.",
+   "web": "http://www.surdistribuidora.com.ar/",
+   "telefono": "+542914310746",
+   "email": "",
+   "ciudad": "General Manuel Jorge Campos",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Mayorista Cabane",
+   "web": "https://www.distribuidoracabane.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Neuquén",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Datis",
+   "web": "http://www.datissrl.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Zapala",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Cimar Distribuciones",
+   "web": "https://cimarsrl.com.ar/nuevacimar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Neuquén",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Leo",
+   "web": "https://distribuidoraleo.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Neuquén",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Don Antonio Distribuidora",
+   "web": "https://donantoniodistribuidora.com/",
+   "telefono": "",
+   "email": "info@donantoniodistribuidora.com",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Frigorifico y Distribuidora Prospitti",
+   "web": "https://www.frigorificoprospitti.com",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "EFA Distribuidora",
+   "web": "https://www.efadistribuidora.com/",
+   "telefono": "+54 299 510-5034",
+   "email": "efadistribuidora@hotmail.com",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Caleuche",
+   "web": "https://distribuidoracaleuche.blogspot.com/",
+   "telefono": "+54 297 242-9353",
+   "email": "caleuche@live.com.ar",
+   "ciudad": "San Martín de los Andes",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Empresa Distribuidora de Energía Norte",
+   "web": "https://www.edensa.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Distribuidora Echeverría",
+   "web": "https://www.instagram.com/echeverria.dee/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "DH Mayorista",
+   "web": "https://dhmayorista.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Procel Mayorista",
+   "web": "https://www.procel-accesorios.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Córdoba",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Misiones Mayorista",
+   "web": "https://www.misionesmayorista.com/",
+   "telefono": "+54 376 5018955",
+   "email": "",
+   "ciudad": "Posadas",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Café America Mayorista",
+   "web": "https://www.americamayorista.com.ar",
+   "telefono": "+54 264 423 0453",
+   "email": "sugerencias@americamayorista.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mayorista de Golosinas El Aguila",
+   "web": "https://www.parana.com.ar/mayorista-el-aguila",
+   "telefono": "+54 343 5011717",
+   "email": "",
+   "ciudad": "Paraná",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Cabral Mayorista",
+   "web": "https://cabralmayorista.com.ar",
+   "telefono": "",
+   "email": "ventas.cabralmayorista@gmail.com",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Gómez Pardo Mayorista",
+   "web": "https://www.gomezpardo.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Concepción",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mayorista Celeste y Blanca",
+   "web": "https://www.tiendacelesteyblanca.com",
+   "telefono": "+54 343 4142030",
+   "email": "info@celesteyblanca.com.ar",
+   "ciudad": "Paraná",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Stock In - Mayorista Multimarcas - Lexico, Oreiro Love y muchas más.",
+   "web": "https://www.stockin.ar",
+   "telefono": "+54 9 351 7180888",
+   "email": "pedidos@mhtendencias.com.ar",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mayorista El Indio",
+   "web": "https://www.elindio.com.ar/",
+   "telefono": "+54 362 4475888",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mayorista El Regional",
+   "web": "https://es-la.facebook.com/Mayoristaelregional/",
+   "telefono": "+54 223 465 1284",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mayorista Diarco",
+   "web": "https://diarco.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Berazategui",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Supermercado Mayorista Jaguar",
+   "web": "http://yaguar.com",
+   "telefono": "+54 3489 425000",
+   "email": "",
+   "ciudad": "Campana",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mayorista Hergo",
+   "web": "https://hergo.com.ar/",
+   "telefono": "+54 223 465 3434",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "ROR Mayoristas",
+   "web": "https://ror.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Neuquén",
+   "provincia": "",
+   "vertical": "distribucion",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Almacén de Envases",
+   "web": "https://almacendeenvases.com/",
+   "telefono": "+54 223 4741904",
+   "email": "almacendeenvases@gmail.com",
+   "ciudad": "Mar del Plata",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Industria de envases",
+   "web": "http://www.zaplast.com.ar/",
+   "telefono": "+54 3487 42-5014",
+   "email": "",
+   "ciudad": "Zarate",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Schott Envases Argentina",
+   "web": "https://www.schott.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Munro",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Grupo Autopartes",
+   "web": "http://grupo-autopartes.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "San Miguel de Tucumán",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Metalúrgica Alem SRL",
+   "web": "http://www.metalurgicaalem.com.ar",
+   "telefono": "+54 3754 422611",
+   "email": "",
+   "ciudad": "Leandro N. Alem",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Metalurgica Finke",
+   "web": "https://metalurgicafinke.com/",
+   "telefono": "+54 3755 470864",
+   "email": "metalurgicafinke@hotmail.com",
+   "ciudad": "Aristóbulo del Valle",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Metalúrgica VZ",
+   "web": "https://www.metalurgicavz.com.ar",
+   "telefono": "+54 3472 444909",
+   "email": "",
+   "ciudad": "Marcos Juárez",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "MAD SRL Autopartes y Accesorios",
+   "web": "http://www.madsrl.com.ar/",
+   "telefono": "+54 353 453 5182",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Grabado de Autopartes",
+   "web": "https://turnos.sgaba.com.ar/",
+   "telefono": "08004440018",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Metalurgica El Talar",
+   "web": "https://www.metalurgicaeltalar.com.ar",
+   "telefono": "+54 11 4740-6068",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Industrias Metalúrgicas Pescarmona S.A. (IMPSA)",
+   "web": "https://www.impsa.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Godoy Cruz",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Metalurgica San Pedro",
+   "web": "http://www.metalurgicasanpedro.com.ar/",
+   "telefono": "+54 3743 493179",
+   "email": "info@metalurgicasanpedro.com.ar",
+   "ciudad": "Capioví",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "VF Metalúrgica",
+   "web": "http://www.vfmetalurgica.com.ar",
+   "telefono": "+543755424206",
+   "email": "vfmetalurgicaobera@gmail.com",
+   "ciudad": "Oberá",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Reciclar Autopartes",
+   "web": "http://reciclarautopartes.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Guaraní",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Unión Obrera Metalúrgica",
+   "web": "https://uom.org.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Neuquén",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sica Metalúrgica Argentina S.A.",
+   "web": "https://sica.net.ar/",
+   "telefono": "+54 3496 42 4242",
+   "email": "",
+   "ciudad": "Esperanza",
+   "provincia": "",
+   "vertical": "manufactura",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "MJM TRANSPORTES SA",
+   "web": "https://www.mjmsa.com.ar",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Dirección de Tránsito y Transporte",
+   "web": "http://www.bahiablanca.gov.ar/conduce/",
+   "telefono": "+54 291 455 8978",
+   "email": "",
+   "ciudad": "Bahía Blanca",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Empresa de transporte Galvense",
+   "web": "https://www.grupogalvense.com.ar/galvense/",
+   "telefono": "+54 03404 48-2027",
+   "email": "cunadelabandera@grupogalvense.com.ar",
+   "ciudad": "Gálvez",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transporte Snaider",
+   "web": "https://www.transportesnaider.com/",
+   "telefono": "+54 376 445-8558",
+   "email": "posadas@transportesnaider.com",
+   "ciudad": "Posadas",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Subsecretaría de Tránsito y Transporte",
+   "web": "http://www.bariloche.gov.ar/tramite2014.php?tramite=1",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "CNRT Control del Transporte",
+   "web": "https://www.cnrt.gob.ar",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transporte Panisa",
+   "web": "https://www.transportepanisa.com",
+   "telefono": "w",
+   "email": "contacto@transpanisa.com",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transporte Chos Malal",
+   "web": "http://www.transportechosmalal.com.ar/",
+   "telefono": "+54 2948 42 1184",
+   "email": "",
+   "ciudad": "Chos Malal",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transportes ANITA",
+   "web": "https://www.transportesanita.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Real del Padre",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Ministerio del Interior y Transporte",
+   "web": "http://www.mininterior.gov.ar",
+   "telefono": "+54 11 4339-0800",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transporte Mostto",
+   "web": "https://www.transportemostto.com.ar/",
+   "telefono": "+54 3446 423909 / 427444",
+   "email": "",
+   "ciudad": "Gualeguaychú",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transporte Elisero",
+   "web": "http://www.transporteelisaro.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "FJW Transporte",
+   "web": "http://www.fjwsa.com.ar",
+   "telefono": "+54 376 445 0100",
+   "email": "fjwsat@arnet.com.ar",
+   "ciudad": "Posadas",
+   "provincia": "Misiones",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Control Transporte de Pasajeros \"El Cacique\" S.A. (Grupos 300;900)",
+   "web": "https://www.elcaciquesa.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Centro Municipal de Capacitación de Transporte y Transito",
+   "web": "http://www2.cordoba.gov.ar/portal/index.php/secretaria-de-servicios-publicos/direccion-centro-de-capacitacion-de-transporte-y-transito/",
+   "telefono": "+54 351 434 8509",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Subsecretaría de Transporte Y Licencias",
+   "web": "https://licencias.serviciosmerlo.net/",
+   "telefono": "+54 220 482 6041",
+   "email": "",
+   "ciudad": "Merlo",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transporte Libertador S.A.",
+   "web": "https://translibertador.com/",
+   "telefono": "+54 230 444 0666",
+   "email": "",
+   "ciudad": "Fátima",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Omar Snaider Transporte y Logística",
+   "web": "http://omarsnaider.com/",
+   "telefono": "+54 362 441-7177",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transportes Automotores 20 de Junio",
+   "web": "http://www.la20.com.ar/",
+   "telefono": "+54 9 0264 425 0283",
+   "email": "informes@la20.com.ar",
+   "ciudad": "Santa Lucía",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Planta de Verificación y Habilitación de Transporte",
+   "web": "https://www.buenosaires.gob.ar/tramites/verificacion-y-habilitacion-de-transporte",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Dirección Provincial de Transporte",
+   "web": "https://transporte.neuquen.gov.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Neuquén",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Sindicato de Choferes de Camiones y Empleados del Transporte de Cargas de Neuquén",
+   "web": "https://www.camionerosnqn.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Cutral Có",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transporte Imaz",
+   "web": "https://www.transporteimaz.com.ar/",
+   "telefono": "+54 299 477-4106",
+   "email": "imazcipo@hotmail.com",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Cámara Patagónica de Empresas de Autotransporte de Cargas",
+   "web": "https://www.capeac.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Junta de Seguridad del Transporte",
+   "web": "https://www.argentina.gob.ar/jst",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transporte Espinosa",
+   "web": "https://www.transporteespinosa.com/contacto",
+   "telefono": "+54 11 4919 9938",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Dirección de Tránsito y Transporte",
+   "web": "https://gralfernandezoro.gob.ar/gobierno-ciudad",
+   "telefono": "+54 299 418-6934",
+   "email": "transito@gralfernandezoro.gob.ar",
+   "ciudad": "General Fernández Oro",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transportes Tomassini",
+   "web": "https://tomassinisrl.com.ar/",
+   "telefono": "+54 9 291 455 1015",
+   "email": "bahia@tomassinisrl.com.ar",
+   "ciudad": "Bahía Blanca",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transportes Ezquerra",
+   "web": "https://www.transportesezquerra.com.ar/",
+   "telefono": "+54 9 11 5717 8491",
+   "email": "",
+   "ciudad": "CABA",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "La Ruta Transportes",
+   "web": "http://larutatransportes.com.ar/",
+   "telefono": "+54 11 7017 4264",
+   "email": "",
+   "ciudad": "CABA",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transportes Santa Marta del Norte (Casa Central)",
+   "web": "https://www.stamarta.com.ar/",
+   "telefono": "+54 11 4912 0186",
+   "email": "info@stamarta.com.ar",
+   "ciudad": "CABA",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Rodriguez Hermanos Transporte",
+   "web": "https://www.rht.com.ar",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Transportes Uspallata",
+   "web": "https://turismouspallata.com/tu/",
+   "telefono": "+54 261 430 7676",
+   "email": "",
+   "ciudad": "Mendoza",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso Payún",
+   "web": "https://www.expresopayun.com/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Malargüe",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso El Carrizal",
+   "web": "http://www.ecsa.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Mb Logística - Autoelevadores - Fletes - Grúas de Auxilio",
+   "web": "https://www.auxiliorwcircolani.com/",
+   "telefono": "+54 353 406 5634",
+   "email": "",
+   "ciudad": "",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso Rivadavia",
+   "web": "https://www.expresorivadavia.com/",
+   "telefono": "+543814268130",
+   "email": "info@expresorivadavia.com",
+   "ciudad": "Pacará Pintado",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Logística y Servicios Integrales S.A.",
+   "web": "http://www.lservicios.com.ar/",
+   "telefono": "+54 230 449 6605",
+   "email": "comercial_lysi@speedy.com.ar",
+   "ciudad": "Fátima",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Celsur logística - Plataforma Logística Pilar 1",
+   "web": "http://celsur.com.ar/",
+   "telefono": "+54 230 4496460",
+   "email": "comercial@celsur.com.ar",
+   "ciudad": "Pilar",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Zarcam Logística - CD Zarcam Pilar 10",
+   "web": "https://www.zarcam.com.ar/",
+   "telefono": "+54 230 4496502",
+   "email": "",
+   "ciudad": "Fátima",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Stock Logística",
+   "web": "https://stocklogistica.com/",
+   "telefono": "+54 11 3658-0129",
+   "email": "administracion@stocklogistica.com",
+   "ciudad": "Villa Ballester",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Logística Tortoriello",
+   "web": "https://www.tortoriello.com.ar/sitio/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso Ríos del Sur",
+   "web": "https://www.expresoriosdelsur.com.ar/",
+   "telefono": "",
+   "email": "",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso Tokio",
+   "web": "http://expresotokio.com/",
+   "telefono": "+54 11 5921 5634",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso Santa Rita",
+   "web": "http://www.santaritatransporte.com.ar/",
+   "telefono": "+54 11 4919 0360",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso Tokio",
+   "web": "https://expresotokio.com.ar/",
+   "telefono": "+54 11 5921 5634",
+   "email": "",
+   "ciudad": "Ciudad Autónoma de Buenos Aires",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso Carena",
+   "web": "https://www.expresocarena.com.ar",
+   "telefono": "+54 11 4919 9191",
+   "email": "",
+   "ciudad": "CABA",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso El Tuyú",
+   "web": "https://www.expresoeltuyu.com.ar/",
+   "telefono": "+54 11 4919 6099",
+   "email": "",
+   "ciudad": "CABA",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Oferrari Logística & Servicios",
+   "web": "https://www.oferrarisrl.com/",
+   "telefono": "",
+   "email": "cipolletti@oferrarisrl.com",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso Oro Negro",
+   "web": "https://www.expresooronegro.com/",
+   "telefono": "+54 11 5091-9000",
+   "email": "traficoci@expresooronegro.com;refrigeradoci1@expresooronegro.com",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  },
+  {
+   "empresa": "Expreso NuevoValle",
+   "web": "https://www.expresonuevovalle.com.ar/",
+   "telefono": "+54 299 479-2802",
+   "email": "",
+   "ciudad": "Cipolletti",
+   "provincia": "",
+   "vertical": "logistica",
+   "fuente": "OpenStreetMap"
+  }
+ ]
+}
