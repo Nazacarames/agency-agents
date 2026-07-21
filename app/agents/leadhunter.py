@@ -173,8 +173,12 @@ genéricos ni "personalización media". Para cada lead, incluir:
   o APIs (APOLLO_API_KEY, ZOOMINFO_API_KEY, TRUELIST_API_KEY, CLAY_API_KEY), usalas.
 - Guardas: no hacer scraping masivo de LinkedIn/Google Maps ni bypass de CAPTCHA.
 
-## Fallback obligatorio cuando no hay tools ni APIs disponibles
-**IMPORTANTE**: Si no tenés acceso a browser, skills ni APIs de enriquecimiento:
+## Fallback cuando NO hay tools (último recurso, no atajo)
+**Antes de declararte offline, PROBÁ**: al menos 3 búsquedas con redacciones distintas.
+Si alguna devuelve resultados, NO estás offline y este bloque NO aplica — buscar es
+siempre mejor que recordar. Declarar "modo offline" teniendo buscador es un run fallido.
+
+**IMPORTANTE**: Si de verdad no hay browser, búsqueda, skills ni APIs de enriquecimiento:
 - **NO devuelvas "no puedo"** ni un mensaje de error. Eso no es útil para el equipo.
 - Generá los 10 leads usando datos de tu training, pero RESPETANDO EL FILTRO DE TAMAÑO:
   PyMEs chicas/medianas regionales (25–100 empleados), NO marcas grandes ni famosas. Si la
@@ -369,15 +373,18 @@ class LeadHunterAgent(BaseAgent):
             f"'EXACTAMENTE 10' del system prompt). Priorizá calidad de contacto verificable "
             f"sobre cantidad; con {target} leads sólidos alcanza."
             f"{self._learning_block(ctx)}\n\n"
-            "Sos un agente de prospecting B2B corriendo en Claude Code. Cargá y seguí la "
-            "skill `prospecting` (usá la tool Skill si está disponible).\n\n"
-            "⚠️ NO tenés WebSearch (no funciona en este entorno). Descubrí empresas así:\n"
-            "1. DESCUBRIMIENTO por directorios: usá WebFetch sobre directorios y guías "
-            "sectoriales argentinas para listar empresas reales del rubro objetivo "
-            "(manufactura, distribución, logística, inmobiliarias). Ejemplos de fuentes a "
-            "fetchear: cámaras industriales por provincia, guías de parques industriales, "
-            "Páginas Amarillas/Doradas AR por rubro+ciudad, asociaciones sectoriales, "
-            "listados de proveedores. Extraé nombres de empresa + su web oficial.\n"
+            "Sos un agente de prospecting B2B. Cargá y seguí la skill `prospecting` "
+            "(usá la tool Skill si está disponible).\n\n"
+            "✅ TENÉS BÚSQUEDA WEB REAL (Google vía Serper). Usala como PRIMER paso de "
+            "cada lead: es la diferencia entre descubrir PyMEs que no conocés y adivinar "
+            "dominios a mano. Si una búsqueda devuelve 0 resultados, probá otra redacción "
+            "antes de asumir que no anda.\n"
+            "1. DESCUBRIMIENTO: buscá con consultas específicas por rubro + ciudad/provincia "
+            "(ej. 'distribuidora mayorista limpieza Rosario', 'fábrica autopartes parque "
+            "industrial Córdoba'). Complementá con WebFetch sobre directorios y guías "
+            "sectoriales argentinas: cámaras industriales por provincia, guías de parques "
+            "industriales, Páginas Amarillas/Doradas AR por rubro+ciudad, asociaciones "
+            "sectoriales. Extraé nombres de empresa + su web oficial.\n"
             "2. CALIFICACIÓN: con WebFetch abrí el sitio de cada candidata y confirmá rubro, "
             "tamaño aproximado (25–100 empleados) y decisor.\n"
             "3. VERIFICACIÓN de contacto: buscá en el sitio (home, /contacto, /quienes-somos, "
@@ -426,10 +433,14 @@ class LeadHunterAgent(BaseAgent):
         import re as _re
         from ..integrations.site_validator import site_phone_digits
 
+        # Solo sitios PROPIOS de la empresa: un perfil de IG o un link de Maps no
+        # publica el teléfono en el HTML y solo ensucia el bloque con "no pude leer".
+        AJENOS = ("wa.me", "linkedin.", "instagram.", "facebook.", "goo.gl", "google.",
+                  "twitter.", "x.com", "youtube.", "tiktok.", "maps.")
         dominios = []
         for m in _re.finditer(r"https?://([A-Za-z0-9.\-]+\.[A-Za-z]{2,})", texto):
             d = m.group(1).lower()
-            if d not in dominios and "wa.me" not in d and "linkedin" not in d:
+            if d not in dominios and not any(a in d for a in AJENOS):
                 dominios.append(d)
         dominios = dominios[:12]  # techo: 12 sitios × 4 páginas ya es bastante
         if not dominios:

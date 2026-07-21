@@ -102,6 +102,24 @@ def _try_fetch(url: str, timeout: float) -> Optional[str]:
         return None
 
 
+# Códigos de área argentinos más usados + los prefijos con los que arranca un
+# número escrito completo. No busca ser exhaustivo: filtra la basura evidente.
+_AR_PREFIJOS = ("54", "011", "11", "0")
+_AR_AREAS = ("11", "220", "221", "223", "230", "236", "237", "249", "260", "261",
+             "263", "264", "266", "280", "291", "294", "297", "299", "336", "341",
+             "342", "343", "345", "351", "353", "358", "362", "364", "370", "376",
+             "379", "380", "381", "383", "385", "387", "388")
+
+
+def _parece_argentino(d: str) -> bool:
+    """True si la cadena de dígitos puede ser un teléfono argentino real."""
+    if d.startswith("54"):
+        return True
+    if d.startswith(_AR_PREFIJOS[1:]):
+        d = d.lstrip("0")
+    return any(d.startswith(a) for a in _AR_AREAS)
+
+
 def site_phone_digits(domain_or_url: str, timeout: float = DEFAULT_TIMEOUT) -> set:
     """Todos los teléfonos que aparecen en el sitio, como strings de dígitos.
 
@@ -141,9 +159,10 @@ def site_phone_digits(domain_or_url: str, timeout: float = DEFAULT_TIMEOUT) -> s
             texto = html
         for m in _PHONE_RE.finditer(texto):
             d = re.sub(r"[^\d]", "", m.group(0))
-            # 10-13 dígitos: abajo de eso son precios, CUITs partidos y años que
-            # el regex de teléfono levanta del texto visible.
-            if 10 <= len(d) <= 13:
+            # 10-13 dígitos Y con pinta de argentino: sin el filtro de prefijo se
+            # colaban IDs de tracking y timestamps (+178422226619, +20366303570)
+            # que ensucian el listado y podrían dar un falso ✅ por coincidencia.
+            if 10 <= len(d) <= 13 and _parece_argentino(d):
                 encontrados.add(d)
     # Sin `break`: el WhatsApp real suele estar en /contacto, no en el home.
     # Cortar en la primera página con algún número escondía el bueno detrás de
