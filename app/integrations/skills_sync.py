@@ -88,3 +88,41 @@ def sync() -> Dict[str, object]:
     return {"ok": True, "copiadas": len(copiadas), "fallidas": fallidas,
             "aprendidas": len(propias), "origen": str(src), "destino": str(dest),
             "skills": copiadas}
+
+
+def status() -> Dict[str, object]:
+    """Qué ve Hermes AHORA. Existe porque no hay SSH al container: sin esto, que
+    el aprendizaje continuo funcione o no es indemostrable desde afuera.
+
+    Separa las skills del repo de las que Hermes escribió solo — que son la única
+    evidencia de que el ciclo de aprendizaje está vivo.
+    """
+    import shutil as _sh
+    from datetime import datetime, timezone
+
+    src, dest = _source_dir(), _dest_dir()
+    del_repo = {p.name for p in src.iterdir() if p.is_dir()} if src and src.is_dir() else set()
+    aprendidas = []
+    try:
+        for p in sorted(dest.iterdir()):
+            if not p.is_dir() or p.name in del_repo:
+                continue
+            sk = p / "SKILL.md"
+            aprendidas.append({
+                "nombre": p.name,
+                "bytes": sk.stat().st_size if sk.is_file() else 0,
+                "modificada": datetime.fromtimestamp(
+                    sk.stat().st_mtime, timezone.utc).isoformat() if sk.is_file() else None,
+            })
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+    aprendidas.sort(key=lambda a: a["modificada"] or "", reverse=True)
+    return {
+        "ok": True,
+        "hermes_cli": bool(_sh.which("hermes")),
+        "home": str(dest.parent),
+        "del_repo": len(del_repo),
+        "aprendidas": len(aprendidas),
+        # Las más recientes primero: si la de arriba es de hoy, el ciclo aprendió hoy.
+        "aprendidas_detalle": aprendidas[:15],
+    }

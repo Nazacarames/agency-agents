@@ -708,7 +708,7 @@ _AGENT_DESCRIPTIONS = {
     "inbox_assistant": "Lee la bandeja + redacta borradores",
     "meeting_prep": "Prepara reuniones con la memoria del cliente (brief, agente de test, demo, objeciones)",
     "web_optimizer": "Ciclo quincenal de SEO/GEO: lee Search Console + su bitácora, decide qué mover y deploya un preview; aprobás y publica",
-    "chief_of_staff": "Brief ejecutivo diario + plan de acción con dueños, seguimiento de recomendaciones y mejoras propuestas al sistema de agentes",
+    "chief_of_staff": "Cierre del día (21:00): qué pasó, quién no entregó y el plan de acción para mañana, con dueños y seguimiento",
 }
 
 
@@ -1875,6 +1875,15 @@ async def api_web_ai_visit(request: Request):
     store["visits"] = store["visits"][-5000:]
     write_json_atomic(path, store)
     return {"ok": True}
+
+
+@app.get("/api/diag/hermes")
+async def api_diag_hermes(request: Request):
+    """Estado del harness Hermes: si el CLI está, cuántas skills del repo ve y
+    cuáles escribió solo (evidencia del aprendizaje continuo). Solo lectura."""
+    _verify_webhook_secret(request)
+    from .integrations.skills_sync import status
+    return status()
 
 
 @app.get("/api/web/ai-visits")

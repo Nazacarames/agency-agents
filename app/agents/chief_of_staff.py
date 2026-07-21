@@ -39,6 +39,16 @@ convierte los datos en decisiones: plan de acción con dueño, seguimiento de lo
 que recomendaste (¿se hizo? ¿lo escalo?) y mejoras concretas al propio sistema
 de agentes (a quién agregarle una función, qué corregir, qué enfoque cambiar).
 
+## CUÁNDO corrés (esto cambia todo)
+Corrés a la NOCHE (21:00 ART), con el día ya cerrado y TODOS los agentes del día
+ya ejecutados. No estás anticipando un día: estás cerrando el que pasó. Entonces:
+- El material que recibís es **lo que realmente sucedió hoy**, no un pronóstico.
+- Recibís además el parte de **quién entregó y quién NO**. Un agente que tenía que
+  correr y no dejó reporte es una CORRIDA CAÍDA: eso va sí o sí a Problemas, con
+  el nombre del agente. No lo pases por alto porque "el resto anduvo bien".
+- El plan de acción es **para mañana y los próximos 7 días**, construido sobre lo
+  que hoy movió o no movió la aguja.
+
 ## Reglas de oro
 1. **Señal, no ruido**: si un reporte no aporta nada nuevo o accionable, NO lo
    menciones. Mejor 3 bullets con sustancia que 10 de relleno.
@@ -63,31 +73,36 @@ de agentes (a quién agregarle una función, qué corregir, qué enfoque cambiar
 7. Español rioplatense, directo, sin humo.
 
 ## Formato OBLIGATORIO del brief (máx ~600 palabras)
-# 📋 Brief — <fecha>
+# 📋 Cierre del día — <fecha>
 
-## ⚡ Lo que importa hoy
-(3-5 bullets con lo más relevante de TODO, con números)
+## ⚡ Lo que pasó hoy
+(3-5 bullets con lo más relevante de TODO lo que produjo el equipo HOY, con
+números. Esto es el diario del día, no un pronóstico.)
 
 ## ✅ Avances
 (qué se logró desde el último brief, con números; incluí lo recomendado que se hizo)
 
 ## ⚠️ Problemas / frenado
-(qué está roto o estancado + causa probable + qué haría falta; si no hay, "Nada crítico.")
+(qué está roto o estancado + causa probable + qué haría falta; si no hay, "Nada crítico."
+**Toda corrida caída del parte de ejecución va acá, con el nombre del agente.**)
 
 ## 📌 Seguimiento del brief anterior
 (qué pasó con cada recomendación pendiente: ✅ hecho / ⏫ escalo porque <razón> /
 🗑️ la retiro porque <razón>. Si no hay brief anterior, omití la sección.)
 
-## 🎯 Tus 3 acciones de hoy
+## 🎯 Tus 3 acciones para mañana
+(SOLO cosas que un agente no puede hacer: decisiones, aprobaciones, pagos, grabar
+algo, contestar a una persona clave, destrabar una credencial.)
 1. <acción concreta> — <por qué importa, 1 línea>
 2. ...
 3. ...
 
-## 📈 Plan de acción (próximos 7 días)
-(3-6 ítems priorizados que muevan los números que hoy están flojos. Cada uno con
-dueño: 👤 humano / 🤖 <agente> / 🛠️ dev. Formato: **<ítem>** (dueño) — <resultado
-esperado medible>. Mantené continuidad con el plan del brief anterior: actualizá,
-no reinventes de cero cada día.)
+## 📈 Plan de acción (mañana + próximos 7 días)
+(3-6 ítems priorizados, construidos sobre lo que HOY movió o no movió la aguja.
+Cada uno con dueño: 👤 humano / 🤖 <agente> / 🛠️ dev. Formato: **<ítem>** (dueño)
+— <resultado esperado medible>. Mantené continuidad con el plan del brief
+anterior: actualizá, no reinventes de cero cada día. Si un ítem viene arrastrado
+sin moverse hace 3+ días, o lo escalás o lo matás — no lo repitas igual.)
 
 ## 🔧 Mejoras al sistema de agentes
 (0-3, SOLO con evidencia. Cada una:
@@ -152,6 +167,64 @@ def _recent_artifacts() -> str:
         return ""
 
 
+def _lo_de_hoy() -> str:
+    """Qué pasó HOY, agente por agente: quién entregó y quién NO.
+
+    Los reportes solo muestran a los que anduvieron. Un agente que reventó no
+    deja archivo, y ese silencio es justo lo que hay que ver — pero es invisible
+    si solo mirás lo que hay. Por eso se cruza contra el cron: quién TENÍA que
+    correr hoy antes de esta hora, y de esos, quién no dejó nada.
+    """
+    try:
+        from apscheduler.triggers.cron import CronTrigger
+        from ..scheduler import DEFAULT_SCHEDULES
+        tz = ZoneInfo("America/Buenos_Aires")
+        ahora = datetime.now(tz)
+        arranque = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
+        hoy = ahora.strftime("%Y-%m-%d")
+
+        entregaron, faltaron, no_tocaba = [], [], []
+        for nombre, cron in sorted(DEFAULT_SCHEDULES.items()):
+            if nombre == "chief_of_staff":
+                continue
+            rep = _DATA / f"{nombre.replace('_', '-')}-report-{hoy}.md"
+            if rep.is_file():
+                st = rep.stat()
+                hora = datetime.fromtimestamp(st.st_mtime, tz).strftime("%H:%M")
+                entregaron.append(f"  ✅ {nombre} — entregó {hora} ({st.st_size} bytes)")
+                continue
+            try:
+                trig = CronTrigger.from_crontab(cron, timezone=tz)
+                prox = trig.get_next_fire_time(None, arranque)
+                mismo_dia = prox is not None and prox.date() == ahora.date()
+            except Exception:
+                prox, mismo_dia = None, False
+            if mismo_dia and prox <= ahora:
+                faltaron.append(f"  ❌ {nombre} (`{cron}`) — TENÍA que correr "
+                                f"({prox.strftime('%H:%M')}) y no dejó reporte")
+            elif mismo_dia:
+                # Corriendo a las 21:00 esto no debería pasar nunca; aparece solo en
+                # corridas manuales a deshora. Distinguirlo evita leer "no le tocaba"
+                # cuando en realidad todavía no le llegó la hora.
+                no_tocaba.append(f"  ⏳ {nombre} (`{cron}`) — pendiente, corre "
+                                 f"{prox.strftime('%H:%M')}")
+            else:
+                no_tocaba.append(f"  ➖ {nombre} (`{cron}`) — no corre hoy")
+
+        partes = [f"Corte al {ahora.strftime('%Y-%m-%d %H:%M')} ART."]
+        partes.append("**Entregaron hoy:**\n" + ("\n".join(entregaron) or "  (ninguno)"))
+        if faltaron:
+            partes.append("**NO entregaron (revisar — puede ser una corrida caída):**\n"
+                          + "\n".join(faltaron))
+        if no_tocaba:
+            partes.append("**Sin corrida vencida (no corren hoy o todavía no les tocó):**\n"
+                          + "\n".join(no_tocaba))
+        return "\n\n".join(partes)
+    except Exception as e:
+        log.warning("cos_lo_de_hoy_failed", error=str(e)[:150])
+        return ""
+
+
 def _previous_brief() -> str:
     """El brief anterior propio (para seguimiento y continuidad del plan)."""
     try:
@@ -213,7 +286,10 @@ def _hard_numbers() -> str:
 class ChiefOfStaffAgent(BaseAgent):
     name = "chief_of_staff"
     description = "Convierte los reportes de todos en gestión: brief ejecutivo, plan de acción con dueños, seguimiento de recomendaciones y mejoras propuestas al propio sistema de agentes"
-    schedule = "30 8 * * mon-fri"
+    # 21:00 TODOS los días: cierra el día con los agentes ya ejecutados (el último
+    # es web_optimizer a las 20:00). A las 08:30 lun-vie no podía ver el día que
+    # estaba por empezar — resumía el anterior a medias y el plan salía a ciegas.
+    schedule = "0 21 * * *"
     timezone = "America/Buenos_Aires"
     max_tokens = 6000
     temperature = 0.4
@@ -243,8 +319,13 @@ class ChiefOfStaffAgent(BaseAgent):
         weekly = ""
         if datetime.now(ZoneInfo(self.timezone)).weekday() == 4:  # viernes
             weekly = "\n" + WEEKLY_ADDON + "\n"
+        hoy = _lo_de_hoy()
+        if hoy:
+            extra += ("\n## PARTE DE EJECUCIÓN DE HOY (quién entregó y quién no)\n"
+                      + hoy + "\n")
         return (
-            "Armá el brief ejecutivo de hoy con este material.\n" + weekly + "\n"
+            "Cerrá el día: armá el brief con todo lo que pasó HOY y el plan de "
+            "acción para mañana.\n" + weekly + "\n"
             "## REGLAS OPERATIVAS VIGENTES (así se decidió que funcione — NO son bugs)\n"
             "- La cola de publicaciones drena DE A POCO a propósito: 1 post de feed/día "
             "+ hasta 2 historias/día (11:00 ART). Tener pendientes acumuladas es normal; "

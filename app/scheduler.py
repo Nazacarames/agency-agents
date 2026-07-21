@@ -50,7 +50,9 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
                                           # Quincenal (no semanal) a propósito: el SEO tarda semanas en moverse y una
                                           # iteración semanal mide ruido. Día-del-mes evita llevar estado para saber
                                           # si "toca esta semana" (un contador se desincroniza si una corrida falla).
-    "chief_of_staff": "30 8 * * mon-fri", # 08:30 hábiles — brief ejecutivo: síntesis de todos los reportes + acciones del día (liviano: deepseek directo, sin CC)
+    "chief_of_staff": "0 21 * * *",       # 21:00 todos los días — CIERRE del día: qué pasó, quién no entregó,
+                                          # y el plan de acción para mañana. A las 08:30 corría ANTES que todo
+                                          # el equipo (que trabaja de 08 a 20), así que planificaba a ciegas.
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 
