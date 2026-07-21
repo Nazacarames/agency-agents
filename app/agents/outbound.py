@@ -30,6 +30,7 @@ from .base import BaseAgent, AgentContext
 from ._common import get_context_block, upstream_handoff_block
 from ..integrations.gmail_client import get_gmail_client, GmailError
 from ..integrations import leads_store as ls
+from ..integrations import email_guard as _eg
 from ..log import get_logger
 
 log = get_logger("outbound")
@@ -346,7 +347,9 @@ class OutboundAgent(BaseAgent):
             key = lead.get("key", "")
             company = lead.get("company", "?")
             email = (lead.get("email") or "").strip()
-            if not _EMAIL_RE.match(email.lower()):
+            enviable, motivo = _eg.es_enviable(email)
+            if not enviable:
+                log.warning("outbound_reengage_frenado", email=email[:60], motivo=motivo)
                 continue
             if not live:
                 lines.append(f"• **{company}** <{email}> — reenganche (dormido "
@@ -450,8 +453,17 @@ class OutboundAgent(BaseAgent):
                 continue
             subject = (it.get("subject") or "").strip()
             body = (it.get("body") or "").strip()
-            if not subject or not body or not _EMAIL_RE.match(email.lower()):
-                errors.append(f"• {company} <{email}> → sin subject/body/email válido, omitido")
+            if not subject or not body:
+                errors.append(f"• {company} <{email}> → sin subject/body, omitido")
+                continue
+            # Barrera de entregabilidad: el regex de forma dejaba pasar cualquier
+            # mail bien escrito, inventado incluido. Un rebote no es cosmético —
+            # es lo que más rápido quema la reputación del dominio de envío.
+            enviable, motivo = _eg.es_enviable(email)
+            if not enviable:
+                errors.append(f"• {company} <{email}> → NO enviado: {motivo}")
+                log.warning("outbound_email_frenado", company=company,
+                            email=email[:60], motivo=motivo)
                 continue
             if not live:
                 preview.append(f"• **{company}** <{email}> — _{label}_: {subject}")
