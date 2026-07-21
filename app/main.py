@@ -1877,6 +1877,28 @@ async def api_web_ai_visit(request: Request):
     return {"ok": True}
 
 
+@app.get("/api/diag/gsc")
+async def api_diag_gsc(request: Request):
+    """¿La service account ya ve Search Console? Devuelve las propiedades a las
+    que tiene acceso. Lista vacía = falta agregarla como usuario."""
+    _verify_webhook_secret(request)
+    from .integrations import search_console as sc
+    from .config import get_settings as _gs
+    sitios = sc.list_sites()
+    sa = ""
+    try:
+        sa = json.loads(_gs().google_service_account_json).get("client_email", "")
+    except Exception:
+        pass
+    return {"service_account": sa,
+            "propiedades": [{"siteUrl": s.get("siteUrl"),
+                             "permiso": s.get("permissionLevel")} for s in sitios],
+            "listo": bool(sitios),
+            "ayuda": ("" if sitios else
+                      "Search Console → Configuración → Usuarios y permisos → "
+                      f"Agregar usuario → {sa} (permiso: Restringido)")}
+
+
 @app.get("/api/diag/hermes")
 async def api_diag_hermes(request: Request):
     """Estado del harness Hermes: si el CLI está, cuántas skills del repo ve y

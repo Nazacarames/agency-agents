@@ -37,8 +37,48 @@ _WINDOW = 28
 
 
 def enabled() -> bool:
-    s = get_settings()
-    return bool(s.google_service_account_json and getattr(s, "gsc_site_url", ""))
+    # GSC_SITE_URL es OPCIONAL: si no está, se descubre solo (ver _resolve_site).
+    # Pedirla obligatoria hacía que el usuario tuviera que saber si su propiedad
+    # es de dominio ("sc-domain:x") o de prefijo ("https://x/"), y errarle da un
+    # 404 que parece problema de permisos.
+    return bool(get_settings().google_service_account_json)
+
+
+def list_sites() -> List[Dict[str, Any]]:
+    """Propiedades a las que la service account tiene acceso. Vacío = todavía no
+    la agregaste como usuario en Search Console."""
+    try:
+        r = _session().get(f"{_API}", timeout=30)
+        if r.status_code >= 400:
+            return []
+        return r.json().get("siteEntry", []) or []
+    except Exception as e:
+        log.warning("gsc_list_sites_failed", error=str(e)[:150])
+        return []
+
+
+def _resolve_site(sess) -> str:
+    """La propiedad a consultar: la configurada a mano, o la que se descubra.
+
+    Al descubrir se prefiere la propiedad de DOMINIO: agrupa http/https y todos
+    los subdominios, así que ve más datos que una de prefijo de URL.
+    """
+    manual = getattr(get_settings(), "gsc_site_url", "")
+    if manual:
+        return manual
+    r = sess.get(f"{_API}", timeout=30)
+    if r.status_code >= 400:
+        raise RuntimeError(f"GSC sites.list {r.status_code}: {r.text[:150]}")
+    entries = r.json().get("siteEntry", []) or []
+    if not entries:
+        raise PermissionError(
+            "la service account no tiene ninguna propiedad: agregá su client_email "
+            "como usuario en Search Console (Configuración → Usuarios y permisos)")
+    urls = [e.get("siteUrl", "") for e in entries]
+    dominio = [u for u in urls if u.startswith("sc-domain:")]
+    elegida = (dominio or urls)[0]
+    log.info("gsc_site_descubierta", elegida=elegida, disponibles=len(urls))
+    return elegida
 
 
 def _session():
@@ -103,14 +143,14 @@ def snapshot() -> Dict[str, Any]:
     """
     s = get_settings()
     if not enabled():
-        return {"ok": False, "error": "sin GOOGLE_SERVICE_ACCOUNT_JSON o GSC_SITE_URL"}
-    site = s.gsc_site_url
+        return {"ok": False, "error": "sin GOOGLE_SERVICE_ACCOUNT_JSON"}
     end = date.today() - timedelta(days=_LAG_DAYS)
     start = end - timedelta(days=_WINDOW - 1)
     prev_end = start - timedelta(days=1)
     prev_start = prev_end - timedelta(days=_WINDOW - 1)
     try:
         sess = _session()
+        site = _resolve_site(sess)
         q_now = _index(_query(sess, site, start, end, ["query"]))
         q_before = _index(_query(sess, site, prev_start, prev_end, ["query"]))
         p_now = _index(_query(sess, site, start, end, ["page"]))
