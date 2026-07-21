@@ -95,6 +95,41 @@ def _wire_search_backend(env: dict, settings: Settings, agente: str = "") -> Non
         env.pop(k, None)
 
 
+def fijar_backend_busqueda() -> dict:
+    """Fija `web.backend: searxng` en el config.yaml de Hermes. Llamar al arranque.
+
+    Sacar TAVILY_API_KEY del entorno del hijo NO alcanza: `get_env_value()` de
+    Hermes chequea os.environ y, si no está, CAE al `.env` de HERMES_HOME — que
+    para nosotros vive en el volumen persistente. Si la key quedó ahí de un setup
+    viejo, el borrado es decorativo y Hermes sigue eligiendo Tavily (agotada).
+
+    `web.backend` del config.yaml gana ANTES de toda esa resolución por variables
+    (`_get_backend()` lo lee primero), así que es el único punto determinístico.
+    """
+    try:
+        import yaml
+        _HERMES_HOME.mkdir(parents=True, exist_ok=True)
+        path = _HERMES_HOME / "config.yaml"
+        cfg = {}
+        if path.is_file():
+            cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        web = cfg.get("web") or {}
+        if web.get("backend") == "searxng" and web.get("search_backend") == "searxng":
+            return {"ok": True, "cambio": False, "backend": "searxng"}
+        web["backend"] = "searxng"
+        web["search_backend"] = "searxng"
+        # extract_backend NO se toca: searxng no sabe extraer (supports_extract()
+        # es False) y pisarlo dejaría a los agentes sin poder leer páginas.
+        cfg["web"] = web
+        path.write_text(yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False),
+                        encoding="utf-8")
+        log.info("hermes_backend_fijado", backend="searxng", path=str(path))
+        return {"ok": True, "cambio": True, "backend": "searxng"}
+    except Exception as e:
+        log.warning("hermes_backend_fijar_failed", error=str(e)[:200])
+        return {"ok": False, "error": str(e)[:200]}
+
+
 def run_hermes(
     prompt: str,
     *,

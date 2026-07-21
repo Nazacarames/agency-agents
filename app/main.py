@@ -62,6 +62,11 @@ async def lifespan(app: FastAPI):
         _sync_skills()
     except Exception as e:
         log.warning("skills_sync_failed", error=str(e)[:200])
+    try:
+        from .clients.hermes import fijar_backend_busqueda as _fijar_backend
+        _fijar_backend()
+    except Exception as e:
+        log.warning("hermes_backend_fijar_failed", error=str(e)[:200])
 
     # ── Iniciar scheduler ──
     global _scheduler
