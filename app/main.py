@@ -53,6 +53,16 @@ async def lifespan(app: FastAPI):
     log.info("container_health", **container.health())
     log.info("automiq_pack_loaded", agents=list_agents())
 
+    # Publicar las skills curadas en el home de Hermes ANTES de arrancar el
+    # scheduler: Hermes es el harness principal y no ve /root/.claude/skills
+    # (corre con --ignore-user-config), así que sin esto los agentes arrancan
+    # sin ninguna de nuestras skills. Best-effort: no debe tumbar el arranque.
+    try:
+        from .integrations.skills_sync import sync as _sync_skills
+        _sync_skills()
+    except Exception as e:
+        log.warning("skills_sync_failed", error=str(e)[:200])
+
     # ── Iniciar scheduler ──
     global _scheduler
     if settings.scheduler_enabled and not settings.global_pause:
