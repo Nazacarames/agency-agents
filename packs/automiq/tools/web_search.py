@@ -52,7 +52,9 @@ def _serper_search(query: str, n: int) -> List[Dict[str, Any]]:
 
 def _brave_search(query: str, n: int) -> List[Dict[str, Any]]:
     """Brave Search API — free tier 2000 queries/mes, confiable desde datacenter."""
-    key = os.environ.get("BRAVE_API_KEY", "")
+    # Hermes llama a esta misma key BRAVE_SEARCH_API_KEY. Aceptamos los dos
+    # nombres para que setear uno solo no deje media casa sin buscador.
+    key = os.environ.get("BRAVE_API_KEY", "") or os.environ.get("BRAVE_SEARCH_API_KEY", "")
     if not key:
         return []
     try:
@@ -73,6 +75,39 @@ def _brave_search(query: str, n: int) -> List[Dict[str, Any]]:
                 "snippet": item.get("description", ""),
             })
         return out
+    except Exception:
+        return []
+
+
+def _google_cse_search(query: str, n: int) -> List[Dict[str, Any]]:
+    """Google Programmable Search (Custom Search JSON API).
+
+    El único proveedor GRATIS-recurrente y sin tarjeta: 100 consultas/día
+    (~3000/mes) con una cuenta de Google que ya tenemos. Por eso va arriba de
+    Tavily, cuyo free tier (1000/mes) se agota y devuelve 432 el resto del mes.
+
+    OJO con la credencial: necesita una API key CLÁSICA (`AIza...`). La
+    GOOGLE_API_KEY nueva de Cloud (formato `AQ....`) NO sirve — Custom Search
+    la rechaza con 401 "API keys are not supported by this API". Por eso lee
+    una var propia y no reusa la que ya está.
+    """
+    key = os.environ.get("GOOGLE_CSE_KEY", "")
+    cx = os.environ.get("GOOGLE_CSE_CX", "")
+    if not key or not cx:
+        return []
+    try:
+        r = httpx.get(
+            "https://www.googleapis.com/customsearch/v1",
+            params={"key": key, "cx": cx, "q": query,
+                    "num": min(n, 10), "gl": "ar", "hl": "es"},
+            timeout=20.0,
+        )
+        if r.status_code >= 400:
+            return []
+        return [{"title": it.get("title", ""),
+                 "url": it.get("link", ""),
+                 "snippet": it.get("snippet", "")}
+                for it in (r.json().get("items", []) or [])[:n]]
     except Exception:
         return []
 
@@ -164,7 +199,8 @@ def web_search(query: str, n: int = 5) -> List[Dict[str, Any]]:
     Cae en cascada por los proveedores con key configurada; DuckDuckGo es el
     último recurso (poco fiable desde datacenter por el 202 anti-bot).
     """
-    for provider in (_serper_search, _brave_search, _tavily_search, _ddg_search):
+    for provider in (_serper_search, _google_cse_search, _brave_search,
+                     _tavily_search, _ddg_search):
         out = provider(query, n)
         if out:
             return out

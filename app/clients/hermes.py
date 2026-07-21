@@ -67,6 +67,33 @@ def _provider_model(llm_provider: str, s: Settings) -> tuple[str, str]:
     return "minimax", s.minimax_model_primary
 
 
+# Vars con las que Hermes elige su backend de búsqueda. Las sacamos del entorno
+# del hijo para que no gane ninguna: queremos que caiga SIEMPRE en nuestro shim.
+# Nuestra cascada igual usa estas keys — las lee del entorno del PADRE.
+_HERMES_SEARCH_KEYS = ("TAVILY_API_KEY", "EXA_API_KEY", "PARALLEL_API_KEY",
+                       "FIRECRAWL_API_KEY", "FIRECRAWL_API_URL",
+                       "BRAVE_SEARCH_API_KEY")
+
+
+def _wire_search_backend(env: dict, settings: Settings) -> None:
+    """Apunta el `web_search` de Hermes a nuestra cascada vía el shim SearXNG.
+
+    Hermes elige UN backend y NO reintenta con otro si falla. Con Tavily seteada
+    lo elegía siempre; agotado su free tier (432) todos los agentes se quedaron
+    ciegos y entregaron reportes armados de memoria. Nuestra cascada sí reintenta
+    (Serper → Google CSE → Brave → Tavily → DDG), así que la ponemos de backend.
+
+    Si no hay webhook_secret no podemos autenticar el shim → dejamos el entorno
+    intacto y Hermes sigue con lo que tenga (peor, pero no peor que hoy).
+    """
+    if not getattr(settings, "webhook_secret", ""):
+        return
+    port = os.environ.get("PORT", "8000")
+    env["SEARXNG_URL"] = f"http://127.0.0.1:{port}/api/searx/{settings.webhook_secret}"
+    for k in _HERMES_SEARCH_KEYS:
+        env.pop(k, None)
+
+
 def run_hermes(
     prompt: str,
     *,
@@ -106,6 +133,8 @@ def run_hermes(
         env["HERMES_HOME"] = str(_HERMES_HOME)
     except Exception as e:
         log.warning("hermes_home_fallback_ephemeral", error=str(e)[:120])
+
+    _wire_search_backend(env, settings)
 
     # El stdout/stderr van SIEMPRE a un temp propio: si `cwd` es un proyecto real,
     # escribir los .bin adentro lo ensuciaría y el rmtree del final lo borraría.

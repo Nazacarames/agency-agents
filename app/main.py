@@ -1924,6 +1924,43 @@ async def api_diag_hermes(request: Request):
     return status()
 
 
+@app.get("/api/searx/{token}/search")
+async def api_searx_shim(token: str, q: str = "", format: str = "json"):
+    """Puente SearXNG → nuestra cascada `web_search`. Lo consume HERMES, no un humano.
+
+    Por qué existe: Hermes elige UN backend de búsqueda y no reintenta con otro
+    si falla. Con TAVILY_API_KEY seteada elige Tavily siempre; cuando el free
+    tier se agotó (432, 1000/1000 el 2026-07-21) todos los agentes se quedaron
+    sin buscar y entregaron reportes inventados. Nuestra cascada
+    (Serper → Google CSE → Brave → Tavily → DDG) sí reintenta.
+
+    Hermes habla el dialecto SearXNG (`{base}/search?q=&format=json`), así que
+    nos hacemos pasar por una instancia SearXNG y `run_hermes` apunta
+    SEARXNG_URL acá. Ventaja sobre instruir al modelo por prompt: no depende de
+    que obedezca ni gasta tokens — es la tool nativa `web_search` la que cae acá.
+
+    El token va en el PATH porque el provider de Hermes no manda headers ni
+    params extra: sin eso quedaría un proxy de búsqueda abierto al público
+    quemando nuestra cuota gratis.
+    """
+    s = get_settings()
+    if not s.webhook_secret or not hmac.compare_digest(token, s.webhook_secret):
+        raise HTTPException(status_code=403, detail="token inválido")
+    if not q.strip():
+        return {"query": q, "number_of_results": 0, "results": []}
+    from packs.automiq.tools.web_search import web_search as _ws
+    hits = await run_in_threadpool(_ws, q, 10)
+    log.info("searx_shim", query=q[:80], results=len(hits))
+    return {
+        "query": q,
+        "number_of_results": len(hits),
+        # `content` y `score` son los campos que lee el provider SearXNG de Hermes.
+        "results": [{"title": h.get("title", ""), "url": h.get("url", ""),
+                     "content": h.get("snippet", ""), "score": float(len(hits) - i)}
+                    for i, h in enumerate(hits)],
+    }
+
+
 @app.get("/api/web/ai-visits")
 async def api_web_ai_visits(request: Request):
     """Resumen del tráfico desde asistentes de IA (GEO): total y por fuente/página."""

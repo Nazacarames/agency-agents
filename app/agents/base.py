@@ -61,6 +61,13 @@ class BaseAgent(ABC):
     # Skill(s) a cargar con la tool Skill. Acepta varias separadas por coma
     # (p.ej. "marketing-ads,ad-campaign-management").
     claude_code_skill: Optional[str] = None
+    # Techo de turnos del harness Hermes. Antes NO se pasaba → todos los agentes
+    # corrían con el default 15 del CLI y los largos morían con "Reached maximum
+    # iterations (15). Requesting summary..." ENTREGANDO UN RESULTADO DEGRADADO
+    # (leadhunter 2026-07-21: inventó el lote desde training data). El límite real
+    # de una corrida es `claude_code_timeout`, no los turnos: un agente que busca
+    # y verifica 10 empresas necesita decenas de tool calls.
+    hermes_max_turns: int = 40
     # Backend LLM alternativo (NVIDIA): "glm" | "deepseek" | "" (default MiniMax/CC).
     # Si está seteado y hay NVIDIA_API_KEY, el agente corre por completion directa con
     # ese modelo (salteando Claude Code); si NVIDIA falla, cae al flujo normal.
@@ -312,7 +319,8 @@ class BaseAgent(ABC):
                         h_text = run_hermes(
                             self._skills_preamble() + user_msg,
                             settings=ctx.settings, llm_provider=prov,
-                            system_append=local_system, timeout=self.claude_code_timeout)
+                            system_append=local_system, timeout=self.claude_code_timeout,
+                            max_turns=self.hermes_max_turns)
                         response = MiniMaxResponse(
                             text=h_text, model=f"hermes:{prov or 'minimax'}",
                             input_tokens=0, output_tokens=0,

@@ -265,7 +265,14 @@ class LeadHunterAgent(BaseAgent):
     # WebSearch NO se incluye: no funciona con backend MiniMax (400 server-side).
     use_claude_code = True
     claude_code_tools = ["WebFetch", "Bash", "Read", "Write", "Glob", "Grep", "Skill"]
-    claude_code_timeout = 1800  # 30 min: Railway no hiberna, dejamos correr la prospección real
+    # 10 leads × (descubrir + calificar + verificar contacto) = decenas de tool
+    # calls. Con el default 40 el lote se corta a la mitad y el modelo "resume"
+    # inventando el resto; es el agente que más turnos necesita de todos.
+    hermes_max_turns = 90
+    # 45 min. Va de la mano con hermes_max_turns=90: si los turnos entran pero el
+    # reloj no, el run muere por timeout SIN entregar nada (peor que el resumen
+    # degradado de antes). El techo real tiene que ser los turnos, no el reloj.
+    claude_code_timeout = 2700
     # (vía Claude Code + WebFetch). El 720 viejo era para la ventana del free de Render.
 
     @property
