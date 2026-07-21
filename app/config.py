@@ -186,6 +186,11 @@ class Settings(BaseSettings):
     google_service_account_json: str = ""
     vertex_project: str = ""          # default = project_id del JSON de la SA
     vertex_location: str = "us-central1"
+    # Search Console para el web_optimizer (SEO/GEO con datos reales). Usa la MISMA
+    # service account de arriba, que hay que agregar a mano como usuario de la
+    # propiedad. Formato: "sc-domain:automiq.agency" (propiedad de dominio) o
+    # "https://automiq.agency/" (propiedad por prefijo de URL). Vacío = desactivado.
+    gsc_site_url: str = ""
     veo_model: str = "veo-3.1-fast-generate-001"  # Veo 3.1 Fast GA (sin allowlist). Full: "veo-3.1-generate-001"
     # Modelo de CALIDAD para el clip del presentador (la cara de la marca): Veo 3.1
     # full (GA, verificado 2026-07-14). Cadena: Omni → este → veo_model (fast).

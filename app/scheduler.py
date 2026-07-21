@@ -46,7 +46,10 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
     "seo_specialist": "0 16 * * *",       # 16:00 — auditoría SEO
     "media_auditor": "0 17 * * *",        # 17:00 — auditoría de ads
     "growth_hacker": "0 18 * * *",        # 18:00 — growth / funnel
-    "web_optimizer": "0 20 * * wed",      # mié 20:00 — mejora la landing + preview Vercel (semanal)
+    "web_optimizer": "0 20 1,15 * *",     # días 1 y 15, 20:00 — ciclo SEO/GEO quincenal con datos de Search Console.
+                                          # Quincenal (no semanal) a propósito: el SEO tarda semanas en moverse y una
+                                          # iteración semanal mide ruido. Día-del-mes evita llevar estado para saber
+                                          # si "toca esta semana" (un contador se desincroniza si una corrida falla).
     "chief_of_staff": "30 8 * * mon-fri", # 08:30 hábiles — brief ejecutivo: síntesis de todos los reportes + acciones del día (liviano: deepseek directo, sin CC)
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
