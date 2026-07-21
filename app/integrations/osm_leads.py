@@ -55,6 +55,10 @@ _CACHE = Path(__file__).resolve().parent.parent.parent / "data" / "osm-leads-cac
 # (es infraestructura donada por voluntarios — abusarla nos gana un bloqueo).
 _TTL_DIAS = 7
 
+# Segundos entre consultas a Overpass. No es una optimización: es no abusar de
+# un servicio gratuito sostenido por voluntarios (nos empezó a devolver 429).
+_PAUSA = 4.0
+
 # Perfiles por vertical. El regex va sobre el NOMBRE porque es como se identifican
 # las PyMEs argentinas del rubro; los tags de OSM solos traen poquísimo
 # (`shop=wholesale` en AR está casi vacío).
@@ -62,8 +66,14 @@ PERFILES: Dict[str, List[str]] = {
     # Varios regex chicos por vertical en vez de uno grande: uno largo hace que
     # Overpass devuelva 504 (medido). Cada entrada es una consulta aparte.
     "distribucion": [r"[Dd]istribuidora|[Dd]istribuciones", r"[Mm]ayorista"],
+    # Manufactura tiene MÁS slices a propósito: es el vertical que mejor convierte
+    # (3% vs 1% de distribución, dato real del pipeline) y el que menos trae por
+    # nombre — las fábricas se llaman por su apellido, no "Fábrica de X".
     "manufactura": [r"[Pp]l[áa]sticos|[Ee]nvases", r"[Mm]etal[úu]rgica|[Aa]utopartes",
-                    r"[Ff][áa]brica|[Ii]ndustrias"],
+                    r"[Ff][áa]brica|[Ii]ndustrias", r"[Ff]undici[óo]n|[Mm]atricer[íi]a",
+                    r"[Ff]rigor[íi]fico|[Aa]limenticia", r"[Tt]extil|[Cc]urtiembre",
+                    r"[Mm]aderera|[Aa]serradero", r"[Qq]u[íi]mica|[Pp]inturas",
+                    r"[Cc]art[óo]n|[Pp]apelera", r"[Mm]aquinaria|[Aa]groindustria"],
     "logistica": [r"[Tt]ransporte", r"[Ll]og[íi]stica|[Ee]xpreso"],
 }
 
@@ -94,17 +104,28 @@ _DOMINIOS_MALOS = (".gob.ar", ".gov.ar", ".edu.ar", ".mil.ar", "facebook.", "ins
 
 
 def _consultar(query: str, timeout: float = 180.0) -> List[Dict[str, Any]]:
-    """Corre una consulta Overpass probando los mirrors. Nunca lanza."""
-    for host in _ENDPOINTS:
+    """Corre una consulta Overpass probando los mirrors. Nunca lanza.
+
+    CORTESÍA OBLIGATORIA: Overpass lo sostienen voluntarios y no nos cobra nada.
+    Al ampliar los perfiles pasamos a ~15 consultas seguidas y empezamos a comer
+    429 (throttling) y 504. Pausa fija entre consultas + backoff ante 429. El
+    refresco completo tarda unos minutos, pero corre UNA vez por semana (cache
+    de 7 días): la lentitud acá no le cuesta nada a nadie.
+    """
+    import time
+    for intento, host in enumerate(_ENDPOINTS):
         try:
             r = httpx.post(host, data={"data": query}, headers=_UA, timeout=timeout)
             if r.status_code == 200:
+                time.sleep(_PAUSA)          # respirar antes de la próxima
                 return r.json().get("elements", []) or []
-            # 504 = la consulta fue muy pesada para el servidor público; 429 = nos
-            # frenaron por frecuencia. En los dos casos, probar el otro mirror.
             log.warning("osm_http", host=host, status=r.status_code)
+            # 429 = nos están frenando: esperar de verdad, no saltar al otro mirror
+            # y seguir golpeando.
+            time.sleep(_PAUSA * (4 if r.status_code == 429 else 1))
         except Exception as e:
             log.warning("osm_error", host=host, error=str(e)[:150])
+            time.sleep(_PAUSA)
     return []
 
 
@@ -123,6 +144,23 @@ area["name"="Argentina"]["admin_level"="2"]->.a;
 (
   node(area.a)["name"~"{regex}",i]["website"];
   way(area.a)["name"~"{regex}",i]["website"];
+);
+out center {limite};"""
+
+
+def _query_industrial(limite: int) -> str:
+    """Plantas industriales por TAG, no por nombre.
+
+    La mayoría de las fábricas argentinas no se llaman "Fábrica de X": se llaman
+    por el apellido del dueño (Zaplast, Arenera Nóbile, Metalúrgica Finke). El
+    regex de nombre las pierde; el tag de uso de suelo las encuentra igual.
+    """
+    return f"""[out:json][timeout:90];
+area["name"="Argentina"]["admin_level"="2"]->.a;
+(
+  way(area.a)["landuse"="industrial"]["name"]["website"];
+  way(area.a)["man_made"="works"]["name"]["website"];
+  node(area.a)["man_made"="works"]["name"]["website"];
 );
 out center {limite};"""
 
@@ -178,13 +216,21 @@ def _guardar_cache(empresas: List[Dict[str, Any]]) -> None:
         log.warning("osm_cache_write_failed", error=str(e)[:150])
 
 
-def refrescar(limite_por_perfil: int = 250) -> List[Dict[str, Any]]:
-    """Consulta Overpass por cada vertical y devuelve el pool completo."""
+def refrescar(limite_por_perfil: int = 250, objetivo: int = 160) -> List[Dict[str, Any]]:
+    """Consulta Overpass por cada vertical y devuelve el pool.
+
+    Corta al llegar a `objetivo`: son ~15 consultas y este refresco puede caer en
+    medio de una corrida de leadhunter. Con 160 empresas ya hay pool para semanas
+    (se entregan 25 por día, rotando) y no tiene sentido hacer esperar al agente
+    ni seguir golpeando Overpass.
+    """
     pool: List[Dict[str, Any]] = []
     vistos: set = set()
     for vertical, regexes in PERFILES.items():
         for regex in regexes:
-            for el in _consultar(_query(regex, limite_por_perfil)):
+            if len(pool) >= objetivo:
+                break
+            for el in _consultar(_query(regex, limite_por_perfil), timeout=70.0):
                 emp = _normalizar(el, vertical)
                 if not emp:
                     continue
@@ -196,7 +242,19 @@ def refrescar(limite_por_perfil: int = 250) -> List[Dict[str, Any]]:
                     continue
                 vistos.add(clave)
                 pool.append(emp)
+    # Pasada extra por tags industriales (ver _query_industrial).
+    for el in _consultar(_query_industrial(limite_por_perfil), timeout=70.0):
+        emp = _normalizar(el, "manufactura")
+        if not emp:
+            continue
+        clave = re.sub(r"^www\.", "", emp["web"].split("//")[-1].split("/")[0].lower())
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        pool.append(emp)
+
     log.info("osm_pool", empresas=len(pool),
+             manufactura=sum(1 for e in pool if e["vertical"] == "manufactura"),
              con_telefono=sum(1 for e in pool if e["telefono"]))
     if pool:
         _guardar_cache(pool)
