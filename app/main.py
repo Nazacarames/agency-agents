@@ -1921,7 +1921,34 @@ async def api_diag_hermes(request: Request):
     cuáles escribió solo (evidencia del aprendizaje continuo). Solo lectura."""
     _verify_webhook_secret(request)
     from .integrations.skills_sync import status
-    return status()
+    out = status()
+    # Qué backend de búsqueda elige Hermes con NUESTRO entorno. Hermes es un
+    # paquete pip en el mismo intérprete, así que podemos preguntárselo a él en
+    # vez de deducirlo: leadhunter dice "búsqueda web" y el shim registra 0
+    # llamadas, o sea que está resolviendo a otro proveedor.
+    try:
+        import os as _os
+        from .clients.hermes import _wire_search_backend
+        entorno = dict(_os.environ)
+        _wire_search_backend(entorno, get_settings(), "diag")
+        previo = {k: _os.environ.get(k) for k in ("SEARXNG_URL",)}
+        _os.environ["SEARXNG_URL"] = entorno["SEARXNG_URL"]
+        try:
+            from tools.web_tools import _get_backend, _get_search_backend, _load_web_config
+            out["busqueda"] = {
+                "backend_elegido": _get_backend(),
+                "backend_search": _get_search_backend(),
+                "config_yaml_web": _load_web_config(),
+                "searxng_url_apunta_a": entorno["SEARXNG_URL"].split("/api/")[0] + "/api/searx/***",
+            }
+        finally:
+            if previo["SEARXNG_URL"] is None:
+                _os.environ.pop("SEARXNG_URL", None)
+            else:
+                _os.environ["SEARXNG_URL"] = previo["SEARXNG_URL"]
+    except Exception as e:
+        out["busqueda"] = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
+    return out
 
 
 @app.get("/api/searx/{token}/{agente}/search")
