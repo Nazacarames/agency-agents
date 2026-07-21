@@ -75,6 +75,23 @@ _HERMES_SEARCH_KEYS = ("TAVILY_API_KEY", "EXA_API_KEY", "PARALLEL_API_KEY",
                        "BRAVE_SEARCH_API_KEY")
 
 
+def token_shim(webhook_secret: str) -> str:
+    """Token EXCLUSIVO del shim de búsqueda, derivado del webhook secret.
+
+    El shim autentica por PATH (el provider SearXNG de Hermes no manda headers),
+    y Railway loguea la URL completa de cada request. Poniendo ahí el
+    WEBHOOK_SECRET lo estábamos escribiendo en texto plano en los logs de acceso
+    en CADA búsqueda — el mismo secreto que protege todos los endpoints.
+
+    Derivarlo por HMAC corta la filtración: lo que queda en los logs sólo sirve
+    para pedir búsquedas, y de él no se puede volver al secreto original.
+    """
+    import hashlib
+    import hmac as _hmac
+    return _hmac.new(webhook_secret.encode(), b"searx-shim-v1",
+                     hashlib.sha256).hexdigest()[:32]
+
+
 def _wire_search_backend(env: dict, settings: Settings, agente: str = "") -> None:
     """Apunta el `web_search` de Hermes a nuestra cascada vía el shim SearXNG.
 
@@ -90,7 +107,8 @@ def _wire_search_backend(env: dict, settings: Settings, agente: str = "") -> Non
         return
     port = os.environ.get("PORT", "8000")
     env["SEARXNG_URL"] = (f"http://127.0.0.1:{port}/api/searx/"
-                          f"{settings.webhook_secret}/{agente or 'desconocido'}")
+                          f"{token_shim(settings.webhook_secret)}/"
+                          f"{agente or 'desconocido'}")
     for k in _HERMES_SEARCH_KEYS:
         env.pop(k, None)
 

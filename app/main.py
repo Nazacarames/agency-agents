@@ -2055,7 +2055,10 @@ async def api_searx_shim(token: str, agente: str, q: str = "", format: str = "js
     por timestamp — así casi doy por bueno un run que había hecho 0 búsquedas).
     """
     s = get_settings()
-    if not s.webhook_secret or not hmac.compare_digest(token, s.webhook_secret):
+    from .clients.hermes import token_shim
+    # Token derivado, NO el webhook secret: la URL entera queda en los logs de
+    # acceso de Railway y ahí no puede viajar el secreto que abre todo lo demás.
+    if not s.webhook_secret or not hmac.compare_digest(token, token_shim(s.webhook_secret)):
         raise HTTPException(status_code=403, detail="token inválido")
     if not q.strip():
         return {"query": q, "number_of_results": 0, "results": []}
