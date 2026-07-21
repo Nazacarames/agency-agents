@@ -707,7 +707,7 @@ _AGENT_DESCRIPTIONS = {
     "web_auditor": "Auditoría de páginas web puntuada",
     "inbox_assistant": "Lee la bandeja + redacta borradores",
     "meeting_prep": "Prepara reuniones con la memoria del cliente (brief, agente de test, demo, objeciones)",
-    "web_optimizer": "Mejora la landing (CRO/SEO/diseño) y deploya un preview en Vercel; aprobás y publica",
+    "web_optimizer": "Ciclo quincenal de SEO/GEO: lee Search Console + su bitácora, decide qué mover y deploya un preview; aprobás y publica",
     "chief_of_staff": "Brief ejecutivo diario + plan de acción con dueños, seguimiento de recomendaciones y mejoras propuestas al sistema de agentes",
 }
 
