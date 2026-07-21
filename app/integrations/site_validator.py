@@ -102,6 +102,55 @@ def _try_fetch(url: str, timeout: float) -> Optional[str]:
         return None
 
 
+def site_phone_digits(domain_or_url: str, timeout: float = DEFAULT_TIMEOUT) -> set:
+    """Todos los teléfonos que aparecen en el sitio, como strings de dígitos.
+
+    Sirve para CONTRASTAR lo que el modelo escribió contra la realidad: si el
+    número que reportó no está en este set, se lo inventó o lo transcribió mal
+    (caso real 2026-07-21: reportó 291 411 1978 y el sitio decía 291 470 1978 —
+    un WhatsApp a ese número no llega a nadie y nadie se entera).
+
+    Mira el HTML CRUDO, no el texto visible: los WhatsApp viven en
+    `href="https://wa.me/549..."` y `href="tel:+54..."`, que `get_text()` tira.
+    """
+    if not domain_or_url:
+        return set()
+    url = domain_or_url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    parsed = urlparse(url)
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    encontrados: set = set()
+    for path in ("", "/contacto", "/contact", "/contactanos"):
+        html = _try_fetch(base + path, timeout=timeout)
+        if not html:
+            continue
+        for m in re.finditer(r"(?:wa\.me/|api\.whatsapp\.com/send\?phone=|tel:)\+?(\d{8,15})", html):
+            encontrados.add(m.group(1))
+        # Y cualquier +54 explícito del HTML crudo: muchos sitios guardan el
+        # WhatsApp en un atributo `data-` o en config JS, donde no lo ve ni
+        # get_text() ni el patrón wa.me (caso Laco). El "+54" literal es señal
+        # suficiente para no traer ruido.
+        for m in re.finditer(r"\+54[\s\-]?[\d\s\-]{8,16}", html):
+            d = re.sub(r"[^\d]", "", m.group(0))
+            if 10 <= len(d) <= 13:
+                encontrados.add(d)
+        try:
+            texto = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+        except Exception:
+            texto = html
+        for m in _PHONE_RE.finditer(texto):
+            d = re.sub(r"[^\d]", "", m.group(0))
+            # 10-13 dígitos: abajo de eso son precios, CUITs partidos y años que
+            # el regex de teléfono levanta del texto visible.
+            if 10 <= len(d) <= 13:
+                encontrados.add(d)
+    # Sin `break`: el WhatsApp real suele estar en /contacto, no en el home.
+    # Cortar en la primera página con algún número escondía el bueno detrás de
+    # un teléfono fijo del header (caso Laco).
+    return encontrados
+
+
 def validate_site(domain_or_url: str, timeout: float = DEFAULT_TIMEOUT) -> SiteContact:
     """Scrapea el sitio y devuelve el primer contacto útil encontrado.
 

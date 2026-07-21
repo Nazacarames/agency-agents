@@ -409,6 +409,75 @@ class LeadHunterAgent(BaseAgent):
             "El objetivo es CALIDAD de contacto verificable, no velocidad."
         )
 
+    # Últimos 8 dígitos: ignora prefijos (+54 / 9 / 0 / 15) que cada sitio
+    # escribe distinto. Dos números argentinos que coinciden en los últimos 8
+    # son el mismo teléfono.
+    @staticmethod
+    def _cola(digitos: str) -> str:
+        return digitos[-8:] if len(digitos) >= 8 else ""
+
+    def _bloque_verificacion(self, texto: str) -> str:
+        """Contrasta CADA teléfono del reporte contra los sitios que cita.
+
+        El modelo se equivoca transcribiendo y el error es mudo: un WhatsApp a
+        un número mal copiado no rebota, simplemente no lo lee nadie. Acá el
+        número del SITIO manda sobre el que escribió el modelo.
+        """
+        import re as _re
+        from ..integrations.site_validator import site_phone_digits
+
+        dominios = []
+        for m in _re.finditer(r"https?://([A-Za-z0-9.\-]+\.[A-Za-z]{2,})", texto):
+            d = m.group(1).lower()
+            if d not in dominios and "wa.me" not in d and "linkedin" not in d:
+                dominios.append(d)
+        dominios = dominios[:12]  # techo: 12 sitios × 4 páginas ya es bastante
+        if not dominios:
+            return ""
+
+        reales: dict = {}
+        for d in dominios:
+            try:
+                reales[d] = site_phone_digits(d, timeout=8.0)
+            except Exception:
+                reales[d] = set()
+        colas_reales = {self._cola(x) for s in reales.values() for x in s} - {""}
+
+        # Dedupe por dígitos, no por string: el mismo número aparece en la tabla
+        # y en el detalle con distinta puntuación ("...1978 (" vs "...1978").
+        reportados, vistos = [], set()
+        for m in _re.finditer(r"\+54[\d\s\-\.]{8,20}", texto):
+            crudo = m.group(0).strip(" .-")
+            d = _re.sub(r"[^\d]", "", crudo)
+            if 10 <= len(d) <= 15 and d not in vistos:
+                vistos.add(d)
+                reportados.append((crudo, d))
+        if not reportados:
+            return ""
+
+        ok, mal = [], []
+        for crudo, d in reportados:
+            (ok if self._cola(d) in colas_reales else mal).append(crudo)
+
+        lineas = ["## ✅ Verificación automática de teléfonos", ""]
+        lineas.append(f"Contrastados contra los sitios citados: **{len(ok)} de "
+                      f"{len(reportados)}** aparecen textualmente en la web de la empresa.")
+        if mal:
+            lineas += ["", "> [!warning] NO uses estos números sin chequear",
+                       "> No figuran en ningún sitio del reporte — el modelo los "
+                       "transcribió mal o los dedujo. Un WhatsApp a un número "
+                       "equivocado no rebota: se pierde en silencio.", ""]
+            for crudo in mal:
+                lineas.append(f"- ❌ `{crudo}`")
+            lineas += ["", "**Los que sí están publicados en esos sitios:**"]
+            for d, nums in reales.items():
+                if nums:
+                    lineas.append(f"- `{d}` → " + ", ".join(f"`+{n}`" for n in sorted(nums)[:4]))
+        for d, nums in reales.items():
+            if not nums:
+                lineas.append(f"- ❔ `{d}` — no pude leer el sitio (bloqueo o sin teléfono publicado)")
+        return "\n".join(lineas) + "\n\n---\n\n"
+
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         """Persistir en disco de forma robusta, validar contactos por scraping
         y disparar sync a Discord + repo.
@@ -444,6 +513,17 @@ class LeadHunterAgent(BaseAgent):
                 f"- timestamp: `{now_iso}`\n\n"
                 f"Revisá `data/leadhunter-leads-{today}.json` y los logs del servicio.\n"
             )
+
+        # Verificación de teléfonos contra los sitios citados. Va ARRIBA de todo:
+        # el que lee el reporte tiene que ver el aviso ANTES de la tabla de leads,
+        # no en una nota al pie. Best-effort: si falla, el reporte sale igual.
+        try:
+            bloque = self._bloque_verificacion(safe_text)
+            if bloque:
+                safe_text = bloque + safe_text
+                response_text = bloque + (response_text or "")
+        except Exception as e:
+            log.warning("leadhunter_verificacion_telefonos_failed", error=str(e)[:200])
 
         # Tabla simple para vista rápida
         lines = safe_text.splitlines()
