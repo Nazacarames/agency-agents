@@ -434,6 +434,73 @@ class LeadHunterAgent(BaseAgent):
     def _cola(digitos: str) -> str:
         return digitos[-8:] if len(digitos) >= 8 else ""
 
+    # Departamentales primero: las lecciones del pipeline dicen que ventas@ /
+    # comercial@ / administracion@ responden 5-10x más que un info@ genérico.
+    _PREF_MAIL = ("ventas@", "comercial@", "administracion@", "pedidos@", "compras@")
+
+    @classmethod
+    def _mejor_mail(cls, mails: set) -> str:
+        for pref in cls._PREF_MAIL:
+            for m in sorted(mails):
+                if m.startswith(pref):
+                    return m
+        genericos = [m for m in sorted(mails) if not m.split("@")[1].endswith(
+            ("gmail.com", "hotmail.com", "yahoo.com", "outlook.com"))]
+        return (genericos or sorted(mails))[0]
+
+    def _corregir_contactos(self, texto: str, reales: dict) -> tuple:
+        """Pisa en el REPORTE los contactos que el modelo no sacó del sitio.
+
+        Corregir el texto y no sólo avisar al pie es lo único que sirve: el
+        reporte es lo que `leads_store.ingest_report` vuelca al CRM y lo que
+        `outbound` termina enviando, y ahí la única validación es que el email
+        tenga FORMA de email (`_EMAIL_RE`). Un `info@<dominio>` inventado pasa
+        ese filtro y sale — el 2026-07-21 se habrían mandado 8 así.
+
+        Devuelve (texto_corregido, lista_de_cambios).
+        """
+        import re as _re
+        cambios: List[str] = []
+        mails_reales = {e.lower() for v in reales.values() for e in v["emails"]}
+
+        # REGLA DURA: un email sólo se reemplaza por otro DEL MISMO DOMINIO.
+        # El primer intento agrupaba por "bloque de lead" y confiaba en que el
+        # split separara las empresas. No separó (el modelo no usa siempre el
+        # mismo encabezado) → cinco empresas distintas quedaron apuntando al mail
+        # de una sexta. Mandarle a una empresa un mail que habla de otra es peor
+        # que el problema que vine a arreglar, así que ahora la asociación tiene
+        # que ser inequívoca: mismo dominio = misma empresa, sin heurísticas.
+        por_dominio: Dict[str, set] = {}
+        for d, v in reales.items():
+            if v["emails"]:
+                por_dominio[_re.sub(r"^www\.", "", d.lower())] = {e.lower() for e in v["emails"]}
+
+        reemplazos: Dict[str, str] = {}
+        for m in _re.finditer(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", texto):
+            mail = m.group(0).lower().rstrip(".,;)")
+            if "automiq" in mail or mail in mails_reales or mail in reemplazos:
+                continue
+            dom = _re.sub(r"^www\.", "", mail.split("@")[1])
+            propios = por_dominio.get(dom)
+            if propios:
+                # Mismo dominio: el sitio publica otros mails, uno de esos es el bueno.
+                bueno = self._mejor_mail(propios)
+                reemplazos[mail] = bueno
+                cambios.append(f"- `{mail}` → `{bueno}` (mismo dominio, es el que "
+                               f"publica el sitio)")
+            else:
+                # Gmail/Hotmail sueltos o dominio que no pudimos leer: NO hay forma
+                # de saber a qué empresa pertenece → no se envía. Conservador a
+                # propósito: un lead sin mail es recuperable, un mail mal mandado no.
+                reemplazos[mail] = "(sin email público)"
+                cambios.append(f"- `{mail}` → **(sin email público)** — no lo publica "
+                               f"el sitio y no hay reemplazo del mismo dominio: NO enviar")
+        for malo, bueno in reemplazos.items():
+            # Case-insensitive: el modelo escribe el mismo mail con mayúsculas
+            # distintas en la tabla y en el detalle.
+            texto = _re.sub(_re.escape(malo), bueno, texto, flags=_re.I)
+        return texto, cambios
+
     def _bloque_verificacion(self, texto: str) -> str:
         """Contrasta CADA teléfono del reporte contra los sitios que cita.
 
@@ -455,7 +522,7 @@ class LeadHunterAgent(BaseAgent):
                 dominios.append(d)
         dominios = dominios[:12]  # techo: 12 sitios × 4 páginas ya es bastante
         if not dominios:
-            return ""
+            return "", texto
 
         reales: dict = {}
         for d in dominios:
@@ -485,13 +552,15 @@ class LeadHunterAgent(BaseAgent):
                 mails_reportados.append(e)
 
         if not reportados and not mails_reportados:
-            return ""
+            return "", texto
 
         ok, mal = [], []
         for crudo, d in reportados:
             (ok if self._cola(d) in colas_reales else mal).append(crudo)
         mails_ok = [e for e in mails_reportados if e in mails_reales]
         mails_mal = [e for e in mails_reportados if e not in mails_reales]
+
+        texto, cambios = self._corregir_contactos(texto, reales)
 
         lineas = ["## ✅ Verificación automática de contactos", ""]
         if reportados:
@@ -522,11 +591,15 @@ class LeadHunterAgent(BaseAgent):
                 if v["emails"]:
                     partes.append(", ".join(f"`{e}`" for e in sorted(v["emails"])[:3]))
                 lineas.append(f"- `{d}` → " + " · ".join(partes))
+        if cambios:
+            lineas += ["", "### ✏️ Emails corregidos en este reporte",
+                       "Ya están pisados abajo — lo que ve el CRM y sale por outbound es "
+                       "esto, no lo que había escrito el modelo.", ""] + cambios
         ilegibles = [d for d, v in reales.items() if not v["telefonos"] and not v["emails"]]
         if ilegibles:
             lineas += ["", "No pude leer estos sitios (bloqueo o sin contacto publicado): "
                        + ", ".join(f"`{d}`" for d in ilegibles)]
-        return "\n".join(lineas) + "\n\n---\n\n"
+        return "\n".join(lineas) + "\n\n---\n\n", texto
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         """Persistir en disco de forma robusta, validar contactos por scraping
@@ -568,10 +641,12 @@ class LeadHunterAgent(BaseAgent):
         # el que lee el reporte tiene que ver el aviso ANTES de la tabla de leads,
         # no en una nota al pie. Best-effort: si falla, el reporte sale igual.
         try:
-            bloque = self._bloque_verificacion(safe_text)
+            bloque, corregido = self._bloque_verificacion(safe_text)
             if bloque:
-                safe_text = bloque + safe_text
-                response_text = bloque + (response_text or "")
+                # `corregido` ya tiene los emails inventados pisados por los reales:
+                # es lo que se persiste y lo que después ingesta el CRM.
+                safe_text = bloque + corregido
+                response_text = bloque + corregido
         except Exception as e:
             log.warning("leadhunter_verificacion_telefonos_failed", error=str(e)[:200])
 

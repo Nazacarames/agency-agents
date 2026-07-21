@@ -90,19 +90,29 @@ def _is_real_email(addr: str) -> bool:
 
 
 def _try_fetch(url: str, timeout: float) -> Optional[str]:
-    try:
-        r = httpx.get(
-            url,
-            headers={"User-Agent": USER_AGENT, "Accept-Language": "es-AR,es;q=0.9"},
-            timeout=timeout,
-            follow_redirects=True,
-        )
-        if r.status_code >= 400:
+    """Descarga una página pública. Reintenta sin verificar TLS si el cert falla.
+
+    Muchísimas PyMEs argentinas tienen el certificado vencido, self-signed o con
+    el hostname mal (medido: sunedistribuciones.com.ar, tyna.com.ar). Si nos
+    frenamos ahí no podemos leer su página de contacto, y el efecto es PEOR que
+    no chequear: marcaríamos como "inventado" un email que la empresa publica.
+    Sólo leemos información de contacto pública — no mandamos credenciales ni
+    datos, así que aceptar un cert roto acá no expone nada nuestro.
+    """
+    cabeceras = {"User-Agent": USER_AGENT, "Accept-Language": "es-AR,es;q=0.9"}
+    for verificar in (True, False):
+        try:
+            r = httpx.get(url, headers=cabeceras, timeout=timeout,
+                          follow_redirects=True, verify=verificar)
+            if r.status_code >= 400:
+                return None
+            return r.text
+        except Exception as e:
+            if verificar and "CERTIFICATE" in str(e).upper():
+                continue          # cert roto → reintentar sin verificar
+            log.warning("site_fetch_failed", url=url, error=str(e)[:160])
             return None
-        return r.text
-    except Exception as e:
-        log.warning("site_fetch_failed", url=url, error=str(e)[:160])
-        return None
+    return None
 
 
 # Códigos de área argentinos más usados + los prefijos con los que arranca un
