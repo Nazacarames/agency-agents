@@ -26,6 +26,7 @@ from pathlib import Path
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block
 from ..clients.claude_code import run_claude_code, ClaudeCodeError
+from ..clients.hermes import run_hermes
 from ..integrations.vercel_client import get_vercel_client, VercelError
 from ..integrations import search_console, seo_progress
 from ..log import get_logger
@@ -250,22 +251,41 @@ class WebOptimizerAgent(BaseAgent):
         except Exception:
             pass
 
-        # Mejora con Claude Code dentro del directorio del proyecto.
+        # Edición dentro del directorio del proyecto. HERMES primero, igual que el
+        # resto del equipo: este agente overridea run(), así que la migración a
+        # Hermes del 2026-07-14 lo había salteado y seguía en Claude Code.
+        # Sin `terminal` ni `code_execution` a propósito: que edite archivos pero
+        # NO pueda deployar ni correr comandos. El deploy lo hace este archivo, en
+        # Python, después. Claude Code queda de red de seguridad, no de camino.
         cc_text = ""
         try:
-            cc_text = run_claude_code(
-                prompt=prompt,
-                settings=ctx.settings,
+            cc_text = run_hermes(
+                prompt, settings=ctx.settings,
                 system_append=self.system_prompt,
-                allowed_tools=self.claude_code_tools,
                 timeout=self.claude_code_timeout,
                 cwd=root,
-                extra_env={"VERCEL_TOKEN": ctx.settings.vercel_token},
+                toolsets="web,file,skills,memory,todo",
             )
-        except ClaudeCodeError as e:
-            log.warning("webopt_cc_failed", run_id=ctx.run_id, error=str(e))
-            self._cleanup(workdir)
-            return self._deliver(ctx, f"⚠️ **Web Optimizer:** no pude correr la mejora (Claude Code) — {e}")
+            log.info("webopt_via_hermes", run_id=ctx.run_id)
+        except Exception as e:
+            log.warning("webopt_hermes_failed", run_id=ctx.run_id, error=str(e)[:200])
+            try:
+                cc_text = run_claude_code(
+                    prompt=prompt,
+                    settings=ctx.settings,
+                    system_append=self.system_prompt,
+                    allowed_tools=self.claude_code_tools,
+                    timeout=self.claude_code_timeout,
+                    cwd=root,
+                    extra_env={"VERCEL_TOKEN": ctx.settings.vercel_token},
+                )
+                log.info("webopt_via_claude_code_fallback", run_id=ctx.run_id)
+            except ClaudeCodeError as e2:
+                log.warning("webopt_cc_failed", run_id=ctx.run_id, error=str(e2))
+                self._cleanup(workdir)
+                return self._deliver(ctx, (
+                    "⚠️ **Web Optimizer:** no pude correr la mejora — "
+                    f"Hermes: {str(e)[:150]} · Claude Code: {e2}"))
 
         # La bitácora se persiste ANTES del deploy: si el deploy falla, el
         # aprendizaje de esta iteración no se pierde igual.

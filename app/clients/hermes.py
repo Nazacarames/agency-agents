@@ -75,8 +75,20 @@ def run_hermes(
     system_append: Optional[str] = None,
     timeout: int = 600,
     max_turns: int = 15,
+    cwd: Optional[str] = None,
+    toolsets: Optional[str] = None,
 ) -> str:
-    """Corre `hermes chat -q` headless y devuelve el texto final."""
+    """Corre `hermes chat -q` headless y devuelve el texto final.
+
+    `cwd`: si se pasa, Hermes corre EN ese directorio (en vez de un temp aislado)
+    → permite que un agente edite un proyecto ya clonado en disco (web_optimizer).
+    OJO: en ese caso el directorio NO se borra y no se escanea buscando artefactos
+    (el entregable es el texto impreso, y el proyecto puede tener miles de .md).
+
+    `toolsets`: override del set de tools. Sirve para SACAR capacidades a un
+    agente concreto (p.ej. web_optimizer no debe tener terminal: el deploy lo
+    hace Python después de revisar, no el modelo por su cuenta).
+    """
     if not hermes_available():
         raise HermesError("CLI `hermes` no encontrado en PATH")
     provider, model = _provider_model(llm_provider, settings)
@@ -95,9 +107,13 @@ def run_hermes(
     except Exception as e:
         log.warning("hermes_home_fallback_ephemeral", error=str(e)[:120])
 
-    workdir = tempfile.mkdtemp(prefix="hermes_run_")
-    stdout_path = os.path.join(workdir, "_hermes_stdout.bin")
-    stderr_path = os.path.join(workdir, "_hermes_stderr.bin")
+    # El stdout/stderr van SIEMPRE a un temp propio: si `cwd` es un proyecto real,
+    # escribir los .bin adentro lo ensuciaría y el rmtree del final lo borraría.
+    io_dir = tempfile.mkdtemp(prefix="hermes_io_")
+    stdout_path = os.path.join(io_dir, "_hermes_stdout.bin")
+    stderr_path = os.path.join(io_dir, "_hermes_stderr.bin")
+    own_workdir = cwd is None
+    workdir = cwd or tempfile.mkdtemp(prefix="hermes_run_")
     exe = shutil.which("hermes") or "hermes"
     # Toolsets acotados: los defaults incluyen browser (automatización de
     # navegador — rabbit hole que hizo timeout a growth_hacker), clarify
@@ -105,7 +121,7 @@ def run_hermes(
     # tts, image_gen (las imágenes las maneja nuestra app). Set de laburo:
     cmd = [exe, "chat", "-q", full_prompt, "-Q", "--yolo",
            "--max-turns", str(max_turns), "-m", model, "--provider", provider,
-           "-t", "web,terminal,file,code_execution,skills,memory,todo",
+           "-t", toolsets or "web,terminal,file,code_execution,skills,memory,todo",
            "--ignore-user-config"]
     try:
         with open(stdout_path, "wb") as fout, open(stderr_path, "wb") as ferr:
@@ -116,12 +132,18 @@ def run_hermes(
             stdout_s = f.read().decode("utf-8", errors="replace")
         with open(stderr_path, "rb") as f:
             stderr_s = f.read().decode("utf-8", errors="replace")
-        artifact = _largest_text_artifact(workdir, exclude={stdout_path, stderr_path})
+        # Rescate de artefacto SOLO con workdir propio/efímero: si el caller pasó
+        # su `cwd` (proyecto real), el entregable es el texto impreso y escanear
+        # miles de .md del proyecto traería cualquier cosa.
+        artifact = (_largest_text_artifact(workdir, exclude={stdout_path, stderr_path})
+                    if own_workdir else None)
     except subprocess.TimeoutExpired as e:
         log.error("hermes_timeout", timeout=timeout)
         raise HermesError(f"hermes chat timeout tras {timeout}s") from e
     finally:
-        shutil.rmtree(workdir, ignore_errors=True)
+        shutil.rmtree(io_dir, ignore_errors=True)
+        if own_workdir:
+            shutil.rmtree(workdir, ignore_errors=True)
 
     if returncode != 0:
         # Con -Q el error real suele quedar en stdout (stderr trae solo el
