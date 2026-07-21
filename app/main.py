@@ -1928,24 +1928,35 @@ async def api_diag_hermes(request: Request):
     # llamadas, o sea que está resolviendo a otro proveedor.
     try:
         import os as _os
-        from .clients.hermes import _wire_search_backend
+        from .clients.hermes import _wire_search_backend, _HERMES_SEARCH_KEYS
         entorno = dict(_os.environ)
         _wire_search_backend(entorno, get_settings(), "diag")
-        previo = {k: _os.environ.get(k) for k in ("SEARXNG_URL",)}
-        _os.environ["SEARXNG_URL"] = entorno["SEARXNG_URL"]
+        # Aplicar el entorno COMPLETO del hijo (incluido el borrado de keys), no
+        # solo SEARXNG_URL: medir con las keys puestas devolvía "tavily" y me hacía
+        # culpar al runtime de un error del propio diagnóstico.
+        previo = {k: _os.environ.get(k) for k in (*_HERMES_SEARCH_KEYS, "SEARXNG_URL")}
         try:
-            from tools.web_tools import _get_backend, _get_search_backend, _load_web_config
+            for k in _HERMES_SEARCH_KEYS:
+                _os.environ.pop(k, None)
+            _os.environ["SEARXNG_URL"] = entorno["SEARXNG_URL"]
+            from tools.web_tools import (_get_backend, _get_search_backend,
+                                         _load_web_config, _env_value)
             out["busqueda"] = {
                 "backend_elegido": _get_backend(),
                 "backend_search": _get_search_backend(),
                 "config_yaml_web": _load_web_config(),
-                "searxng_url_apunta_a": entorno["SEARXNG_URL"].split("/api/")[0] + "/api/searx/***",
+                # Si Hermes SIGUE viendo la key después de sacarla del entorno, es
+                # que la lee de su propio .env en HERMES_HOME → sacarla del env del
+                # hijo no sirve para nada y hay que borrarla de ahí.
+                "tavily_visible_pese_a_borrarla": bool(_env_value("TAVILY_API_KEY")),
+                "searxng_visible": bool(_env_value("SEARXNG_URL")),
             }
         finally:
-            if previo["SEARXNG_URL"] is None:
-                _os.environ.pop("SEARXNG_URL", None)
-            else:
-                _os.environ["SEARXNG_URL"] = previo["SEARXNG_URL"]
+            for k, v in previo.items():
+                if v is None:
+                    _os.environ.pop(k, None)
+                else:
+                    _os.environ[k] = v
     except Exception as e:
         out["busqueda"] = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
     return out
