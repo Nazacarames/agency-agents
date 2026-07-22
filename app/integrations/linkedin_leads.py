@@ -30,6 +30,9 @@ _NOTE_DM_PROMPT = (
     "termina con micro-CTA suave>\n"
     "DM: <primer mensaje para cuando acepte, 3-4 líneas, un dolor concreto de su rubro + "
     "cómo lo resolvemos + CTA de demo de 15 minutos>\n"
+    "PROHIBIDO afirmarle a la persona qué cargo tiene o en qué empresa trabaja "
+    "('vi que sos gerente en X'): el perfil lo encontró un buscador y puede no ser "
+    "quien creemos. Hablá del RUBRO y de la empresa del lead, nunca del cargo de él.\n"
     "Nada más que esas 2 líneas (NOTA: y DM:). DATOS DEL LEAD:\n"
 )
 
@@ -92,6 +95,14 @@ def find_profile(company: str, decisor: str = "") -> Dict[str, str]:
             for r in (web_search(q, 5) or []):
                 url = (r.get("url") or "").split("?")[0]
                 if "linkedin.com/in/" not in url:
+                    continue
+                # LinkedIn sirve el perfil desde el subdominio del país del titular.
+                # Nuestros leads son PyMEs argentinas, así que un perfil br/cl/pe/es
+                # NUNCA puede ser el match correcto: son empresas homónimas. Sin este
+                # filtro, "Metalúrgica Rosario" matcheaba a una señora llamada Rosario
+                # en España, y le mandábamos una invitación personalizada.
+                host = url.split("//", 1)[-1].split("/", 1)[0].lower()
+                if host not in ("www.linkedin.com", "linkedin.com", "ar.linkedin.com"):
                     continue
                 title = (r.get("title") or "").replace("| LinkedIn", "").strip()
                 # La marca tiene que estar en el TITULAR del perfil ("Gerente en X"),
