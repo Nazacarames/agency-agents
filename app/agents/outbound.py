@@ -28,6 +28,7 @@ import pytz
 
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block, upstream_handoff_block
+from ..config import get_settings
 from ..integrations.gmail_client import get_gmail_client, GmailError
 from ..integrations import leads_store as ls
 from ..integrations import email_guard as _eg
@@ -57,7 +58,7 @@ Tu trabajo: por cada lead, redactar el email que corresponde a SU step.
   en dos leads distintos: cada asunto se lee como escrito por una persona para ESA empresa.
   Bien: "pedidos que entran a las 11 de la noche" · "las 7 sucursales y un solo WhatsApp".
   Mal: "demo para Laco: pedidos de Bahía Blanca que entran fuera de horario".
-- Firmá como "Equipo Automiq".
+- Firmá como "{{FIRMA}}".
 - NUNCA inventes precios, plazos ni datos del lead que no estén en el material.
 
 ## Cómo cambia el mensaje según el step
@@ -94,7 +95,7 @@ objeto por lead, COPIANDO la `key` tal cual te la pasé:
 """.strip()
 
 
-def _reengage_body(lead: Dict[str, Any]) -> str:
+def _reengage_body(lead: Dict[str, Any], firma: str = "Equipo Automiq") -> str:
     """Mensaje único de reenganche a un lead dormido (plantilla determinística, sin LLM).
     Tono de los reenganches que funcionaron: cálido, sin presión, con salida cordial."""
     ind = (lead.get("industria") or "").strip()
@@ -107,7 +108,7 @@ def _reengage_body(lead: Dict[str, Any]) -> str:
         "atención de consultas y pedidos, sin costo y sin compromiso.\n\n"
         "¿Te copa que coordinemos 15 minutos esta semana? Si preferís que lo deje por "
         "acá, avisame y listo.\n\n"
-        "Abrazo,\nEquipo Automiq"
+        f"Abrazo,\n{firma}"
     )
 
 
@@ -189,7 +190,11 @@ class OutboundAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        return f"{get_context_block()}\n\n{OUTBOUND_INSTRUCTIONS}"
+        # La firma del cuerpo tiene que ser LA MISMA que el From. Un mail que llega
+        # de "Nazareno Carames" y abajo firma "Equipo Automiq" se lee como automático.
+        firma = get_settings().outbound_from_name
+        return (f"{get_context_block()}\n\n"
+                f"{OUTBOUND_INSTRUCTIONS.replace('{{FIRMA}}', firma)}")
 
     def _today(self) -> str:
         return datetime.now(pytz.timezone(self.timezone)).strftime("%Y-%m-%d")
@@ -356,7 +361,7 @@ class OutboundAgent(BaseAgent):
                              f"≥{ls.REENGAGE_AFTER_DAYS}d desde que respondió)")
                 continue
             subject = _reengage_subject(lead)
-            body = _reengage_body(lead)
+            body = _reengage_body(lead, firma=self._reengage_from_name())
             try:
                 # thread_id_of DENTRO del try: un 404/401 de Gmail acá abortaba
                 # post_process entero → los reenganches ya enviados no se

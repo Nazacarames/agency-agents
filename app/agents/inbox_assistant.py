@@ -22,6 +22,7 @@ from typing import Any, Dict, List
 
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block
+from ..config import get_settings
 from ..integrations.gmail_client import get_gmail_client, GmailError
 from ..integrations.calendar_client import get_calendar_client, CalendarError
 from ..integrations import inbox_state
@@ -59,7 +60,7 @@ responder cada detalle por mail.
   ads para PyMEs) en 1 frase concreta de beneficio, sin ser vendedor agresivo.
 - Si NO tenés un dato puntual (precio exacto, algo interno), NO lo inventes: usá eso mismo
   como excusa perfecta para la reunión ("eso lo vemos en 15 min según tu caso").
-- Firmá como "Equipo Automiq". NUNCA prometas algo que no podés cumplir ni inventes precios/plazos.
+- Firmá como "{{FIRMA}}". NUNCA prometas algo que no podés cumplir ni inventes precios/plazos.
 
 ## Dos situaciones para el CTA (MUY IMPORTANTE)
 **(A) Todavía NO acordaron un horario concreto** → proponé y pedí que confirmen:
@@ -72,7 +73,7 @@ responder cada detalle por mail.
   `book.confirm=true` con la fecha/hora en ISO-8601 con offset ART (-03:00) y, en `reply`,
   CONFIRMÁ la reunión e incluí LITERALMENTE el token `{{MEET_LINK}}` donde irá el link del Meet
   (yo lo reemplazo por el link real). Ej. de reply: "¡Listo! Te agendé para el jueves 15h.
-  Acá tenés el link del Meet: {{MEET_LINK}} — nos vemos ahí. Equipo Automiq."
+  Acá tenés el link del Meet: {{MEET_LINK}} — nos vemos ahí. {{FIRMA}}."
 
 ## Formato de salida (OBLIGATORIO)
 Devolvé EXCLUSIVAMENTE un array JSON válido (sin texto antes ni después, sin ```),
@@ -121,7 +122,11 @@ class InboxAssistantAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        return f"{get_context_block()}\n\n{INBOX_INSTRUCTIONS}"
+        # Misma firma que el From del outbound: el prospecto ya viene hablando con
+        # esa persona, no con un "equipo".
+        firma = get_settings().outbound_from_name
+        return (f"{get_context_block()}\n\n"
+                f"{INBOX_INSTRUCTIONS.replace('{{FIRMA}}', firma)}")
 
     def _booking_block(self, ctx: AgentContext) -> str:
         """Contexto de agenda para que el CTA de cada respuesta cierre la reunión."""
