@@ -72,6 +72,8 @@ CLIENT_ARCHIVE_CRON = "0 5 * * *"
 # leadhunter/outbound). Semanal, domingo 07:00 ART. Determinístico, sin costo de cuota.
 LEARNING_DIGEST_CRON = "0 7 * * sun"
 COMPETITOR_REFRESH_CRON = "0 8 * * sun"   # dom 08:00 — refresca el playbook de competencia
+OSM_REFRESH_CRON = "0 5 * * sun"          # dom 05:00 — rearma el pool de
+                                          # candidatas de OpenStreetMap (leadhunter)
 SCOUT_REFRESH_CRON = "0 9 * * sun"        # dom 09:00 — visual scout IG (Gemini mira reels reales)
 TREND_RADAR_CRON = "45 6 * * *"           # diario 06:45 — radar de tendencias; digest ~7 AM
 CREATIVE_STUDY_CRON = "0 10 1 * *"        # día 1 de cada mes 10:00 — re-estudia formatos de creativos
@@ -112,6 +114,8 @@ class AgentScheduler:
                               _scheduled_competitor_refresh)
         self._register_simple("scout:refresh", SCOUT_REFRESH_CRON, DEFAULT_TIMEZONE,
                               _scheduled_scout_refresh)
+        self._register_simple("osm:refresh", OSM_REFRESH_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_osm_refresh)
         self._register_simple("trends:radar", TREND_RADAR_CRON, DEFAULT_TIMEZONE,
                               _scheduled_trend_radar)
         self._register_simple("creative:study", CREATIVE_STUDY_CRON, DEFAULT_TIMEZONE,
@@ -270,6 +274,25 @@ async def _scheduled_competitor_refresh() -> None:
         log.info("trends_refresh_scheduled_done", result=tr)
     except Exception as e:
         log.error("trends_refresh_failed", error=str(e)[:200])
+
+
+async def _scheduled_osm_refresh() -> None:
+    """Rearma el pool de candidatas de OpenStreetMap para leadhunter.
+
+    Va como job aparte y no dentro del agente: son ~15 consultas a Overpass con
+    pausas de cortesía (minutos). Si esto corriera al armar el prompt, la primera
+    corrida después de tocar los perfiles arrancaría demorada — y una consulta
+    lenta a un servicio de terceros no tiene por qué frenar al agente.
+
+    Domingo 05:00: ningún agente corre a esa hora.
+    """
+    import asyncio
+    from .integrations import osm_leads
+    try:
+        pool = await asyncio.to_thread(osm_leads.refrescar)
+        log.info("osm_refresh_scheduled_done", empresas=len(pool))
+    except Exception as e:
+        log.error("osm_refresh_failed", error=str(e)[:200])
 
 
 async def _scheduled_scout_refresh() -> None:

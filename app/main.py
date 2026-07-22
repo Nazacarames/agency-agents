@@ -67,6 +67,20 @@ async def lifespan(app: FastAPI):
         _fijar_backend()
     except Exception as e:
         log.warning("hermes_backend_fijar_failed", error=str(e)[:200])
+    # Pool de candidatas de OSM: si falta o cambió la config de búsqueda, se
+    # rearma AHORA en un thread aparte. El job semanal (osm:refresh) solo lo
+    # mantiene al día; sin esto, un cambio de perfiles un lunes no tomaría
+    # efecto hasta el domingo siguiente. En thread para no demorar el arranque
+    # (son ~15 consultas a Overpass con pausas de cortesía).
+    try:
+        from .integrations import osm_leads as _osm
+        if _osm.necesita_refresco():
+            import threading
+            threading.Thread(target=_osm.refrescar, daemon=True,
+                             name="osm-refresh-arranque").start()
+            log.info("osm_refresco_al_arranque", motivo="cache ausente o config nueva")
+    except Exception as e:
+        log.warning("osm_arranque_failed", error=str(e)[:200])
 
     # ── Iniciar scheduler ──
     global _scheduler

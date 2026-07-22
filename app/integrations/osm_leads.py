@@ -244,6 +244,22 @@ def _leer_cache() -> Optional[List[Dict[str, Any]]]:
         return None
 
 
+def _leer_cache_aunque_vencido() -> Optional[List[Dict[str, Any]]]:
+    """El pool guardado sin importar TTL ni huella. Sólo para no dejar al agente
+    sin candidatas mientras el job de refresco todavía no corrió."""
+    try:
+        if not _CACHE.is_file():
+            return None
+        return json.loads(_CACHE.read_text(encoding="utf-8")).get("empresas") or None
+    except Exception:
+        return None
+
+
+def necesita_refresco() -> bool:
+    """True si el cache está ausente, vencido o con otra configuración."""
+    return _leer_cache() is None
+
+
 def _guardar_cache(empresas: List[Dict[str, Any]]) -> None:
     try:
         _CACHE.parent.mkdir(exist_ok=True)
@@ -324,10 +340,14 @@ def candidatos(cantidad: int = 25, excluir: Optional[set] = None,
     Rota por día para que dos corridas seguidas no traigan las mismas: sin esto
     el agente recibiría siempre las primeras 25 y el pool nunca avanzaría.
     """
-    pool = _leer_cache()
-    if pool is None:
-        pool = refrescar()
+    # NUNCA refresca en línea: esto corre dentro del armado del prompt del
+    # agente, y rearmar el pool son ~15 consultas a Overpass con pausas de
+    # cortesía (minutos). El refresco es un job aparte (scheduler: "osm:refresh").
+    # Si el cache está vencido o con otra huella, se usa IGUAL: un pool viejo es
+    # infinitamente mejor que dejar al agente sin candidatas.
+    pool = _leer_cache() or _leer_cache_aunque_vencido()
     if not pool:
+        log.warning("osm_sin_pool", nota="todavía no corrió el job osm:refresh")
         return []
     excluir = {e.lower().strip() for e in (excluir or set())}
 
