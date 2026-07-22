@@ -214,11 +214,28 @@ def _normalizar(el: Dict[str, Any], vertical: str) -> Optional[Dict[str, Any]]:
     }
 
 
+def _huella() -> str:
+    """Huella de la CONFIGURACIÓN de búsqueda (perfiles + filtros).
+
+    El TTL solo mide tiempo, y eso escondió una mejora: al ampliar los perfiles
+    de manufactura, prod siguió sirviendo el pool viejo del cache y el cambio no
+    iba a tomar efecto hasta 7 días después. Guardando la huella, cualquier
+    cambio de perfiles o filtros invalida el cache y se rearma solo.
+    """
+    import hashlib
+    crudo = json.dumps(PERFILES, sort_keys=True) + _GRANDES.pattern + \
+        _NO_EMPRESA.pattern + _RUIDO.pattern + "".join(_DOMINIOS_MALOS)
+    return hashlib.sha256(crudo.encode()).hexdigest()[:16]
+
+
 def _leer_cache() -> Optional[List[Dict[str, Any]]]:
     try:
         if not _CACHE.is_file():
             return None
         data = json.loads(_CACHE.read_text(encoding="utf-8"))
+        if data.get("huella") != _huella():
+            log.info("osm_cache_invalidado", motivo="cambió la config de búsqueda")
+            return None
         cuando = datetime.fromisoformat(data["actualizado"])
         if datetime.now(timezone.utc) - cuando > timedelta(days=_TTL_DIAS):
             return None
@@ -231,7 +248,8 @@ def _guardar_cache(empresas: List[Dict[str, Any]]) -> None:
     try:
         _CACHE.parent.mkdir(exist_ok=True)
         _CACHE.write_text(json.dumps(
-            {"actualizado": datetime.now(timezone.utc).isoformat(), "empresas": empresas},
+            {"actualizado": datetime.now(timezone.utc).isoformat(),
+             "huella": _huella(), "empresas": empresas},
             ensure_ascii=False, indent=1), encoding="utf-8")
     except Exception as e:
         log.warning("osm_cache_write_failed", error=str(e)[:150])
