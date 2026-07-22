@@ -282,7 +282,25 @@ def refrescar(limite_por_perfil: int = 250, objetivo: int = 160) -> List[Dict[st
     return pool
 
 
-def candidatos(cantidad: int = 25, excluir: Optional[set] = None) -> List[Dict[str, Any]]:
+def candidatos_por_cupo(cupo: Dict[str, int],
+                        excluir: Optional[set] = None) -> List[Dict[str, Any]]:
+    """Candidatas respetando un cupo por vertical: {"manufactura": 6, ...}.
+
+    Existe para que la priorización por tasa de respuesta sea REAL. Decirle al
+    modelo "priorizá manufactura" es una sugerencia que puede ignorar (medido
+    todo el 2026-07-21); entregarle 6 empresas de manufactura y 3 de
+    distribución es un hecho.
+    """
+    salida: List[Dict[str, Any]] = []
+    for vertical, n in cupo.items():
+        if n <= 0:
+            continue
+        salida.extend(candidatos(n, excluir, vertical=vertical))
+    return salida
+
+
+def candidatos(cantidad: int = 25, excluir: Optional[set] = None,
+               vertical: Optional[str] = None) -> List[Dict[str, Any]]:
     """Empresas listas para prospectar, sin las que ya están en el pipeline.
 
     Rota por día para que dos corridas seguidas no traigan las mismas: sin esto
@@ -299,7 +317,8 @@ def candidatos(cantidad: int = 25, excluir: Optional[set] = None) -> List[Dict[s
         n = emp["empresa"].lower()
         return any(x and (x in n or n in x) for x in excluir)
 
-    libres = [e for e in pool if not ya_esta(e)]
+    libres = [e for e in pool if not ya_esta(e)
+              and (vertical is None or e["vertical"] == vertical)]
     if not libres:
         return []
     # Offset por día del año: avanza sobre el pool sin repetir el mismo tramo.
@@ -310,6 +329,16 @@ def candidatos(cantidad: int = 25, excluir: Optional[set] = None) -> List[Dict[s
     return rotado[:cantidad]
 
 
+def bloque_por_cupo(cupo: Dict[str, int], excluir: Optional[set] = None) -> str:
+    """Igual que `bloque_prompt` pero respetando el cupo por vertical."""
+    try:
+        emps = candidatos_por_cupo(cupo, excluir)
+    except Exception as e:
+        log.warning("osm_bloque_cupo_failed", error=str(e)[:150])
+        return ""
+    return _formatear(emps)
+
+
 def bloque_prompt(cantidad: int = 25, excluir: Optional[set] = None) -> str:
     """El bloque que se le inyecta al agente. Vacío si no hay nada (nunca rompe)."""
     try:
@@ -317,6 +346,10 @@ def bloque_prompt(cantidad: int = 25, excluir: Optional[set] = None) -> str:
     except Exception as e:
         log.warning("osm_bloque_failed", error=str(e)[:150])
         return ""
+    return _formatear(emps)
+
+
+def _formatear(emps: List[Dict[str, Any]]) -> str:
     if not emps:
         return ""
     filas = [f"{i}. **{e['empresa']}** — {e['web']}"

@@ -296,7 +296,79 @@ class LeadHunterAgent(BaseAgent):
     def system_prompt(self) -> str:
         return f"{get_context_block()}\n\n{LEADHUNTER_INSTRUCTIONS}"
 
-    def _learning_block(self, ctx: AgentContext) -> str:
+    # El CRM y OSM nombran distinto a los mismos verticales.
+    _CRM_A_OSM = {"manufacturing": "manufactura", "distribución": "distribucion",
+                  "logística": "logistica"}
+
+    def _cupo_por_respuesta(self, target: int) -> tuple:
+        """Reparte el cupo del día entre verticales según la tasa de respuesta REAL.
+
+        Por qué no basta con decírselo al modelo: la tasa ya se le pasaba como
+        lección de texto ("manufacturing 3%, distribución 1%") y es una sugerencia
+        que puede ignorar — el 2026-07-21 quedó claro que las ignora. Repartir el
+        cupo en código lo convierte en un hecho.
+
+        Suavizado hacia el PROMEDIO GLOBAL, no con un +1 fijo. Es la diferencia
+        entre un reparto sensato y uno absurdo: con Laplace simple
+        ((resp+1)/(cont+2)) y los números reales del pipeline —manufactura 2/58,
+        distribución 1/76, logística 0/17— el cupo daba **6 de 10 a logística**,
+        que nunca respondió, sólo porque el +1 pesa muchísimo cuando el
+        denominador es chico. Encogiendo hacia el promedio global con fuerza
+        `_ALFA`, los verticales con poca evidencia se parecen al promedio en vez
+        de dispararse, y gana el que de verdad rinde.
+
+        Reserva de exploración: 1 lugar SIEMPRE va al vertical con menos datos.
+        Sin eso el sistema se encierra en lo que ya funciona y nunca descubre que
+        otro rubro rendía mejor — y el pipeline es demasiado chico para dar por
+        cerrado ningún vertical.
+        """
+        from ..integrations import leads_store as ls
+        try:
+            agg = ls.outcomes_by_vertical(ls.load_store())
+        except Exception:
+            return {}, ""
+        datos = {}
+        for crm, osm in self._CRM_A_OSM.items():
+            a = agg.get(crm) or {}
+            datos[osm] = (a.get("contacted", 0), a.get("replied", 0))
+        if not any(c for c, _ in datos.values()):
+            return {}, ""           # sin historial todavía: que decida el agente
+
+        # Promedio global del pipeline: es el "no sé nada de este vertical".
+        tot_c = sum(c for c, _ in datos.values())
+        tot_r = sum(r for _, r in datos.values())
+        p0 = (tot_r / tot_c) if tot_c else 0.02
+        # _ALFA = cuántos contactos "de prior" pesan. 30 ≈ hace falta esa
+        # cantidad de evidencia propia para despegarse del promedio global.
+        _ALFA = 30.0
+        tasas = {v: (r + _ALFA * p0) / (c + _ALFA) for v, (c, r) in datos.items()}
+        explorar = 1 if target >= 5 else 0
+        # El lugar de exploración va al que MENOS sabemos, no al que peor rinde:
+        # "poco explorado" y "no funciona" son cosas distintas.
+        menos_datos = min(datos, key=lambda v: datos[v][0])
+
+        reparto: Dict[str, int] = {v: 0 for v in datos}
+        total_tasas = sum(tasas.values()) or 1
+        for v, t in tasas.items():
+            reparto[v] = int((target - explorar) * t / total_tasas)
+        # Los redondeos hacia abajo dejan sobrantes: van al de mejor tasa.
+        while sum(reparto.values()) < target - explorar:
+            reparto[max(tasas, key=tasas.get)] += 1
+        reparto[menos_datos] += explorar
+
+        detalle = " · ".join(
+            f"{v} {reparto[v]} ({datos[v][1]}/{datos[v][0]} resp.)"
+            for v in sorted(reparto, key=lambda x: -reparto[x]) if reparto[v])
+        texto = (
+            "## 📊 CUPO DE HOY POR VERTICAL (calculado con la tasa de respuesta real)\n"
+            f"{detalle}\n"
+            f"Incluye 1 lugar de exploración en **{menos_datos}** (el vertical del que "
+            "menos datos tenemos — poco explorado no es lo mismo que no funciona).\n"
+            "Las candidatas de abajo ya vienen en esta proporción."
+        )
+        return reparto, texto
+
+    def _learning_block(self, ctx: AgentContext, target: int = 10) -> str:
         """Inyecta lo aprendido del pipeline: empresas YA contactadas (no repetir) +
         rubros que mejor convierten (priorizar). Hace al leadhunter mejor con el tiempo."""
         parts: List[str] = []  # type: ignore[name-defined]
@@ -352,7 +424,16 @@ class LeadHunterAgent(BaseAgent):
                 ya = set(_ls.known_companies(_ls.load_store(), limit=300))
             except Exception:
                 ya = set()
-            bloque = osm_leads.bloque_prompt(25, excluir=ya)
+            cupo, texto_cupo = self._cupo_por_respuesta(target)
+            if cupo:
+                parts.append(texto_cupo)
+                # 2.5 candidatas por lead pedido: el agente descarta las que no
+                # dan el perfil, así que entregarle justo el número lo dejaría
+                # corto en cuanto una no sirva.
+                cupo_osm = {v: n * 3 for v, n in cupo.items() if n}
+                bloque = osm_leads.bloque_por_cupo(cupo_osm, excluir=ya)
+            else:
+                bloque = osm_leads.bloque_prompt(25, excluir=ya)
             if bloque:
                 parts.append(bloque.strip())
         except Exception as e:
