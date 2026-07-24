@@ -137,6 +137,10 @@ class Settings(BaseSettings):
     # ⚠️ Si inbox_auto_send=True, el Inbox Assistant RESPONDE solo (no borradores),
     # siempre empujando a agendar una reunión. Default OFF por seguridad.
     inbox_auto_send: bool = False
+    # Remitentes que NUNCA se responden solos aunque inbox_auto_send=True: para esos
+    # el inbox deja BORRADOR y lo manda Nazareno a mano (clientes en negociación).
+    # Coma-separado; acepta emails exactos o dominios (p.ej. "clamevet.com.ar").
+    inbox_manual_senders: str = ""
     # Link de agenda (Calendly / Cal.com) que se ofrece en cada respuesta para cerrar
     # la reunión sin ida y vuelta. Si está vacío, el agente propone horarios concretos.
     booking_url: str = ""

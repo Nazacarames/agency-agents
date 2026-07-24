@@ -108,6 +108,29 @@ def _parse_llm_json(text: str) -> List[Dict[str, Any]]:
     return extract_json_array(text, required_key="thread_id")
 
 
+def _manual_match(to: str, raw: str) -> bool:
+    """True si el remitente `to` está en la lista de 'no responder solo'
+    (settings.inbox_manual_senders). Para esos el inbox deja BORRADOR en vez de
+    enviar — negociaciones con clientes se manejan a mano. Acepta emails exactos
+    o dominios ('clamevet.com.ar' matchea cualquier @clamevet.com.ar)."""
+    to = (to or "").lower().strip()
+    if not to or not raw:
+        return False
+    if "<" in to and ">" in to:                      # "Nombre <email>" → email
+        to = to[to.find("<") + 1:to.find(">")].strip()
+    dom = to.split("@")[-1] if "@" in to else ""
+    for entry in raw.split(","):
+        e = entry.strip().lower()
+        if not e:
+            continue
+        if "@" in e:
+            if to == e:
+                return True
+        elif dom and (dom == e or dom.endswith("." + e)):
+            return True
+    return False
+
+
 class InboxAssistantAgent(BaseAgent):
     name = "inbox_assistant"
     description = "Responde la bandeja de Automiq apuntando a agendar reuniones (auto-send o borradores)"
@@ -414,9 +437,14 @@ class InboxAssistantAgent(BaseAgent):
                 errors.append(f"• **{subj}** → ❌ Gmail no disponible, sin {verb}")
                 continue
 
+            # Cliente en lista manual (inbox_manual_senders) → nunca responder solo:
+            # forzar BORRADOR aunque inbox_auto_send=True, para que lo mande Nazareno.
+            manual = _manual_match(to, ctx.settings.inbox_manual_senders)
+            item_live = live and not manual
+
             # ── Agendar reunión (crear Meet) si el prospecto confirmó horario ──
             # Sólo en modo live (crear un evento real es una acción, como enviar).
-            if wants_book and live:
+            if wants_book and item_live:
                 meet_link, when = self._book_meeting(ctx, book, company=subj, email=to)
                 if meet_link:
                     reply = reply.replace("{{MEET_LINK}}", meet_link)
@@ -432,13 +460,14 @@ class InboxAssistantAgent(BaseAgent):
                     "{{MEET_LINK}}",
                     "(coordinamos el link cuando confirmes el horario)")
 
-            if not live:
+            if not item_live:
                 try:
                     draft_id = client.create_draft(
                         thread_id=tid, to=to, subject=subj, body=reply,
                         in_reply_to_msg_id=meta.get("last_msg_id"),
                     )
-                    created.append(f"• **{subj}** → 📝 borrador `{draft_id}` para {to}")
+                    why = " · 🔒 cliente en lista manual, revisá y enviá vos" if manual else ""
+                    created.append(f"• **{subj}** → 📝 borrador `{draft_id}` para {to}{why}")
                     inbox_state.mark_processed(tid, meta.get("last_msg_id", ""), action="draft")
                 except Exception as e:
                     log.error("inbox_draft_failed", thread_id=tid, error=str(e))
