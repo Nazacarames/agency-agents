@@ -99,4 +99,13 @@ class SocialMediaAgent(BaseAgent):
         if isinstance(args, dict) and "publish" in args:
             pub = bool(args["publish"])
         text = augment_with_images(response_text, s.content_image_count, publish=pub)
+        # QA de texto con Gemini (gemelo del QA visual): puntúa el copy y reinyecta
+        # el fix como LECCION para la próxima corrida. Best-effort.
+        try:
+            from ..integrations import text_judge
+            qa = text_judge.qa_and_learn(self.name, "social", response_text)
+            if qa:
+                text += "\n" + qa
+        except Exception:
+            pass
         return super().post_process(text, ctx)

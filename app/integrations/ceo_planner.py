@@ -60,16 +60,30 @@ def plan_objective(objective: str, roster: List[Dict[str, str]],
         + (f"\nCONTEXTO DEL CLIENTE OBJETIVO:\n{client_ctx}\n" if client_ctx else "")
         + "\nDescomponé el objetivo en sub-tareas por agente. Devolvé sólo el array JSON."
     )
+    steps: List[Dict[str, Any]] = []
+    # 1) Gemini (Vertex) primero: descarga la cuota de MiniMax — que es el cuello de
+    #    botella de todo el sistema — y es gratis dentro del service account que ya usamos.
     try:
-        from ..clients.minimax import MiniMaxClient
-        with MiniMaxClient(get_settings()) as mm:
-            resp = mm.complete(system=_SYSTEM,
-                               messages=[{"role": "user", "content": user}],
-                               max_tokens=2000, temperature=0.4)
-        steps = _extract_json_array(resp.text) or []
+        from . import vision
+        if vision.enabled():
+            raw = vision.synthesize(user, _SYSTEM, max_tokens=2000)
+            steps = _extract_json_array(raw) or []
+            if steps:
+                log.info("ceo_plan_via_gemini", n=len(steps))
     except Exception as e:
-        log.warning("ceo_plan_failed", error=str(e)[:200])
-        return []
+        log.warning("ceo_plan_gemini_failed", error=str(e)[:150])
+    # 2) Fallback MiniMax (si Gemini está apagado o no devolvió plan usable).
+    if not steps:
+        try:
+            from ..clients.minimax import MiniMaxClient
+            with MiniMaxClient(get_settings()) as mm:
+                resp = mm.complete(system=_SYSTEM,
+                                   messages=[{"role": "user", "content": user}],
+                                   max_tokens=2000, temperature=0.4)
+            steps = _extract_json_array(resp.text) or []
+        except Exception as e:
+            log.warning("ceo_plan_failed", error=str(e)[:200])
+            return []
 
     out: List[Dict[str, Any]] = []
     for s in steps:
