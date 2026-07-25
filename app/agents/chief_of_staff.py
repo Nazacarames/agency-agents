@@ -115,6 +115,15 @@ Si no hay nada con evidencia sólida: "Sin mejoras esta vez.")
 ## 🚀 Misiones sugeridas para los agentes
 (0-3; cada una con el texto EXACTO del objetivo, listo para pegar en el panel.
 Formato: **misión** → `<objetivo concreto y medible>` (agentes: <cuáles>))
+
+## 🔁 DELEGACIÓN (bloque para el sistema — NO es para el humano)
+No sos solo un consejero: repartís el trabajo. De TODO lo de arriba (plan con
+dueño 🤖, misiones), bajá lo que un agente puede ejecutar solo a órdenes concretas.
+Por CADA una emití UNA línea, exactamente en este formato (agente real, en snake_case):
+`DELEGAR(<agente>): <tarea concreta, medible y autosuficiente para su próxima corrida>`
+Reglas: máx 6; solo agentes del roster; nada de tareas del humano (esas van en "Tus 3
+acciones"); si no hay nada que delegar, omití el bloque. Cada agente recibe su orden
+en su próxima corrida (no gasta una corrida extra).
 """.strip()
 
 WEEKLY_ADDON = """
@@ -298,6 +307,56 @@ class ChiefOfStaffAgent(BaseAgent):
     @property
     def system_prompt(self) -> str:
         return f"{get_context_block()}\n\n{COS_INSTRUCTIONS}"
+
+    def post_process(self, response_text: str, ctx: AgentContext) -> str:
+        """Además de persistir el brief, EJECUTA la delegación: convierte las líneas
+        `DELEGAR(<agente>): <tarea>` en órdenes reales que cada agente recibe en su
+        próxima corrida (agent_inbox) y registra la tanda como misión para trackearla.
+        NO dispara corridas nuevas a propósito: cada run de agente es pesado en cuota,
+        así que la orden viaja sobre la corrida que el agente ya tiene programada."""
+        delegated = self._delegate(response_text or "", ctx)
+        text = response_text or ""
+        if delegated:
+            lines = "\n".join(f"- 🤖 **{a}** ← {t}" for a, t in delegated)
+            text = f"{text.rstrip()}\n\n## 🔁 Delegado (lo recibe cada agente en su próxima corrida)\n{lines}\n"
+        return super().post_process(text, ctx)
+
+    def _delegate(self, text: str, ctx: AgentContext):
+        """Parsea DELEGAR(agente): tarea, deja la orden en el buzón del agente y crea
+        una misión de tracking. Devuelve [(agente, tarea), ...]. Best-effort."""
+        import re
+        try:
+            from ..integrations import agent_inbox, missions_store as mis
+            from .registry import list_agents as _all
+            valid = {a.name for a in _all()}
+            out = []
+            seen = set()
+            for m in re.finditer(r"^[\s>*`\-]*DELEGAR\(([a-z_]+)\)\s*[:：]\s*(.+)$",
+                                 text, re.IGNORECASE | re.MULTILINE):
+                agente = m.group(1).lower()
+                tarea = m.group(2).strip().strip("`*")
+                if agente not in valid or agente == self.name or len(tarea) < 10:
+                    continue
+                if agente in seen or len(out) >= 6:
+                    continue
+                seen.add(agente)
+                if agent_inbox.leave(self.name, agente, f"[Delegado por el Chief] {tarea}"):
+                    out.append((agente, tarea))
+            if out:
+                fecha = datetime.now(ZoneInfo(self.timezone)).strftime("%Y-%m-%d")
+                try:
+                    mis.create_mission(
+                        objective=f"Delegaciones del cierre del {fecha}",
+                        agents=[a for a, _ in out],
+                        plan=[{"agent": a, "task": t} for a, t in out],
+                        notes="Auto-delegado por chief_of_staff (se entrega en la próxima corrida de cada agente).")
+                except Exception as e:
+                    log.warning("cos_mission_record_failed", error=str(e)[:120])
+                log.info("cos_delegated", run_id=ctx.run_id, count=len(out))
+            return out
+        except Exception as e:
+            log.warning("cos_delegate_failed", error=str(e)[:150])
+            return []
 
     def build_user_message(self, ctx: AgentContext) -> str:
         reports = _recent_artifacts()

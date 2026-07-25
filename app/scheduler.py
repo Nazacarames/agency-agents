@@ -83,6 +83,9 @@ PRACTICE_RESEARCH_CRON = "0 7 1,15 * *"   # día 1 y 15, 07:00 — research web 
 DRIVE_SYNC_CRON = "0 5 * * *"             # diario 05:00 — contenido/reportes/backup de stores a Google Drive
 COMMENT_WATCH_CRON = "15 */2 * * *"       # cada 2h — comentarios nuevos en nuestros posts (comment-gate → Discord)
 REEL_STUDY_CRON = "30 6 * * mon"          # lun 06:30 — Gemini mira reels del competidor → prompts/lecciones
+WATCHDOG_CRON = "15 7,14,20 * * *"        # 07:15/14:15/20:15 — salud del sistema (token Gmail + corridas
+                                          # caídas). 07:15 avisa el token muerto ANTES de que outbound salga;
+                                          # 14:15 y 20:15 barren las caídas de la mañana y la tarde. Sin LLM.
 
 
 class AgentScheduler:
@@ -132,6 +135,9 @@ class AgentScheduler:
                               _scheduled_comment_watch)
         self._register_simple("reels:study", REEL_STUDY_CRON, DEFAULT_TIMEZONE,
                               _scheduled_reel_study)
+        if self.s.watchdog_enabled:
+            self._register_simple("watchdog", WATCHDOG_CRON, DEFAULT_TIMEZONE,
+                                  _scheduled_watchdog)
         self.scheduler.start()
         log.info("scheduler_started", jobs=self.jobs_registered, tz=self.s.scheduler_timezone)
 
@@ -385,6 +391,19 @@ async def _scheduled_comment_watch() -> None:
         log.info("comment_watch_scheduled_done", result=res)
     except Exception as e:
         log.error("comment_watch_failed", error=str(e)[:200])
+
+
+async def _scheduled_watchdog() -> None:
+    """Salud del sistema: token Gmail + corridas caídas → Discord (best-effort)."""
+    import asyncio
+    from .integrations import watchdog
+    from .container import get_container
+    try:
+        c = get_container()
+        res = await asyncio.to_thread(watchdog.check, c.settings, c.discord)
+        log.info("watchdog_scheduled_done", result=res)
+    except Exception as e:
+        log.error("watchdog_failed", error=str(e)[:200])
 
 
 async def _scheduled_trend_radar() -> None:

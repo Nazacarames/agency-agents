@@ -43,6 +43,15 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True
     global_pause: bool = False
 
+    # ── Watchdog (salud del sistema) ──
+    # Chequea proactivamente lo que se rompe EN SILENCIO (token Gmail vencido,
+    # corridas de agente caídas) y avisa a Discord. Sin esto, un refresh token
+    # muerto tumbaba outbound/inbox/drive sin que nadie se entere hasta días después.
+    watchdog_enabled: bool = True
+    # Minutos de gracia tras la hora programada antes de contar una corrida como caída
+    # (cubre agentes lentos: los de Claude Code tardan hasta ~10 min).
+    watchdog_grace_min: int = 45
+
     # ── Web ──
     port: int = 8000
     host: str = "0.0.0.0"

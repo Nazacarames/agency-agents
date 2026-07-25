@@ -504,7 +504,40 @@ class OutboundAgent(BaseAgent):
         log.info("outbound_done", run_id=ctx.run_id, sent=len(sent),
                  preview=len(preview), errors=len(errors), live=live)
 
-        return super().post_process(self._render_report(ctx, live, auto, sent, preview, errors, missing), ctx)
+        # QA de texto con Gemini (mismo lazo que el QA visual): puntúa los emails
+        # redactados y reinyecta el fix de mayor impacto como LECCION para la próxima
+        # corrida. Best-effort, no bloquea nada (Vertex apagado → se saltea).
+        qa_line = self._qa_emails(by_key, ctx)
+
+        report = self._render_report(ctx, live, auto, sent, preview, errors, missing)
+        if qa_line:
+            report += "\n" + qa_line
+        return super().post_process(report, ctx)
+
+    def _qa_emails(self, by_key: Dict[str, Dict[str, Any]], ctx: AgentContext) -> str:
+        """Juzga los emails redactados con Gemini y registra el fix como lección.
+        Devuelve una línea para el reporte ('' si no corrió)."""
+        emails = [it for it in by_key.values() if it.get("subject") and it.get("body")]
+        if not emails:
+            return ""
+        try:
+            from ..integrations import text_judge
+            if not text_judge.enabled():
+                return ""
+            res = text_judge.judge_emails(emails)
+            if not res:
+                return ""
+            avg = res.get("avg", 0)
+            fix = (res.get("top_fix") or "").strip()
+            # Solo aprendemos cuando hay margen real (lote flojo): evita ruido cuando ya sale bien.
+            if fix and avg < 80:
+                from ..integrations import memory_store as ms
+                ms.record_outcome("outbound", f"QA de calidad (Gemini) sobre cold-emails: {fix}")
+            return f"\n## 🧪 QA Gemini de los emails\nScore promedio: **{avg}/100**" + (
+                f" · Fix aplicado a futuras corridas: _{fix}_" if fix and avg < 80 else " · sin cambios (buen lote)")
+        except Exception as e:
+            log.warning("outbound_qa_failed", error=str(e)[:150])
+            return ""
 
     # ── render del reporte para Discord ──
 
