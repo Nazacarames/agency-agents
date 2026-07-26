@@ -443,6 +443,10 @@ class OutboundAgent(BaseAgent):
         if missing_keys:
             by_key.update(self._redraft_missing(ctx, store, missing_keys))
 
+        # Evaluator-optimizer: Gemini puntúa cada email y los FLOJOS se regeneran ANTES
+        # de enviar (no solo "se aprende para la próxima"). Mejora el mail que sale hoy.
+        qa_improved, qa_avg = self._improve_weak_emails(ctx, by_key, store)
+
         sent, preview, errors, missing = [], [], [], []
         for key in ctx.args.get("_ob_due_keys", []):
             lead = store.get("leads", {}).get(key)
@@ -502,42 +506,85 @@ class OutboundAgent(BaseAgent):
                 _save_sent_log(sent_log)
 
         log.info("outbound_done", run_id=ctx.run_id, sent=len(sent),
-                 preview=len(preview), errors=len(errors), live=live)
-
-        # QA de texto con Gemini (mismo lazo que el QA visual): puntúa los emails
-        # redactados y reinyecta el fix de mayor impacto como LECCION para la próxima
-        # corrida. Best-effort, no bloquea nada (Vertex apagado → se saltea).
-        qa_line = self._qa_emails(by_key, ctx)
+                 preview=len(preview), errors=len(errors), live=live, qa_improved=qa_improved)
 
         report = self._render_report(ctx, live, auto, sent, preview, errors, missing)
-        if qa_line:
-            report += "\n" + qa_line
+        if qa_avg is not None:
+            report += (f"\n## 🧪 QA Gemini (evaluator-optimizer)\nScore promedio: **{qa_avg}/100**"
+                       + (f" · **{qa_improved}** email(s) flojo(s) regenerado(s) antes de enviar"
+                          if qa_improved else " · sin regeneraciones (buen lote)"))
         return super().post_process(report, ctx)
 
-    def _qa_emails(self, by_key: Dict[str, Dict[str, Any]], ctx: AgentContext) -> str:
-        """Juzga los emails redactados con Gemini y registra el fix como lección.
-        Devuelve una línea para el reporte ('' si no corrió)."""
-        emails = [it for it in by_key.values() if it.get("subject") and it.get("body")]
-        if not emails:
-            return ""
+    # ── Evaluator-optimizer: juzgar y regenerar los emails flojos antes de enviar ──
+
+    _QA_REGEN_BELOW = 70   # score por debajo del cual se regenera el email
+
+    def _improve_weak_emails(self, ctx: AgentContext, by_key: Dict[str, Dict[str, Any]],
+                             store: Dict[str, Any]):
+        """Gemini puntúa cada email; los que están por debajo de _QA_REGEN_BELOW se
+        regeneran con el problema detectado como guía. Muta by_key in-place.
+        Devuelve (n_regenerados, score_promedio|None). Best-effort: nunca bloquea el envío."""
         try:
             from ..integrations import text_judge
             if not text_judge.enabled():
-                return ""
-            res = text_judge.judge_emails(emails)
-            if not res:
-                return ""
-            avg = res.get("avg", 0)
-            fix = (res.get("top_fix") or "").strip()
-            # Solo aprendemos cuando hay margen real (lote flojo): evita ruido cuando ya sale bien.
-            if fix and avg < 80:
+                return 0, None
+            keys = [k for k in ctx.args.get("_ob_due_keys", [])
+                    if by_key.get(k) and by_key[k].get("subject") and by_key[k].get("body")]
+            if not keys:
+                return 0, None
+            items = [{"label": by_key[k].get("company", ""), "subject": by_key[k].get("subject", ""),
+                      "text": by_key[k].get("body", "")} for k in keys]
+            scores = text_judge.score_items("email", items)
+            if not scores:
+                return 0, None
+            vals = [s["score"] for s in scores if s]
+            avg = round(sum(vals) / len(vals)) if vals else None
+            improved, worst_issue = 0, ""
+            for k, sc in zip(keys, scores):
+                if not sc or sc.get("score", 100) >= self._QA_REGEN_BELOW:
+                    continue
+                worst_issue = worst_issue or sc.get("issue", "")
+                new = self._regen_email(ctx, store.get("leads", {}).get(k), by_key[k], sc.get("issue", ""))
+                if new:
+                    by_key[k]["subject"] = new.get("subject") or by_key[k]["subject"]
+                    by_key[k]["body"] = new.get("body") or by_key[k]["body"]
+                    improved += 1
+            # Lección del patrón más flojo (para que el redactor mejore de raíz a futuro).
+            if worst_issue:
                 from ..integrations import memory_store as ms
-                ms.record_outcome("outbound", f"QA de calidad (Gemini) sobre cold-emails: {fix}")
-            return f"\n## 🧪 QA Gemini de los emails\nScore promedio: **{avg}/100**" + (
-                f" · Fix aplicado a futuras corridas: _{fix}_" if fix and avg < 80 else " · sin cambios (buen lote)")
+                ms.record_outcome("outbound", f"QA (Gemini) — patrón a corregir en cold-emails: {worst_issue}")
+            log.info("outbound_qa_optimize", run_id=ctx.run_id, avg=avg, improved=improved)
+            return improved, avg
         except Exception as e:
             log.warning("outbound_qa_failed", error=str(e)[:150])
-            return ""
+            return 0, None
+
+    def _regen_email(self, ctx: AgentContext, lead, current: Dict[str, Any], issue: str):
+        """Reescribe un cold-email flojo corrigiendo `issue`. Devuelve {subject, body} o None."""
+        if not lead or ctx.minimax is None:
+            return None
+        try:
+            prompt = (
+                "Reescribí ESTE cold-email para el lead, corrigiendo el problema detectado por el QA.\n"
+                f"PROBLEMA A CORREGIR: {issue}\n\n"
+                "=== LEAD ===\n" + self._lead_block(lead) + "\n\n"
+                f"=== EMAIL ACTUAL ===\nAsunto: {current.get('subject', '')}\n{current.get('body', '')}\n\n"
+                'Devolvé EXCLUSIVAMENTE un objeto JSON: {"subject": "...", "body": "..."}. '
+                "Respetá las reglas de outbound (subject ≤45, abrí con la señal del prospecto, "
+                "1 beneficio medible, CTA claro, tono humano rioplatense).")
+            resp = ctx.minimax.complete(system=self.system_prompt,
+                                        messages=[{"role": "user", "content": prompt}],
+                                        max_tokens=1200, temperature=self.temperature)
+            from ._common import sanitize_model_text
+            clean, _ = sanitize_model_text(resp.text)
+            m = re.search(r"\{.*\}", clean, re.DOTALL)
+            if not m:
+                return None
+            obj = json.loads(m.group(0))
+            return obj if isinstance(obj, dict) and obj.get("body") and obj.get("subject") else None
+        except Exception as e:
+            log.warning("outbound_regen_failed", error=str(e)[:120])
+            return None
 
     # ── render del reporte para Discord ──
 

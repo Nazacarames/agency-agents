@@ -97,6 +97,37 @@ def _missed_runs(settings: Settings) -> List[Tuple[str, str]]:
     return missed
 
 
+# Firmas de una corrida DEGRADADA (el agente "entregó" pero el output está roto).
+# Salieron de incidentes reales: leadhunter inventando leads al topar turnos (2026-07-21),
+# placeholders de runs fallidos, y el corte de Hermes pidiendo resumen a la mitad.
+_DEGRADED_MARKERS = (
+    "no devolvió output",
+    "reached maximum iterations",
+    "requesting summary",
+    "maximum iterations",
+)
+
+
+def _degraded_reports(settings: Settings) -> List[Tuple[str, str]]:
+    """Reportes de HOY que existen pero traen una firma de degradación."""
+    hoy = datetime.now(_TZ).strftime("%Y-%m-%d")
+    out: List[Tuple[str, str]] = []
+    try:
+        for p in _DATA.glob(f"*-report-{hoy}.md"):
+            try:
+                txt = p.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            low = txt.lower()
+            hit = next((m for m in _DEGRADED_MARKERS if m in low), "")
+            if hit:
+                agente = p.stem.split("-report-")[0].replace("-", "_")
+                out.append((agente, hit))
+    except Exception as e:
+        log.warning("watchdog_degraded_scan_failed", error=str(e)[:120])
+    return out
+
+
 # ── entrada ──
 
 def check(settings: Settings, discord=None) -> Dict[str, Any]:
@@ -130,8 +161,19 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
                         "y no dejó reporte hoy.")
         fresh_keys.append(key)
 
+    # 3) Reportes degradados (entregó pero el output está roto)
+    degraded = _degraded_reports(settings)
+    for nombre, marker in degraded:
+        key = f"degraded:{nombre}"
+        if key in already:
+            continue
+        problems.append(f"🩹 **Reporte degradado**: `{nombre}` entregó pero el output trae "
+                        f"la firma `{marker}` — revisá que no haya inventado/truncado.")
+        fresh_keys.append(key)
+
     result = {"gmail": g_status, "gmail_detail": g_detail,
-              "missed": [m[0] for m in missed], "alerted": len(problems)}
+              "missed": [m[0] for m in missed],
+              "degraded": [d[0] for d in degraded], "alerted": len(problems)}
 
     if problems and discord is not None:
         try:

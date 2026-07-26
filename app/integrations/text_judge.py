@@ -87,6 +87,51 @@ def _parse_obj(text: str) -> Dict[str, Any]:
     return {}
 
 
+def _parse_array(text: str) -> List[Dict[str, Any]]:
+    """Extrae un array JSON del texto (Gemini a veces lo envuelve). [] si falla."""
+    if not text:
+        return []
+    t = text.strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```[a-zA-Z]*\n?|\n?```$", "", t).strip()
+    for candidate in (t, (re.search(r"\[.*\]", t, re.DOTALL) or [None])[0] if "[" in t else None):
+        if not candidate:
+            continue
+        try:
+            arr = json.loads(candidate)
+            if isinstance(arr, list):
+                return [e for e in arr if isinstance(e, dict)]
+        except Exception:
+            continue
+    return []
+
+
+def score_items(kind: str, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Puntúa CADA texto por separado. `items`: [{label, text}, ...].
+    Devuelve una lista alineada por índice: [{score:int, issue:str} | None]. [] si falla."""
+    rubric = _RUBRICS.get(kind)
+    n = len(items[:8])
+    if not rubric or not enabled() or not n:
+        return []
+    from . import vision
+    payload = "\n\n".join(f"[{i}] {it.get('label', '?')}\nAsunto: {it.get('subject', '')}\n"
+                          f"{it.get('text', '')}" for i, it in enumerate(items[:8]))
+    spec = ("\n\nPuntuá CADA texto por su número [i]. Devolvé EXCLUSIVAMENTE un array JSON "
+            '(sin ``` ni texto): [{"i": <indice>, "score": <0-100>, "issue": "<problema principal, corto>"}]')
+    raw = vision.synthesize(payload[:12000], rubric + spec, max_tokens=1400)
+    arr = _parse_array(raw)
+    out: List[Any] = [None] * n
+    for e in arr:
+        try:
+            i = int(e.get("i"))
+            if 0 <= i < n:
+                out[i] = {"score": int(e.get("score", 0)), "issue": str(e.get("issue", "")).strip()}
+        except Exception:
+            continue
+    log.info("text_judge_scored", kind=kind, n=n, got=sum(1 for x in out if x))
+    return out
+
+
 def judge(kind: str, payload: str) -> Dict[str, Any]:
     """Puntúa `payload` con la rúbrica de `kind` ('email'|'social'|'proposal').
     Devuelve {avg, top_fix} o {} si el juez no está disponible/falla."""
