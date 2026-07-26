@@ -211,6 +211,15 @@ class OutboundAgent(BaseAgent):
         if report:
             ingest_stats = ls.ingest_report(store, report, today=today, sent_log_emails=sent_emails)
 
+        # 1b) Enriquecer emails: leads con web pero sin email → buscar uno PUBLICADO en su
+        #     sitio (técnica de Scout, pero sin SMTP-guessing: solo emails reales + MX-check).
+        #     Los que hoy solo iban a WhatsApp pueden pasar a ser contactables por mail.
+        try:
+            from ..integrations import lead_enrich
+            ctx.args["_ob_enriched"] = lead_enrich.enrich_missing_emails(store, limit=4)
+        except Exception as e:
+            log.warning("outbound_enrich_failed", error=str(e)[:120])
+
         # 2) ¿Qué leads toca contactar hoy? (primer toque + follow-ups vencidos)
         cap = int(ctx.settings.outbound_daily_cap)
         due = ls.due_for_touch(store, today=today)
@@ -647,6 +656,7 @@ class OutboundAgent(BaseAgent):
             f"Nuevos del reporte: **{ing.get('nuevos', 0)}** · "
             + (f"**Enviados:** {len(sent)} · " if live else f"**A enviar:** {len(preview)} · ")
             + f"**Errores:** {len(errors)}"
+            + (f" · **Emails enriquecidos:** {ctx.args.get('_ob_enriched', 0)}" if ctx.args.get('_ob_enriched') else "")
             + (f" · **Sobre el tope:** {over_cap} (quedan para mañana)" if over_cap else ""),
             "",
         ]
