@@ -222,8 +222,15 @@ class OutboundAgent(BaseAgent):
 
         # 2) ¿Qué leads toca contactar hoy? (primer toque + follow-ups vencidos)
         cap = int(ctx.settings.outbound_daily_cap)
+        # Si hay leads que respondieron y esperan reenganche, RESERVAMOS slots del cupo
+        # para ellos (valen más que un toque frío) → los toques nuevos ceden lugar.
+        # Solo se reserva cuando de verdad hay tibios esperando, para no desperdiciar cupo.
+        reserved = int(getattr(ctx.settings, "outbound_reengage_reserved", 0) or 0)
+        if reserved and not ls.due_for_reengage(store, today=today):
+            reserved = 0
+        first_cap = max(1, cap - reserved)
         due = ls.due_for_touch(store, today=today)
-        due_today = due[:cap]
+        due_today = due[:first_cap]
         over_cap = len(due) - len(due_today)
 
         # Guardamos el store ya ingestado y el contexto para post_process.

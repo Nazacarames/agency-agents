@@ -168,6 +168,10 @@ class Settings(BaseSettings):
     # Dedup por email (sent-log en el volume) + tope diario. Default OFF por seguridad.
     outbound_auto_send: bool = False
     outbound_daily_cap: int = 10         # máximo de emails nuevos por corrida
+    # Slots RESERVADOS del cupo diario para reenganchar leads que RESPONDIERON y se
+    # callaron (tibios = 10x más valiosos que un toque frío). Sin esto, los toques
+    # fríos llenaban el cupo y el reenganche nunca corría → se perdían respuestas reales.
+    outbound_reengage_reserved: int = 3
     outbound_from_name: str = "Equipo Automiq"
     outbound_from_email: str = ""        # alias "send as" verificado en Gmail (ej: hola@automiq.agency)
     discord_agencia_webhook_url: str = ""  # webhook del canal #agencia (leads de la web)
