@@ -88,7 +88,10 @@ números. Esto es el diario del día, no un pronóstico.)
 
 ## 📌 Seguimiento del brief anterior
 (qué pasó con cada recomendación pendiente: ✅ hecho / ⏫ escalo porque <razón> /
-🗑️ la retiro porque <razón>. Si no hay brief anterior, omití la sección.)
+🗑️ la retiro porque <razón>. Si no hay brief anterior, omití la sección.
+**Incluí acá tus DELEGACIONES recientes**: por cada tarea que delegaste a un agente,
+mirá su reporte de hoy y decidí ✅ la cumplió / ⏫ no la hizo → la re-delego (poné la
+línea DELEGAR de nuevo abajo) / 🗑️ ya no aplica. No dejes una delegación colgada sin veredicto.)
 
 ## 🎯 Tus 3 acciones para mañana
 (SOLO cosas que un agente no puede hacer: decisiones, aprobaciones, pagos, grabar
@@ -231,6 +234,30 @@ def _lo_de_hoy() -> str:
         return "\n\n".join(partes)
     except Exception as e:
         log.warning("cos_lo_de_hoy_failed", error=str(e)[:150])
+        return ""
+
+
+def _open_delegations() -> str:
+    """Las delegaciones recientes que dejó el chief (missions auto-delegadas), para que
+    en el próximo cierre verifique si el agente las cumplió y re-delegue si no."""
+    try:
+        from ..integrations import missions_store as mis
+        rows = mis.list_missions(limit=15)
+        dele = [m for m in rows
+                if str(m.get("objective", "")).startswith("Delegaciones del cierre")][:2]
+        if not dele:
+            return ""
+        parts = []
+        for m in dele:
+            when = str(m.get("created_at", ""))[:10]
+            items = m.get("plan") or []
+            lines = "\n".join(f"  - 🤖 {p.get('agent')}: {p.get('task')}"
+                              for p in items if isinstance(p, dict))
+            if lines:
+                parts.append(f"[{when}] misión #{m.get('id')}:\n{lines}")
+        return "\n\n".join(parts)
+    except Exception as e:
+        log.warning("cos_open_deleg_failed", error=str(e)[:120])
         return ""
 
 
@@ -382,6 +409,11 @@ class ChiefOfStaffAgent(BaseAgent):
         if hoy:
             extra += ("\n## PARTE DE EJECUCIÓN DE HOY (quién entregó y quién no)\n"
                       + hoy + "\n")
+        deleg = _open_delegations()
+        if deleg:
+            extra += ("\n## TUS DELEGACIONES RECIENTES (verificá si se cumplieron: cruzá cada "
+                      "una contra los reportes de hoy; si se hizo, celebralo en Avances; si no, "
+                      "re-delegala con DELEGAR(...) o escalala como acción)\n" + deleg + "\n")
         return (
             "Cerrá el día: armá el brief con todo lo que pasó HOY y el plan de "
             "acción para mañana.\n" + weekly + "\n"
