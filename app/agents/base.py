@@ -320,6 +320,17 @@ class BaseAgent(ABC):
                 # Si el backend NVIDIA falla (429 del tier gratis, medido en prod),
                 # reintentar Hermes con MiniMax antes de abandonar a la cadena vieja.
                 providers = [self.llm_provider] + ([""] if self.llm_provider else [])
+                # Override de operador para BAKE-OFF de backends: `args._force_provider`
+                # fuerza un único backend (sin fallback) para poder medir su calidad pura.
+                # "minimax"/"" → MiniMax; "deepseek"/"glm" → NVIDIA. Sin el flag, nada cambia.
+                try:
+                    fp = ctx.args.get("_force_provider") if isinstance(ctx.args, dict) else None
+                    if fp is not None:
+                        providers = ["" if str(fp).lower() in ("", "minimax") else str(fp).lower()]
+                        log.info("backend_forced", agent=self.name, run_id=ctx.run_id,
+                                 provider=providers[0] or "minimax")
+                except Exception:
+                    pass
                 for prov in providers:
                     try:
                         h_text = run_hermes(

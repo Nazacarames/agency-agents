@@ -781,8 +781,20 @@ async def api_run_agent(name: str, request: Request, background: BackgroundTasks
     if name not in list_agents():
         raise HTTPException(status_code=404, detail=f"agente {name} no existe")
     run_id = str(uuid.uuid4())
-    background.add_task(_run_pack_agent, name, {"force_global": True}, run_id, "dashboard")
-    return {"ok": True, "run_id": run_id, "agent": name, "status": "queued"}
+    args: Dict[str, Any] = {"force_global": True}
+    # Body opcional para bake-off / debug: {"provider": "deepseek|glm|minimax", "dry_run": true}
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            if body.get("provider"):
+                args["_force_provider"] = str(body["provider"])
+            if body.get("dry_run"):
+                args["dry_run"] = True
+    except Exception:
+        pass
+    background.add_task(_run_pack_agent, name, args, run_id, "dashboard")
+    return {"ok": True, "run_id": run_id, "agent": name, "status": "queued",
+            "provider": args.get("_force_provider", "default")}
 
 
 async def _run_agent_task(name: str, prompt: str, run_id: str,
