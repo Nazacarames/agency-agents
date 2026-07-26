@@ -560,30 +560,50 @@ class OutboundAgent(BaseAgent):
             return 0, None
 
     def _regen_email(self, ctx: AgentContext, lead, current: Dict[str, Any], issue: str):
-        """Reescribe un cold-email flojo corrigiendo `issue`. Devuelve {subject, body} o None."""
-        if not lead or ctx.minimax is None:
+        """Reescribe un cold-email flojo corrigiendo `issue`. Devuelve {subject, body} o None.
+        Backend: NVIDIA (deepseek, gratis) primero; fallback MiniMax. Sin quemar cuota paga
+        salvo que NVIDIA falle."""
+        if not lead:
+            return None
+        prompt = (
+            "Reescribí ESTE cold-email para el lead, corrigiendo el problema detectado por el QA.\n"
+            f"PROBLEMA A CORREGIR: {issue}\n\n"
+            "=== LEAD ===\n" + self._lead_block(lead) + "\n\n"
+            f"=== EMAIL ACTUAL ===\nAsunto: {current.get('subject', '')}\n{current.get('body', '')}\n\n"
+            'Devolvé EXCLUSIVAMENTE un objeto JSON: {"subject": "...", "body": "..."}. '
+            "Respetá las reglas de outbound (subject ≤45, abrí con la señal del prospecto, "
+            "1 beneficio medible, CTA claro, tono humano rioplatense).")
+        text = ""
+        # 1) NVIDIA (deepseek) — gratis.
+        if getattr(ctx.settings, "nvidia_api_key", ""):
+            try:
+                from ..clients.nvidia import complete_with_provider
+                resp = complete_with_provider("deepseek", ctx.settings, self.system_prompt,
+                                              prompt, 1200, self.temperature)
+                text = resp.text or ""
+            except Exception as e:
+                log.warning("outbound_regen_nvidia_failed", error=str(e)[:120])
+        # 2) Fallback MiniMax (pago) solo si NVIDIA no dio nada.
+        if not text and ctx.minimax is not None:
+            try:
+                resp = ctx.minimax.complete(system=self.system_prompt,
+                                            messages=[{"role": "user", "content": prompt}],
+                                            max_tokens=1200, temperature=self.temperature)
+                text = resp.text or ""
+            except Exception as e:
+                log.warning("outbound_regen_minimax_failed", error=str(e)[:120])
+        if not text:
             return None
         try:
-            prompt = (
-                "Reescribí ESTE cold-email para el lead, corrigiendo el problema detectado por el QA.\n"
-                f"PROBLEMA A CORREGIR: {issue}\n\n"
-                "=== LEAD ===\n" + self._lead_block(lead) + "\n\n"
-                f"=== EMAIL ACTUAL ===\nAsunto: {current.get('subject', '')}\n{current.get('body', '')}\n\n"
-                'Devolvé EXCLUSIVAMENTE un objeto JSON: {"subject": "...", "body": "..."}. '
-                "Respetá las reglas de outbound (subject ≤45, abrí con la señal del prospecto, "
-                "1 beneficio medible, CTA claro, tono humano rioplatense).")
-            resp = ctx.minimax.complete(system=self.system_prompt,
-                                        messages=[{"role": "user", "content": prompt}],
-                                        max_tokens=1200, temperature=self.temperature)
             from ._common import sanitize_model_text
-            clean, _ = sanitize_model_text(resp.text)
+            clean, _ = sanitize_model_text(text)
             m = re.search(r"\{.*\}", clean, re.DOTALL)
             if not m:
                 return None
             obj = json.loads(m.group(0))
             return obj if isinstance(obj, dict) and obj.get("body") and obj.get("subject") else None
         except Exception as e:
-            log.warning("outbound_regen_failed", error=str(e)[:120])
+            log.warning("outbound_regen_parse_failed", error=str(e)[:120])
             return None
 
     # ── render del reporte para Discord ──

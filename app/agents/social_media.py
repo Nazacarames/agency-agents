@@ -98,14 +98,17 @@ class SocialMediaAgent(BaseAgent):
         args = getattr(ctx, "args", None) or {}
         if isinstance(args, dict) and "publish" in args:
             pub = bool(args["publish"])
-        text = augment_with_images(response_text, s.content_image_count, publish=pub)
-        # QA de texto con Gemini (gemelo del QA visual): puntúa el copy y reinyecta
-        # el fix como LECCION para la próxima corrida. Best-effort.
+        # QA con Gemini ANTES de encolar: si el contenido está muy flojo, frena el
+        # auto-publish (queda para revisión) en vez de mandar algo malo. Best-effort.
+        pub_final, qa_line = pub, ""
         try:
             from ..integrations import text_judge
-            qa = text_judge.qa_and_learn(self.name, "social", response_text)
-            if qa:
-                text += "\n" + qa
+            gate = text_judge.qa_gate(self.name, "social", response_text)
+            pub_final = pub and gate["publish_ok"]
+            qa_line = gate["line"]
         except Exception:
             pass
+        text = augment_with_images(response_text, s.content_image_count, publish=pub_final)
+        if qa_line:
+            text += "\n" + qa_line
         return super().post_process(text, ctx)

@@ -21,6 +21,8 @@ log = get_logger("text_judge")
 
 # Debajo de este score consideramos que el lote tiene margen real → se aprende.
 LEARN_BELOW = 80
+# Debajo de este score NO conviene auto-publicar: se frena y queda para revisión humana.
+HOLD_BELOW = 50
 
 
 def enabled() -> bool:
@@ -162,6 +164,38 @@ def judge_emails(emails: List[Dict[str, Any]]) -> Dict[str, Any]:
         for e in emails[:8]
     )
     return judge("email", payload)
+
+
+def qa_gate(agent_name: str, kind: str, payload: str) -> Dict[str, Any]:
+    """Juzga `payload`, aprende si está flojo, y decide si conviene auto-publicar.
+    Devuelve {line, avg, publish_ok}. publish_ok=False solo si el score < HOLD_BELOW
+    (contenido muy flojo → se frena el auto-publish y queda para revisión humana).
+    Si el juez no está disponible, NUNCA bloquea (publish_ok=True). Best-effort."""
+    try:
+        if not enabled():
+            return {"line": "", "avg": None, "publish_ok": True}
+        res = judge(kind, payload)
+        if not res:
+            return {"line": "", "avg": None, "publish_ok": True}
+        avg = res.get("avg", 0)
+        fix = (res.get("top_fix") or "").strip()
+        if fix and avg < LEARN_BELOW:
+            from . import memory_store as ms
+            ms.record_outcome(agent_name, f"QA de calidad (Gemini) sobre {kind}: {fix}")
+        publish_ok = avg >= HOLD_BELOW
+        line = f"\n## 🧪 QA Gemini\nScore promedio: **{avg}/100**"
+        if not publish_ok:
+            line += (f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {HOLD_BELOW}): quedó para tu "
+                     f"revisión. Fix sugerido: _{fix}_" if fix else
+                     f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {HOLD_BELOW}): revisá antes de publicar.")
+        elif fix and avg < LEARN_BELOW:
+            line += f" · Fix aplicado a futuras corridas: _{fix}_"
+        else:
+            line += " · sin cambios (buen lote)"
+        return {"line": line, "avg": avg, "publish_ok": publish_ok}
+    except Exception as e:
+        log.warning("text_judge_gate_failed", agent=agent_name, kind=kind, error=str(e)[:150])
+        return {"line": "", "avg": None, "publish_ok": True}
 
 
 def qa_and_learn(agent_name: str, kind: str, payload: str) -> str:
