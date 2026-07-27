@@ -19,6 +19,11 @@ from ..log import get_logger
 
 log = get_logger("vision")
 
+# Modelo de análisis (el flash más nuevo de Gemini — barato y capaz). Un solo lugar
+# para todas las llamadas de visión/síntesis. thinkingBudget=0 (abajo) evita que el
+# "thinking" se coma el budget de tokens y trunque la respuesta.
+_MODEL = "gemini-3.6-flash"
+
 
 def enabled() -> bool:
     return veo_video.enabled()
@@ -38,8 +43,8 @@ def _generate(parts: list, model: str, max_tokens: int, timeout: float = 240.0) 
            f"/locations/global/publishers/google/models/{model}:generateContent")
     body = {"contents": [{"role": "user", "parts": parts}],
             "generationConfig": {"temperature": 0.4, "maxOutputTokens": max_tokens,
-                                 # gemini-2.5-flash usa "thinking" y se come el budget de
-                                 # tokens → respuesta truncada. thinkingBudget=0 lo apaga.
+                                 # los flash de Gemini usan "thinking" y se comen el budget
+                                 # de tokens → respuesta truncada. thinkingBudget=0 lo apaga.
                                  "thinkingConfig": {"thinkingBudget": 0}}}
     try:
         with httpx.Client(timeout=timeout) as c:
@@ -55,7 +60,7 @@ def _generate(parts: list, model: str, max_tokens: int, timeout: float = 240.0) 
         return ""
 
 
-def describe(image_paths: List[str], prompt: str, model: str = "gemini-2.5-flash",
+def describe(image_paths: List[str], prompt: str, model: str = _MODEL,
              max_tokens: int = 1800) -> str:
     """Gemini mira imágenes (hasta 8) y responde texto. "" si falla."""
     if not enabled() or not image_paths:
@@ -74,7 +79,7 @@ def describe(image_paths: List[str], prompt: str, model: str = "gemini-2.5-flash
     return _generate(parts, model, max_tokens)
 
 
-def describe_video(video_path: str, prompt: str, model: str = "gemini-2.5-flash",
+def describe_video(video_path: str, prompt: str, model: str = _MODEL,
                    max_tokens: int = 1800) -> str:
     """Gemini analiza el VIDEO ENTERO nativo (movimiento + AUDIO + texto en pantalla en
     el tiempo) — muy superior a frames sueltos. El video debe venir ya achicado (<~18MB
@@ -93,7 +98,7 @@ def describe_video(video_path: str, prompt: str, model: str = "gemini-2.5-flash"
     return _generate(parts, model, max_tokens)
 
 
-def synthesize(text: str, prompt: str, model: str = "gemini-2.5-flash",
+def synthesize(text: str, prompt: str, model: str = _MODEL,
                max_tokens: int = 2000) -> str:
     """Llamada solo-texto (para sintetizar notas en el playbook final). "" si falla."""
     if not enabled() or not text.strip():

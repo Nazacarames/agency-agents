@@ -36,9 +36,17 @@ log = get_logger("reel_study")
 _DATA = Path(__file__).resolve().parent.parent.parent / "data"
 _STATE = _DATA / "reel-study.json"
 _DIGEST = _DATA / "reel-study.md"
-_HANDLE = "ai._kid"
+_HANDLE = "ai._kid"         # fallback si no hay config
 _MAX_VIDEO_MB = 18          # límite inline de Gemini ~20MB; margen
-_MODELS = ("gemini-2.5-pro", "gemini-2.5-flash")
+_MODELS = ("gemini-3.6-flash", "gemini-2.5-flash")   # flash más nuevo → fallback conocido
+
+
+def _handles() -> List[str]:
+    """Competencia a estudiar (config `reel_study_handles`). La PRIMERA es la principal
+    (se le estudian más reels). Se puede ampliar por env sin deploy."""
+    raw = (getattr(get_settings(), "reel_study_handles", "") or _HANDLE)
+    hs = [h.strip().lstrip("@") for h in raw.split(",") if h.strip()]
+    return hs or [_HANDLE]
 
 _PROMPT = """Sos director creativo de Automiq (agencia de automatización con IA; público:
 dueños de pymes argentinas). Este reel es de @{handle}, un competidor cuyo contenido el
@@ -61,12 +69,12 @@ La mecánica, en criollo, en 3-4 bullets.
 - **Lección de edición** (1 línea accionable para nuestros shorts):"""
 
 
-def _discover(limit: int = 25) -> List[Dict]:
-    """Reels del competidor vía Business Discovery (media_url incluido)."""
+def _discover(handle: str, limit: int = 25) -> List[Dict]:
+    """Reels de `handle` vía Business Discovery (media_url incluido)."""
     s = get_settings()
     if not (s.meta_page_token and s.ig_business_id):
         return []
-    fields = (f"business_discovery.username({_HANDLE}){{media.limit({limit})"
+    fields = (f"business_discovery.username({handle}){{media.limit({limit})"
               f"{{id,media_type,media_url,like_count,comments_count,caption,permalink}}}}")
     url = (f"https://graph.facebook.com/v21.0/{s.ig_business_id}"
            f"?fields={urllib.parse.quote(fields)}"
@@ -74,7 +82,7 @@ def _discover(limit: int = 25) -> List[Dict]:
     try:
         r = json.load(urllib.request.urlopen(url, timeout=60))
     except Exception as e:
-        log.warning("reel_discover_failed", error=str(e)[:200])
+        log.warning("reel_discover_failed", handle=handle, error=str(e)[:200])
         return []
     media = ((r.get("business_discovery") or {}).get("media") or {}).get("data") or []
     vids = [m for m in media if m.get("media_type") == "VIDEO" and m.get("media_url")]
@@ -95,7 +103,10 @@ def _gemini_watch(video: bytes, prompt: str) -> str:
                             "data": base64.b64encode(video).decode()}},
             {"text": prompt},
         ]}],
-        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 6000},
+        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 6000,
+                             # los flash de Gemini usan "thinking" y se comen el budget de
+                             # tokens → análisis truncado. thinkingBudget=0 lo apaga.
+                             "thinkingConfig": {"thinkingBudget": 0}},
     }
     for model in _MODELS:
         url = (f"https://aiplatform.googleapis.com/v1beta1/projects/{project}"
@@ -116,38 +127,49 @@ def _gemini_watch(video: bytes, prompt: str) -> str:
     return ""
 
 
-def study(n: int = 2) -> Dict[str, int]:
-    """Estudia los n reels top NO estudiados. Devuelve contadores."""
+def study(n: int = 2, per_secondary: int = 1) -> Dict[str, int]:
+    """Estudia reels top NO estudiados: `n` del competidor PRINCIPAL + `per_secondary`
+    de cada competidor secundario (config `reel_study_handles`). Devuelve contadores."""
     try:
         st = json.loads(_STATE.read_text(encoding="utf-8"))
     except Exception:
         st = {"studied": []}
     studied = set(st.get("studied", []))
-    pending = [m for m in _discover() if m["id"] not in studied][:n]
+
+    handles = _handles()
+    # (handle, reel) pendientes: al principal (índice 0) hasta n; a cada secundario hasta
+    # per_secondary. Así ampliamos la inteligencia creativa sin disparar el costo.
+    pending: List[tuple] = []
+    for i, h in enumerate(handles):
+        cap = n if i == 0 else per_secondary
+        if cap <= 0:
+            continue
+        fresh = [m for m in _discover(h) if m["id"] not in studied][:cap]
+        pending += [(h, m) for m in fresh]
     if not pending:
-        log.info("reel_study_nothing_new")
+        log.info("reel_study_nothing_new", handles=handles)
         return {"ok": True, "estudiados": 0}
 
     sections: List[str] = []
-    for m in pending:
+    for h, m in pending:
         try:
             with urllib.request.urlopen(m["media_url"], timeout=120) as r:
                 video = r.read()
         except Exception as e:
-            log.warning("reel_download_failed", id=m["id"], error=str(e)[:150])
+            log.warning("reel_download_failed", handle=h, id=m["id"], error=str(e)[:150])
             continue
         if len(video) > _MAX_VIDEO_MB * 1024 * 1024:
-            log.info("reel_too_big", id=m["id"], mb=len(video) // (1024 * 1024))
+            log.info("reel_too_big", handle=h, id=m["id"], mb=len(video) // (1024 * 1024))
             studied.add(m["id"])  # no reintentar cada semana
             continue
         analysis = _gemini_watch(video, _PROMPT.format(
-            handle=_HANDLE, caption=(m.get("caption") or "")[:200].replace('"', "'"),
+            handle=h, caption=(m.get("caption") or "")[:200].replace('"', "'"),
             likes=m.get("like_count", 0), comments=m.get("comments_count", 0),
             permalink=m.get("permalink", "")))
         if analysis:
-            sections.append(analysis)
+            sections.append(f"## @{h}\n\n{analysis}")
             studied.add(m["id"])
-            log.info("reel_studied", id=m["id"], likes=m.get("like_count", 0))
+            log.info("reel_studied", handle=h, id=m["id"], likes=m.get("like_count", 0))
             # Cosechar la "Lección de edición" al almacén de lecciones (se reinyecta
             # en cada short nuestro vía creative_learnings — retroalimentación).
             try:
@@ -164,7 +186,8 @@ def study(n: int = 2) -> Dict[str, int]:
 
     from ..agents._common import today_ar
     today = today_ar()
-    body = f"# Estudio de reels @{_HANDLE} — {today}\n\n" + "\n\n---\n\n".join(sections)
+    handles_txt = ", ".join(f"@{h}" for h in handles)
+    body = f"# Estudio de reels de competencia ({handles_txt}) — {today}\n\n" + "\n\n---\n\n".join(sections)
     _DIGEST.write_text(body, encoding="utf-8")
     (_DATA / f"reel-study-report-{today}.md").write_text(body, encoding="utf-8")
     st["studied"] = list(studied)[-500:]
@@ -176,9 +199,9 @@ def study(n: int = 2) -> Dict[str, int]:
         if s.discord_configured:
             dw = DiscordWebhook(s)
             dw.send_agent_output(
-                agent_name="🎬 Estudio de reels (Gemini miró al competidor)",
-                text=f"{len(sections)} reels de @{_HANDLE} analizados a fondo "
-                     f"(video+audio+texto). Prompts y lecciones ya inyectados a los "
+                agent_name="🎬 Estudio de reels (Gemini miró a la competencia)",
+                text=f"{len(sections)} reels de la competencia ({handles_txt}) analizados a "
+                     f"fondo (video+audio+texto). Prompts y lecciones ya inyectados a los "
                      f"agentes de contenido.\n\n" + body[:1400],
                 run_id="reel-study",
                 url=s.discord_webhook_for("social"),

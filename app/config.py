@@ -116,6 +116,10 @@ class Settings(BaseSettings):
     # redes indicadas, con el caption que planificaron. Requiere tokens Meta.
     social_auto_publish: bool = True
     social_publish_targets: str = "instagram,facebook"   # CSV: instagram,facebook
+    # Competencia a estudiar con Gemini (reel_study). CSV, el PRIMERO es el principal
+    # (se le estudian más reels). Cuentas IG Business/Creator (Business Discovery las
+    # encuentra por username). Se puede ampliar por env sin deploy (REEL_STUDY_HANDLES).
+    reel_study_handles: str = "ai._kid,manychat,kommo"
     # Auto-archivar prospectos/clientes no-activos sin movimiento hace N días
     # (libera su memoria). Los clientes 'activo' (pagando) nunca se archivan.
     client_archive_days: int = 10
