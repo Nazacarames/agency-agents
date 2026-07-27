@@ -37,8 +37,10 @@ def _playbook_block() -> str:
 # Fotos canónicas de Nazareno (en /media). Se pasan como REFERENCE IMAGES a Veo 3.1
 # (referenceType=asset) → misma cara en todas las escenas, sin importar el lugar.
 NAZA_REFERENCE_PATHS = [
-    "/media/de18bc9748b44b2397bef59b4c5a1e8b.jpg",  # hablando a cámara
-    "/media/e01a2f7651334c97a262e70f826ab9f6.jpg",  # headshot
+    "/media/84909f5800324fa584f571ecb3c4baeb.jpg",  # oficina navy, head+shoulders
+    "/media/91b3a0df61ce436092da564936f63dc5.jpg",  # coworking, medio cuerpo
+    # (regeneradas 2026-07-27 desde NAZARENO_IDENTITY: las anteriores se perdieron del
+    #  volumen → daban 404 y la cara no se anclaba. Verificado: Veo 3.1 ancla bien con estas.)
 ]
 NAZA_TALKING_PATH = NAZA_REFERENCE_PATHS[0]  # compat
 
