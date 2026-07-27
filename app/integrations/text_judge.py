@@ -219,3 +219,50 @@ def qa_and_learn(agent_name: str, kind: str, payload: str) -> str:
     except Exception as e:
         log.warning("text_judge_qa_failed", agent=agent_name, kind=kind, error=str(e)[:150])
         return ""
+
+
+def improve_text(agent_name: str, kind: str, text: str, regenerate,
+                 *, below: int = 70, min_len_ratio: float = 0.6) -> Dict[str, Any]:
+    """Evaluator-optimizer (el patrón de 'reliable agents': generar → juzgar → si flojo,
+    corregir → re-juzgar). Juzga `text`; si el score < `below`, pide UNA revisión a
+    `regenerate(text, fix)` y la re-juzga; se queda con la de MAYOR score (y solo si no se
+    achicó por debajo de `min_len_ratio` del original, para no aceptar una versión mutilada).
+    Registra el fix como LECCION igual. Best-effort: si el juez no está o algo falla, devuelve
+    el texto original intacto. `regenerate(text, fix) -> str|None`.
+    Devuelve {text, avg, improved, line}."""
+    try:
+        if not enabled() or not (text or "").strip():
+            return {"text": text, "avg": None, "improved": False, "line": ""}
+        res = judge(kind, text)
+        if not res:
+            return {"text": text, "avg": None, "improved": False, "line": ""}
+        avg = res.get("avg", 0)
+        fix = (res.get("top_fix") or "").strip()
+        head = "\n## 🧪 QA Gemini (evaluator-optimizer)"
+        if not (fix and avg < below):
+            return {"text": text, "avg": avg, "improved": False,
+                    "line": f"{head}\nScore: **{avg}/100** · sin cambios (buen lote)"}
+        # Un solo pase de auto-corrección con el fix como guía.
+        new_text = None
+        try:
+            new_text = regenerate(text, fix)
+        except Exception as e:
+            log.warning("improve_regen_failed", agent=agent_name, error=str(e)[:150])
+        final_text, final_avg, improved = text, avg, False
+        if new_text and len(new_text.strip()) >= len(text.strip()) * min_len_ratio:
+            res2 = judge(kind, new_text)
+            new_avg = res2.get("avg", 0) if res2 else 0
+            if new_avg > avg:
+                final_text, final_avg, improved = new_text, new_avg, True
+        # Lección para mejorar de raíz a futuro (además del fix in-run).
+        from . import memory_store as ms
+        ms.record_outcome(agent_name, f"QA de calidad (Gemini) sobre {kind}: {fix}")
+        tail = (f" · ✍️ auto-corregido {avg}→{final_avg}/100"
+                if improved else f" · fix aplicado a futuras corridas: _{fix}_")
+        log.info("text_judge_improved", agent=agent_name, kind=kind,
+                 avg=avg, final=final_avg, improved=improved)
+        return {"text": final_text, "avg": final_avg, "improved": improved,
+                "line": f"{head}\nScore: **{final_avg}/100**{tail}"}
+    except Exception as e:
+        log.warning("text_judge_improve_failed", agent=agent_name, kind=kind, error=str(e)[:150])
+        return {"text": text, "avg": None, "improved": False, "line": ""}

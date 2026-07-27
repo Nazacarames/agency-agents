@@ -13,6 +13,9 @@ queda guardado en la memoria del cliente automaticamente (base.py).
 """
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block, official_site_directive
+from ..log import get_logger
+
+log = get_logger("meeting_prep")
 
 
 MEETING_PREP_INSTRUCTIONS = """
@@ -70,3 +73,52 @@ class MeetingPrepAgent(BaseAgent):
             + extra
             + official_site_directive()
         )
+
+    def post_process(self, response_text: str, ctx: AgentContext) -> str:
+        # Evaluator-optimizer: Gemini juzga la propuesta con la rúbrica `proposal` y,
+        # si está floja, hace UN pase de auto-corrección antes de entregarla. Best-effort:
+        # si el juez no está o falla, entrega el brief tal cual (nunca bloquea).
+        try:
+            from ..integrations import text_judge
+            res = text_judge.improve_text(
+                self.name, "proposal", response_text,
+                lambda t, fix: self._regen_brief(ctx, t, fix))
+            response_text = res["text"]
+            if res["line"]:
+                response_text += "\n" + res["line"]
+        except Exception as e:
+            log.warning("meeting_prep_qa_failed", error=str(e)[:150])
+        return super().post_process(response_text, ctx)
+
+    def _regen_brief(self, ctx: AgentContext, text: str, fix: str):
+        """Reescribe el brief corrigiendo el problema del QA, preservando TODAS las
+        secciones. NVIDIA (deepseek, gratis) primero; fallback MiniMax. Texto o None."""
+        prompt = (
+            "Mejorá ESTE brief de reunion corrigiendo el problema detectado por el QA, SIN "
+            "perder ninguna seccion (mantene: resumen 30s, dolores→solucion, discovery, que "
+            "mostrar + agente de test, pricing, objeciones, cierre).\n"
+            f"PROBLEMA A CORREGIR: {fix}\n\n"
+            f"=== BRIEF ACTUAL ===\n{text}\n\n"
+            "Devolve el brief COMPLETO ya corregido, en el mismo formato.")
+        txt = ""
+        if getattr(ctx.settings, "nvidia_api_key", ""):
+            try:
+                from ..clients.nvidia import complete_with_provider
+                resp = complete_with_provider("deepseek", ctx.settings, self.system_prompt,
+                                              prompt, self.max_tokens, self.temperature)
+                txt = resp.text or ""
+            except Exception as e:
+                log.warning("meeting_prep_regen_nvidia_failed", error=str(e)[:120])
+        if not txt and ctx.minimax is not None:
+            try:
+                resp = ctx.minimax.complete(system=self.system_prompt,
+                                            messages=[{"role": "user", "content": prompt}],
+                                            max_tokens=self.max_tokens, temperature=self.temperature)
+                txt = resp.text or ""
+            except Exception as e:
+                log.warning("meeting_prep_regen_minimax_failed", error=str(e)[:120])
+        if not txt:
+            return None
+        from ._common import sanitize_model_text
+        clean, _ = sanitize_model_text(txt)
+        return clean.strip() or None
