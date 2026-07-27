@@ -62,6 +62,88 @@ def _run(cmd: List[str]) -> bool:
         return False
 
 
+def _probe(path: str) -> tuple:
+    """(dur_seg, w, h) del mp4 vía ffprobe. (0,0,0) si falla."""
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "format=duration:stream=width,height",
+             "-of", "default=nw=1:nk=1", str(path)],
+            capture_output=True, timeout=30)
+        vals = [x for x in r.stdout.decode("utf-8", "ignore").split() if x]
+        # orden: width, height, duration (stream primero, luego format)
+        w = int(vals[0]); h = int(vals[1]); dur = float(vals[2])
+        return dur, w, h
+    except Exception as e:
+        log.warning("ffprobe_failed", error=str(e)[:120])
+        return 0.0, 0, 0
+
+
+def _ass_time(sec: float) -> str:
+    sec = max(0.0, sec)
+    h = int(sec // 3600); m = int((sec % 3600) // 60); s = sec % 60
+    return f"{h:d}:{m:02d}:{s:05.2f}"
+
+
+def _write_ass(frase: str, dur: float, w: int, h: int, path: Path, position: str) -> None:
+    """Genera un .ass con la frase en trozos de ~3 palabras, grande, centrado, con
+    borde negro grueso (estilo viral 'texto grande'). `position`: 'bottom' | 'top'."""
+    fs = max(28, int(h / 15))                 # ~128px en 1920
+    outline = max(3, fs // 18)
+    align = 2 if position == "bottom" else 8   # 2=abajo-centro, 8=arriba-centro
+    marginv = int(h * (0.09 if position == "bottom" else 0.11))
+    words = frase.split()
+    chunks = [" ".join(words[i:i + 3]) for i in range(0, len(words), 3)] or [frase]
+    per = dur / len(chunks)
+    header = (
+        "[Script Info]\nScriptType: v4.00+\n"
+        f"PlayResX: {w}\nPlayResY: {h}\nScaledBorderAndShadow: yes\n\n"
+        "[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, "
+        "BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, "
+        "MarginV, Encoding\n"
+        f"Style: Def,Liberation Sans,{fs},&H00FFFFFF,&H00000000,&H00000000,-1,1,"
+        f"{outline},1,{align},60,60,{marginv},1\n\n"
+        "[Events]\nFormat: Layer, Start, End, Style, Text\n")
+    lines = []
+    for i, ch in enumerate(chunks):
+        txt = ch.replace("\\", "").replace("{", "").replace("}", "").upper()
+        lines.append(f"Dialogue: 0,{_ass_time(i * per)},{_ass_time((i + 1) * per)},Def,{txt}")
+    path.write_text(header + "\n".join(lines) + "\n", encoding="utf-8")
+
+
+def burn_subtitles(src_path: str, frase: str, position: str = "bottom") -> Optional[str]:
+    """Quema subtítulos (la frase hablada) en el short. Best-effort: si algo falla,
+    devuelve None y el caller se queda con el video sin subs (cero regresión).
+    Devuelve /media/<file>.mp4 nuevo o None."""
+    frase = (frase or "").strip()
+    if not frase or not src_path or not Path(src_path).exists():
+        return None
+    dur, w, h = _probe(src_path)
+    if dur <= 0 or w <= 0:
+        return None
+    work = _images_dir() / f"_subs_{uuid.uuid4().hex[:8]}"
+    work.mkdir(parents=True, exist_ok=True)
+    try:
+        ass = work / "subs.ass"
+        _write_ass(frase, dur, w, h, ass, position)
+        assarg = ass.as_posix().replace(":", "\\:")   # escapa el drive-colon en Windows; no-op en Linux
+        out = _images_dir() / f"short_sub_{uuid.uuid4().hex}.mp4"
+        cmd = [_ffmpeg(), "-y", "-i", str(src_path), "-vf", f"ass='{assarg}'",
+               "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", *_X264_LOWMEM,
+               "-c:a", "copy", "-movflags", "+faststart", str(out)]
+        if _run(cmd) and out.exists():
+            log.info("subs_burned", file=out.name, chunks=frase.count(" ") // 3 + 1)
+            return f"/media/{out.name}"
+        return None
+    finally:
+        try:
+            for f in work.glob("*"):
+                f.unlink()
+            work.rmdir()
+        except Exception:
+            pass
+
+
 def _normalize(seg: Dict, idx: int, work: Path, w: int, h: int) -> Optional[Path]:
     """Normaliza un segmento (video o imagen) a un mp4 estándar de w x h.
     El tamaño lo decide `assemble` para TODO el lote (mezclar resoluciones

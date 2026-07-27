@@ -300,6 +300,19 @@ class TikTokCreatorAgent(BaseAgent):
                 url = video_assembler.assemble_short(clip_path, [], proof_dur=5.0)
             if not url:
                 return text
+            # Subtítulos quemados desde la frase hablada (VEO_FRASE) — estilo viral
+            # "texto grande". Arriba si hay card de demo abajo; abajo si es full-screen.
+            # Best-effort: si falla, seguimos con el video sin subs.
+            frase = (getattr(self, "_veo_frase", "") or "").strip()
+            if frase:
+                try:
+                    subbed = video_assembler.burn_subtitles(
+                        self._media_to_path(url), frase,
+                        position="top" if frames else "bottom")
+                    if subbed:
+                        url = subbed
+                except Exception as e:
+                    log.warning("tiktok_subs_failed", error=str(e)[:150])
             block = (f"\n\n---\n\n## 🎬 Video armado (listo para postear)\n\n"
                      f"`{url}` — short 9:16: Nazareno + chat animado (mensajes llegando), "
                      f"ensamblado automático.\n")

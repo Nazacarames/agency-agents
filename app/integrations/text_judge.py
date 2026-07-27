@@ -266,3 +266,33 @@ def improve_text(agent_name: str, kind: str, text: str, regenerate,
     except Exception as e:
         log.warning("text_judge_improve_failed", agent=agent_name, kind=kind, error=str(e)[:150])
         return {"text": text, "avg": None, "improved": False, "line": ""}
+
+
+def competitor_gap(agent_name: str, our_text: str, aplica: str = "imagen") -> str:
+    """Cierra el loop competitivo: Gemini compara NUESTRA pieza recién generada contra el
+    ESTUDIO del competidor (reel_study) y devuelve la ÚNICA táctica que nos falta. La registra
+    como lección creativa → se reinyecta en la próxima pieza. Read-only sobre nuestro contenido
+    (no regenera nada). Best-effort: sin juez/estudio o si falla, devuelve ''."""
+    try:
+        if not enabled() or not (our_text or "").strip():
+            return ""
+        from . import reel_study, creative_learnings, vision
+        comp = reel_study.block().strip()
+        if not comp:
+            return ""
+        prompt = (
+            "Sos director creativo de Automiq (agencia argentina de IA). Arriba te paso el "
+            "ESTUDIO del contenido de la competencia (Gemini miró sus reels). Abajo va UNA pieza "
+            "NUESTRA recién generada. Comparalas y devolvé EXCLUSIVAMENTE la ÚNICA táctica de la "
+            "competencia que a nuestra pieza le FALTA y más le sumaría, en 1 frase accionable y "
+            "concreta (sin preámbulo, sin listas).\n\n=== ESTUDIO DE LA COMPETENCIA ===\n" + comp)
+        gap = (vision.synthesize(our_text[:4000], prompt, max_tokens=200) or "").strip()
+        gap = gap.strip("-•* ").strip()
+        if len(gap) < 12:
+            return ""
+        creative_learnings.add(gap, "gap_vs_competencia", aplica)
+        log.info("competitor_gap_learned", agent=agent_name, aplica=aplica)
+        return f"\n## 🔍 Brecha vs competencia (aprendida para la próxima)\n{gap}"
+    except Exception as e:
+        log.warning("competitor_gap_failed", agent=agent_name, error=str(e)[:150])
+        return ""

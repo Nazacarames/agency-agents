@@ -100,15 +100,19 @@ class SocialMediaAgent(BaseAgent):
             pub = bool(args["publish"])
         # QA con Gemini ANTES de encolar: si el contenido está muy flojo, frena el
         # auto-publish (queda para revisión) en vez de mandar algo malo. Best-effort.
-        pub_final, qa_line = pub, ""
+        pub_final, qa_line, gap_line = pub, "", ""
         try:
             from ..integrations import text_judge
             gate = text_judge.qa_gate(self.name, "social", response_text)
             pub_final = pub and gate["publish_ok"]
             qa_line = gate["line"]
+            # Cierre del loop competitivo: brecha vs el estudio del competidor → lección.
+            gap_line = text_judge.competitor_gap(self.name, response_text, "imagen")
         except Exception:
             pass
         text = augment_with_images(response_text, s.content_image_count, publish=pub_final)
         if qa_line:
             text += "\n" + qa_line
+        if gap_line:
+            text += "\n" + gap_line
         return super().post_process(text, ctx)
