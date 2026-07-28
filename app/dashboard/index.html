@@ -353,6 +353,10 @@
           <div class="panel"><h3>Últimas publicaciones</h3><div class="ph-sub">Resultado de los posts en IG/FB.</div><div id="overviewPosts" style="margin-top:8px"></div></div>
           <div class="panel"><h3>Estado del sistema</h3><div class="ph-sub">Servicios conectados.</div><div id="overviewHealth" style="margin-top:8px"></div></div>
         </div>
+        <div class="grid-2">
+          <div class="panel"><h3>SEO — Search Console</h3><div class="ph-sub">Impresiones y clics reales, 28 días vs los 28 previos.</div><div id="overviewSeo" style="margin-top:8px"></div></div>
+          <div class="panel"><h3>GEO — visitas desde IA</h3><div class="ph-sub">Gente que llega desde respuestas de ChatGPT / Claude / Perplexity.</div><div id="overviewGeo" style="margin-top:8px"></div></div>
+        </div>
         <div class="sec-head"><h2>Agentes que corrieron hoy</h2></div>
         <div class="grid" id="overviewAgents"></div>
         <div class="sec-head"><h2>Últimas tareas</h2></div>
@@ -1039,7 +1043,7 @@ function svgSpark(values, color){
 async function loadOverview(){
   el('overviewKpis').innerHTML='<p class="muted">Cargando…</p>';
   try{
-    const [stats, ag, tk, pubq, health, bill] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), api('/api/publish/queue').catch(()=>null), api('/api/system/health').catch(()=>null), api('/api/finance/summary').catch(()=>null) ]);
+    const [stats, ag, tk, pubq, health, bill, gsc, geo] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), api('/api/publish/queue').catch(()=>null), api('/api/system/health').catch(()=>null), api('/api/finance/summary').catch(()=>null), api('/api/diag/gsc').catch(()=>null), api('/api/web/ai-visits').catch(()=>null) ]);
     CACHE.agents=ag; CACHE.tasks=tk; CACHE.stats=stats;
     const b=stats.billing, f=stats.finance, m=stats.metrics||{};
     const profitCls = f.profit_month_usd>=0?'up':'down';
@@ -1065,6 +1069,8 @@ async function loadOverview(){
     el('overviewAlerts').innerHTML = alertsHtml([...computeExtraAlerts(bill), ...(stats.alerts||[])]);
     el('overviewPosts').innerHTML = overviewPostsHtml(pubq);
     el('overviewHealth').innerHTML = overviewHealthHtml(health);
+    el('overviewSeo').innerHTML = overviewSeoHtml(gsc);
+    el('overviewGeo').innerHTML = overviewGeoHtml(geo);
     setNavCount('publicaciones', pubq && pubq.pending ? pubq.pending : null);
 
     const today = ag.agents.filter(a=>a.today);
@@ -1162,6 +1168,30 @@ function overviewHealthHtml(h){
     + healthRow(!!h.images_enabled,'Generación de imágenes', h.images_enabled?'MiniMax ok':'deshabilitada')
     + healthRow(!!h.db,'Base de datos', h.db?'Supabase ok':'modo JSON')
     + healthRow(true,'Cola de publicación', (h.queue?h.queue.pending:0)+' en cola · '+(h.queue&&h.queue.published_today?'hoy publicado':'hoy pendiente'));
+}
+function overviewSeoHtml(g){
+  if(!g) return '<div class="empty" style="padding:18px">—</div>';
+  if(!g.listo) return `<div class="muted" style="font-size:13px;padding:6px 0">Search Console sin conectar. ${esc(g.ayuda||'')}</div>`;
+  const d=g.datos||{};
+  if(d.error) return `<div class="err" style="font-size:13px">${esc(d.error)}</div>`;
+  const t=d.totales||{};
+  const dImp=(t.impresiones||0)-(t.impresiones_antes||0), dClk=(t.clicks||0)-(t.clicks_antes||0);
+  const arr=x=>x>0?'▲':x<0?'▼':'▬';
+  return healthRow(true,'Impresiones (28d)', `${t.impresiones||0} · ${arr(dImp)} ${dImp>=0?'+':''}${dImp} vs previo`)
+    + healthRow(true,'Clics (28d)', `${t.clicks||0} · ${arr(dClk)} ${dClk>=0?'+':''}${dClk} vs previo`)
+    + healthRow((d.consultas_subiendo||0)>0,'Consultas subiendo', (d.consultas_subiendo||0)+' ganando impresiones')
+    + healthRow((d.a_tiro_de_pagina1||0)>0,'A tiro de página 1', (d.a_tiro_de_pagina1||0)+' consultas')
+    + `<div class="faint" style="font-size:11px;margin-top:6px">${esc(d.periodo||'')} · sc-domain</div>`;
+}
+function overviewGeoHtml(v){
+  if(!v) return '<div class="empty" style="padding:18px">—</div>';
+  const f=v.por_fuente||{}, last=(v.ultimas||[]).slice(-1)[0];
+  const rows=Object.keys(f).length
+    ? Object.entries(f).map(([k,n])=>healthRow(true, k.charAt(0).toUpperCase()+k.slice(1), n+' visita'+(n>1?'s':''))).join('')
+    : '<div class="muted" style="font-size:13px;padding:6px 0">Sin visitas de IA todavía.</div>';
+  return healthRow((v.total||0)>0,'Visitas desde IA (total)', String(v.total||0))
+    + rows
+    + (last?`<div class="faint" style="font-size:11px;margin-top:6px">Última: ${esc((last.ts||'').slice(0,10))} · ${esc(last.source||'')}</div>`:'');
 }
 function kpi(lbl,val,icon,cls=''){ return `<div class="kpi-card ${cls}"><div class="ic">${icon}</div><div class="lbl">${esc(lbl)}</div><div class="kpi">${esc(val)}</div></div>`; }
 
