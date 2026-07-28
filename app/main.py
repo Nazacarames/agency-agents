@@ -1946,6 +1946,28 @@ async def api_diag_gsc(request: Request):
     return out
 
 
+@app.post("/api/admin/housekeeping")
+async def api_admin_housekeeping(request: Request,
+                                 days_images: Optional[int] = None,
+                                 days_reports: Optional[int] = None):
+    """Libera el volumen: corre housekeeping.cleanup() (respeta la cola pendiente;
+    la media vieja está backupeada en Drive) y devuelve el disco antes/después.
+    Para SOLO MEDIR sin borrar nada, pasá days_images muy alto (ej. 99999).
+    days_images/days_reports overridean la retención por defecto (30/60 días)."""
+    _verify_webhook_secret(request)
+    import asyncio
+    import shutil
+    from .integrations import housekeeping as hk
+    d = str(_data_dir())
+    before = shutil.disk_usage(d)
+    res = await asyncio.to_thread(hk.cleanup, days_images, days_reports)
+    after = shutil.disk_usage(d)
+    mb = lambda b: round(b / 1_048_576, 1)
+    return {"cleanup": res,
+            "disco_mb": {"total": mb(after.total), "usado_antes": mb(before.used),
+                         "usado_ahora": mb(after.used), "libre_ahora": mb(after.free)}}
+
+
 @app.get("/api/diag/hermes")
 async def api_diag_hermes(request: Request):
     """Estado del harness Hermes: si el CLI está, cuántas skills del repo ve y

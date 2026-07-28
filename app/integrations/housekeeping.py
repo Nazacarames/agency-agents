@@ -45,14 +45,16 @@ def _pending_media() -> set:
         return set()
 
 
-def cleanup() -> Dict[str, int]:
+def cleanup(days_images: int | None = None, days_reports: int | None = None) -> Dict[str, int]:
     now = time.time()
+    ki = IMAGES_KEEP_DAYS if days_images is None else days_images
+    kr = REPORTS_KEEP_DAYS if days_reports is None else days_reports
     removed_media = removed_reports = freed = 0
 
     images = _DATA / "images"
     if images.exists():
         keep = _pending_media()
-        cutoff = now - IMAGES_KEEP_DAYS * 86400
+        cutoff = now - ki * 86400
         for p in images.iterdir():
             try:
                 if not p.is_file() or p.name in keep or p.stat().st_mtime > cutoff:
@@ -65,7 +67,7 @@ def cleanup() -> Dict[str, int]:
                 continue
 
     if _DATA.exists():
-        cutoff = now - REPORTS_KEEP_DAYS * 86400
+        cutoff = now - kr * 86400
         for p in _DATA.glob("*-report-*.md"):
             try:
                 if p.stat().st_mtime < cutoff:
