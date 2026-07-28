@@ -39,6 +39,29 @@ def _state() -> dict:
         return {"uploaded": []}
 
 
+def link_for(name: str) -> str:
+    """webViewLink de Drive de un archivo ya subido, '' si no está. Lo usa el
+    offload de media para no re-subir (files.create duplicaría por nombre)."""
+    try:
+        return _state().get("links", {}).get(name, "") or ""
+    except Exception:
+        return ""
+
+
+def remember(name: str, link: str) -> None:
+    """Guarda el link de un archivo subido fuera de sync() (offload)."""
+    if not link:
+        return
+    try:
+        st = _state()
+        links = st.get("links", {})
+        links[name] = link
+        st["links"] = dict(list(links.items())[-_MAX_STATE:])
+        write_json_atomic(_STATE, st)
+    except Exception:
+        pass
+
+
 def sync() -> dict:
     if not drive_client.enabled():
         return {"ok": False, "reason": "drive deshabilitado o sin creds/scope"}
@@ -47,6 +70,7 @@ def sync() -> dict:
     st = _state()
     uploaded = list(st.get("uploaded", []))
     seen = set(uploaded)
+    links = dict(st.get("links", {}))
 
     def _mark(name: str) -> None:
         seen.add(name)
@@ -72,8 +96,10 @@ def sync() -> dict:
                 kind = "videos"
             else:
                 continue
-            if drive_client.upload_file(p, ["Automiq", "Contenido", month, kind]):
+            link = drive_client.upload_file(p, ["Automiq", "Contenido", month, kind])
+            if link:
                 _mark(p.name)
+                links[p.name] = link
                 counts[kind] += 1
             elif not drive_client.enabled():
                 break  # scope caído: no insistir con el resto
@@ -132,6 +158,7 @@ def sync() -> dict:
                 pass
 
     st["uploaded"] = uploaded[-_MAX_STATE:]
+    st["links"] = dict(list(links.items())[-_MAX_STATE:])
     st["last_sync"] = now.isoformat()
     write_json_atomic(_STATE, st)
     log.info("drive_sync_done", **counts)

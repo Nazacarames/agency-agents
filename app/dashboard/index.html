@@ -1148,7 +1148,7 @@ function overviewPostsHtml(pubq){
   const rows=[...done,...fail];
   if(!rows.length) return `<div class="muted" style="font-size:13px;padding:6px 0">Sin publicaciones todavía · ${pubq.pending||0} en cola.</div>`;
   return rows.map(it=>`<div class="post-card" style="display:flex;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--line-soft);border-radius:8px"${postCardAttrs(it)}>
-    <img src="${esc(it.image)}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none;border:1px solid var(--line)"/>
+    ${it.archived&&it.drive_link?`<a href="${esc(it.drive_link)}" target="_blank" title="Ver en Drive" style="width:40px;height:40px;border-radius:8px;flex:none;border:1px solid var(--line);background:#0D1426;display:flex;align-items:center;justify-content:center;font-size:16px;text-decoration:none">📁</a>`:`<img src="${esc(it.image)}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none;border:1px solid var(--line)"/>`}
     <div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((it.caption||'').slice(0,60))}</div>
     <div style="margin-top:3px;display:flex;gap:5px">${it.status==='published'?postLinks(it):'<span class="badge red">Falló</span>'}</div></div>
     <span class="faint" style="font-size:11px;white-space:nowrap">${esc((it.published_at||it.created_at||'').slice(5,10))}</span></div>`).join('')
@@ -1340,8 +1340,9 @@ function kindBadge(it){
   const m={story:'📖 Historia',carousel:'🎠 Carrusel',reel:'🎞️ Reel'};
   return m[k]?`<span class="badge blue">${m[k]}</span>`:'';
 }
-function pubThumb(src){
+function pubThumb(src, it){
   const st='width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line)';
+  if(it && it.archived && it.drive_link) return `<a href="${esc(it.drive_link)}" target="_blank" style="${st};background:#0D1426;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--muted);text-decoration:none;text-align:center;padding:4px"><span style="font-size:20px">📁</span>Ver en Drive</a>`;
   if(/\.(mp4|webm)(\?|#|$)/i.test(src||'')) return `<video src="${esc(src)}#t=0.5" muted playsinline preload="metadata" style="${st};background:#0D1426"></video>`;
   if(!src) return `<div style="${st};background:#0D1426;display:flex;align-items:center;justify-content:center;font-size:26px">🎬</div>`;
   return `<img src="${esc(src)}" loading="lazy" style="${st}"/>`;
@@ -1390,13 +1391,13 @@ async function loadPublicaciones(){
       const isToday=dd===0; const publishedToday=isToday&&q.published_today>0;
       cal+=`<div style="background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:9px;padding:7px;min-height:74px;${it?'border-color:rgba(91,140,247,.4)':''}">
         <div class="faint" style="font-size:10.5px;font-weight:700">${DOW[date.getDay()]} ${date.getDate()}</div>
-        ${it?`<img src="${esc(it.image)}" loading="lazy" style="width:100%;height:42px;object-fit:cover;border-radius:5px;margin-top:5px"/>`:(publishedToday?'<div style="font-size:11px;color:var(--green);margin-top:14px;text-align:center">✓ hoy</div>':'<div style="font-size:11px;color:var(--faint);margin-top:18px;text-align:center">—</div>')}
+        ${it?(it.archived&&it.drive_link?`<a href="${esc(it.drive_link)}" target="_blank" title="Ver en Drive" style="display:block;width:100%;height:42px;border-radius:5px;margin-top:5px;background:#0D1426;text-align:center;line-height:42px;font-size:15px;text-decoration:none">📁</a>`:`<img src="${esc(it.image)}" loading="lazy" style="width:100%;height:42px;object-fit:cover;border-radius:5px;margin-top:5px"/>`):(publishedToday?'<div style="font-size:11px;color:var(--green);margin-top:14px;text-align:center">✓ hoy</div>':'<div style="font-size:11px;color:var(--faint);margin-top:18px;text-align:center">—</div>')}
       </div>`; }
     cal+='</div>';
     el('pubCalendar').innerHTML = pend.length||q.published_today ? cal : '<div class="empty" style="padding:20px">Nada programado. Cuando los agentes generen contenido, se agenda 1 por día.</div>';
     // publicadas: galería del feed + galería de videos (agrupados arriba)
     const postCard = it => `<div class="card post-card" style="padding:12px"${postCardAttrs(it)}>
-      ${pubThumb(it.image)}
+      ${pubThumb(it.image, it)}
       <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${kindBadge(it)}${postLinks(it)}<span class="badge grey" style="margin-left:auto">${esc((it.published_at||'').slice(0,10))}</span></div>
       <div class="muted" style="font-size:12.5px;line-height:1.45;margin-top:8px;max-height:84px;overflow:hidden">${esc((it.caption||'').slice(0,180))}${(it.caption||'').length>180?'…':''}</div>
     </div>`;
@@ -1407,14 +1408,14 @@ async function loadPublicaciones(){
     // cola
     el('pubQueue').innerHTML = pend.length ? '<div class="grid">'+pend.map((it,i)=>{ const d=new Date(); d.setDate(d.getDate()+startOffset+i);
       return `<div class="card" style="padding:12px;display:flex;gap:12px">
-      <div style="width:74px;flex:none">${pubThumb(it.image)}</div>
+      <div style="width:74px;flex:none">${pubThumb(it.image, it)}</div>
       <div style="flex:1;min-width:0"><div style="display:flex;gap:6px;margin-bottom:6px"><span class="badge blue">🗓️ ${d.toLocaleDateString('es-AR',{day:'2-digit',month:'short'})}</span>${kindBadge(it)}</div>
         <div class="muted" style="font-size:12.5px;line-height:1.4;max-height:60px;overflow:hidden">${esc((it.caption||'').slice(0,120))}…</div>
         <button class="btn-ghost btn-xs" style="margin-top:8px" onclick="pubDel('${it.id}')">Quitar</button></div></div>`; }).join('')+'</div>'
       : '<div class="card empty">Nada en cola. Cuando los agentes generen contenido aparece acá.</div>';
     // fallidas
     el('pubFailed').innerHTML = fail.length ? fail.map(it=>`<div class="card" style="margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
-      <div style="width:60px;flex:none">${pubThumb(it.image)}</div>
+      <div style="width:60px;flex:none">${pubThumb(it.image, it)}</div>
       <div style="flex:1;min-width:0"><div class="badge red" style="margin-bottom:5px">Falló</div>
         <div class="faint" style="font-size:12px;white-space:pre-wrap;max-height:60px;overflow:hidden">${esc(it.error||'')}</div></div>
       <div style="white-space:nowrap"><button class="btn-ghost btn-xs" onclick="pubRetry('${it.id}')">Reintentar</button><button class="btn-ghost btn-xs" onclick="pubDel('${it.id}')">🗑</button></div></div>`).join('')

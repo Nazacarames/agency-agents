@@ -352,12 +352,17 @@ async def _scheduled_roundtable() -> None:
 async def _scheduled_housekeeping() -> None:
     """Retención del volumen: borra media vieja no pendiente y reportes antiguos."""
     import asyncio
-    from .integrations import housekeeping
+    from .integrations import housekeeping, media_offload
     try:
         res = await asyncio.to_thread(housekeeping.cleanup)
         log.info("housekeeping_scheduled_done", result=res)
     except Exception as e:
         log.error("housekeeping_failed", error=str(e)[:200])
+    try:
+        off = await asyncio.to_thread(media_offload.run)
+        log.info("media_offload_scheduled_done", result=off)
+    except Exception as e:
+        log.error("media_offload_failed", error=str(e)[:200])
 
 
 async def _scheduled_reel_study() -> None:

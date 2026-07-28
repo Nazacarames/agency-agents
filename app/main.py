@@ -1958,12 +1958,14 @@ async def api_admin_housekeeping(request: Request,
     import asyncio
     import shutil
     from .integrations import housekeeping as hk
+    from .integrations import media_offload
     d = str(_data_dir())
     before = shutil.disk_usage(d)
     res = await asyncio.to_thread(hk.cleanup, days_images, days_reports)
+    offload = await asyncio.to_thread(media_offload.run)
     after = shutil.disk_usage(d)
     mb = lambda b: round(b / 1_048_576, 1)
-    return {"cleanup": res,
+    return {"cleanup": res, "offload": offload,
             "disco_mb": {"total": mb(after.total), "usado_antes": mb(before.used),
                          "usado_ahora": mb(after.used), "libre_ahora": mb(after.free)}}
 
