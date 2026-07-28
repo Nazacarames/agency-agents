@@ -252,7 +252,7 @@ def playbook_block() -> str:
     autopsy = ""
     try:
         from . import content_autopsy
-        autopsy = content_autopsy.block()
+        autopsy = content_autopsy.cached_block()
     except Exception:
         autopsy = ""
     # Dirección de arte viva (formatos/estilos de imagen — estudio mensual automático).

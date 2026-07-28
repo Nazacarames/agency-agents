@@ -94,6 +94,11 @@ SEED_DIRECTION = """# Dirección de arte — formatos de imagen/ad que convierte
    metáforas de producto. NUNCA el 3D azul corporativo genérico.
 9. **MINIMAL pattern-interrupt** — UN solo objeto, muchísimo aire, color inesperado.
    Para frenar el scroll entre reels ruidosos.
+10. **PIZARRA / CUADERNO handwritten** — foto de una página de cuaderno o pizarra real,
+   texto y flechas A MANO con marcadores de colores y resaltador (imperfecto, orgánico,
+   textura de papel). Para explicar un sistema/flujo paso a paso o desglosar un dato: se
+   lee como apuntes de un colega, no como infografía corporativa. Pattern-interrupt puro:
+   nada en el feed se le parece.
 
 ## Texto sobre la imagen: NO siempre
 - ~1 de cada 3 piezas va SIN titular compuesto: la foto documental fuerte o la
@@ -136,7 +141,8 @@ _DISTILL_SYSTEM = (
     "el cuándo-usarlos con lo nuevo): FOTO editorial del rubro, DEMO (chat real del "
     "producto), EDITORIAL (placa blanca con resaltador), CÓMIC meme 2 paneles, BANNER "
     "de ad, TIPOGRÁFICO, ILUSTRACIÓN con carácter, 3D con gusto, MINIMAL "
-    "pattern-interrupt. "
+    "pattern-interrupt, PIZARRA/CUADERNO handwritten (foto de cuaderno/pizarra real, "
+    "texto a mano con marcadores y resaltador). "
     "Sé concreto y cuantitativo. NADA de relleno. Empezá con "
     "'# Dirección de arte — formatos de imagen/ad que convierten' y la fecha."
 )

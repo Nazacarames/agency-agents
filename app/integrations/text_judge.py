@@ -62,6 +62,25 @@ rúbrica (0-100; penalizá lo vago y lo que no cierra la venta):
 
 _RUBRICS = {"email": _EMAIL_RUBRIC, "social": _SOCIAL_RUBRIC, "proposal": _PROPOSAL_RUBRIC}
 
+
+def _rubric_for(kind: str) -> str:
+    """Rúbrica de `kind`. Para 'social' la enriquece con lo que REALMENTE funcionó en
+    nuestro IG (la idea del post-scorer: puntuar contra performance real, no opinión
+    genérica). Si aún no hay engagement propio, cae a la rúbrica base. Best-effort."""
+    base = _RUBRICS.get(kind, "")
+    if kind != "social" or not base:
+        return base
+    try:
+        from . import content_autopsy
+        data = content_autopsy.cached_block().strip()
+    except Exception:
+        data = ""
+    if not data:
+        return base
+    return (base + "\n\n6. ADEMÁS, puntualo contra NUESTROS datos reales de IG (abajo): "
+            "premiá el borrador que replica el formato/gancho de los ✅ y penalizá si cae "
+            "en el patrón de los ❌.\n" + data)
+
 _OUTPUT_SPEC = (
     "\n\nTe paso el/los texto(s). Devolvé EXCLUSIVAMENTE un objeto JSON (sin ``` ni texto):\n"
     '{"avg": <promedio 0-100 entero>, '
@@ -137,7 +156,7 @@ def score_items(kind: str, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def judge(kind: str, payload: str) -> Dict[str, Any]:
     """Puntúa `payload` con la rúbrica de `kind` ('email'|'social'|'proposal').
     Devuelve {avg, top_fix} o {} si el juez no está disponible/falla."""
-    rubric = _RUBRICS.get(kind)
+    rubric = _rubric_for(kind)
     if not rubric or not enabled() or not (payload or "").strip():
         return {}
     from . import vision

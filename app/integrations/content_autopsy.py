@@ -10,6 +10,7 @@ Best-effort: si no hay token o falla, devuelve "" y no rompe nada.
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -101,3 +102,21 @@ def block(n: int = 20) -> str:
         lines.append(f"❌ flojo [{r['type']}] {r['interactions']} interacc — \"{r['caption']}\"")
     lines.append("Replicá el formato/gancho de los ✅ y evitá el patrón de los ❌.\n=== fin ===")
     return "\n".join(lines)
+
+
+_CACHE: Dict[str, object] = {"t": 0.0, "txt": ""}
+
+
+def cached_block(n: int = 20, ttl: float = 21600.0) -> str:
+    """block() memoizado `ttl` segundos (6h por defecto). Generación y juez lo piden con
+    segundos de diferencia; sin caché serían ~21 llamadas Graph repetidas por corrida.
+    Best-effort: si block() falla, devuelve lo último cacheado ('' si nunca hubo)."""
+    now = time.time()
+    if now - float(_CACHE["t"]) < ttl:
+        return str(_CACHE["txt"])
+    try:
+        _CACHE["txt"] = block(n)
+    except Exception:
+        pass  # deja el valor viejo
+    _CACHE["t"] = now
+    return str(_CACHE["txt"])
