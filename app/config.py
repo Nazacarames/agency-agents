@@ -226,6 +226,14 @@ class Settings(BaseSettings):
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
 
+    # ── TokenRouter (kimi-k3-free) — backend de texto GRATIS de ÚLTIMO recurso ──
+    # Se usa SOLO cuando MiniMax falla (típicamente 429 de cuota). Lento (~40-70s,
+    # modelo "thinking") pero sin costo: mejor entregar tarde que fallar la corrida.
+    # La key va como env var TOKENROUTER_API_KEY en Railway, NUNCA en el repo.
+    tokenrouter_api_key: str = ""
+    tokenrouter_base_url: str = "https://api.tokenrouter.com/v1"
+    tokenrouter_model: str = "moonshotai/kimi-k3-free"
+
     # ── TrendsMCP (tendencias de contenido: Google/YouTube/TikTok/Reddit) ──
     trends_api_key: str = ""
     trends_mcp_url: str = "https://api.trendsmcp.ai/mcp"

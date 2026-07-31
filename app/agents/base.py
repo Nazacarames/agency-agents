@@ -432,28 +432,43 @@ class BaseAgent(ABC):
 
             # 2) Path MiniMax directo (con o sin tool-use), o fallback del anterior.
             if response is None:
-                if self.tools:
-                    try:
-                        response = self._run_agentic_loop(ctx, local_system, user_msg)
-                    except MiniMaxError as e:
-                        # Red de seguridad: si el proveedor rechaza el campo `tools`
-                        # (o el loop falla), no dejamos al equipo sin entregable:
-                        # caemos a una completion de texto plano (modo offline).
-                        log.warning("agentic_loop_failed_fallback_text",
-                                    agent=self.name, run_id=ctx.run_id, error=str(e))
+                try:
+                    if self.tools:
+                        try:
+                            response = self._run_agentic_loop(ctx, local_system, user_msg)
+                        except MiniMaxError as e:
+                            # Red de seguridad: si el proveedor rechaza el campo `tools`
+                            # (o el loop falla), no dejamos al equipo sin entregable:
+                            # caemos a una completion de texto plano (modo offline).
+                            log.warning("agentic_loop_failed_fallback_text",
+                                        agent=self.name, run_id=ctx.run_id, error=str(e))
+                            response = ctx.minimax.complete(
+                                system=local_system,
+                                messages=[{"role": "user", "content": user_msg}],
+                                max_tokens=self.max_tokens,
+                                temperature=self.temperature,
+                            )
+                    else:
                         response = ctx.minimax.complete(
                             system=local_system,
                             messages=[{"role": "user", "content": user_msg}],
                             max_tokens=self.max_tokens,
                             temperature=self.temperature,
                         )
-                else:
-                    response = ctx.minimax.complete(
-                        system=local_system,
-                        messages=[{"role": "user", "content": user_msg}],
-                        max_tokens=self.max_tokens,
-                        temperature=self.temperature,
-                    )
+                except MiniMaxError as e:
+                    # 2b) Último recurso GRATIS: si MiniMax agota cuota (429) o falla,
+                    #     TokenRouter (kimi-k3-free). Lento pero sin costo: mejor
+                    #     entregar tarde que fallar la corrida. Solo si está configurado.
+                    from ..clients.tokenrouter import (complete_tokenrouter,
+                                                       tokenrouter_enabled)
+                    if not tokenrouter_enabled(ctx.settings):
+                        raise
+                    log.warning("minimax_failed_fallback_tokenrouter", agent=self.name,
+                                run_id=ctx.run_id, error=str(e)[:200])
+                    response = complete_tokenrouter(
+                        ctx.settings, local_system, user_msg,
+                        self.max_tokens, self.temperature)
+                    log.info("agent_via_tokenrouter", agent=self.name, run_id=ctx.run_id)
             # Sanitización: MiniMax a veces inyecta caracteres CJK (chino/japonés)
             # en medio del español. Los limpiamos acá (un solo punto → cubre el
             # reporte de todos los agentes y los emails de outbound) antes de
