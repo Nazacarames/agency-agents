@@ -26,6 +26,9 @@ AGENT_NAMES: List[str] = [
     "meeting_prep",
     "web_optimizer",
     "chief_of_staff",
+    "finance_officer",
+    "customer_success",
+    "delivery_pm",
 ]
 
 

@@ -728,6 +728,9 @@ _AGENT_DESCRIPTIONS = {
     "meeting_prep": "Prepara reuniones con la memoria del cliente (brief, agente de test, demo, objeciones)",
     "web_optimizer": "Ciclo quincenal de SEO/GEO: lee Search Console + su bitácora, decide qué mover y deploya un preview; aprobás y publica",
     "chief_of_staff": "Cierre del día (21:00): qué pasó, quién no entregó y el plan de acción para mañana, con dueños y seguimiento",
+    "finance_officer": "CFO: brief financiero (gastos, MRR, cobranzas, decisiones de plata)",
+    "customer_success": "Postventa/retención: plan de seguimiento por cliente + riesgos de churn",
+    "delivery_pm": "Project manager de entrega: etapas, bloqueos e hitos por proyecto de cliente",
 }
 
 

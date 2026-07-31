@@ -40,3 +40,6 @@ from . import web_optimizer    # noqa: F401, E402
 from . import inbox_assistant  # noqa: F401, E402
 from . import meeting_prep     # noqa: F401, E402
 from . import chief_of_staff   # noqa: F401, E402
+from . import finance_officer  # noqa: F401, E402
+from . import customer_success  # noqa: F401, E402
+from . import delivery_pm      # noqa: F401, E402
