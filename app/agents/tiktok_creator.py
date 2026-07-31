@@ -244,6 +244,12 @@ class TikTokCreatorAgent(BaseAgent):
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         text = response_text or ""
+        # Modo prueba: arma el short pero NO publica a IG/YouTube/TikTok (para
+        # verificar el pipeline sin quemar marca). Se activa con args no_publish=True.
+        try:
+            self._no_publish = bool(isinstance(ctx.args, dict) and ctx.args.get("no_publish"))
+        except Exception:
+            self._no_publish = False
         text, clip_path = self._add_nazareno_clip(text)      # Veo 3.1 Fast (marca personal)
         if not clip_path:
             text, clip_path = self._add_ugc_clip(text)       # UGC: testimonio de cliente (Veo)
@@ -342,6 +348,10 @@ class TikTokCreatorAgent(BaseAgent):
                     return text.rstrip() + ("\n\n> ⚠️ **El QA de Gemini bloqueó la "
                                             "publicación** (short claramente roto). "
                                             "No salió a IG/TikTok/YouTube — revisar.\n")
+            if getattr(self, "_no_publish", False):
+                log.info("tiktok_no_publish_mode", url=url)
+                return text.rstrip() + ("\n\n> 🧪 **Modo prueba (no_publish)**: short armado "
+                                        "pero NO publicado a IG/YouTube/TikTok.\n")
             text = self._maybe_upload_youtube(text, self._media_to_path(url))
             text = self._enqueue_ig_reel(text, url)
             text = self._maybe_post_tiktok(text, self._media_to_path(url), url)

@@ -790,6 +790,8 @@ async def api_run_agent(name: str, request: Request, background: BackgroundTasks
                 args["_force_provider"] = str(body["provider"])
             if body.get("dry_run"):
                 args["dry_run"] = True
+            if body.get("no_publish"):
+                args["no_publish"] = True
     except Exception:
         pass
     background.add_task(_run_pack_agent, name, args, run_id, "dashboard")
