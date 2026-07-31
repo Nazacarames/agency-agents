@@ -783,7 +783,7 @@ async def api_departments(request: Request):
     """Organigrama por departamentos (para el panel OS): cada depto con sus
     agentes enriquecidos (descripción, cron, si corrió hoy)."""
     _verify_webhook_secret(request)
-    from .agents.departments import DEPARTMENTS
+    from .agents.departments import DEPARTMENTS, DEPT_AUTONOMY
 
     def _build():
         out = []
@@ -799,7 +799,8 @@ async def api_departments(request: Request):
                 })
             out.append({
                 "id": dept_id, "label": dept["label"], "icon": dept["icon"],
-                "color": dept["color"], "desc": dept["desc"], "agents": agents,
+                "color": dept["color"], "desc": dept["desc"],
+                "autonomy": DEPT_AUTONOMY.get(dept_id, "sugiere"), "agents": agents,
             })
         return out
 

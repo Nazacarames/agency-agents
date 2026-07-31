@@ -271,6 +271,10 @@
   .dept-title{font-weight:800;font-size:15px;color:var(--navy);letter-spacing:-.2px}
   .dept-desc{font-size:11.5px;color:var(--faint);line-height:1.4;margin-top:2px}
   .dept-count{margin-left:auto;align-self:flex-start;font-size:11px;font-weight:800;color:#fff;background:var(--dept,#2563eb);padding:2px 9px;border-radius:20px}
+  .dept-auto{display:inline-block;margin-top:7px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.2px;text-transform:capitalize}
+  .auto-sugiere{background:rgba(100,116,139,.18);color:#94a3b8}
+  .auto-reversible{background:rgba(234,179,8,.16);color:#eab308}
+  .auto-publica{background:rgba(34,197,94,.16);color:#22c55e}
   .dept-agents{display:flex;flex-direction:column;gap:9px}
   .dept-agent{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:rgba(255,255,255,.03);transition:.14s}
   .dept-agent:hover{border-color:color-mix(in srgb,var(--dept,#2563eb) 55%,var(--line));transform:translateY(-1px)}
@@ -1566,9 +1570,12 @@ async function loadDepartamentos(){
 }
 function deptColumn(dep){
   const agents = (dep.agents||[]).map(deptAgentCard).join('') || '<div class="faint" style="font-size:12px">Sin agentes.</div>';
+  const auto = dep.autonomy||'sugiere';
+  const autoTip = {sugiere:'Solo sugiere — todo lo aprobás vos',reversible:'Acciona solo cosas internas reversibles',publica:'Ejecuta lo outward ya aprobado/en cola'}[auto]||'';
   return `<div class="dept-col" style="--dept:${esc(dep.color||'#2563eb')}">
     <div class="dept-head"><span class="dept-icon">${dep.icon||'🏢'}</span>
-      <div><div class="dept-title">${esc(dep.label||'')}</div><div class="dept-desc">${esc(dep.desc||'')}</div></div>
+      <div style="flex:1;min-width:0"><div class="dept-title">${esc(dep.label||'')}</div><div class="dept-desc">${esc(dep.desc||'')}</div>
+        <span class="dept-auto auto-${esc(auto)}" title="${esc(autoTip)}">⚙ ${esc(auto)}</span></div>
       <span class="dept-count">${(dep.agents||[]).length}</span>
     </div>
     <div class="dept-agents">${agents}</div>

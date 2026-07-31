@@ -50,7 +50,8 @@ class DeliveryPMAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        return f"{get_context_block()}\n\n{PM_INSTRUCTIONS}"
+        from .departments import autonomy_note
+        return f"{get_context_block()}\n\n{autonomy_note(self.name)}\n\n{PM_INSTRUCTIONS}"
 
     def build_user_message(self, ctx: AgentContext) -> str:
         parts = ["Armá el tablero de entrega con el estado de abajo.\n"]

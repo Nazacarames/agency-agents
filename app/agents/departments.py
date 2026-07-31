@@ -12,7 +12,24 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-# id -> {label, icon, color, desc, agents:[name]}
+# Niveles de autonomía (proactividad de bajo riesgo), definidos POR departamento.
+# Los agentes leen su nivel y se autorregulan (ver autonomy_note). Los gates duros
+# que ya existen (no_publish, cola 1/día, tope de outbound) siguen vigentes aparte.
+AUTONOMY_LEVELS = {
+    "sugiere": "SOLO SUGERÍS: no ejecutás ninguna acción por tu cuenta. Todo lo que "
+               "propongas queda para que el dueño lo apruebe. Nunca mandás nada afuera "
+               "ni gastás plata.",
+    "reversible": "Podés EJECUTAR SOLO acciones internas y 100% reversibles (guardar "
+                  "notas/memoria, mover un lead de etapa, encolar borradores, generar "
+                  "análisis/propuestas internas, deploy de preview). Todo lo que salga a "
+                  "un tercero o gaste plata → lo SUGERÍS, no lo hacés.",
+    "publica": "Además de lo reversible, podés EJECUTAR acciones outward YA planificadas y "
+               "de bajo riesgo (publicar una pieza que ya está en cola/aprobada, mandar un "
+               "follow-up a un lead que ya está en secuencia). NUNCA a un cliente nuevo, "
+               "NUNCA gastás plata, NUNCA mail en frío a alguien nuevo sin aprobación.",
+}
+
+# id -> {label, icon, color, desc, autonomy, agents:[name]}
 DEPARTMENTS: Dict[str, dict] = {
     "direccion": {
         "label": "Dirección",
@@ -65,6 +82,35 @@ DEPARTMENTS: Dict[str, dict] = {
         "agents": ["delivery_pm"],
     },
 }
+
+
+# Nivel de autonomía POR departamento (defaults; el dueño los ajusta).
+# Honra los ejemplos dados: Marketing publica, Comercial sugiere, Finanzas nunca acciona.
+DEPT_AUTONOMY: Dict[str, str] = {
+    "direccion": "reversible",       # planifica/delega interno, no publica ni gasta
+    "comercial": "sugiere",          # todo pasa por aprobación del dueño
+    "marketing": "publica",          # ejecuta lo ya aprobado/en cola
+    "growth": "reversible",          # propone y deploya previews que se aprueban
+    "finanzas": "sugiere",           # nunca acciona
+    "customer_success": "reversible",  # guarda seguimiento, encola; no manda a clientes solo
+    "delivery": "reversible",        # actualiza estado interno de proyectos
+}
+
+
+def autonomy_of(agent_name: str) -> str:
+    """Nivel de autonomía del departamento del agente ('sugiere' por defecto)."""
+    return DEPT_AUTONOMY.get(department_of(agent_name), "sugiere")
+
+
+def autonomy_note(agent_name: str) -> str:
+    """Bloque para inyectar al agente: su departamento + qué puede hacer solo."""
+    dept_id = department_of(agent_name)
+    dept = DEPARTMENTS.get(dept_id, {})
+    level = DEPT_AUTONOMY.get(dept_id, "sugiere")
+    rule = AUTONOMY_LEVELS.get(level, AUTONOMY_LEVELS["sugiere"])
+    label = dept.get("label", "sin departamento")
+    return (f"## Tu lugar en la empresa\nDepartamento: **{label}**. "
+            f"Nivel de autonomía: **{level}**.\n{rule}")
 
 
 def department_of(agent_name: str) -> str:
