@@ -778,6 +778,34 @@ async def api_agents(request: Request):
     return {"agents": await run_in_threadpool(_listing)}
 
 
+@app.get("/api/departments")
+async def api_departments(request: Request):
+    """Organigrama por departamentos (para el panel OS): cada depto con sus
+    agentes enriquecidos (descripción, cron, si corrió hoy)."""
+    _verify_webhook_secret(request)
+    from .agents.departments import DEPARTMENTS
+
+    def _build():
+        out = []
+        for dept_id, dept in DEPARTMENTS.items():
+            agents = []
+            for name in dept["agents"]:
+                info = _agent_last_output(name)
+                agents.append({
+                    "name": name,
+                    "description": _AGENT_DESCRIPTIONS.get(name, ""),
+                    "schedule": DEFAULT_SCHEDULES.get(name),
+                    **info,
+                })
+            out.append({
+                "id": dept_id, "label": dept["label"], "icon": dept["icon"],
+                "color": dept["color"], "desc": dept["desc"], "agents": agents,
+            })
+        return out
+
+    return {"departments": await run_in_threadpool(_build)}
+
+
 @app.post("/api/agents/{name}/run")
 async def api_run_agent(name: str, request: Request, background: BackgroundTasks):
     _verify_webhook_secret(request)

@@ -263,6 +263,25 @@
   .nav-item{transition:.16s}
   .nav-item:hover{transform:translateX(2px)}
   .nav-item.active{background:linear-gradient(120deg,rgba(43,91,232,.4),rgba(59,130,246,.16));box-shadow:inset 0 0 0 1px rgba(91,140,247,.45),0 4px 16px rgba(43,91,232,.2)}
+  /* Panel OS — departamentos */
+  .dept-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .dept-col{border:1px solid var(--line);border-top:3px solid var(--dept,#2563eb);border-radius:14px;background:rgba(255,255,255,.02);padding:14px;display:flex;flex-direction:column}
+  .dept-head{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+  .dept-icon{width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:10px;background:color-mix(in srgb,var(--dept,#2563eb) 22%,transparent)}
+  .dept-title{font-weight:800;font-size:15px;color:var(--navy);letter-spacing:-.2px}
+  .dept-desc{font-size:11.5px;color:var(--faint);line-height:1.4;margin-top:2px}
+  .dept-count{margin-left:auto;align-self:flex-start;font-size:11px;font-weight:800;color:#fff;background:var(--dept,#2563eb);padding:2px 9px;border-radius:20px}
+  .dept-agents{display:flex;flex-direction:column;gap:9px}
+  .dept-agent{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:rgba(255,255,255,.03);transition:.14s}
+  .dept-agent:hover{border-color:color-mix(in srgb,var(--dept,#2563eb) 55%,var(--line));transform:translateY(-1px)}
+  .da-top{display:flex;align-items:center;gap:8px}
+  .da-name{font-weight:700;font-size:13.5px;color:var(--navy);text-transform:capitalize}
+  .da-desc{font-size:12px;color:var(--muted);line-height:1.45;margin:5px 0 9px}
+  .da-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .dot.on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+  .dot.idle{background:#eab308}
+  .dot.off{background:#64748b}
 
   /* Botón primario con barrido al hover */
   .btn:not(.btn-ghost){position:relative;overflow:hidden}
@@ -338,6 +357,10 @@
     <div class="content">
 
       <!-- RESUMEN / COCKPIT -->
+      <section id="tab-departamentos" class="tabsec hidden">
+        <div class="dept-board" id="deptBoard"><div class="card empty">Cargando departamentos…</div></div>
+      </section>
+
       <section id="tab-resumen" class="tabsec">
         <div id="overviewAlerts"></div>
         <div class="kpi-row" id="overviewKpis"></div>
@@ -821,6 +844,7 @@ const ICONS = {
 };
 const NAV = [
   {id:'resumen', label:'Resumen', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
+  {id:'departamentos', label:'Departamentos', sub:'La empresa por sectores: cada departamento con sus agentes. Corrélos y mirá su último output.'},
   {id:'finanzas', label:'Finanzas', sub:'Ingresos, gastos y ganancia. Tipos de cambio y facturación por cliente.'},
   {id:'clientes', label:'Clientes', sub:'Facturación, servicios, estado y memoria de cada cliente.'},
   {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound. Convertí a cliente.'},
@@ -880,6 +904,7 @@ function go(tab){
 }
 function loadTab(tab){
   if(tab==='resumen') loadOverview();
+  if(tab==='departamentos') loadDepartamentos();
   if(tab==='finanzas') loadFinanzas();
   if(tab==='publicaciones') loadPublicaciones();
   if(tab==='ads') loadAds();
@@ -1530,6 +1555,38 @@ function agentCard(a){
         <button class="btn btn-sm" onclick="runAgent('${a.name}',this)">Disparar</button>
       </span>
     </div></div>`;
+}
+async function loadDepartamentos(){
+  const board = el('deptBoard');
+  try{
+    const d = await api('/api/departments');
+    const deps = d.departments||[];
+    board.innerHTML = deps.length ? deps.map(deptColumn).join('') : '<div class="card empty">Sin departamentos.</div>';
+  }catch(e){ board.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
+}
+function deptColumn(dep){
+  const agents = (dep.agents||[]).map(deptAgentCard).join('') || '<div class="faint" style="font-size:12px">Sin agentes.</div>';
+  return `<div class="dept-col" style="--dept:${esc(dep.color||'#2563eb')}">
+    <div class="dept-head"><span class="dept-icon">${dep.icon||'🏢'}</span>
+      <div><div class="dept-title">${esc(dep.label||'')}</div><div class="dept-desc">${esc(dep.desc||'')}</div></div>
+      <span class="dept-count">${(dep.agents||[]).length}</span>
+    </div>
+    <div class="dept-agents">${agents}</div>
+  </div>`;
+}
+function deptAgentCard(a){
+  const on = a.has_output && a.today;
+  const cls = on ? 'on' : (a.has_output ? 'idle' : 'off');
+  const status = on ? 'corrió hoy' : (a.has_output ? ('último: '+esc(a.last_date||'—')) : 'sin correr');
+  return `<div class="dept-agent">
+    <div class="da-top"><span class="dot ${cls}"></span><span class="da-name">${esc((a.name||'').replace(/_/g,' '))}</span></div>
+    <div class="da-desc">${esc(a.description||'')}</div>
+    <div class="da-foot"><span class="faint" style="font-size:11px">${status}</span>
+      <span style="display:flex;gap:5px">
+        <button class="btn-ghost btn-sm" onclick="viewLast('${a.name}')">Ver</button>
+        <button class="btn btn-sm" onclick="runAgent('${a.name}',this)">Correr</button>
+      </span></div>
+  </div>`;
 }
 async function webPreview(btn){
   if(btn){btn.disabled=true;}
