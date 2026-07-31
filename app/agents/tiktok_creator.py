@@ -289,6 +289,7 @@ class TikTokCreatorAgent(BaseAgent):
             if not clip_path:
                 return text
             frames = [p for p in (mock_frames or []) if p]
+            from_montage = False
             if frames:
                 # PRIMERO el servicio de montaje externo (split + subtítulos + color +
                 # b-roll, con RAM propia). Si no está o falla, cae al armado local.
@@ -298,6 +299,7 @@ class TikTokCreatorAgent(BaseAgent):
                     if montage_client.enabled():
                         url = montage_client.produce(
                             clip_path, frames, script=getattr(self, "_veo_frase", ""))
+                        from_montage = bool(url)
                 except Exception as e:
                     log.warning("montage_client_failed", error=str(e)[:200])
                 # PRO local: Nazareno ARRIBA + bot ABAJO a la vez; fallback secuencial.
@@ -311,8 +313,11 @@ class TikTokCreatorAgent(BaseAgent):
             # Subtítulos quemados desde la frase hablada (VEO_FRASE) — estilo viral
             # "texto grande". Arriba si hay card de demo abajo; abajo si es full-screen.
             # Best-effort: si falla, seguimos con el video sin subs.
+            # OJO: si el video vino del montage, ESE ya quemó sus subtítulos → NO
+            # quemar una segunda capa (salían dobles y desincronizados). Solo el path
+            # local (assemble_split) sale sin subs y los necesita acá.
             frase = (getattr(self, "_veo_frase", "") or "").strip()
-            if frase:
+            if frase and not from_montage:
                 try:
                     subbed = video_assembler.burn_subtitles(
                         self._media_to_path(url), frase,
