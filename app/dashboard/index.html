@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet" />
 <style>
   :root{
     --blue:#2B5BE8; --blue-dark:#2348C0; --blue-bright:#5B8CF7; --blue-tint:rgba(59,130,246,.16);
@@ -21,7 +21,9 @@
     --shadow:0 1px 2px rgba(0,0,0,.45),0 6px 18px rgba(0,0,0,.28);
     --shadow-lg:0 24px 70px rgba(0,0,0,.55);
     --radius:14px;
-    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    /* Engine / cerebro (estética BENNETT OS) */
+    --eng-bg:#07080e; --eng-bg2:#0a0c14; --eng-grid:rgba(120,150,220,.055); --eng-amber:#ff8a3d;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--navy);-webkit-font-smoothing:antialiased;font-size:14px;
@@ -305,39 +307,57 @@
   .dot.on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
   .dot.idle{background:#eab308}
   .dot.off{background:#64748b}
-  /* Panel OS — cerebro neuronal (futurista) */
-  .neo{position:relative;display:flex;flex-direction:column;align-items:center}
-  .neo-stage{position:relative;width:min(92vw,780px);aspect-ratio:1/1;margin:4px auto 0;background:radial-gradient(circle at 50% 50%,rgba(43,91,232,.10),transparent 62%)}
-  .neo-stage::before{content:'';position:absolute;inset:6%;border-radius:50%;background:radial-gradient(circle,transparent 61%,rgba(255,255,255,.035) 62%,transparent 63.5%),radial-gradient(circle,transparent 39%,rgba(255,255,255,.03) 40%,transparent 41.5%);pointer-events:none}
-  .neo-links{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:1}
-  .neo-link{stroke-width:.5;opacity:.6;stroke-linecap:round;stroke-dasharray:2 3;filter:drop-shadow(0 0 2px currentColor);animation:neoFlow 2.4s linear infinite;animation-delay:var(--d)}
-  @keyframes neoFlow{to{stroke-dashoffset:-25}}
-  .neo-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:clamp(118px,20vw,166px);aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 40% 34%,#3b7bff,#1a2fb0 58%,#0b1038);box-shadow:0 0 0 1px rgba(120,160,255,.4),0 0 46px rgba(43,91,232,.6),inset 0 0 32px rgba(0,0,0,.55)}
-  .neo-core-in{text-align:center;z-index:2}
-  .neo-core-t{font-weight:800;font-size:15px;letter-spacing:1.5px;color:#fff;text-shadow:0 0 12px rgba(120,170,255,.9)}
-  .neo-core-s{font-size:9.5px;color:rgba(255,255,255,.72);letter-spacing:.4px;margin-top:2px}
-  .neo-ring{position:absolute;left:50%;top:50%;width:100%;height:100%;border-radius:50%;border:1px solid rgba(120,160,255,.5);transform:translate(-50%,-50%);animation:neoPulse 3s ease-out infinite}
-  .neo-ring.r2{animation-delay:1s}.neo-ring.r3{animation-delay:2s}
-  @keyframes neoPulse{0%{width:100%;height:100%;opacity:.65}100%{width:235%;height:235%;opacity:0}}
+  /* ═══ OPTIMAL ENGINE — cerebro (estética BENNETT OS) ═══ */
+  .neo{position:relative;display:flex;flex-direction:column;align-items:center;font-family:var(--mono)}
+  /* prompt bar tipo terminal */
+  .neo-prompt{width:100%;max-width:1100px;margin:0 auto 6px;display:flex;align-items:center;gap:10px;padding:12px 15px;border:1px solid var(--eng-grid);border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
+  .neo-prompt-cursor{color:var(--eng-amber);font-size:13px;animation:blink 1.1s steps(1) infinite}
+  @keyframes blink{50%{opacity:.15}}
+  .neo-prompt-in{flex:1;background:transparent;border:none;outline:none;color:var(--navy);font-family:var(--mono);font-size:13px;letter-spacing:.2px}
+  .neo-prompt-in::placeholder{color:#5b6784}
+  .neo-prompt-sub{font-size:9.5px;color:#5b6784;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+  /* stage: casi negro + grilla + viñeta */
+  .neo-stage{position:relative;width:min(94vw,900px);aspect-ratio:1/.92;margin:2px auto 0;border:1px solid var(--eng-grid);border-radius:14px;overflow:hidden;
+    background:
+      radial-gradient(circle at 50% 48%,rgba(255,138,61,.09),transparent 46%),
+      linear-gradient(var(--eng-grid) 1px,transparent 1px) 0 0/34px 34px,
+      linear-gradient(90deg,var(--eng-grid) 1px,transparent 1px) 0 0/34px 34px,
+      radial-gradient(circle at 50% 46%,var(--eng-bg2),var(--eng-bg) 78%)}
+  .neo-stage::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 20px rgba(0,0,0,.6)}
+  .neo-links{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:2}
+  .neo-link{stroke-width:.4;opacity:.5;stroke-linecap:round;stroke-dasharray:1.5 2.5;filter:drop-shadow(0 0 2px currentColor);animation:neoFlow 3s linear infinite;animation-delay:var(--d)}
+  @keyframes neoFlow{to{stroke-dashoffset:-20}}
+  /* núcleo: cerebro de partículas (canvas) */
+  .neo-core{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);z-index:3;width:clamp(180px,30vw,300px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
+  .neo-brain{width:100%;height:100%;filter:drop-shadow(0 0 26px rgba(255,120,50,.4))}
+  .neo-core-label{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);text-align:center;font-size:11px;font-weight:800;letter-spacing:2.5px;color:#ffd9b8;text-shadow:0 0 14px rgba(255,138,61,.8);pointer-events:none}
+  .neo-core-label span{display:block;font-weight:500;font-size:8.5px;letter-spacing:1.5px;color:#8a94ac;margin-top:2px}
+  /* nodos: orbe circular con ícono + label debajo */
   .neo-nodes{position:absolute;inset:0;z-index:4}
-  .neo-node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;width:clamp(94px,13vw,126px);padding:12px 8px;border-radius:15px;cursor:pointer;background:linear-gradient(160deg,rgba(20,28,54,.92),rgba(12,18,38,.94));border:1px solid color-mix(in srgb,var(--dept) 55%,var(--line));box-shadow:0 0 22px -7px var(--dept),inset 0 1px 0 rgba(255,255,255,.05);color:var(--navy);transition:transform .18s,box-shadow .18s,border-color .18s;animation:nodeIn .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--in)}
-  .neo-node:hover{transform:translate(-50%,-50%) scale(1.07);box-shadow:0 0 34px -3px var(--dept);border-color:var(--dept);z-index:6}
-  @keyframes nodeIn{from{opacity:0;transform:translate(-50%,-50%) scale(.55)}to{opacity:1}}
-  .neo-node-ic{width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:11px;background:color-mix(in srgb,var(--dept) 26%,transparent);box-shadow:0 0 14px -3px var(--dept)}
-  .neo-node-l{font-weight:700;font-size:12px;text-align:center;line-height:1.15}
-  .neo-node-m{display:flex;align-items:center;gap:5px;font-size:10px}
-  .neo-node-c{font-weight:800;color:#fff;background:var(--dept);border-radius:20px;padding:0 7px}
-  .neo-dotmini{width:7px;height:7px;border-radius:50%}
-  .neo-dotmini.auto-sugiere{background:#64748b}.neo-dotmini.auto-reversible{background:#eab308}.neo-dotmini.auto-publica{background:#22c55e}
-  .neo-live{color:#22c55e;font-weight:700}
-  .neo-loading{position:absolute;left:50%;top:64%;transform:translateX(-50%);color:var(--muted);font-size:12px}
-  .neo-drawer{width:100%;max-width:940px;margin:6px auto 0;border:1px solid color-mix(in srgb,var(--dept,#2563eb) 40%,var(--line));border-top:3px solid var(--dept,#2563eb);border-radius:16px;background:var(--paper);box-shadow:var(--shadow-lg);overflow:hidden;max-height:0;opacity:0;transition:max-height .4s ease,opacity .3s,padding .3s}
-  .neo-drawer.open{max-height:1600px;opacity:1;padding:16px}
-  .neo-drawer-h{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
-  .neo-close{margin-left:auto;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--navy);width:30px;height:30px;border-radius:8px;cursor:pointer;flex:none;font-size:14px}
+  .neo-node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;width:120px;background:none;border:none;cursor:pointer;color:var(--navy);animation:nodeIn .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--in)}
+  @keyframes nodeIn{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}to{opacity:1}}
+  .neo-orb{position:relative;width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;
+    background:radial-gradient(circle at 40% 35%,color-mix(in srgb,var(--dept) 30%,#0b0d16),#080a10);
+    border:1.5px solid var(--dept);box-shadow:0 0 18px -2px var(--dept),inset 0 0 14px rgba(0,0,0,.6);transition:transform .18s,box-shadow .18s}
+  .neo-node:hover .neo-orb{transform:scale(1.12);box-shadow:0 0 30px 0 var(--dept)}
+  .neo-orb-badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:20px;background:var(--dept);color:#08080e;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 0 10px -1px var(--dept)}
+  .neo-node-l{font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;text-align:center;line-height:1.25;color:#e6ecfb;text-shadow:0 1px 4px #000}
+  .neo-node-s{font-size:8.5px;letter-spacing:.5px;color:#7f8aa6;display:flex;align-items:center;gap:5px;text-transform:uppercase}
+  .neo-dotmini{width:6px;height:6px;border-radius:50%;box-shadow:0 0 6px currentColor}
+  .neo-dotmini.auto-sugiere{background:#64748b;color:#64748b}.neo-dotmini.auto-reversible{background:#ffb020;color:#ffb020}.neo-dotmini.auto-publica{background:#21d07a;color:#21d07a}
+  .neo-live{color:#21d07a}
+  .neo-loading{position:absolute;left:50%;top:76%;transform:translateX(-50%);color:#6b7690;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:var(--mono)}
+  /* drawer del depto (panel engine) */
+  .neo-drawer{width:100%;max-width:1100px;margin:10px auto 0;border:1px solid color-mix(in srgb,var(--dept,#ff8a3d) 45%,var(--eng-grid));border-left:3px solid var(--dept,#ff8a3d);border-radius:12px;background:linear-gradient(180deg,var(--eng-bg2),var(--eng-bg));box-shadow:0 0 40px -10px color-mix(in srgb,var(--dept,#ff8a3d) 40%,transparent),var(--shadow-lg);overflow:hidden;max-height:0;opacity:0;transition:max-height .45s ease,opacity .3s,padding .3s;font-family:var(--mono)}
+  .neo-drawer.open{max-height:1800px;opacity:1;padding:18px}
+  .neo-drawer-h{display:flex;align-items:flex-start;gap:13px;margin-bottom:16px}
+  .neo-drawer-h .dept-title{font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;font-size:15px}
+  .neo-close{margin-left:auto;background:rgba(255,255,255,.05);border:1px solid var(--eng-grid);color:var(--navy);width:30px;height:30px;border-radius:8px;cursor:pointer;flex:none;font-size:14px;font-family:var(--mono)}
   .neo-close:hover{background:rgba(255,255,255,.12)}
-  .neo-drawer-a{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:10px}
-  @media(max-width:640px){.neo-node{width:82px;padding:8px 5px}.neo-node-l{font-size:10px}.neo-node-ic{width:30px;height:30px;font-size:16px}}
+  .neo-drawer-a{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:10px}
+  .neo-drawer-a .dept-agent{background:linear-gradient(160deg,rgba(255,255,255,.025),transparent);border-color:var(--eng-grid)}
+  .neo-drawer-a .da-name{font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;font-size:12px}
+  @media(max-width:640px){.neo-node{width:88px}.neo-orb{width:44px;height:44px;font-size:17px}.neo-node-l{font-size:9px}}
 
   /* Botón primario con barrido al hover */
   .btn:not(.btn-ghost){position:relative;overflow:hidden}
@@ -415,11 +435,16 @@
       <!-- RESUMEN / COCKPIT -->
       <section id="tab-departamentos" class="tabsec hidden">
         <div class="neo" id="neo">
+          <div class="neo-prompt">
+            <span class="neo-prompt-cursor">▸</span>
+            <input class="neo-prompt-in" id="neoPrompt" placeholder="dump into the brain… o soltá documentos" autocomplete="off" />
+            <span class="neo-prompt-sub">text · voice · drag or upload</span>
+          </div>
           <div class="neo-stage" id="neoStage">
-            <svg class="neo-links" id="neoLinks" preserveAspectRatio="none"></svg>
+            <svg class="neo-links" id="neoLinks" preserveAspectRatio="none" viewBox="0 0 100 100"></svg>
             <div class="neo-core" id="neoCore">
-              <span class="neo-ring r1"></span><span class="neo-ring r2"></span><span class="neo-ring r3"></span>
-              <div class="neo-core-in"><div class="neo-core-t">CEREBRO</div><div class="neo-core-s">Obsidian · Graphify</div></div>
+              <canvas class="neo-brain" id="neoBrain" width="340" height="340"></canvas>
+              <div class="neo-core-label">WHOLE BRAIN<span>Obsidian · Graphify</span></div>
             </div>
             <div class="neo-nodes" id="neoNodes"></div>
           </div>
@@ -1625,31 +1650,49 @@ function agentCard(a){
 }
 function skelCards(n){ return Array.from({length:n||6}).map(()=>'<div class="card"><span class="skel skel-line" style="width:45%;height:15px"></span><span class="skel skel-line" style="width:85%;margin-top:11px"></span><span class="skel skel-line" style="width:60%"></span></div>').join(''); }
 function skelKpis(n){ return Array.from({length:n||5}).map(()=>'<div class="kpi-card"><span class="skel skel-line" style="width:55%;height:10px"></span><span class="skel skel-line" style="width:72%;height:22px;margin-top:9px"></span></div>').join(''); }
-let NEO_DEPS=[];
+let NEO_DEPS=[], NEO_RAF=null;
 async function loadDepartamentos(){
   const nodes=el('neoNodes');
-  nodes.innerHTML='<div class="neo-loading">Sincronizando el cerebro…</div>';
+  nodes.innerHTML='<div class="neo-loading">sincronizando el cerebro…</div>';
+  neoBrain();
   try{
     const d = await api('/api/departments');
     NEO_DEPS = d.departments||[];
     renderNeo(NEO_DEPS);
   }catch(e){ nodes.innerHTML='<div class="card err" style="position:relative">'+esc(e.message)+'</div>'; }
 }
+function neoBrain(){
+  const cv=el('neoBrain'); if(!cv) return;
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=W*0.44, N=88, LINK=W*0.17;
+  const P=Array.from({length:N},()=>{const a=Math.random()*6.283,r=Math.pow(Math.random(),.62)*R;return{x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,r:Math.random()*1.5+.5};});
+  cancelAnimationFrame(NEO_RAF);
+  function frame(){
+    const sec=el('tab-departamentos');
+    if(sec&&sec.classList.contains('hidden')){ NEO_RAF=requestAnimationFrame(frame); return; }
+    ctx.clearRect(0,0,W,H);
+    for(const p of P){p.x+=p.vx;p.y+=p.vy;const dx=p.x-cx,dy=p.y-cy,dd=Math.hypot(dx,dy)||1;if(dd>R){p.vx-=dx/dd*.03;p.vy-=dy/dd*.03;}}
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const dx=P[i].x-P[j].x,dy=P[i].y-P[j].y,d=Math.hypot(dx,dy);if(d<LINK){ctx.strokeStyle='rgba(255,120,60,'+(.16*(1-d/LINK)).toFixed(3)+')';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(P[i].x,P[i].y);ctx.lineTo(P[j].x,P[j].y);ctx.stroke();}}
+    ctx.shadowColor='#ff7a2f';ctx.shadowBlur=7;
+    for(const p of P){const t=Math.max(0,1-Math.hypot(p.x-cx,p.y-cy)/R);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fillStyle='rgba(255,'+(110+(t*100|0))+','+(30+(t*40|0))+',.92)';ctx.fill();}
+    ctx.shadowBlur=0;
+    NEO_RAF=requestAnimationFrame(frame);
+  }
+  frame();
+}
 function renderNeo(deps){
   const nodes=el('neoNodes'), links=el('neoLinks');
-  const n=deps.length||1, cx=50, cy=50, R=37;
-  links.setAttribute('viewBox','0 0 100 100');
+  const n=deps.length||1, cx=50, cy=50, Rx=37, Ry=40;
   links.innerHTML = deps.map((dep,i)=>{
-    const a=(-90 + i*(360/n))*Math.PI/180, x=cx+R*Math.cos(a), y=cy+R*Math.sin(a);
-    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(2)}" y2="${y.toFixed(2)}" stroke="${esc(dep.color||'#2563eb')}" class="neo-link" style="--d:${(i*0.12).toFixed(2)}s"/>`;
+    const a=(-90+i*(360/n))*Math.PI/180, x=cx+Rx*Math.cos(a), y=cy+Ry*Math.sin(a);
+    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(2)}" y2="${y.toFixed(2)}" stroke="${esc(dep.color||'#ff8a3d')}" class="neo-link" style="--d:${(i*0.14).toFixed(2)}s"/>`;
   }).join('');
   nodes.innerHTML = deps.map((dep,i)=>{
-    const a=(-90 + i*(360/n))*Math.PI/180, x=cx+R*Math.cos(a), y=cy+R*Math.sin(a);
+    const a=(-90+i*(360/n))*Math.PI/180, x=cx+Rx*Math.cos(a), y=cy+Ry*Math.sin(a);
     const live=(dep.agents||[]).filter(z=>z.has_output&&z.today).length;
-    return `<button class="neo-node" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--dept:${esc(dep.color||'#2563eb')};--in:${(i*0.08).toFixed(2)}s" data-i="${i}" title="${esc(dep.label)}">
-      <span class="neo-node-ic">${dep.icon||'🏢'}</span>
+    return `<button class="neo-node" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--dept:${esc(dep.color||'#ff8a3d')};--in:${(i*0.07).toFixed(2)}s" data-i="${i}" title="${esc(dep.label)}">
+      <span class="neo-orb">${dep.icon||'🏢'}<span class="neo-orb-badge">${(dep.agents||[]).length}</span></span>
       <span class="neo-node-l">${esc(dep.label||'')}</span>
-      <span class="neo-node-m"><span class="neo-node-c">${(dep.agents||[]).length}</span><span class="neo-dotmini auto-${esc(dep.autonomy||'sugiere')}"></span>${live?`<span class="neo-live">${live} activos</span>`:''}</span>
+      <span class="neo-node-s"><span class="neo-dotmini auto-${esc(dep.autonomy||'sugiere')}"></span>${live?`<span class="neo-live">${live} activos</span>`:esc(dep.autonomy||'')}</span>
     </button>`;
   }).join('');
   nodes.querySelectorAll('.neo-node').forEach(b=>b.addEventListener('click',()=>openDept(NEO_DEPS[+b.dataset.i])));
