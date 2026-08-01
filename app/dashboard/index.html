@@ -367,7 +367,7 @@
   .neo-ghost i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:3px;height:3px;border-radius:50%;background:rgba(170,188,225,.25)}
   .neo-gdot{position:absolute;transform:translate(-50%,-50%);width:2.5px;height:2.5px;border-radius:50%;background:rgba(160,178,215,.3);pointer-events:none}
   /* núcleo: cerebro de partículas (canvas) */
-  .neo-core{position:absolute;left:46.5%;top:47%;transform:translate(-50%,-50%);z-index:3;width:clamp(200px,26vw,320px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
+  .neo-core{position:absolute;left:44%;top:47%;transform:translate(-50%,-50%);z-index:3;width:clamp(200px,26vw,320px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
   /* anillo fino alrededor del cerebro (ref img#3) */
   .neo-core::before{content:'';position:absolute;inset:-8%;border:1px solid rgba(200,214,240,.13);border-radius:50%;pointer-events:none}
   .neo-core::after{content:'';position:absolute;inset:-20%;border:1px dashed rgba(180,196,228,.06);border-radius:50%;pointer-events:none}
@@ -675,7 +675,7 @@
   .stab.act{color:#cfe3ff;border-color:rgba(91,140,247,.5);background:rgba(59,130,246,.1)}
   /* ═══ LENS · LEGEND · DIRECTORY (panel derecho del video) ═══ */
   .neo-rail{position:absolute;right:12px;top:52px;width:186px;z-index:5;display:flex;flex-direction:column;gap:10px;font-family:var(--mono);pointer-events:auto;animation:nodeIn .6s ease both}
-  .nr-box{border:1px solid var(--eng-grid);border-radius:10px;background:rgba(8,12,19,.72);backdrop-filter:blur(14px);padding:10px 11px;overflow:hidden;flex:none}
+  .nr-box{border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(5,8,13,.96);backdrop-filter:blur(18px);padding:10px 11px;overflow:hidden;flex:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
   .nr-h{font-size:7.5px;letter-spacing:2.2px;color:#5f6a85;margin-bottom:7px;text-transform:uppercase}
   .nr-lens{display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#aeb8d0;padding:3px 0;cursor:pointer;transition:.2s}
   .nr-lens:hover{color:#fff}
@@ -686,7 +686,7 @@
   .nr-lg.off{opacity:.34}
   .nr-dir{height:186px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;padding-right:3px}
   .nr-dir::-webkit-scrollbar{width:3px}.nr-dir::-webkit-scrollbar-thumb{background:rgba(255,138,61,.3)}
-  .nr-d{font-size:8.5px;color:#8b93ab;padding:3px 4px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+  .nr-d{font-size:8px;line-height:1.5;color:#8b93ab;padding:3px 4px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
   .nr-d:hover{background:rgba(255,255,255,.05);color:#fff}
   .neo-stage.tree-mode .neo-rail{display:none}
   .neo-stage.hide-sat .neo-sat,.neo-stage.hide-sat .orb-a{display:none}
@@ -2245,7 +2245,7 @@ function renderVaultDomLabels(){
   let h='';
   BRAIN_DOMS.slice(0,6).forEach((d,i)=>{
     const a=angs[i%angs.length]*Math.PI/180;
-    h+=`<span class="brain-dom" style="left:${(46.5+14*Math.cos(a)).toFixed(1)}%;top:${(47+16*Math.sin(a)).toFixed(1)}%;animation-delay:${(0.5+i*0.1).toFixed(1)}s">${esc(d[0])} · ${d[1]}</span>`;
+    h+=`<span class="brain-dom" style="left:${(44+13*Math.cos(a)).toFixed(1)}%;top:${(47+16*Math.sin(a)).toFixed(1)}%;animation-delay:${(0.5+i*0.1).toFixed(1)}s">${esc(d[0])} · ${d[1]}</span>`;
   });
   nodes.insertAdjacentHTML('beforeend',h);
 }
@@ -2256,7 +2256,7 @@ function renderOrbital(deps){
   el('neoStage').style.removeProperty('--amb');
   el('neoStage').classList.remove('tree-mode');
   const flat=[]; deps.forEach(d=>(d.agents||[]).forEach(a=>flat.push({a,d})));
-  const N=flat.length||1, cx=46.5, cy=48, Rx=34.5, Ry=41;
+  const N=flat.length||1, cx=44, cy=48, Rx=32, Ry=41;
   links.innerHTML=`<ellipse cx="${cx}" cy="${cy}" rx="${Rx}" ry="${Ry}" fill="none" stroke="rgba(200,214,240,.1)" stroke-width=".15"/>`
     + flat.map((f,i)=>{const a=(-90+i*(360/N))*Math.PI/180;
       const X1=cx+13*Math.cos(a), Y1=cy+14*Math.sin(a), X2=cx+(Rx-2.5)*Math.cos(a), Y2=cy+(Ry-2.5)*Math.sin(a);
@@ -2281,7 +2281,7 @@ function renderNeo(deps){
   el('neoCore').style.display='';
   el('neoStage').classList.remove('tree-mode');
   el('neoStage').style.removeProperty('--amb');
-  const n=deps.length||1, cx=46.5, cy=48, Rx=33.5, Ry=39;
+  const n=deps.length||1, cx=44, cy=48, Rx=31, Ry=39;
   // posición de cada agente-satélite (tenue, alrededor de su depto — ref img#3)
   const sats=[];
   deps.forEach((dep,i)=>{
@@ -2289,7 +2289,7 @@ function renderNeo(deps){
     ags.forEach((ag,j)=>{
       const off=(j-(k-1)/2)*Math.min(11, 40/Math.max(k,1));
       const a=(base+off)*Math.PI/180;
-      sats.push({x:cx+(Rx+8.5)*Math.cos(a), y:cy+(Ry+8.5)*Math.sin(a),
+      sats.push({x:cx+(Rx+7)*Math.cos(a), y:cy+(Ry+7.5)*Math.sin(a),
                  dx:cx+Rx*Math.cos(base*Math.PI/180), dy:cy+Ry*Math.sin(base*Math.PI/180), ag});
     });
   });
