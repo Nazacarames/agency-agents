@@ -197,6 +197,18 @@ def search(query: str, k: int = 3, layer: str = "", min_terms: int = 0) -> List[
             score *= REF_PENALTY
         scored.append((score, d))
     scored.sort(key=lambda x: -x[0])
+    if layer == "material":
+        # Tope de 2 por fuente: el estudio de reels tiene secciones largas y con
+        # mucho vocabulario, y se llevaba 3 de los 5 lugares aun para el agente
+        # que arma el calendario de posts. Sirve más un pasaje de cada cosa.
+        por_fuente, diverso = {}, []
+        for s, d in scored:
+            f = d["meta"].get("fuente", "")
+            if por_fuente.get(f, 0) >= 2:
+                continue
+            por_fuente[f] = por_fuente.get(f, 0) + 1
+            diverso.append((s, d))
+        scored = diverso
     return [{"layer": d["layer"], "head": d["head"], "text": d["body"],
              "score": round(s, 2), **d["meta"]} for s, d in scored[:k]]
 
