@@ -39,6 +39,7 @@ _STOP = {
     "vamos", "ahora", "luego", "antes", "después", "despues", "mismo", "misma",
     "automiq", "agencia", "agente", "agentes", "usuario", "dueño", "dueno",
 }
+REF_PENALTY = 0.35   # cuánto pesa la biblioteca de terceros frente a lo propio
 _cache: Dict[str, Any] = {"mtime": None, "docs": [], "df": {}, "n": 0}
 
 
@@ -67,14 +68,14 @@ def _index() -> Dict[str, Any]:
         return {"docs": [], "df": {}, "n": 0}
     docs, df = [], {}
 
-    def add(layer: str, head: str, body: str, meta: dict) -> None:
+    def add(layer: str, head: str, body: str, meta: dict, ref: bool = False) -> None:
         # El encabezado (título de nota/sección, o la firma de la función) es la
         # señal más fuerte, por eso se puntúa aparte y pesa el doble.
         t_head, t_body = _terms(head), _terms(body)
         if not (t_head or t_body):
             return
         docs.append({"layer": layer, "head": head, "body": body, "meta": meta,
-                     "head_terms": t_head, "terms": t_head | t_body})
+                     "head_terms": t_head, "terms": t_head | t_body, "ref": ref})
         for t in t_head | t_body:
             df[t] = df.get(t, 0) + 1
 
@@ -82,7 +83,7 @@ def _index() -> Dict[str, Any]:
         note = s.get("note") or ""
         add("vault", f"{note} {s.get('title') or ''}".replace("-", " "),
             s.get("text") or "", {"note": note, "folder": s.get("folder") or "",
-                                  "title": s.get("title") or ""})
+                                  "title": s.get("title") or ""}, bool(s.get("ref")))
     # Notas sin secciones (una nota corta, sin encabezados) igual tienen que ser
     # encontrables: caen por su extracto.
     con_sec = {(s.get("note") or "") for s in raw.get("sections") or []}
@@ -90,7 +91,8 @@ def _index() -> Dict[str, Any]:
         if nd.get("id") in con_sec or not nd.get("excerpt"):
             continue
         add("vault", (nd.get("id") or "").replace("-", " "), nd["excerpt"],
-            {"note": nd.get("id") or "", "folder": nd.get("folder") or "", "title": ""})
+            {"note": nd.get("id") or "", "folder": nd.get("folder") or "", "title": ""},
+            bool(nd.get("ref")))
     for c in raw.get("code") or []:
         add("code", c.get("label") or "", c.get("file") or "",
             {"file": c.get("file") or "", "kind": c.get("kind") or ""})
@@ -119,6 +121,10 @@ def search(query: str, k: int = 3, layer: str = "", min_terms: int = 2) -> List[
             continue
         score = sum(math.log(1 + n / df.get(t, 1)) for t in hits)
         score += sum(math.log(1 + n / df.get(t, 1)) for t in qt & d["head_terms"])
+        # Material de terceros (biblioteca de plantillas) por debajo de lo propio:
+        # aparece cuando no tenemos doctrina del tema, no en lugar de ella.
+        if d.get("ref"):
+            score *= REF_PENALTY
         scored.append((score, d))
     scored.sort(key=lambda x: -x[0])
     return [{"layer": d["layer"], "head": d["head"], "text": d["body"],

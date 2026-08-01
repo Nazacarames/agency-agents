@@ -4616,7 +4616,7 @@
       "label": "_terms()",
       "file_type": "code",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L44",
+      "source_location": "L46",
       "_origin": "ast"
     },
     {
@@ -4624,7 +4624,7 @@
       "label": "_index()",
       "file_type": "code",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L48",
+      "source_location": "L55",
       "_origin": "ast"
     },
     {
@@ -4640,7 +4640,7 @@
       "label": "search()",
       "file_type": "code",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L97",
+      "source_location": "L105",
       "_origin": "ast"
     },
     {
@@ -4648,7 +4648,7 @@
       "label": "block()",
       "file_type": "code",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L122",
+      "source_location": "L134",
       "_origin": "ast"
     },
     {
@@ -4660,27 +4660,27 @@
       "_origin": "ast"
     },
     {
-      "id": "app_integrations_brain_search_rationale_49",
+      "id": "app_integrations_brain_search_rationale_56",
       "label": "Índice en memoria, reconstruido solo cuando cambia brain-graph.json.",
       "file_type": "rationale",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L49",
+      "source_location": "L56",
       "_origin": "ast"
     },
     {
-      "id": "app_integrations_brain_search_rationale_98",
+      "id": "app_integrations_brain_search_rationale_106",
       "label": "Pasajes más relevantes. Exige `min_terms` términos en común: con uno solo…",
       "file_type": "rationale",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L98",
+      "source_location": "L106",
       "_origin": "ast"
     },
     {
-      "id": "app_integrations_brain_search_rationale_123",
+      "id": "app_integrations_brain_search_rationale_135",
       "label": "Bloque listo para el prompt, o \"\" si no hay nada relevante (o si el cerebro…",
       "file_type": "rationale",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L123",
+      "source_location": "L135",
       "_origin": "ast"
     },
     {
@@ -16688,7 +16688,7 @@
       "label": "_excerpt()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L49",
+      "source_location": "L56",
       "_origin": "ast"
     },
     {
@@ -16696,7 +16696,7 @@
       "label": "_notes_layer()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L54",
+      "source_location": "L61",
       "_origin": "ast"
     },
     {
@@ -16704,7 +16704,7 @@
       "label": "_sections_layer()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L77",
+      "source_location": "L87",
       "_origin": "ast"
     },
     {
@@ -16712,7 +16712,7 @@
       "label": "_code_layer()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L126",
+      "source_location": "L138",
       "_origin": "ast"
     },
     {
@@ -16720,7 +16720,7 @@
       "label": "_run()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L154",
+      "source_location": "L166",
       "_origin": "ast"
     },
     {
@@ -16736,7 +16736,7 @@
       "label": "build_merged_graph()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L163",
+      "source_location": "L175",
       "_origin": "ast"
     },
     {
@@ -16744,7 +16744,7 @@
       "label": "build_brain()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L185",
+      "source_location": "L197",
       "_origin": "ast"
     },
     {
@@ -16752,7 +16752,7 @@
       "label": "_load_env_file()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L207",
+      "source_location": "L220",
       "_origin": "ast"
     },
     {
@@ -16760,7 +16760,7 @@
       "label": "push()",
       "file_type": "code",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L216",
+      "source_location": "L229",
       "_origin": "ast"
     },
     {
@@ -16772,35 +16772,35 @@
       "_origin": "ast"
     },
     {
-      "id": "scripts_brain_sync_rationale_55",
+      "id": "scripts_brain_sync_rationale_62",
       "label": "Notas del vault con su extracto + los [[wikilinks]] entre ellas.",
       "file_type": "rationale",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L55",
+      "source_location": "L62",
       "_origin": "ast"
     },
     {
-      "id": "scripts_brain_sync_rationale_78",
+      "id": "scripts_brain_sync_rationale_88",
       "label": "Secciones del vault (una por encabezado, según Graphify) con SU texto. Graphify…",
       "file_type": "rationale",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L78",
+      "source_location": "L88",
       "_origin": "ast"
     },
     {
-      "id": "scripts_brain_sync_rationale_127",
+      "id": "scripts_brain_sync_rationale_139",
       "label": "Módulos, funciones y docstrings de app/packs/scripts + sus relaciones. Se…",
       "file_type": "rationale",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L127",
+      "source_location": "L139",
       "_origin": "ast"
     },
     {
-      "id": "scripts_brain_sync_rationale_164",
+      "id": "scripts_brain_sync_rationale_176",
       "label": "Corre Graphify sobre el vault y sobre el repo, y fusiona los dos grafos. El…",
       "file_type": "rationale",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L164",
+      "source_location": "L176",
       "_origin": "ast"
     },
     {
@@ -57958,8 +57958,8 @@
     },
     {
       "source": "app_integrations_brain_search",
-      "target": "pathlib",
-      "relation": "imports_from",
+      "target": "unicodedata",
+      "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
@@ -57969,7 +57969,7 @@
     },
     {
       "source": "app_integrations_brain_search",
-      "target": "typing",
+      "target": "pathlib",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -57980,12 +57980,23 @@
     },
     {
       "source": "app_integrations_brain_search",
+      "target": "typing",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/integrations/brain_search.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "app_integrations_brain_search",
       "target": "app_log",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -57995,7 +58006,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L44",
+      "source_location": "L46",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58005,7 +58016,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L48",
+      "source_location": "L55",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58016,7 +58027,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L48",
+      "source_location": "L55",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58026,7 +58037,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L97",
+      "source_location": "L105",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58037,7 +58048,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L97",
+      "source_location": "L105",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58047,7 +58058,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L122",
+      "source_location": "L134",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58058,7 +58069,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L100",
+      "source_location": "L108",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58069,7 +58080,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L103",
+      "source_location": "L111",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58080,7 +58091,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L126",
+      "source_location": "L138",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -58095,32 +58106,32 @@
       "_origin": "ast"
     },
     {
-      "source": "app_integrations_brain_search_rationale_49",
+      "source": "app_integrations_brain_search_rationale_56",
       "target": "app_integrations_brain_search_index",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L49",
+      "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast"
     },
     {
-      "source": "app_integrations_brain_search_rationale_98",
+      "source": "app_integrations_brain_search_rationale_106",
       "target": "app_integrations_brain_search_search",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L98",
+      "source_location": "L106",
       "weight": 1.0,
       "_origin": "ast"
     },
     {
-      "source": "app_integrations_brain_search_rationale_123",
+      "source": "app_integrations_brain_search_rationale_135",
       "target": "app_integrations_brain_search_block",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L123",
+      "source_location": "L135",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95284,7 +95295,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L49",
+      "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95294,7 +95305,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L54",
+      "source_location": "L61",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95304,7 +95315,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L77",
+      "source_location": "L87",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95314,7 +95325,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L126",
+      "source_location": "L138",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95324,7 +95335,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L154",
+      "source_location": "L166",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95335,7 +95346,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L154",
+      "source_location": "L166",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95345,7 +95356,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L163",
+      "source_location": "L175",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95356,7 +95367,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L163",
+      "source_location": "L175",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95366,7 +95377,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L185",
+      "source_location": "L197",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95376,7 +95387,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L207",
+      "source_location": "L220",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95386,7 +95397,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L216",
+      "source_location": "L229",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95397,7 +95408,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L67",
+      "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95408,7 +95419,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L103",
+      "source_location": "L113",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95419,7 +95430,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L158",
+      "source_location": "L170",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95430,7 +95441,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L171",
+      "source_location": "L183",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95441,7 +95452,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L187",
+      "source_location": "L199",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95452,7 +95463,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L187",
+      "source_location": "L199",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95463,7 +95474,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L188",
+      "source_location": "L200",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95474,7 +95485,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L189",
+      "source_location": "L201",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95485,7 +95496,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L190",
+      "source_location": "L202",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95496,7 +95507,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L208",
+      "source_location": "L221",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -95511,42 +95522,42 @@
       "_origin": "ast"
     },
     {
-      "source": "scripts_brain_sync_rationale_55",
+      "source": "scripts_brain_sync_rationale_62",
       "target": "scripts_brain_sync_notes_layer",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L55",
+      "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast"
     },
     {
-      "source": "scripts_brain_sync_rationale_78",
+      "source": "scripts_brain_sync_rationale_88",
       "target": "scripts_brain_sync_sections_layer",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L78",
+      "source_location": "L88",
       "weight": 1.0,
       "_origin": "ast"
     },
     {
-      "source": "scripts_brain_sync_rationale_127",
+      "source": "scripts_brain_sync_rationale_139",
       "target": "scripts_brain_sync_code_layer",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L127",
+      "source_location": "L139",
       "weight": 1.0,
       "_origin": "ast"
     },
     {
-      "source": "scripts_brain_sync_rationale_164",
+      "source": "scripts_brain_sync_rationale_176",
       "target": "scripts_brain_sync_build_merged_graph",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "scripts/brain_sync.py",
-      "source_location": "L164",
+      "source_location": "L176",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -135182,7 +135193,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "app/integrations/brain_search.py",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast"
     },

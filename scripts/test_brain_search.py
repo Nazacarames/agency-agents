@@ -25,6 +25,13 @@ CEREBRO = {
     "code": [{"id": "x1", "file": "app/integrations/publish_queue.py",
               "label": "encolar_publicacion()", "kind": "code"}],
 }
+# Biblioteca de terceros: mismo tema, texto más largo → sin penalización le gana
+# a la doctrina propia y el agente termina citando un README ajeno.
+CEREBRO["sections"].append(
+    {"note": "README-paid-media", "folder": "06-Resources", "ref": True,
+     "title": "Paid Media Division",
+     "text": "Camara veterinaria: paid media playbook, competencia, cotizacion, "
+             "camara, veterinaria, competencia, cotizacion, presupuesto generico."})
 
 tmp = Path(tempfile.gettempdir()) / "test-brain-graph.json"
 tmp.write_text(json.dumps(CEREBRO), encoding="utf-8")
@@ -47,6 +54,10 @@ assert hits and hits[0]["note"] == "Nota-Sin-Secciones", hits
 hits = bs.search("encolar publicacion queue", layer="code")
 assert hits and hits[0]["layer"] == "code", hits
 assert all(h["layer"] == "code" for h in hits)
+
+# 3b. La doctrina propia le gana a la biblioteca de terceros sobre el mismo tema
+hits = bs.search("competencia cotizacion camara veterinaria", k=2)
+assert hits[0]["note"] == "2026-07-17-Propuesta-CLAMEVET", [h["note"] for h in hits]
 
 # 4. Un tema ajeno NO arrastra ruido (umbral de 2 términos)
 assert bs.search("receta de milanesas napolitanas") == []

@@ -42,6 +42,13 @@ SECTION_CHARS = 400         # pasaje por sección (lo buscan los agentes)
 MIN_SECTION = 60            # menos que esto es un índice o un encabezado suelto
 CODE_ROOTS = ("app/", "packs/", "scripts/")
 MAX_BYTES = 4_500_000
+# Carpetas del vault que son BIBLIOTECA DE TERCEROS, no doctrina de la agencia
+# (06-Resources son plantillas de agentes bajadas de internet). Se indexan igual
+# —a veces sirven— pero marcadas `ref` para que no le ganen a lo propio: sin
+# esto, "paid media para distribuidoras" devolvía tres READMEs ajenos y ni un
+# solo pasaje nuestro sobre distribuidoras.
+REF_FOLDERS = tuple(f.strip() for f in
+                    os.environ.get("BRAIN_REF_FOLDERS", "06-Resources").split(",") if f.strip())
 
 
 # ── Capa 1: el vault (notas + secciones) ──
@@ -64,7 +71,10 @@ def _notes_layer() -> tuple[list, list, dict, dict]:
         except Exception:
             texts[p] = ""
         ids.add(p.stem)
-        nodes.append({"id": p.stem, "folder": folder, "excerpt": _excerpt(texts[p])})
+        nd = {"id": p.stem, "folder": folder, "excerpt": _excerpt(texts[p])}
+        if folder.startswith(REF_FOLDERS):
+            nd["ref"] = True
+        nodes.append(nd)
         domains[folder] = domains.get(folder, 0) + 1
     for p in notes:
         for m in LINK_RE.finditer(texts[p]):
@@ -116,8 +126,10 @@ def _sections_layer(graph: dict) -> list:
             body = MD_RE.sub("", " ".join(l.strip() for l in lines[max(ln, fm_end):end] if l.strip()))
             body = " ".join(body.split())[:SECTION_CHARS]
             if len(body) >= MIN_SECTION:
-                out.append({"note": note, "folder": folder,
-                            "title": label[:120], "text": body})
+                sec = {"note": note, "folder": folder, "title": label[:120], "text": body}
+                if folder.startswith(REF_FOLDERS):
+                    sec["ref"] = True
+                out.append(sec)
     return out
 
 
@@ -192,7 +204,8 @@ def build_brain() -> dict:
              "sections": sections, "code": code_nodes, "code_edges": code_edges,
              "stats": {"notes": len(nodes), "links": len(edges),
                        "folders": len(domains), "sections": len(sections),
-                       "code_nodes": len(code_nodes), "code_edges": len(code_edges)}}
+                       "code_nodes": len(code_nodes), "code_edges": len(code_edges),
+                       "ref_sections": sum(1 for s in sections if s.get("ref"))}}
     # Todo esto crece con el repo y con el vault: recortamos los pasajes antes de
     # que el POST muera por tamaño, en vez de perder la sync entera.
     cut = SECTION_CHARS
