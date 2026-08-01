@@ -811,15 +811,15 @@ async def api_brain_graph(request: Request):
         return {"ok": False, "nodes": [], "edges": [], "domains": {}}
 
 
-@app.get("/api/vault/search")
-async def api_vault_search(request: Request, q: str, k: int = 3):
-    """Qué pasajes del vault recibiría un agente que corre con este tema. Es el
-    diagnóstico del contexto: sin esto no hay forma de ver desde afuera si la
-    inyección funciona en producción."""
+@app.get("/api/brain/search")
+async def api_brain_search(request: Request, q: str, k: int = 3, layer: str = ""):
+    """Qué pasajes del cerebro (vault + código) recibiría un agente que corre con
+    este tema. Es el diagnóstico del contexto: sin esto no hay forma de ver desde
+    afuera si la inyección funciona en producción. `layer` = vault | code."""
     _verify_webhook_secret(request)
-    from .integrations import vault_search
-    hits = await run_in_threadpool(vault_search.search, q, k)
-    return {"query": q, "hits": hits, "indexed": vault_search._index().get("n", 0)}
+    from .integrations import brain_search
+    hits = await run_in_threadpool(brain_search.search, q, k, layer)
+    return {"query": q, "hits": hits, "indexed": brain_search._index().get("n", 0)}
 
 
 @app.get("/api/departments")

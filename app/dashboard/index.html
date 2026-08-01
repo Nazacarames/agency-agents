@@ -486,6 +486,8 @@
   .bx-type.leccion{background:rgba(33,208,122,.12);color:#5fe6a4;border:1px solid rgba(33,208,122,.3)}
   .bx-type.nota{background:rgba(77,150,255,.12);color:#8ab6ff;border:1px solid rgba(77,150,255,.3)}
   .bx-type.vault{background:rgba(47,212,196,.1);color:#5fe6c8;border:1px solid rgba(47,212,196,.3)}
+  .bx-type.pasaje{background:rgba(177,92,255,.12);color:#c79bff;border:1px solid rgba(177,92,255,.3)}
+  .bx-type.codigo{background:rgba(255,176,32,.12);color:#ffcc70;border:1px solid rgba(255,176,32,.3)}
   .bx-row-title{font-size:12px;font-weight:700;color:#e6ecfb;letter-spacing:.3px}
   .bx-row-d{margin-left:auto;font-size:9px;color:#5b6784}
   .bx-row-b{font-family:var(--sans);font-size:12px;line-height:1.5;color:#93a0bc}
@@ -2156,7 +2158,7 @@ async function loadDepartamentos(){
     if(g&&g.ok&&g.stats&&g.stats.notes){
       neoBrain(g.stats.notes);
       const s=document.querySelector('.neo-core-label span:first-of-type');
-      if(s) s.textContent=`Obsidian · Graphify · ${g.stats.notes} notas`;
+      if(s) s.textContent=`Obsidian · Graphify · ${g.stats.notes} notas · ${g.stats.code_nodes||0} código`;
       BRAIN_DOMS=Object.entries(g.domains||{}).sort((a,b)=>b[1]-a[1]);
       renderVaultDomLabels();
     }
@@ -2716,8 +2718,14 @@ function brainItems(){
   (BRAIN.notes||[]).forEach(n=>out.push({type:'nota',dom:(n.to||'?').replace(/_/g,' '),title:(n.from||'?')+' → '+(n.to||'?').replace(/_/g,' '),body:n.note||'',date:String(n.created_at||'').slice(0,10)}));
   if(BRAIN.vault){
     const deg=BRAIN.vault._deg||{};
+    // El cuerpo es el extracto real: así el buscador del cerebro encuentra por
+    // CONTENIDO y no solo por el nombre del archivo.
     (BRAIN.vault.nodes||[]).forEach(v=>out.push({type:'vault',dom:v.folder||'(raíz)',title:v.id,
-      body:(deg[v.id]?deg[v.id]+' enlaces salientes':'sin enlaces salientes'),date:''}));
+      body:v.excerpt||(deg[v.id]?deg[v.id]+' enlaces salientes':''),date:''}));
+    (BRAIN.vault.sections||[]).forEach(s=>out.push({type:'pasaje',dom:s.folder||'(raíz)',
+      title:(s.note||'')+' › '+(s.title||''),body:s.text||'',date:''}));
+    (BRAIN.vault.code||[]).forEach(c=>out.push({type:'codigo',dom:(c.file||'').split('/').slice(0,2).join('/'),
+      title:c.label||'',body:c.file||'',date:''}));
   }
   return out;
 }
@@ -2732,8 +2740,9 @@ function renderBrain(){
     </div>
     ${BRAIN.vault?`<div class="bx-stats2">
       <div class="bx-st"><b>${BRAIN.vault.stats.notes}</b><span>notas</span></div>
-      <div class="bx-st"><b>${BRAIN.vault.stats.links}</b><span>enlaces</span></div>
-      <div class="bx-st"><b>${BRAIN.vault.stats.folders}</b><span>dominios</span></div>
+      <div class="bx-st"><b>${BRAIN.vault.stats.sections||0}</b><span>pasajes</span></div>
+      <div class="bx-st"><b>${BRAIN.vault.stats.code_nodes||0}</b><span>código</span></div>
+      <div class="bx-st"><b>${BRAIN.vault.stats.links+(BRAIN.vault.stats.code_edges||0)}</b><span>enlaces</span></div>
       <div class="bx-st"><b>${(BRAIN.les||[]).length+(BRAIN.mem||[]).length+(BRAIN.notes||[]).length}</b><span>vivas</span></div>
     </div>
     <div class="bx-top"><div class="bx-doms-h">▸ MÁS ENLAZADAS</div>${(()=>{
@@ -2741,7 +2750,7 @@ function renderBrain(){
       return Object.entries(ind).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([n,c])=>
         `<div class="bx-top-r"><span>${esc(n)}</span><b>${c} ←</b></div>`).join('')||'<div class="bx-empty" style="padding:6px">—</div>';
     })()}</div>`:''}
-    <div class="bx-chips">${['','memoria','leccion','nota'].concat(BRAIN.vault?['vault']:[]).map(t=>`<button class="bx-chip ${BRAIN_F.type===t?'act':''}" data-t="${t}">${t||'todas'}</button>`).join('')}</div>
+    <div class="bx-chips">${['','memoria','leccion','nota'].concat(BRAIN.vault?['vault','pasaje','codigo']:[]).map(t=>`<button class="bx-chip ${BRAIN_F.type===t?'act':''}" data-t="${t}">${t||'todas'}</button>`).join('')}</div>
     <div class="bx-body"><div class="bx-doms" id="bxDoms"></div><div class="bx-rows" id="bxRows"></div></div></div>`;
   el('bxQ').addEventListener('input',e=>{BRAIN_F.q=e.target.value;renderBrainRows();});
   dr.querySelectorAll('.bx-chip').forEach(c=>c.addEventListener('click',()=>{BRAIN_F.type=c.dataset.t;BRAIN_F.dom='';renderBrain();}));
@@ -2764,7 +2773,7 @@ function renderBrainRows(){
   if(BRAIN_F.dom)  items=items.filter(i=>i.dom===BRAIN_F.dom);
   if(q) items=items.filter(i=>(i.title+' '+i.body+' '+i.dom).toLowerCase().includes(q));
   el('bxStats').textContent=`${(BRAIN.mem||[]).length} memorias · ${(BRAIN.les||[]).length} lecciones · ${(BRAIN.notes||[]).length} notas`
-    +(BRAIN.vault?` · VAULT ${BRAIN.vault.stats.notes} notas / ${BRAIN.vault.stats.links} enlaces`:'');
+    +(BRAIN.vault?` · CEREBRO ${BRAIN.vault.stats.notes} notas / ${BRAIN.vault.stats.sections||0} pasajes / ${BRAIN.vault.stats.code_nodes||0} código`:'');
   el('bxRows').innerHTML=items.length?items.slice(0,120).map(i=>
     `<div class="bx-row"><div class="bx-row-t"><span class="bx-type ${i.type}">${i.type}</span><span class="bx-row-title">${esc(i.title)}</span><span class="bx-row-d">${esc(i.dom)}${i.date?' · '+esc(i.date):''}</span></div><div class="bx-row-b">${esc((i.body||'').slice(0,300))}</div></div>`).join('')
     :'<div class="bx-empty">— sin anotaciones acá; tirá algo en "dump into the brain" —</div>';
