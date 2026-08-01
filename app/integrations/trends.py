@@ -60,7 +60,9 @@ def refresh() -> dict:
         log.warning("trends_refresh_empty")
         return {"ok": False, "reason": "sin datos"}
 
-    block = ["=== TENDENCIAS AHORA (datos reales, " + today + ") ===",
+    # Sin "AHORA": el archivo se lee días después de generarse y el sello de
+    # frescura ya dice cuántos. Prometer actualidad en el título era la mentira.
+    block = ["=== TENDENCIAS DEL NICHO (datos reales del " + today + ") ===",
              "Momentum de NUESTROS temas (búsqueda Google, últimos 3 meses):"]
     block += lines
     block.append("Regla: priorizá en el hook/copy los temas que están SUBIENDO; a los que "
