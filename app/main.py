@@ -811,6 +811,17 @@ async def api_brain_graph(request: Request):
         return {"ok": False, "nodes": [], "edges": [], "domains": {}}
 
 
+@app.get("/api/vault/search")
+async def api_vault_search(request: Request, q: str, k: int = 3):
+    """Qué pasajes del vault recibiría un agente que corre con este tema. Es el
+    diagnóstico del contexto: sin esto no hay forma de ver desde afuera si la
+    inyección funciona en producción."""
+    _verify_webhook_secret(request)
+    from .integrations import vault_search
+    hits = await run_in_threadpool(vault_search.search, q, k)
+    return {"query": q, "hits": hits, "indexed": vault_search._index().get("n", 0)}
+
+
 @app.get("/api/departments")
 async def api_departments(request: Request):
     """Organigrama por departamentos (para el panel OS): cada depto con sus
