@@ -610,6 +610,47 @@
   /* charts: path suave con anim de dibujo + puntos glow */
   .chart path[pathLength]{stroke-dasharray:1;stroke-dashoffset:1;animation:chartDraw 1.1s .1s cubic-bezier(.5,0,.2,1) forwards}
   .chart circle.pt{filter:drop-shadow(0 0 4px currentColor)}
+  /* ═══ VIDEO PASS 2 — orbital · pill · vecinos · directory flotante · dominios ═══ */
+  .eyebrow{font-family:var(--mono);font-size:8.5px;letter-spacing:2px;color:#4f6b8a;text-transform:uppercase;margin-bottom:2px}
+  .eyebrow span{color:#7ea4c9}
+  .view-tog{position:absolute;top:12px;right:14px;z-index:6;display:flex;gap:4px;background:rgba(8,11,18,.7);border:1px solid var(--eng-grid);border-radius:8px;padding:3px}
+  .vt{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;padding:4px 10px;border:none;border-radius:6px;background:transparent;color:#6b7690;cursor:pointer;transition:.25s}
+  .vt.act{background:rgba(59,130,246,.18);color:#cfe3ff;box-shadow:inset 0 0 0 1px rgba(91,140,247,.35)}
+  .neo-stage.tree-mode .view-tog{display:none}
+  /* vista ORBITAL: todos los agentes en anillo alrededor del cerebro */
+  .orb-a{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;pointer-events:auto;font-family:var(--mono);animation:nodeIn .5s ease both}
+  .orb-c{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--dept,#ff8a3d);border:1px solid var(--dept,#ff8a3d);background:radial-gradient(circle at 40% 32%,rgba(255,255,255,.18),#0a0d15 60%,#05070c);box-shadow:0 0 9px -4px var(--dept,#ff8a3d);transition:transform .3s,box-shadow .3s}
+  .orb-c svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+  .orb-a:hover .orb-c{transform:scale(1.25);box-shadow:0 0 16px -3px var(--dept,#ff8a3d)}
+  .orb-l{font-size:6px;letter-spacing:.6px;color:#5f6a85;text-transform:uppercase;max-width:70px;text-align:center;line-height:1.3;opacity:0;transition:.25s}
+  .orb-a:hover .orb-l{opacity:1;color:#c3cde4}
+  .orb-dl{position:absolute;transform:translate(-50%,-50%);font-family:var(--mono);font-size:7.5px;letter-spacing:1.5px;text-transform:uppercase;pointer-events:none;text-shadow:0 1px 4px #000}
+  /* pill inferior ◀ DEPTO ▶ + vecinos fantasma */
+  .tree-pill{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);display:flex;gap:0;pointer-events:auto;font-family:var(--mono);border:1px solid var(--eng-grid);border-radius:20px;background:rgba(8,11,18,.75);overflow:hidden;animation:nodeIn .5s ease both}
+  .tree-pill button{background:transparent;border:none;color:#aeb8d0;font-family:var(--mono);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;padding:8px 13px;cursor:pointer;transition:.2s}
+  .tree-pill button:hover{color:#ffd9b8;background:rgba(255,138,61,.06)}
+  .tree-pill .tp-name{border-left:1px solid var(--eng-grid);border-right:1px solid var(--eng-grid);color:#e8edf9}
+  .tree-ngh{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;pointer-events:auto;opacity:.32;transition:opacity .25s;font-family:var(--mono);animation:nodeIn .6s ease both}
+  .tree-ngh:hover{opacity:.8}
+  .tree-ngh .tb-circ{width:34px;height:34px;animation:none}
+  .tree-ngh .tb-circ svg{width:15px;height:15px}
+  .tree-ngh span.nl{font-size:7px;letter-spacing:1.2px;text-transform:uppercase;color:#8b93ab;max-width:90px;text-align:center;line-height:1.4}
+  /* DIRECTORY = panel FLOTANTE sobre el stage (ref video) */
+  .neo-drawer{position:absolute;left:14px;top:52px;bottom:14px;width:min(440px,44%);margin:0;z-index:8;overflow-y:auto;max-height:none;opacity:0;transform:translateX(-14px);pointer-events:none;transition:opacity .3s,transform .35s cubic-bezier(.32,.72,0,1);background:rgba(8,12,19,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:12px}
+  .neo-drawer.open{opacity:1;transform:none;pointer-events:auto;max-height:none;padding:16px}
+  .bx-body{grid-template-columns:1fr;gap:12px}
+  .bx-rows{max-height:none;overflow:visible}
+  .neo-drawer::-webkit-scrollbar{width:5px}
+  .neo-drawer::-webkit-scrollbar-thumb{background:rgba(255,138,61,.25);border-radius:4px}
+  .bx-stats2{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+  .bx-st{border:1px solid var(--eng-grid);border-radius:8px;padding:7px 9px;text-align:center}
+  .bx-st b{display:block;font-size:15px;color:#ffd9b8;font-family:var(--mono)}
+  .bx-st span{font-size:7.5px;letter-spacing:1.2px;color:#6b7690;text-transform:uppercase}
+  .bx-top{margin-bottom:12px}
+  .bx-top-r{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:10px;color:#aeb8d0;padding:4px 2px;border-bottom:1px solid rgba(255,255,255,.045)}
+  .bx-top-r b{color:#ffd9b8;font-weight:600}
+  /* labels de dominios del vault alrededor del cerebro */
+  .brain-dom{position:absolute;transform:translate(-50%,-50%);font-family:var(--mono);font-size:7px;letter-spacing:1.4px;text-transform:uppercase;color:#c9a37b;opacity:.75;pointer-events:none;text-shadow:0 1px 5px #000;animation:nodeIn 1s ease both}
   /* ═══ MEMORIA = consola viva (JetBrains Mono verde/cyan sobre ultra-oscuro) ═══ */
   .con-head{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--emerald);display:flex;align-items:center;gap:9px;margin-bottom:14px;text-transform:uppercase}
   .con-head .con-dot{width:7px;height:7px;border-radius:50%;background:var(--emerald);box-shadow:0 0 10px var(--emerald);animation:led 1.6s ease-in-out infinite;flex:none}
@@ -698,6 +739,7 @@
   <main>
     <div class="topbar">
       <div>
+        <div class="eyebrow">// AUTOMIQ-OS · <span id="crumbSec">departamentos</span></div>
         <h1 id="pageTitle">Resumen</h1>
         <div class="sub" id="pageSub">Estado general de la agencia.</div>
       </div>
@@ -714,6 +756,10 @@
             <span class="neo-prompt-sub">text · voice · drag or upload</span>
           </div>
           <div class="neo-stage" id="neoStage">
+            <div class="view-tog" id="viewTog">
+              <button class="vt act" data-v="radial" onclick="setNeoView('radial')">RADIAL</button>
+              <button class="vt" data-v="orbital" onclick="setNeoView('orbital')">ORBITAL</button>
+            </div>
             <svg class="neo-links" id="neoLinks" preserveAspectRatio="none" viewBox="0 0 100 100"></svg>
             <div class="neo-core" id="neoCore" onclick="openBrain()" title="Abrir el cerebro — anotaciones, lecciones y memoria">
               <canvas class="neo-brain" id="neoBrain" width="340" height="340"></canvas>
@@ -1276,6 +1322,7 @@ function go(tab){
   sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter');
   const meta = NAV.find(n=>n.id===tab);
   el('pageTitle').textContent = meta.label; el('pageSub').textContent = meta.sub;
+  try{ el('crumbSec').textContent = meta.id||tab; }catch(e){}
   el('sidebar').classList.remove('open');
   loadTab(tab);
 }
@@ -1977,6 +2024,8 @@ async function loadDepartamentos(){
       neoBrain(g.stats.notes);
       const s=document.querySelector('.neo-core-label span:first-of-type');
       if(s) s.textContent=`Obsidian · Graphify · ${g.stats.notes} notas`;
+      BRAIN_DOMS=Object.entries(g.domains||{}).sort((a,b)=>b[1]-a[1]);
+      renderVaultDomLabels();
     }
   }).catch(()=>{});
 }
@@ -2036,9 +2085,52 @@ async function pingLoop(){
     el('whoami').innerHTML=`<span class="led"></span> LIVE · <b>${esc(location.hostname.split('.')[0])}</b> · ${ms}ms`;
   }catch(e){ el('whoami').innerHTML='<span class="led" style="background:var(--danger);box-shadow:0 0 8px var(--danger)"></span> OFFLINE'; }
 }
-function renderNeo(deps){
+let NEO_VIEW='radial', BRAIN_DOMS=null;
+function setNeoView(v){
+  NEO_VIEW=v;
+  document.querySelectorAll('.vt').forEach(b=>b.classList.toggle('act',b.dataset.v===v));
+  renderNeo(NEO_DEPS);
+}
+/* labels de los dominios REALES del vault alrededor del cerebro (ref video) */
+function renderVaultDomLabels(){
+  if(!BRAIN_DOMS||NEO_VIEW!=='radial') return;
+  const angs=[-64,-18,28,76,142,208], nodes=el('neoNodes');
+  let h='';
+  BRAIN_DOMS.slice(0,6).forEach((d,i)=>{
+    const a=angs[i%angs.length]*Math.PI/180;
+    h+=`<span class="brain-dom" style="left:${(50+15*Math.cos(a)).toFixed(1)}%;top:${(47+16*Math.sin(a)).toFixed(1)}%;animation-delay:${(0.5+i*0.1).toFixed(1)}s">${esc(d[0])} · ${d[1]}</span>`;
+  });
+  nodes.insertAdjacentHTML('beforeend',h);
+}
+/* vista ORBITAL: el anillo de TODOS los agentes alrededor del cerebro (intro del video) */
+function renderOrbital(deps){
   const nodes=el('neoNodes'), links=el('neoLinks');
   el('neoCore').style.display='';
+  el('neoStage').style.removeProperty('--amb');
+  el('neoStage').classList.remove('tree-mode');
+  const flat=[]; deps.forEach(d=>(d.agents||[]).forEach(a=>flat.push({a,d})));
+  const N=flat.length||1, cx=50, cy=48, Rx=39, Ry=41;
+  links.innerHTML=`<ellipse cx="${cx}" cy="${cy}" rx="${Rx}" ry="${Ry}" fill="none" stroke="rgba(200,214,240,.1)" stroke-width=".15"/>`
+    + flat.map((f,i)=>{const a=(-90+i*(360/N))*Math.PI/180;
+      return `<line x1="${(cx+13*Math.cos(a)).toFixed(1)}" y1="${(cy+14*Math.sin(a)).toFixed(1)}" x2="${(cx+(Rx-2.5)*Math.cos(a)).toFixed(1)}" y2="${(cy+(Ry-2.5)*Math.sin(a)).toFixed(1)}" stroke="${esc(f.d.color)}" stroke-width=".1" opacity=".22"/>`;}).join('');
+  let h='', di=0;
+  deps.forEach(d=>{
+    const k=(d.agents||[]).length; if(!k) return;
+    const mid=(-90+(di+k/2-0.5)*(360/N))*Math.PI/180;
+    h+=`<span class="orb-dl" style="left:${(cx+(Rx+7)*Math.cos(mid)).toFixed(1)}%;top:${(cy+(Ry+6)*Math.sin(mid)).toFixed(1)}%;color:${esc(d.color)}">${esc((d.label||'').split(' / ')[0])}</span>`;
+    di+=k;
+  });
+  h+=flat.map((f,i)=>{const a=(-90+i*(360/N))*Math.PI/180;
+    return `<button class="orb-a" style="left:${(cx+Rx*Math.cos(a)).toFixed(1)}%;top:${(cy+Ry*Math.sin(a)).toFixed(1)}%;--dept:${esc(f.d.color)};animation-delay:${(i*0.03).toFixed(2)}s" onclick="agentDetail('${f.a.name}')" title="${esc(f.a.description||'')}">
+      <span class="orb-c">${SVG_PERSON}</span><span class="orb-l">${esc((f.a.name||'').replace(/_/g,' '))}</span></button>`;}).join('');
+  nodes.innerHTML=h;
+  renderVaultDomLabels();
+}
+function renderNeo(deps){
+  if(NEO_VIEW==='orbital'){ renderOrbital(deps); return; }
+  const nodes=el('neoNodes'), links=el('neoLinks');
+  el('neoCore').style.display='';
+  el('neoStage').classList.remove('tree-mode');
   el('neoStage').style.removeProperty('--amb');
   const n=deps.length||1, cx=50, cy=48, Rx=38, Ry=39;
   // posición de cada agente-satélite (tenue, alrededor de su depto — ref img#3)
@@ -2082,6 +2174,7 @@ function renderNeo(deps){
     </button>`;
   }).join('');
   nodes.querySelectorAll('.neo-node').forEach(b=>b.addEventListener('click',()=>openDept(NEO_DEPS[+b.dataset.i])));
+  renderVaultDomLabels();
 }
 function openDept(dep){
   if(!dep) return;
@@ -2117,6 +2210,7 @@ function renderDeptTree(dep){
   const ags=dep.agents||[], n=ags.length||1, col=dep.color||'#ff8a3d';
   // AMBIENTE del sector: el stage entero se tiñe del color del depto (ref)
   st.style.setProperty('--amb', `color-mix(in srgb, ${col} 13%, transparent)`);
+  st.classList.add('tree-mode');
   // spread COMPACTO según cantidad (deptos chicos no se desparraman)
   const aw=Math.min(64, n*13), xs=i=>n===1?50:(50-aw/2 + i*(aw/(n-1)));
   const svcs=[]; ags.forEach(a=>(a.connections||[]).forEach(c=>{ if(!svcs.includes(c)) svcs.push(c); }));
@@ -2156,7 +2250,17 @@ function renderDeptTree(dep){
       </button>`;}).join('')
     + `<button class="tree-brain" style="left:${BX}%;top:${BY}%;--dept:${esc(col)}" onclick="openBrain()" title="Abrir el cerebro">
          <span class="tb-circ">${SVG_PERSON}</span><span class="tb-l">${esc(dep.label)}</span></button>`
-    + `<button class="tree-back" onclick="backToRadial()">◀ volver al cerebro</button>`;
+    + (()=>{ // vecinos fantasma a los costados (continuidad espacial, ref video)
+        const nd=NEO_DEPS.length; if(nd<2) return '';
+        const prev=NEO_DEPS[((NEO_CUR-1)%nd+nd)%nd], next=NEO_DEPS[(NEO_CUR+1)%nd];
+        return `<button class="tree-ngh" style="left:3.5%;top:52%;--dept:${esc(prev.color)}" onclick="deptNav(-1)" title="${esc(prev.label)}">
+            <span class="tb-circ">${SVG_PERSON}</span><span class="nl">${esc(prev.label)}</span></button>
+          <button class="tree-ngh" style="left:96.5%;top:52%;--dept:${esc(next.color)}" onclick="deptNav(1)" title="${esc(next.label)}">
+            <span class="tb-circ">${SVG_PERSON}</span><span class="nl">${esc(next.label)}</span></button>`; })()
+    + `<div class="tree-pill">
+         <button onclick="deptNav(-1)" title="Anterior (←)">◀</button>
+         <button class="tp-name" onclick="backToRadial()" title="Volver al cerebro">${esc(dep.label)}</button>
+         <button onclick="deptNav(1)" title="Siguiente (→)">▶</button></div>`;
 }
 /* ═══ FUNNEL timeline glow (ref img#6) — data real del pipeline ═══ */
 function funnelViz(counts){
@@ -2286,6 +2390,17 @@ function renderBrain(){
       <input class="bx-search" id="bxQ" placeholder="buscar en el cerebro…" value="${esc(BRAIN_F.q)}" autocomplete="off">
       <button class="neo-close" onclick="el('neoDrawer').classList.remove('open')" title="Cerrar">✕</button>
     </div>
+    ${BRAIN.vault?`<div class="bx-stats2">
+      <div class="bx-st"><b>${BRAIN.vault.stats.notes}</b><span>notas</span></div>
+      <div class="bx-st"><b>${BRAIN.vault.stats.links}</b><span>enlaces</span></div>
+      <div class="bx-st"><b>${BRAIN.vault.stats.folders}</b><span>dominios</span></div>
+      <div class="bx-st"><b>${(BRAIN.les||[]).length+(BRAIN.mem||[]).length+(BRAIN.notes||[]).length}</b><span>vivas</span></div>
+    </div>
+    <div class="bx-top"><div class="bx-doms-h">▸ MÁS ENLAZADAS</div>${(()=>{
+      const ind={}; (BRAIN.vault.edges||[]).forEach(([a,b])=>{ind[b]=(ind[b]||0)+1;});
+      return Object.entries(ind).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([n,c])=>
+        `<div class="bx-top-r"><span>${esc(n)}</span><b>${c} ←</b></div>`).join('')||'<div class="bx-empty" style="padding:6px">—</div>';
+    })()}</div>`:''}
     <div class="bx-chips">${['','memoria','leccion','nota'].concat(BRAIN.vault?['vault']:[]).map(t=>`<button class="bx-chip ${BRAIN_F.type===t?'act':''}" data-t="${t}">${t||'todas'}</button>`).join('')}</div>
     <div class="bx-body"><div class="bx-doms" id="bxDoms"></div><div class="bx-rows" id="bxRows"></div></div></div>`;
   el('bxQ').addEventListener('input',e=>{BRAIN_F.q=e.target.value;renderBrainRows();});
