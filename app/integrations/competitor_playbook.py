@@ -24,6 +24,7 @@ log = get_logger("competitor_playbook")
 
 _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 _FILE = _DATA_DIR / "competitor-playbook.md"
+from . import freshness as _fresh  # noqa: E402  (sello de antigüedad en el bloque)
 
 # Sembrado con research real (WebSearch, 2026-07-03): qué funciona HOY en contenido
 # de agencias/servicios de IA. Lo reescribe competitor_study.refresh() cada semana.
@@ -289,7 +290,8 @@ def playbook_block() -> str:
     except Exception:
         pass
     return (
-        "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo) ===\n"
+        "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo"
+        + _fresh.sello(_FILE) + ") ===\n"
         + load_playbook().strip()
         + "\n=== fin playbook ===\n"
         + COMPETITOR_DEEP_DIVE

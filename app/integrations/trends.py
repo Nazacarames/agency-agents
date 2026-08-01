@@ -77,11 +77,20 @@ def refresh() -> dict:
     return {"ok": True, "momentum": momentum}
 
 
+TTL_DIAS = 14   # más viejo que esto ya no se puede presentar como "AHORA"
+
+
 def load_block() -> str:
-    """Bloque de tendencias vigente ('' si nunca se refrescó)."""
+    """Bloque de tendencias vigente ('' si nunca se refrescó o si venció).
+
+    El encabezado dice "AHORA": si el archivo tiene semanas, inyectarlo es
+    mentirle al agente, así que preferimos no darle nada."""
+    from .freshness import sello, vigente
+    if not vigente(_FILE, TTL_DIAS):
+        return ""
     try:
-        t = _FILE.read_text(encoding="utf-8")
-        return t.strip()
+        t = _FILE.read_text(encoding="utf-8").strip()
+        return t.replace(" ===\n", sello(_FILE) + " ===\n", 1) if t else ""
     except FileNotFoundError:
         return ""
     except Exception as e:

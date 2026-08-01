@@ -164,7 +164,9 @@ def block() -> str:
     """Bloque para inyectar a los agentes de contenido. Los patrones de la Ad Library
     (curados por el usuario) van SIEMPRE, por encima del estudio vivo/override."""
     try:
-        return ("\n\n=== DIRECCIÓN DE ARTE (formatos de imagen/ad — estudio vivo) ===\n"
+        from . import freshness as _fresh
+        return ("\n\n=== DIRECCIÓN DE ARTE (formatos de imagen/ad — estudio vivo"
+                + _fresh.sello(_FILE) + ") ===\n"
                 + AD_LIBRARY_PATTERNS.strip() + "\n\n"
                 + load().strip() + "\n=== fin dirección de arte ===\n")
     except Exception:

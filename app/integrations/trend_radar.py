@@ -23,6 +23,7 @@ log = get_logger("trend_radar")
 
 _DATA = Path(__file__).resolve().parent.parent.parent / "data"
 _FILE = _DATA / "trend-radar.json"
+TTL_DIAS = 3    # una noticia de la semana pasada ya no sirve para trend-jacking
 
 # Las fuentes que se revisan cada mañana (query, etiqueta, solo_medios_AR).
 # Nicho REAL: dueños de PyMEs argentinas (distribuidoras, comercios, inmobiliarias)
@@ -219,7 +220,13 @@ def block(n: int = 5) -> str:
         lines = [f"- ({t.get('source', '?')}) {t['title']}"
                  + (f" → gancho: \"{t['hook_idea']}\"" if t.get("hook_idea") else "")
                  for t in top]
-        return ("\n\n=== RADAR DE HOY (noticias REALES del nicho — trend-jacking) ===\n"
+        # "DE HOY" sólo si de verdad es de hoy: con el radar frío, el agente
+        # armaría trend-jacking sobre noticias que ya no son noticia.
+        from .freshness import sello, vigente
+        if not vigente(_FILE, TTL_DIAS):
+            return ""
+        return ("\n\n=== RADAR DE HOY (noticias REALES del nicho — trend-jacking"
+                + sello(_FILE) + ") ===\n"
                 + "\n".join(lines)
                 + "\nUSALO: si alguna cruza natural con la pieza que estás armando, abrí el "
                 "hook con esa novedad ('¿viste que...?') y aterrizala en el dolor del dueño "

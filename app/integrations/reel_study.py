@@ -221,5 +221,7 @@ def block() -> str:
         return ""
     if not t:
         return ""
+    from .freshness import sello
     return ("\n\n=== ESTUDIO DE VIDEO DEL COMPETIDOR (Gemini MIRÓ sus reels — usá estos "
-            "prompts/lecciones) ===\n" + t[:4500] + "\n=== fin estudio de video ===")
+            "prompts/lecciones" + sello(_DIGEST) + ") ===\n" + t[:4500]
+            + "\n=== fin estudio de video ===")
