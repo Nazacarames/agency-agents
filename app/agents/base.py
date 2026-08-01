@@ -252,6 +252,20 @@ class BaseAgent(ABC):
         collab = self._collab_block()
         if collab:
             blocks.append(collab)
+        # Documentación propia: los pasajes del vault que hablan del tema de esta
+        # corrida. Va por relevancia y no como tool porque así lo reciben TODOS
+        # los caminos (Hermes/Claude Code/NVIDIA/MiniMax) sin que el modelo tenga
+        # que acordarse de pedirlo.
+        try:
+            from ..integrations import vault_search
+            # La query es SOLO el mensaje de la corrida: agregarle self.description
+            # hacía que la nota que más matcheara fuera la ficha del propio agente
+            # (05-Agents/<él mismo>) y tapaba el tema real.
+            vault = vault_search.block(user_msg[:2000])
+            if vault:
+                blocks.append(vault)
+        except Exception as e:
+            log.warning("vault_block_failed", agent=self.name, error=str(e)[:120])
         # cliente objetivo (args.client_id) → su memoria acumulada
         cid = ctx.args.get("client_id") if isinstance(ctx.args, dict) else None
         if cid:
