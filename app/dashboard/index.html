@@ -846,6 +846,7 @@ function fmtDate(s){ return s ? String(s).replace('T',' ').slice(0,16) : '—'; 
 function ico(p){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; }
 
 const ICONS = {
+  departamentos: ico('<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-2h12v2"/>'),
   resumen: ico('<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>'),
   agentes: ico('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'),
   tareas:  ico('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),
@@ -1089,7 +1090,7 @@ function svgSpark(values, color){
 
 // ── Resumen / cockpit ──
 async function loadOverview(){
-  el('overviewKpis').innerHTML='<p class="muted">Cargando…</p>';
+  el('overviewKpis').innerHTML=skelKpis(5);
   try{
     const [stats, ag, tk, pubq, health, bill, gsc, geo] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), api('/api/publish/queue').catch(()=>null), api('/api/system/health').catch(()=>null), api('/api/finance/summary').catch(()=>null), api('/api/diag/gsc').catch(()=>null), api('/api/web/ai-visits').catch(()=>null) ]);
     CACHE.agents=ag; CACHE.tasks=tk; CACHE.stats=stats;
@@ -1579,6 +1580,8 @@ function agentCard(a){
       </span>
     </div></div>`;
 }
+function skelCards(n){ return Array.from({length:n||6}).map(()=>'<div class="card"><span class="skel skel-line" style="width:45%;height:15px"></span><span class="skel skel-line" style="width:85%;margin-top:11px"></span><span class="skel skel-line" style="width:60%"></span></div>').join(''); }
+function skelKpis(n){ return Array.from({length:n||5}).map(()=>'<div class="kpi-card"><span class="skel skel-line" style="width:55%;height:10px"></span><span class="skel skel-line" style="width:72%;height:22px;margin-top:9px"></span></div>').join(''); }
 async function loadDepartamentos(){
   const board = el('deptBoard');
   board.innerHTML = Array.from({length:6}).map(()=>`<div class="dept-col skel-col">
@@ -1658,7 +1661,7 @@ async function webPromote(btn, url){
   catch(e){ toast('Error: '+e.message); if(btn){btn.disabled=false;btn.textContent='🚀 Aprobar y publicar a producción';} }
 }
 async function loadAgents(){
-  const g=el('agentsGrid'); g.innerHTML='<p class="muted">Cargando…</p>';
+  const g=el('agentsGrid'); g.innerHTML=skelCards(8);
   try{ const d=await api('/api/agents'); CACHE.agents=d; setNavCount('agentes',d.agents.length);
     g.innerHTML=d.agents.map(agentCard).join('');
   }catch(e){ g.innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
