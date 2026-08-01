@@ -82,7 +82,9 @@
   .topbar{position:sticky;top:0;z-index:10;background:rgba(7,8,14,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:18px 30px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
   /* Engine chrome: tipografía técnica mono */
   #pageTitle{font-family:var(--mono);text-transform:uppercase;letter-spacing:1.5px;font-weight:800}
-  .nav-item{font-family:var(--mono);letter-spacing:.2px;font-size:12.5px}
+  .nav-item{font-family:var(--mono);letter-spacing:.2px;font-size:12px;padding:8px 12px}
+  .nav-group{font-family:var(--mono);font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:#4d5871;margin:13px 12px 4px;user-select:none}
+  .nav-group:first-child{margin-top:2px}
   .sec-head h2{font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;font-size:13.5px}
   th,.badge,.side-brand .sub{font-family:var(--mono)}
   .kpi-card .lbl{font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;font-size:10px}
@@ -1066,25 +1068,25 @@ const ICONS = {
   tendencias: ico('<path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/>'),
 };
 const NAV = [
-  {id:'departamentos', label:'Departamentos', sub:'La empresa por sectores: cada departamento con sus agentes. Corrélos y mirá su último output.'},
-  {id:'resumen', label:'Resumen', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
-  {id:'finanzas', label:'Finanzas', sub:'Ingresos, gastos y ganancia. Tipos de cambio y facturación por cliente.'},
-  {id:'clientes', label:'Clientes', sub:'Facturación, servicios, estado y memoria de cada cliente.'},
-  {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound. Convertí a cliente.'},
-  {id:'publicaciones', label:'Publicaciones', sub:'Posts en IG/FB + Shorts en YouTube/TikTok: publicados, cola del día y resultados.'},
-  {id:'ads', label:'Ads', sub:'Campañas de ads por cliente: gasto, resultados y ROAS.'},
-  {id:'growth', label:'Growth', sub:'Objetivos y tareas de crecimiento de la empresa.'},
-  {id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
-  {id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
-  {id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
-  {id:'calendario', label:'Calendario', sub:'Tu Google Calendar: mirá y agendá reuniones desde acá. Sincronizado en vivo.'},
-  {id:'agenda', label:'Reuniones', sub:'Preparación de reuniones con todo el contexto del cliente. Abajo, tu agenda.'},
-  {id:'contenido', label:'Contenido', sub:'Generación y publicación de contenido para nuestras redes.'},
-  {id:'cm', label:'Community Mgr', sub:'Un clic y el reel sale a Instagram, TikTok y YouTube Shorts con descripción auto-generada.'},
-  {id:'baul', label:'Baúl de Ganchos', sub:'Cada gancho guardado queda como plantilla lista para reusar. Buscá por nicho, tipo y likes.'},
-  {id:'espia', label:'Espía', sub:'Los reels más gustados de la competencia, con el gancho transcripto. Se refresca solo los domingos.'},
-  {id:'tendencias', label:'Tendencias', sub:'Novedades del nicho etiquetadas por potencial de gancho. Resumen por Discord a las 7 AM.'},
-  {id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
+  {g:'OS', id:'departamentos', label:'Departamentos', sub:'La empresa por sectores: cada departamento con sus agentes. Corrélos y mirá su último output.'},
+  {g:'OS', id:'resumen', label:'Resumen', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
+  {g:'VENTAS', id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound. Convertí a cliente.'},
+  {g:'VENTAS', id:'clientes', label:'Clientes', sub:'Facturación, servicios, estado y memoria de cada cliente.'},
+  {g:'VENTAS', id:'agenda', label:'Reuniones', sub:'Preparación de reuniones con todo el contexto del cliente. Abajo, tu agenda.'},
+  {g:'VENTAS', id:'calendario', label:'Calendario', sub:'Tu Google Calendar: mirá y agendá reuniones desde acá. Sincronizado en vivo.'},
+  {g:'CONTENIDO', id:'publicaciones', label:'Publicaciones', sub:'Posts en IG/FB + Shorts en YouTube/TikTok: publicados, cola del día y resultados.'},
+  {g:'CONTENIDO', id:'contenido', label:'Estudio', sub:'Generación y publicación de contenido para nuestras redes.'},
+  {g:'CONTENIDO', id:'cm', label:'Community Mgr', sub:'Un clic y el reel sale a Instagram, TikTok y YouTube Shorts con descripción auto-generada.'},
+  {g:'CONTENIDO', id:'baul', label:'Baúl de Ganchos', sub:'Cada gancho guardado queda como plantilla lista para reusar. Buscá por nicho, tipo y likes.'},
+  {g:'CONTENIDO', id:'espia', label:'Espía', sub:'Los reels más gustados de la competencia, con el gancho transcripto. Se refresca solo los domingos.'},
+  {g:'CONTENIDO', id:'tendencias', label:'Tendencias', sub:'Novedades del nicho etiquetadas por potencial de gancho. Resumen por Discord a las 7 AM.'},
+  {g:'CONTENIDO', id:'ads', label:'Ads', sub:'Campañas de ads por cliente: gasto, resultados y ROAS.'},
+  {g:'EMPRESA', id:'finanzas', label:'Finanzas', sub:'Ingresos, gastos y ganancia. Tipos de cambio y facturación por cliente.'},
+  {g:'EMPRESA', id:'growth', label:'Growth', sub:'Objetivos y tareas de crecimiento de la empresa.'},
+  {g:'EMPRESA', id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
+  {g:'SISTEMA', id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
+  {g:'SISTEMA', id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
+  {g:'SISTEMA', id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
 ];
 
 async function api(path, opts={}){
@@ -1110,8 +1112,13 @@ async function doLogin(){
 
 // ── Nav / routing ──
 function buildNav(){
-  el('nav').innerHTML = NAV.map(n=>`<button class="nav-item${n.id===CURRENT?' active':''}" data-tab="${n.id}">
-    ${ICONS[n.id]}<span>${n.label}</span><span class="count hidden" id="navc-${n.id}"></span></button>`).join('');
+  let g='';
+  el('nav').innerHTML = NAV.map(n=>{
+    const h = n.g && n.g!==g ? `<div class="nav-group">${n.g}</div>` : '';
+    g = n.g||g;
+    return h+`<button class="nav-item${n.id===CURRENT?' active':''}" data-tab="${n.id}">
+    ${ICONS[n.id]||''}<span>${n.label}</span><span class="count hidden" id="navc-${n.id}"></span></button>`;
+  }).join('');
   document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
 }
 function go(tab){
