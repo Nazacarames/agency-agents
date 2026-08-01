@@ -787,6 +787,17 @@ async def api_departments(request: Request):
     _verify_webhook_secret(request)
     from .agents.departments import DEPARTMENTS, DEPT_AUTONOMY
 
+    from .agents.registry import get_agent
+
+    def _agent_meta(name):
+        try:
+            a = get_agent(name)
+            skills = [s.strip() for s in (getattr(a, "claude_code_skill", "") or "").split(",") if s.strip()]
+            return {"skills": skills, "backend": getattr(a, "llm_provider", "") or "minimax",
+                    "max_tokens": getattr(a, "max_tokens", 0)}
+        except Exception:
+            return {"skills": [], "backend": "", "max_tokens": 0}
+
     def _build():
         out = []
         for dept_id, dept in DEPARTMENTS.items():
@@ -797,6 +808,8 @@ async def api_departments(request: Request):
                     "name": name,
                     "description": _AGENT_DESCRIPTIONS.get(name, ""),
                     "schedule": DEFAULT_SCHEDULES.get(name),
+                    "autonomy": DEPT_AUTONOMY.get(dept_id, "sugiere"),
+                    **_agent_meta(name),
                     **info,
                 })
             out.append({

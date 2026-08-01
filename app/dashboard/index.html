@@ -364,6 +364,27 @@
   .neo-drawer-a .dept-agent{background:linear-gradient(160deg,rgba(255,255,255,.025),transparent);border-color:var(--eng-grid)}
   .neo-drawer-a .da-name{font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;font-size:12px}
   @media(max-width:640px){.neo-node{width:88px}.neo-orb{width:44px;height:44px;font-size:17px}.neo-node-l{font-size:9px}}
+  /* Agent detail — panel de agente (estética engine, mapea al de la referencia) */
+  .ad{font-family:var(--mono);color:var(--navy)}
+  .ad-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .ad-dept{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--dept);text-shadow:0 0 12px var(--dept)}
+  .ad-status{font-size:10px;letter-spacing:.5px;color:#7f8aa6}.ad-status.on{color:#21d07a}
+  .ad-role{font-family:'Inter';font-size:13.5px;line-height:1.55;color:#c7d0e6;padding:11px 13px;border-left:2px solid var(--dept);background:rgba(255,255,255,.02);border-radius:0 8px 8px 0;margin-bottom:16px}
+  .ad-sec{margin-bottom:14px}
+  .ad-h{font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:#6b7690;margin-bottom:8px}
+  .ad-lad{display:flex;flex-direction:column;gap:2px;padding:9px 12px;border:1px solid var(--eng-grid);border-radius:9px;margin-bottom:6px;opacity:.45;transition:.15s}
+  .ad-lad.act{opacity:1;border-color:var(--dept);background:color-mix(in srgb,var(--dept) 12%,transparent);box-shadow:0 0 16px -6px var(--dept)}
+  .ad-lad b{font-size:11px;letter-spacing:.6px;color:#e6ecfb}.ad-lad.act b{color:var(--dept)}
+  .ad-lad span{font-family:'Inter';font-size:11.5px;color:#8a94ac}
+  .ad-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .ad-pills{display:flex;flex-wrap:wrap;gap:6px}
+  .ad-pill{font-size:10px;letter-spacing:.5px;padding:3px 9px;border-radius:6px;background:color-mix(in srgb,var(--dept) 16%,transparent);border:1px solid color-mix(in srgb,var(--dept) 40%,var(--eng-grid));color:#dfe6f7}
+  .ad-dim,.ad-mono{font-size:11px;color:#8a94ac}.ad-mono{letter-spacing:.5px}
+  .ad-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;border-top:1px solid var(--eng-grid);padding-top:14px}
+  .ad-actions .btn,.ad-actions .btn-ghost{font-family:var(--mono);letter-spacing:.5px}
+  .da-open{margin-left:auto;color:#5b6784;font-size:12px}
+  .dept-agent:hover .da-open{color:var(--dept,#ff8a3d)}
+  @media(max-width:560px){.ad-grid{grid-template-columns:1fr}}
 
   /* Botón primario con barrido al hover */
   .btn:not(.btn-ghost){position:relative;overflow:hidden}
@@ -1722,15 +1743,45 @@ function deptAgentCard(a){
   const on = a.has_output && a.today;
   const cls = on ? 'on' : (a.has_output ? 'idle' : 'off');
   const status = on ? 'corrió hoy' : (a.has_output ? ('último: '+esc(a.last_date||'—')) : 'sin correr');
-  return `<div class="dept-agent">
-    <div class="da-top"><span class="dot ${cls}"></span><span class="da-name">${esc((a.name||'').replace(/_/g,' '))}</span></div>
+  return `<div class="dept-agent" onclick="agentDetail('${a.name}')" style="cursor:pointer">
+    <div class="da-top"><span class="dot ${cls}"></span><span class="da-name">${esc((a.name||'').replace(/_/g,' '))}</span><span class="da-open">◈</span></div>
     <div class="da-desc">${esc(a.description||'')}</div>
-    <div class="da-foot"><span class="faint" style="font-size:11px">${status}</span>
+    <div class="da-foot" onclick="event.stopPropagation()"><span class="faint" style="font-size:11px">${status}</span>
       <span style="display:flex;gap:5px">
         <button class="btn-ghost btn-sm" onclick="viewLast('${a.name}')">Ver</button>
         <button class="btn btn-sm" onclick="runAgent('${a.name}',this)">Correr</button>
       </span></div>
   </div>`;
+}
+function agentDetail(name){
+  let A=null, D=null;
+  for(const d of NEO_DEPS){ const f=(d.agents||[]).find(x=>x.name===name); if(f){A=f;D=d;break;} }
+  if(!A){ viewLast(name); return; }
+  const auto=A.autonomy||'sugiere';
+  const ladder=[
+    {k:'sugiere',t:'HUMAN-LED · SUGIERE',d:'Solo propone. Vos aprobás y ejecutás todo.'},
+    {k:'reversible',t:'ASSISTED · REVERSIBLE',d:'Ejecuta solo acciones internas 100% reversibles (notas, encolar, mover leads).'},
+    {k:'publica',t:'AUTONOMOUS · PUBLICA',d:'Además ejecuta lo outward ya aprobado/en cola. Nunca cliente nuevo ni plata.'}
+  ];
+  const skills=(A.skills||[]).length?A.skills.map(s=>`<span class="ad-pill">${esc(s)}</span>`).join(''):'<span class="ad-dim">— sin skills —</span>';
+  const on=A.has_output&&A.today;
+  const html=`<div class="ad" style="--dept:${esc(D.color||'#ff8a3d')}">
+    <div class="ad-top"><span class="ad-dept">${D.icon} ${esc(D.label)}</span>
+      <span class="ad-status ${on?'on':'off'}">${on?'● corrió hoy':(A.has_output?'○ último '+esc(A.last_date||'—'):'○ sin correr')}</span></div>
+    <div class="ad-role">${esc(A.description||'')}</div>
+    <div class="ad-sec"><div class="ad-h">▸ THE LADDER — nivel de autonomía</div>
+      ${ladder.map(l=>`<div class="ad-lad ${l.k===auto?'act':''}"><b>${l.t}</b><span>${l.d}</span></div>`).join('')}</div>
+    <div class="ad-grid">
+      <div class="ad-sec"><div class="ad-h">▸ BUILDS ON — skills</div><div class="ad-pills">${skills}</div></div>
+      <div class="ad-sec"><div class="ad-h">▸ DONE BY — backend</div><div class="ad-pills"><span class="ad-pill">${esc(A.backend||'minimax')}</span><span class="ad-pill">hermes harness</span></div></div>
+      <div class="ad-sec"><div class="ad-h">▸ CADENCE</div><div class="ad-mono">${A.schedule?esc(A.schedule):'on-demand'}</div></div>
+      <div class="ad-sec"><div class="ad-h">▸ MAX OUTPUT</div><div class="ad-mono">${(A.max_tokens||0).toLocaleString()} tokens</div></div>
+    </div>
+    <div class="ad-actions">
+      <button class="btn-ghost btn-sm" onclick="viewLast('${A.name}')">VER OUTPUT</button>
+      <button class="btn btn-sm" onclick="runAgent('${A.name}',this)">▸ CORRER AHORA</button>
+    </div></div>`;
+  openModal(name.replace(/_/g,' '), html);
 }
 async function webPreview(btn){
   if(btn){btn.disabled=true;}
