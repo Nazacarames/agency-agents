@@ -18,7 +18,7 @@ import json
 import re
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -778,6 +778,37 @@ async def api_agents(request: Request):
         return out
 
     return {"agents": await run_in_threadpool(_listing)}
+
+
+@app.post("/api/brain/graph")
+async def api_brain_graph_upload(request: Request):
+    """Recibe el grafo destilado del vault de Obsidian (generado LOCAL por
+    scripts/brain_sync.py: notas + [[links]] + carpetas). Se persiste en el
+    volumen y el Brain Explorer lo sirve. El vault NO vive en Railway: viaja
+    solo este JSON liviano."""
+    _verify_webhook_secret(request)
+    body = await request.json()
+    if not isinstance(body, dict) or not isinstance(body.get("nodes"), list):
+        raise HTTPException(status_code=400, detail="grafo inválido (falta nodes)")
+    if len(json.dumps(body)) > 2_000_000:
+        raise HTTPException(status_code=413, detail="grafo demasiado grande")
+    from .integrations.jsonstore import write_json_atomic
+    body["received_at"] = datetime.now(timezone.utc).isoformat()
+    write_json_atomic(_data_dir() / "brain-graph.json", body)
+    return {"ok": True, "nodes": len(body.get("nodes") or []),
+            "edges": len(body.get("edges") or [])}
+
+
+@app.get("/api/brain/graph")
+async def api_brain_graph(request: Request):
+    _verify_webhook_secret(request)
+    p = _data_dir() / "brain-graph.json"
+    if not p.exists():
+        return {"ok": False, "nodes": [], "edges": [], "domains": {}}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {"ok": False, "nodes": [], "edges": [], "domains": {}}
 
 
 @app.get("/api/departments")

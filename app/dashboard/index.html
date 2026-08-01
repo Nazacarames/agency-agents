@@ -483,6 +483,7 @@
   .bx-type.memoria{background:rgba(255,138,61,.14);color:#ffb37a;border:1px solid rgba(255,138,61,.3)}
   .bx-type.leccion{background:rgba(33,208,122,.12);color:#5fe6a4;border:1px solid rgba(33,208,122,.3)}
   .bx-type.nota{background:rgba(77,150,255,.12);color:#8ab6ff;border:1px solid rgba(77,150,255,.3)}
+  .bx-type.vault{background:rgba(47,212,196,.1);color:#5fe6c8;border:1px solid rgba(47,212,196,.3)}
   .bx-row-title{font-size:12px;font-weight:700;color:#e6ecfb;letter-spacing:.3px}
   .bx-row-d{margin-left:auto;font-size:9px;color:#5b6784}
   .bx-row-b{font-family:'Inter';font-size:12px;line-height:1.5;color:#93a0bc}
@@ -1891,10 +1892,19 @@ async function loadDepartamentos(){
     NEO_DEPS = d.departments||[];
     renderNeo(NEO_DEPS);
   }catch(e){ nodes.innerHTML='<div class="card err" style="position:relative">'+esc(e.message)+'</div>'; }
+  // el cerebro refleja el VAULT real (Fase 3): densidad = notas, label con el conteo
+  api('/api/brain/graph').then(g=>{
+    if(g&&g.ok&&g.stats&&g.stats.notes){
+      neoBrain(g.stats.notes);
+      const s=document.querySelector('.neo-core-label span:first-of-type');
+      if(s) s.textContent=`Obsidian · Graphify · ${g.stats.notes} notas`;
+    }
+  }).catch(()=>{});
 }
-function neoBrain(){
+function neoBrain(nReal){
   const cv=el('neoBrain'); if(!cv) return;
-  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=W*0.36, N=140, LINK=W*0.135;
+  const N=nReal?Math.max(90,Math.min(230,Math.round(nReal*0.55))):140;
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=W*0.36, LINK=W*0.135;
   const P=Array.from({length:N},()=>{const a=Math.random()*6.283,r=Math.pow(Math.random(),.5)*R;return{x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,vx:(Math.random()-.5)*.16,vy:(Math.random()-.5)*.16,r:Math.random()*1.6+.6};});
   cancelAnimationFrame(NEO_RAF);
   function frame(){
@@ -2122,9 +2132,14 @@ async function openBrain(){
   dr.innerHTML='<div class="bx"><div class="bx-empty">▸ cargando el cerebro…</div></div>';
   dr.classList.add('open');
   try{
-    const [m,l,n]=await Promise.all([
-      api('/api/memory'), api('/api/lessons'), api('/api/agent-notes').catch(()=>({notes:[]}))]);
-    BRAIN={mem:m.memory||[], les:l.lessons||[], notes:n.notes||[]};
+    const [m,l,n,g]=await Promise.all([
+      api('/api/memory'), api('/api/lessons'), api('/api/agent-notes').catch(()=>({notes:[]})),
+      api('/api/brain/graph').catch(()=>null)]);
+    BRAIN={mem:m.memory||[], les:l.lessons||[], notes:n.notes||[], vault:(g&&g.ok)?g:null};
+    if(BRAIN.vault){
+      const deg={}; (BRAIN.vault.edges||[]).forEach(([a,b])=>{deg[a]=(deg[a]||0)+1;});
+      BRAIN.vault._deg=deg;
+    }
     BRAIN_F={q:'',type:'',dom:''};
     renderBrain();
   }catch(e){ dr.innerHTML='<div class="bx"><div class="bx-empty">'+esc(e.message)+'</div></div>'; }
@@ -2134,6 +2149,11 @@ function brainItems(){
   (BRAIN.mem||[]).forEach(m=>out.push({type:'memoria',dom:m.section||'general',title:m.title||'(sin título)',body:m.content||'',date:String(m.updated_at||m.created_at||'').slice(0,10)}));
   (BRAIN.les||[]).forEach(l=>out.push({type:'leccion',dom:(l.agent||'general').replace(/_/g,' '),title:l.kind||'lección',body:l.lesson||'',date:String(l.created_at||'').slice(0,10)}));
   (BRAIN.notes||[]).forEach(n=>out.push({type:'nota',dom:(n.to||'?').replace(/_/g,' '),title:(n.from||'?')+' → '+(n.to||'?').replace(/_/g,' '),body:n.note||'',date:String(n.created_at||'').slice(0,10)}));
+  if(BRAIN.vault){
+    const deg=BRAIN.vault._deg||{};
+    (BRAIN.vault.nodes||[]).forEach(v=>out.push({type:'vault',dom:v.folder||'(raíz)',title:v.id,
+      body:(deg[v.id]?deg[v.id]+' enlaces salientes':'sin enlaces salientes'),date:''}));
+  }
   return out;
 }
 function renderBrain(){
@@ -2145,7 +2165,7 @@ function renderBrain(){
       <input class="bx-search" id="bxQ" placeholder="buscar en el cerebro…" value="${esc(BRAIN_F.q)}" autocomplete="off">
       <button class="neo-close" onclick="el('neoDrawer').classList.remove('open')" title="Cerrar">✕</button>
     </div>
-    <div class="bx-chips">${['','memoria','leccion','nota'].map(t=>`<button class="bx-chip ${BRAIN_F.type===t?'act':''}" data-t="${t}">${t||'todas'}</button>`).join('')}</div>
+    <div class="bx-chips">${['','memoria','leccion','nota'].concat(BRAIN.vault?['vault']:[]).map(t=>`<button class="bx-chip ${BRAIN_F.type===t?'act':''}" data-t="${t}">${t||'todas'}</button>`).join('')}</div>
     <div class="bx-body"><div class="bx-doms" id="bxDoms"></div><div class="bx-rows" id="bxRows"></div></div></div>`;
   el('bxQ').addEventListener('input',e=>{BRAIN_F.q=e.target.value;renderBrainRows();});
   dr.querySelectorAll('.bx-chip').forEach(c=>c.addEventListener('click',()=>{BRAIN_F.type=c.dataset.t;BRAIN_F.dom='';renderBrain();}));
@@ -2167,7 +2187,8 @@ function renderBrainRows(){
   if(BRAIN_F.type) items=items.filter(i=>i.type===BRAIN_F.type);
   if(BRAIN_F.dom)  items=items.filter(i=>i.dom===BRAIN_F.dom);
   if(q) items=items.filter(i=>(i.title+' '+i.body+' '+i.dom).toLowerCase().includes(q));
-  el('bxStats').textContent=`${(BRAIN.mem||[]).length} memorias · ${(BRAIN.les||[]).length} lecciones · ${(BRAIN.notes||[]).length} notas`;
+  el('bxStats').textContent=`${(BRAIN.mem||[]).length} memorias · ${(BRAIN.les||[]).length} lecciones · ${(BRAIN.notes||[]).length} notas`
+    +(BRAIN.vault?` · VAULT ${BRAIN.vault.stats.notes} notas / ${BRAIN.vault.stats.links} enlaces`:'');
   el('bxRows').innerHTML=items.length?items.slice(0,120).map(i=>
     `<div class="bx-row"><div class="bx-row-t"><span class="bx-type ${i.type}">${i.type}</span><span class="bx-row-title">${esc(i.title)}</span><span class="bx-row-d">${esc(i.dom)}${i.date?' · '+esc(i.date):''}</span></div><div class="bx-row-b">${esc((i.body||'').slice(0,300))}</div></div>`).join('')
     :'<div class="bx-empty">— sin anotaciones acá; tirá algo en "dump into the brain" —</div>';
