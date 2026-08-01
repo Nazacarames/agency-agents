@@ -12316,86 +12316,6 @@
       "_origin": "ast"
     },
     {
-      "id": "app_integrations_vault_search",
-      "label": "vault_search.py",
-      "file_type": "code",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_terms",
-      "label": "_terms()",
-      "file_type": "code",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L41",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_index",
-      "label": "_index()",
-      "file_type": "code",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L45",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_py_any",
-      "label": "Any",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_search",
-      "label": "search()",
-      "file_type": "code",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L79",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_block",
-      "label": "block()",
-      "file_type": "code",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L102",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_rationale_1",
-      "label": "vault_search — los agentes consultan la documentación del vault de Obsidian. El…",
-      "file_type": "rationale",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_rationale_46",
-      "label": "Índice en memoria, reconstruido solo cuando cambia brain-graph.json.",
-      "file_type": "rationale",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L46",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_rationale_80",
-      "label": "Notas más relevantes para `query`. Exige `min_terms` términos en común — con…",
-      "file_type": "rationale",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L80",
-      "_origin": "ast"
-    },
-    {
-      "id": "app_integrations_vault_search_rationale_103",
-      "label": "Bloque listo para el prompt, o \"\" si no hay nada relevante (o si el cerebro…",
-      "file_type": "rationale",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L103",
-      "_origin": "ast"
-    },
-    {
       "id": "app_integrations_veo_video",
       "label": "veo_video.py",
       "file_type": "code",
@@ -13988,8 +13908,8 @@
       "_origin": "ast"
     },
     {
-      "id": "app_main_api_vault_search",
-      "label": "api_vault_search()",
+      "id": "app_main_api_brain_search",
+      "label": "api_brain_search()",
       "file_type": "code",
       "source_file": "app/main.py",
       "source_location": "L815",
@@ -15253,7 +15173,7 @@
     },
     {
       "id": "app_main_rationale_816",
-      "label": "Qué pasajes del vault recibiría un agente que corre con este tema. Es el…",
+      "label": "Qué pasajes del cerebro (vault + código) recibiría un agente que corre con este…",
       "file_type": "rationale",
       "source_file": "app/main.py",
       "source_location": "L816",
@@ -17284,6 +17204,22 @@
       "_origin": "ast"
     },
     {
+      "id": "scripts_test_brain_search",
+      "label": "test_brain_search.py",
+      "file_type": "code",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_test_brain_search_rationale_1",
+      "label": "Check de brain_search: las dos capas del cerebro (vault + código), relevancia,…",
+      "file_type": "rationale",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
       "id": "scripts_test_dept_collab",
       "label": "test_dept_collab.py",
       "file_type": "code",
@@ -17296,22 +17232,6 @@
       "label": "Check de la colaboración por departamento: broadcast NOTA_PARA(<depto>),…",
       "file_type": "rationale",
       "source_file": "scripts/test_dept_collab.py",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "scripts_test_vault_search",
-      "label": "test_vault_search.py",
-      "file_type": "code",
-      "source_file": "scripts/test_vault_search.py",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "scripts_test_vault_search_rationale_1",
-      "label": "Check de vault_search: relevancia, umbral y tolerancia a cerebro vacío. Correr:…",
-      "file_type": "rationale",
-      "source_file": "scripts/test_vault_search.py",
       "source_location": "L1",
       "_origin": "ast"
     },
@@ -80728,207 +80648,6 @@
       "_origin": "ast"
     },
     {
-      "source": "app_integrations_vault_search",
-      "target": "math",
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L15",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search",
-      "target": "re",
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L16",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search",
-      "target": "pathlib",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L17",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search",
-      "target": "typing",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L18",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search",
-      "target": "app_log",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L20",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search",
-      "target": "app_integrations_vault_search_terms",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L41",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search",
-      "target": "app_integrations_vault_search_index",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L45",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_index",
-      "target": "app_integrations_vault_search_py_any",
-      "relation": "references",
-      "context": "generic_arg",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L45",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search",
-      "target": "app_integrations_vault_search_search",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L79",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_search",
-      "target": "app_integrations_vault_search_py_any",
-      "relation": "references",
-      "context": "generic_arg",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L79",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search",
-      "target": "app_integrations_vault_search_block",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L102",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_index",
-      "target": "app_integrations_vault_search_terms",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L67",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_search",
-      "target": "app_integrations_vault_search_index",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L82",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_search",
-      "target": "app_integrations_vault_search_terms",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L85",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_block",
-      "target": "app_integrations_vault_search_search",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L106",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_rationale_1",
-      "target": "app_integrations_vault_search",
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L1",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_rationale_46",
-      "target": "app_integrations_vault_search_index",
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L46",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_rationale_80",
-      "target": "app_integrations_vault_search_search",
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L80",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "app_integrations_vault_search_rationale_103",
-      "target": "app_integrations_vault_search_block",
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L103",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
       "source": "app_integrations_veo_video",
       "target": "base64",
       "relation": "imports",
@@ -85368,7 +85087,7 @@
       "_origin": "ast"
     },
     {
-      "source": "app_main_api_vault_search",
+      "source": "app_main_api_brain_search",
       "target": "get",
       "relation": "references",
       "confidence": "EXTRACTED",
@@ -85380,7 +85099,7 @@
     },
     {
       "source": "app_main",
-      "target": "app_main_api_vault_search",
+      "target": "app_main_api_brain_search",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.py",
@@ -85389,7 +85108,7 @@
       "_origin": "ast"
     },
     {
-      "source": "app_main_api_vault_search",
+      "source": "app_main_api_brain_search",
       "target": "request",
       "relation": "references",
       "context": "parameter_type",
@@ -90593,7 +90312,7 @@
       "_origin": "ast"
     },
     {
-      "source": "app_main_api_vault_search",
+      "source": "app_main_api_brain_search",
       "target": "app_main_verify_webhook_secret",
       "relation": "calls",
       "context": "call",
@@ -90604,7 +90323,7 @@
       "_origin": "ast"
     },
     {
-      "source": "app_main_api_vault_search",
+      "source": "app_main_api_brain_search",
       "target": "get",
       "relation": "calls",
       "context": "call",
@@ -92941,7 +92660,7 @@
     },
     {
       "source": "app_main_rationale_816",
-      "target": "app_main_api_vault_search",
+      "target": "app_main_api_brain_search",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/main.py",
@@ -96769,6 +96488,71 @@
       "_origin": "ast"
     },
     {
+      "source": "scripts_test_brain_search",
+      "target": "json",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scripts_test_brain_search",
+      "target": "sys",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scripts_test_brain_search",
+      "target": "tempfile",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scripts_test_brain_search",
+      "target": "pathlib",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scripts_test_brain_search",
+      "target": "app_integrations",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scripts_test_brain_search_rationale_1",
+      "target": "scripts_test_brain_search",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "scripts_test_dept_collab",
       "target": "sys",
       "relation": "imports",
@@ -96818,71 +96602,6 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "scripts/test_dept_collab.py",
-      "source_location": "L1",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "scripts_test_vault_search",
-      "target": "json",
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/test_vault_search.py",
-      "source_location": "L3",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "scripts_test_vault_search",
-      "target": "sys",
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/test_vault_search.py",
-      "source_location": "L4",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "scripts_test_vault_search",
-      "target": "tempfile",
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/test_vault_search.py",
-      "source_location": "L5",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "scripts_test_vault_search",
-      "target": "pathlib",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/test_vault_search.py",
-      "source_location": "L6",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "scripts_test_vault_search",
-      "target": "app_integrations",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/test_vault_search.py",
-      "source_location": "L10",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "scripts_test_vault_search_rationale_1",
-      "target": "scripts_test_vault_search",
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/test_vault_search.py",
       "source_location": "L1",
       "weight": 1.0,
       "_origin": "ast"
@@ -136843,17 +136562,6 @@
       "_origin": "ast"
     },
     {
-      "source": "app_integrations_vault_search",
-      "target": "app_log_get_logger",
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/integrations/vault_search.py",
-      "source_location": "L20",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
       "source": "app_integrations_veo_video",
       "target": "app_config_get_settings",
       "relation": "imports",
@@ -137724,7 +137432,7 @@
     },
     {
       "source": "app_agents_base",
-      "target": "app_integrations_vault_search",
+      "target": "app_integrations_brain_search",
       "relation": "imports_from",
       "context": "submodule_import",
       "confidence": "EXTRACTED",
@@ -139286,7 +138994,7 @@
     },
     {
       "source": "app_main",
-      "target": "app_integrations_vault_search",
+      "target": "app_integrations_brain_search",
       "relation": "imports_from",
       "context": "submodule_import",
       "confidence": "EXTRACTED",
@@ -140011,6 +139719,17 @@
       "_origin": "ast"
     },
     {
+      "source": "scripts_test_brain_search",
+      "target": "app_integrations_brain_search",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/test_brain_search.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "scripts_test_dept_collab",
       "target": "app_agents_departments",
       "relation": "imports_from",
@@ -140018,17 +139737,6 @@
       "confidence": "EXTRACTED",
       "source_file": "scripts/test_dept_collab.py",
       "source_location": "L8",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "scripts_test_vault_search",
-      "target": "app_integrations_vault_search",
-      "relation": "imports_from",
-      "context": "submodule_import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/test_vault_search.py",
-      "source_location": "L10",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -147279,8 +146987,8 @@
       "_origin": "ast"
     },
     {
-      "source": "app_main_api_vault_search",
-      "target": "app_integrations_vault_search_index",
+      "source": "app_main_api_brain_search",
+      "target": "app_integrations_brain_search_index",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",

@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "app/agents/base.py": {
-    "mtime": 1785612990.381723,
-    "ast_hash": "0531e99085d6b7547e6a3ec798febe72",
+    "mtime": 1785614646.5315766,
+    "ast_hash": "b96cb087ae6f6b67054e37e9a84b8a14",
     "semantic_hash": ""
   },
   "app/agents/chief_of_staff.py": {
@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "app/main.py": {
-    "mtime": 1785613758.387808,
-    "ast_hash": "6686576291086d68f3af258cf5ec0daa",
+    "mtime": 1785614653.7225103,
+    "ast_hash": "4e667ac243a10e18edfa9b91787ea8c2",
     "semantic_hash": ""
   },
   "app/scheduler.py": {
@@ -1560,8 +1560,8 @@
     "semantic_hash": ""
   },
   "app/dashboard/index.html": {
-    "mtime": 1785611763.8399086,
-    "ast_hash": "14446700ef14df55b0e7f6401cfe05e7",
+    "mtime": 1785614860.5922818,
+    "ast_hash": "82697f9ab475179afe41b8dfdbee8769",
     "semantic_hash": ""
   },
   "data/trends-block.md": {
@@ -1844,14 +1844,9 @@
     "ast_hash": "8511d65230f2527c4ab2ff573b9dc6c0",
     "semantic_hash": ""
   },
-  "app/integrations/vault_search.py": {
-    "mtime": 1785612883.9396477,
-    "ast_hash": "4f44e8c971f1dea7fd769357d952658d",
-    "semantic_hash": ""
-  },
   "data/brain-graph.json": {
-    "mtime": 1785614556.1843202,
-    "ast_hash": "2cabdab904ce0c6c1fcc4a61108a553b",
+    "mtime": 1785614631.657003,
+    "ast_hash": "e11c35b7f37f3bb23163d2ae226071ab",
     "semantic_hash": ""
   },
   "scripts/brain_sync.py": {
@@ -1864,14 +1859,14 @@
     "ast_hash": "f39756ee2ec966b5f381a111e95b1fe9",
     "semantic_hash": ""
   },
-  "scripts/test_vault_search.py": {
-    "mtime": 1785612973.8353498,
-    "ast_hash": "32dc9c0673dcc9b570ad968c02e1efb7",
-    "semantic_hash": ""
-  },
   "app/integrations/brain_search.py": {
     "mtime": 1785614610.4093306,
     "ast_hash": "e7da2fcc19d30d4b5661f48c97287540",
+    "semantic_hash": ""
+  },
+  "scripts/test_brain_search.py": {
+    "mtime": 1785614676.1803737,
+    "ast_hash": "e4c4aa8d5a5f17406472a143ca16b4d7",
     "semantic_hash": ""
   }
 }

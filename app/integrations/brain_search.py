@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import math
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -42,7 +43,12 @@ _cache: Dict[str, Any] = {"mtime": None, "docs": [], "df": {}, "n": 0}
 
 
 def _terms(text: str) -> set:
-    return {w for w in _WORD.findall((text or "").lower()) if w not in _STOP}
+    # Sin plegar los acentos, "cámara" y "camara" son términos distintos y la
+    # mitad de las búsquedas falla en silencio: la doctrina está escrita con
+    # tildes y las consultas casi nunca las llevan.
+    plano = "".join(c for c in unicodedata.normalize("NFD", (text or "").lower())
+                    if unicodedata.category(c) != "Mn")
+    return {w for w in _WORD.findall(plano) if w not in _STOP}
 
 
 def _index() -> Dict[str, Any]:
