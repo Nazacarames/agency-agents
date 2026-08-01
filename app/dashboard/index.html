@@ -82,9 +82,32 @@
   .topbar{position:sticky;top:0;z-index:10;background:rgba(7,8,14,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:18px 30px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
   /* Engine chrome: tipografía técnica mono */
   #pageTitle{font-family:var(--mono);text-transform:uppercase;letter-spacing:1.5px;font-weight:800}
-  .nav-item{font-family:var(--mono);letter-spacing:.2px;font-size:12px;padding:8px 12px}
-  .nav-group{font-family:var(--mono);font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:#4d5871;margin:13px 12px 4px;user-select:none}
-  .nav-group:first-child{margin-top:2px}
+  /* sidebar estilo ref: sin íconos, sin pill — texto tiny mono + acento fino */
+  #app{grid-template-columns:208px 1fr}
+  aside{padding:14px 10px}
+  .side-brand{padding:4px 8px 14px}
+  .side-brand .mark svg{width:30px;height:30px}
+  .side-brand .sub{font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500}
+  .nav{gap:1px}
+  .nav-item{font-family:var(--mono);letter-spacing:.4px;font-size:11px;padding:5px 11px;border-radius:0;color:#7f8aa6;font-weight:500}
+  .nav-item svg{display:none}
+  .nav-item:hover{background:transparent;color:#dbe3f5;transform:none}
+  .nav-item.active{background:transparent;box-shadow:inset 2px 0 0 var(--blue-bright);color:#fff}
+  .nav-item .count{font-size:9px;padding:0 6px;background:rgba(255,255,255,.05)}
+  .nav-group{font-family:var(--mono);font-size:7.5px;letter-spacing:2.5px;text-transform:uppercase;color:#465068;margin:12px 11px 3px;user-select:none}
+  .nav-group:first-child{margin-top:0}
+  /* topbar slim */
+  .topbar{padding:12px 24px}
+  .topbar h1{font-size:15px}
+  .topbar .sub{font-size:11px;margin-top:2px}
+  .content{padding:16px 24px 60px}
+  /* tabs del árbol: ◀ back · ◁ ▷ · DEPTO ✕ (ref img#1) */
+  .tree-tabs{position:absolute;top:12px;left:14px;z-index:6;display:flex;align-items:center;gap:5px;font-family:var(--mono);pointer-events:auto;animation:nodeIn .4s ease both}
+  .tree-tabs button,.tree-tabs .tt-name{background:rgba(255,255,255,.025);border:1px solid var(--eng-grid);border-radius:6px;color:#aeb8d0;font-family:var(--mono);font-size:10px;letter-spacing:.8px;padding:5px 9px;cursor:pointer;transition:.2s;text-transform:uppercase}
+  .tree-tabs button:hover{border-color:rgba(255,138,61,.5);color:#ffd9b8}
+  .tree-tabs .tt-name{display:flex;align-items:center;gap:7px;color:#e8edf9;border-color:color-mix(in srgb,var(--dept,#ff8a3d) 45%,var(--eng-grid))}
+  .tree-tabs .tt-name i{font-style:normal;color:#5f6a85;cursor:pointer}
+  .tree-tabs .tt-name i:hover{color:#ffd9b8}
   .sec-head h2{font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;font-size:13.5px}
   th,.badge,.side-brand .sub{font-family:var(--mono)}
   .kpi-card .lbl{font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;font-size:10px}
@@ -553,7 +576,7 @@
   <aside id="sidebar">
     <div class="side-brand">
       <span class="mark"><svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="32" fill="#0D1426"/><path d="M21 46 L32 16 L43 46" stroke="#fff" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="20,42 28,36 36,38 45,28" stroke="#2B5BE8" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="42" r="3.4" fill="#2B5BE8"/><circle cx="28" cy="36" r="3.4" fill="#2B5BE8"/><circle cx="36" cy="38" r="3.4" fill="#2B5BE8"/><circle cx="45" cy="28" r="3.4" fill="#2B5BE8"/></svg></span>
-      <div><div class="brand" style="font-size:17px">Automiq</div><div class="sub">GESTIÓN DE AGENCIA</div></div>
+      <div><div class="brand" style="font-size:15px;font-family:var(--mono);letter-spacing:1px">AUTOMIQ OS</div><div class="sub">v2 · cerebro óptimo</div></div>
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
@@ -1875,7 +1898,28 @@ function openDept(dep){
 }
 /* ── ÁRBOL del depto (ref img#8): servicios → agentes → chips de tarea → nodo del sector ── */
 const SVG_PERSON='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 19.5c1.9-3.6 4.3-5.2 7-5.2s5.1 1.6 7 5.2"/></svg>';
+let NEO_CUR=-1;
+/* cambio de depto con flechas — el árbol DESLIZA animado (ref: tabs ◁ ▷ del video) */
+function deptNav(d){
+  const n=NEO_DEPS.length; if(!n||NEO_CUR<0) return;
+  const i=((NEO_CUR+d)%n+n)%n;
+  const layers=[el('neoNodes'),el('neoLinks')];
+  layers.forEach(x=>{x.style.transition='transform .24s ease,opacity .24s';x.style.transform=`translateX(${-d*52}px)`;x.style.opacity='0';});
+  setTimeout(()=>{
+    renderDeptTree(NEO_DEPS[i]);
+    layers.forEach(x=>{x.style.transition='none';x.style.transform=`translateX(${d*52}px)`;x.style.opacity='0';});
+    void layers[0].offsetWidth;
+    layers.forEach(x=>{x.style.transition='transform .34s cubic-bezier(.32,.72,0,1),opacity .34s';x.style.transform='';x.style.opacity='1';});
+  },230);
+}
+document.addEventListener('keydown',e=>{
+  if(CURRENT!=='departamentos'||NEO_CUR<0) return;
+  if(e.key==='ArrowRight') deptNav(1);
+  else if(e.key==='ArrowLeft') deptNav(-1);
+  else if(e.key==='Escape') backToRadial();
+});
 function renderDeptTree(dep){
+  NEO_CUR=NEO_DEPS.indexOf(dep);
   el('neoDrawer').classList.remove('open');
   el('neoCore').style.display='none';
   const st=el('neoStage'), nodes=el('neoNodes'), links=el('neoLinks');
@@ -1900,7 +1944,13 @@ function renderDeptTree(dep){
     }});
   links.innerHTML=L;
   nodes.innerHTML =
-    `<div class="tree-title">${esc((dep.label||'').toUpperCase())}<small>${esc(dep.desc||'')}</small></div>`
+    `<div class="tree-tabs" style="--dept:${esc(col)}">
+       <button onclick="backToRadial()" title="Volver al cerebro">◀ BACK</button>
+       <button onclick="deptNav(-1)" title="Depto anterior (←)">◁</button>
+       <button onclick="deptNav(1)" title="Depto siguiente (→)">▷</button>
+       <span class="tt-name">${esc(dep.label||'')} <i onclick="backToRadial()" title="Cerrar">✕</i></span>
+     </div>`
+    + `<div class="tree-title">${esc((dep.label||'').toUpperCase())}<small>${esc(dep.desc||'')}</small></div>`
     + svcs.map((s,i)=>`<div class="tree-svc" style="left:${sx(i).toFixed(1)}%;top:${SY}%;animation-delay:${(i*0.05).toFixed(2)}s">
         <span class="ts-circ">${esc(s[0]||'·')}</span><span class="ts-name">${esc(s)}</span></div>`).join('')
     + ags.map((a,i)=>{const x=xs(i); const on=a.has_output&&a.today;
@@ -1914,7 +1964,13 @@ function renderDeptTree(dep){
          <span class="tb-circ">${SVG_PERSON}</span><span class="tb-l">${esc(dep.label)}</span></button>`
     + `<button class="tree-back" onclick="backToRadial()">◀ volver al cerebro</button>`;
 }
-function backToRadial(){ el('neoStage').style.removeProperty('--amb'); renderNeo(NEO_DEPS); }
+function backToRadial(){
+  NEO_CUR=-1;
+  const layers=[el('neoNodes'),el('neoLinks')];
+  layers.forEach(x=>{x.style.transition='';x.style.transform='';x.style.opacity='';});
+  el('neoStage').style.removeProperty('--amb');
+  renderNeo(NEO_DEPS);
+}
 /* ── BRAIN EXPLORER: click en el cerebro → anotaciones/lecciones/notas reales ── */
 let BRAIN=null, BRAIN_F={q:'',type:'',dom:''};
 async function openBrain(){
