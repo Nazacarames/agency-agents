@@ -88,7 +88,7 @@
   .kpi-card .lbl{font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;font-size:10px}
   .topbar h1{font-size:22px;font-weight:700;letter-spacing:-.3px}
   .topbar .sub{color:var(--muted);font-size:13.5px;margin-top:3px}
-  .content{padding:24px 30px 70px;max-width:1280px}
+  .content{padding:24px 30px 70px;max-width:none}
 
   .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
@@ -316,14 +316,14 @@
   /* ═══ OPTIMAL ENGINE — cerebro (estética BENNETT OS) ═══ */
   .neo{position:relative;display:flex;flex-direction:column;align-items:center;font-family:var(--mono)}
   /* prompt bar tipo terminal */
-  .neo-prompt{width:100%;max-width:1100px;margin:0 auto 6px;display:flex;align-items:center;gap:10px;padding:12px 15px;border:1px solid var(--eng-grid);border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
+  .neo-prompt{width:100%;margin:0 auto 6px;display:flex;align-items:center;gap:10px;padding:12px 15px;border:1px solid var(--eng-grid);border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
   .neo-prompt-cursor{color:var(--eng-amber);font-size:13px;animation:blink 1.1s steps(1) infinite}
   @keyframes blink{50%{opacity:.15}}
   .neo-prompt-in{flex:1;background:transparent;border:none;outline:none;color:var(--navy);font-family:var(--mono);font-size:13px;letter-spacing:.2px}
   .neo-prompt-in::placeholder{color:#5b6784}
   .neo-prompt-sub{font-size:9.5px;color:#5b6784;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
   /* stage: casi negro + grilla + viñeta */
-  .neo-stage{position:relative;width:min(94vw,900px);aspect-ratio:1/.92;margin:2px auto 0;border:1px solid var(--eng-grid);border-radius:14px;overflow:hidden;
+  .neo-stage{position:relative;width:100%;height:max(560px,calc(100dvh - 250px));margin:2px auto 0;border:1px solid var(--eng-grid);border-radius:14px;overflow:hidden;
     background:
       radial-gradient(circle at 50% 48%,rgba(255,138,61,.09),transparent 46%),
       linear-gradient(var(--eng-grid) 1px,transparent 1px) 0 0/34px 34px,
@@ -331,10 +331,18 @@
       radial-gradient(circle at 50% 46%,var(--eng-bg2),var(--eng-bg) 78%)}
   .neo-stage::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 20px rgba(0,0,0,.6)}
   .neo-links{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:2}
-  .neo-link{stroke-width:.4;opacity:.5;stroke-linecap:round;stroke-dasharray:1.5 2.5;filter:drop-shadow(0 0 2px currentColor);animation:neoFlow 3s linear infinite;animation-delay:var(--d)}
-  @keyframes neoFlow{to{stroke-dashoffset:-20}}
+  /* líneas HAIRLINE, calmas (ref: casi estáticas, finísimas) */
+  .neo-link{stroke-width:.22;opacity:.42;stroke-linecap:round;stroke-dasharray:.8 2.4;animation:neoFlow 14s linear infinite;animation-delay:var(--d)}
+  @keyframes neoFlow{to{stroke-dashoffset:-16}}
+  /* anillos fantasma decorativos (ref img#3: círculos dashed vacíos orbitando) */
+  .neo-ghost{position:absolute;transform:translate(-50%,-50%);border:1px dashed rgba(160,178,215,.18);border-radius:50%;pointer-events:none}
+  .neo-ghost i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:3px;height:3px;border-radius:50%;background:rgba(170,188,225,.25)}
+  .neo-gdot{position:absolute;transform:translate(-50%,-50%);width:2.5px;height:2.5px;border-radius:50%;background:rgba(160,178,215,.3);pointer-events:none}
   /* núcleo: cerebro de partículas (canvas) */
-  .neo-core{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);z-index:3;width:clamp(180px,30vw,300px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
+  .neo-core{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);z-index:3;width:clamp(200px,26vw,320px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
+  /* anillo fino alrededor del cerebro (ref img#3) */
+  .neo-core::before{content:'';position:absolute;inset:-8%;border:1px solid rgba(200,214,240,.13);border-radius:50%;pointer-events:none}
+  .neo-core::after{content:'';position:absolute;inset:-20%;border:1px dashed rgba(180,196,228,.06);border-radius:50%;pointer-events:none}
   .neo-brain{width:100%;height:100%;filter:drop-shadow(0 0 26px rgba(255,120,50,.4))}
   .neo-core-label{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);text-align:center;font-size:11px;font-weight:800;letter-spacing:2.5px;color:#ffd9b8;text-shadow:0 0 14px rgba(255,138,61,.8);pointer-events:none}
   .neo-core-label span{display:block;font-weight:500;font-size:8.5px;letter-spacing:1.5px;color:#8a94ac;margin-top:2px}
@@ -342,21 +350,22 @@
   .neo-nodes{position:absolute;inset:0;z-index:4;pointer-events:none}
   .neo-node{pointer-events:auto}
   .neo-links{pointer-events:none}
-  .neo-node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;width:120px;background:none;border:none;cursor:pointer;color:var(--navy);animation:nodeIn .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--in)}
-  @keyframes nodeIn{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}to{opacity:1}}
-  .neo-orb{position:relative;width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;
-    background:radial-gradient(circle at 40% 35%,color-mix(in srgb,var(--dept) 30%,#0b0d16),#080a10);
-    border:1.5px solid var(--dept);box-shadow:0 0 18px -2px var(--dept),inset 0 0 14px rgba(0,0,0,.6);transition:transform .18s,box-shadow .18s}
-  .neo-node:hover .neo-orb{transform:scale(1.12);box-shadow:0 0 30px 0 var(--dept)}
-  .neo-orb-badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:20px;background:var(--dept);color:#08080e;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 0 10px -1px var(--dept)}
-  .neo-node-l{font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;text-align:center;line-height:1.25;color:#e6ecfb;text-shadow:0 1px 4px #000}
-  .neo-node-s{font-size:8.5px;letter-spacing:.5px;color:#7f8aa6;display:flex;align-items:center;gap:5px;text-transform:uppercase}
+  /* nodos PRECISOS (ref: círculos chicos, anillo fino 1px, glow mínimo, sin rebote) */
+  .neo-node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;width:112px;background:none;border:none;cursor:pointer;color:var(--navy);animation:nodeIn .6s ease both;animation-delay:var(--in)}
+  @keyframes nodeIn{from{opacity:0}to{opacity:1}}
+  .neo-orb{position:relative;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;
+    background:radial-gradient(circle at 45% 40%,#10141f,#07080e);
+    border:1px solid color-mix(in srgb,var(--dept) 80%,#1a2030);box-shadow:0 0 10px -5px var(--dept);transition:transform .35s cubic-bezier(.32,.72,0,1),box-shadow .35s,border-color .35s}
+  .neo-node:hover .neo-orb{transform:scale(1.06);box-shadow:0 0 15px -4px var(--dept);border-color:var(--dept)}
+  .neo-orb-badge{position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;border-radius:14px;background:#0a0c14;color:var(--dept);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;border:1px solid color-mix(in srgb,var(--dept) 70%,transparent)}
+  .neo-node-l{font-size:8.5px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;text-align:center;line-height:1.5;color:#c3cde4}
+  .neo-node-s{font-size:7.5px;letter-spacing:1px;color:#5f6a85;display:flex;align-items:center;gap:4px;text-transform:uppercase}
   .neo-dotmini{width:6px;height:6px;border-radius:50%;box-shadow:0 0 6px currentColor}
   .neo-dotmini.auto-sugiere{background:#64748b;color:#64748b}.neo-dotmini.auto-reversible{background:#ffb020;color:#ffb020}.neo-dotmini.auto-publica{background:#21d07a;color:#21d07a}
   .neo-live{color:#21d07a}
   .neo-loading{position:absolute;left:50%;top:76%;transform:translateX(-50%);color:#6b7690;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:var(--mono)}
   /* drawer del depto (panel engine) */
-  .neo-drawer{width:100%;max-width:1100px;margin:10px auto 0;border:1px solid color-mix(in srgb,var(--dept,#ff8a3d) 45%,var(--eng-grid));border-left:3px solid var(--dept,#ff8a3d);border-radius:12px;background:linear-gradient(180deg,var(--eng-bg2),var(--eng-bg));box-shadow:0 0 40px -10px color-mix(in srgb,var(--dept,#ff8a3d) 40%,transparent),var(--shadow-lg);overflow:hidden;max-height:0;opacity:0;transition:max-height .45s ease,opacity .3s,padding .3s;font-family:var(--mono)}
+  .neo-drawer{width:100%;margin:10px auto 0;border:1px solid color-mix(in srgb,var(--dept,#ff8a3d) 45%,var(--eng-grid));border-left:3px solid var(--dept,#ff8a3d);border-radius:12px;background:linear-gradient(180deg,var(--eng-bg2),var(--eng-bg));box-shadow:0 0 40px -10px color-mix(in srgb,var(--dept,#ff8a3d) 40%,transparent),var(--shadow-lg);overflow:hidden;max-height:0;opacity:0;transition:max-height .45s ease,opacity .3s,padding .3s;font-family:var(--mono)}
   .neo-drawer.open{max-height:1800px;opacity:1;padding:18px}
   .neo-drawer-h{display:flex;align-items:flex-start;gap:13px;margin-bottom:16px}
   .neo-drawer-h .dept-title{font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;font-size:15px}
@@ -387,6 +396,22 @@
   .da-open{margin-left:auto;color:#5b6784;font-size:12px}
   .dept-agent:hover .da-open{color:var(--dept,#ff8a3d)}
   @media(max-width:560px){.ad-grid{grid-template-columns:1fr}}
+  /* ── VISTA ÁRBOL de departamento (ref img#4: agentes arriba → convergen al cerebro del sector) ── */
+  .tree-title{position:absolute;left:50%;top:7%;transform:translateX(-50%);font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:5px;color:#e8edf9;text-align:center;pointer-events:none;animation:nodeIn .5s ease both}
+  .tree-title small{display:block;font-size:8px;letter-spacing:2px;color:#5f6a85;margin-top:4px;font-weight:500}
+  .tl-solid{stroke-width:.22;opacity:.5}
+  .tl-dash{stroke-width:.2;opacity:.4;stroke-dasharray:.8 2}
+  .tree-agent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;width:130px;background:none;border:none;cursor:pointer;pointer-events:auto;font-family:var(--mono);animation:nodeIn .6s ease both}
+  .ta-circ{position:relative;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--dept,#ff8a3d);border:1px solid color-mix(in srgb,var(--dept,#ff8a3d) 75%,#1a2030);background:radial-gradient(circle at 45% 40%,#10141f,#07080e);box-shadow:0 0 9px -5px var(--dept,#ff8a3d);transition:transform .35s cubic-bezier(.32,.72,0,1),box-shadow .35s}
+  .tree-agent:hover .ta-circ{transform:scale(1.08);box-shadow:0 0 14px -4px var(--dept,#ff8a3d)}
+  .ta-on{position:absolute;top:-2px;right:-2px;width:6px;height:6px;border-radius:50%;background:#39d98a;box-shadow:0 0 6px #39d98a}
+  .ta-name{font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:#c3cde4;line-height:1.4;text-align:center}
+  .ta-desc{font-size:7.5px;color:#5f6a85;line-height:1.45;text-align:center;font-family:'Inter'}
+  .tree-brain{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;pointer-events:auto;font-family:var(--mono);animation:nodeIn .7s ease both}
+  .tree-brain canvas{width:96px;height:96px;filter:drop-shadow(0 0 14px rgba(255,120,50,.35))}
+  .tb-l{font-size:8.5px;letter-spacing:2px;text-transform:uppercase;color:#c3cde4}
+  .tree-back{position:absolute;left:50%;bottom:4.5%;transform:translateX(-50%);pointer-events:auto;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#dfe6f7;background:rgba(255,255,255,.03);border:1px solid var(--eng-grid);border-radius:20px;padding:8px 18px;cursor:pointer;transition:.3s}
+  .tree-back:hover{border-color:rgba(255,138,61,.5);color:#ffd9b8}
   /* ── Cerebro CLICKEABLE + hover physics ── */
   .neo-core{cursor:pointer;transition:transform .7s cubic-bezier(.32,.72,0,1)}
   .neo-core:hover{transform:translate(-50%,-50%) scale(1.06)}
@@ -1772,12 +1797,23 @@ function neoBrain(){
 }
 function renderNeo(deps){
   const nodes=el('neoNodes'), links=el('neoLinks');
-  const n=deps.length||1, cx=50, cy=50, Rx=37, Ry=40;
+  el('neoCore').style.display='';
+  const n=deps.length||1, cx=50, cy=48, Rx=38, Ry=39;
   links.innerHTML = deps.map((dep,i)=>{
     const a=(-90+i*(360/n))*Math.PI/180, x=cx+Rx*Math.cos(a), y=cy+Ry*Math.sin(a);
-    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(2)}" y2="${y.toFixed(2)}" stroke="${esc(dep.color||'#ff8a3d')}" class="neo-link" style="--d:${(i*0.14).toFixed(2)}s"/>`;
+    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(2)}" y2="${y.toFixed(2)}" stroke="${esc(dep.color||'#ff8a3d')}" class="neo-link" style="--d:${(i*0.4).toFixed(2)}s"/>`;
   }).join('');
-  nodes.innerHTML = deps.map((dep,i)=>{
+  // anillos fantasma decorativos entre los deptos + puntos sueltos (ref img#3)
+  let ghosts='';
+  for(let i=0;i<n;i++){
+    const a=(-90+(i+0.5)*(360/n))*Math.PI/180;
+    const gx=cx+(Rx+6)*Math.cos(a), gy=cy+(Ry+6)*Math.sin(a);
+    const s=16+((i*7)%9);
+    ghosts+=`<span class="neo-ghost" style="left:${gx.toFixed(1)}%;top:${gy.toFixed(1)}%;width:${s}px;height:${s}px"><i></i></span>`;
+    const a2=(-70+i*(360/n))*Math.PI/180;
+    ghosts+=`<span class="neo-gdot" style="left:${(cx+(Rx-9)*Math.cos(a2)).toFixed(1)}%;top:${(cy+(Ry-9)*Math.sin(a2)).toFixed(1)}%"></span>`;
+  }
+  nodes.innerHTML = ghosts + deps.map((dep,i)=>{
     const a=(-90+i*(360/n))*Math.PI/180, x=cx+Rx*Math.cos(a), y=cy+Ry*Math.sin(a);
     const live=(dep.agents||[]).filter(z=>z.has_output&&z.today).length;
     return `<button class="neo-node" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--dept:${esc(dep.color||'#ff8a3d')};--in:${(i*0.07).toFixed(2)}s" data-i="${i}" title="${esc(dep.label)}">
@@ -1790,19 +1826,42 @@ function renderNeo(deps){
 }
 function openDept(dep){
   if(!dep) return;
-  const dr=el('neoDrawer');
-  const auto=dep.autonomy||'sugiere';
-  const autoTip={sugiere:'Solo sugiere — todo lo aprobás vos',reversible:'Acciona solo cosas internas reversibles',publica:'Ejecuta lo outward ya aprobado/en cola'}[auto]||'';
-  dr.style.setProperty('--dept', dep.color||'#2563eb');
-  dr.innerHTML=`<div class="neo-drawer-h">
-      <span class="dept-icon">${dep.icon||'🏢'}</span>
-      <div style="flex:1;min-width:0"><div class="dept-title">${esc(dep.label||'')}</div><div class="dept-desc">${esc(dep.desc||'')}</div>
-        <span class="dept-auto auto-${esc(auto)}" title="${esc(autoTip)}">⚙ ${esc(auto)}</span></div>
-      <button class="neo-close" onclick="el('neoDrawer').classList.remove('open')" title="Cerrar">✕</button>
-    </div>
-    <div class="dept-agents neo-drawer-a">${(dep.agents||[]).map(deptAgentCard).join('')||'<div class="faint">Sin agentes.</div>'}</div>`;
-  dr.classList.add('open');
+  renderDeptTree(dep);
 }
+/* ── ÁRBOL del depto (ref img#4): agentes arriba → líneas convergen al cerebro del sector ── */
+function renderDeptTree(dep){
+  el('neoDrawer').classList.remove('open');
+  el('neoCore').style.display='none';
+  const nodes=el('neoNodes'), links=el('neoLinks');
+  const ags=dep.agents||[], n=ags.length||1, col=dep.color||'#ff8a3d';
+  const xs=i=>n===1?50:(16+i*(68/(n-1)));
+  const AY=30, BX=50, BY=72;
+  links.innerHTML = ags.map((a,i)=>{const x=xs(i);
+    return `<line x1="${x}" y1="${AY+6}" x2="${x}" y2="${AY+12}" stroke="#aebbdc" class="tl-solid"/>`+
+           `<line x1="${x}" y1="${AY+12.5}" x2="${BX}" y2="${BY-9}" stroke="#aebbdc" class="tl-dash"/>`;}).join('')
+    + `<ellipse cx="${BX}" cy="${BY}" rx="6.5" ry="8.5" fill="none" stroke="${esc(col)}" stroke-width=".22" opacity=".45"/>`;
+  nodes.innerHTML =
+    `<div class="tree-title">${esc((dep.label||'').toUpperCase())}<small>${esc(dep.desc||'')}</small></div>`
+    + ags.map((a,i)=>{const x=xs(i); const on=a.has_output&&a.today;
+      return `<button class="tree-agent" style="left:${x.toFixed(1)}%;top:${AY}%;--dept:${esc(col)};animation-delay:${(i*0.06).toFixed(2)}s" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}">
+        <span class="ta-circ">A${on?'<i class="ta-on"></i>':''}</span>
+        <span class="ta-name">${esc((a.name||'').replace(/_/g,' '))}</span>
+        <span class="ta-desc">${esc((a.description||'').slice(0,48))}${(a.description||'').length>48?'…':''}</span>
+      </button>`;}).join('')
+    + `<button class="tree-brain" style="left:${BX}%;top:${BY}%" onclick="openBrain()" title="Abrir el cerebro">
+         <canvas id="miniBrain" width="150" height="150"></canvas><span class="tb-l">${esc(dep.label)}</span></button>`
+    + `<button class="tree-back" onclick="backToRadial()">◀ volver al cerebro</button>`;
+  miniBrainDraw(document.getElementById('miniBrain'));
+}
+function miniBrainDraw(cv){
+  if(!cv) return;
+  const x=cv.getContext('2d'), W=cv.width, cx=W/2, R=W*0.4, N=52, L=W*0.2;
+  const P=Array.from({length:N},()=>{const a=Math.random()*6.283,r=Math.pow(Math.random(),.55)*R;return{x:cx+Math.cos(a)*r,y:cx+Math.sin(a)*r};});
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const d=Math.hypot(P[i].x-P[j].x,P[i].y-P[j].y);
+    if(d<L){x.strokeStyle='rgba(255,120,60,'+(.15*(1-d/L)).toFixed(3)+')';x.lineWidth=.4;x.beginPath();x.moveTo(P[i].x,P[i].y);x.lineTo(P[j].x,P[j].y);x.stroke();}}
+  for(const p of P){x.beginPath();x.arc(p.x,p.y,Math.random()*1.3+.5,0,6.283);x.fillStyle='rgba(255,150,70,.9)';x.fill();}
+}
+function backToRadial(){ renderNeo(NEO_DEPS); }
 /* ── BRAIN EXPLORER: click en el cerebro → anotaciones/lecciones/notas reales ── */
 let BRAIN=null, BRAIN_F={q:'',type:'',dom:''};
 async function openBrain(){
