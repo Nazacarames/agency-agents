@@ -1151,10 +1151,10 @@
         </div>
         <div id="lessonsList"></div>
 
-        <div class="sec-head" style="margin-top:26px"><h2>Notas a los agentes</h2><span class="faint" style="font-size:12px">Directiva puntual del dueño: le llega al agente en su próxima corrida (una sola vez) y pisa lo que haya dejado la mesa redonda u otro agente.</span></div>
+        <div class="sec-head" style="margin-top:26px"><h2>Notas a los agentes</h2><span class="faint" style="font-size:12px">Directiva puntual del dueño: le llega en su próxima corrida (una sola vez) y pisa lo que haya dejado la mesa redonda u otro agente. Elegí un departamento y le llega a todo el sector.</span></div>
         <div class="card" style="margin-bottom:14px">
           <div class="row">
-            <div style="flex:1;min-width:160px"><label>Agente</label><select id="nAgent" class="inp"></select></div>
+            <div style="flex:1;min-width:160px"><label>Agente o departamento</label><select id="nAgent" class="inp"></select></div>
             <div style="flex:3;min-width:240px"><label>Nota / directiva</label><input id="nNote" class="inp" placeholder="No frenes el cold-email: mejorá el copy y adjuntá la video-auditoría"/></div>
           </div>
           <button class="btn btn-sm" id="nBtn" style="margin-top:10px">Dejar nota</button>
@@ -3266,7 +3266,7 @@ async function loadNotes(){
         <td class="muted" style="font-size:13px">${esc(n.note)}</td>
         <td>${n.delivered?'<span class="badge ok">entregada</span>':'<span class="badge warn">pendiente</span>'}</td>
         <td class="faint" style="white-space:nowrap">${esc((n.created_at||'').slice(0,10))}</td></tr>`).join('')+'</tbody></table></div>'
-      : '<div class="card empty">Sin notas en el buzón. Los agentes también se dejan notas entre ellos con NOTA_PARA(agente).</div>';
+      : '<div class="card empty">Sin notas en el buzón. Los agentes también se dejan notas entre ellos con NOTA_PARA(agente) — o a todo su sector con NOTA_PARA(departamento).</div>';
   }catch(e){ el('notesList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
 }
 el('nBtn').addEventListener('click', async ()=>{
