@@ -367,7 +367,7 @@
   .neo-ghost i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:3px;height:3px;border-radius:50%;background:rgba(170,188,225,.25)}
   .neo-gdot{position:absolute;transform:translate(-50%,-50%);width:2.5px;height:2.5px;border-radius:50%;background:rgba(160,178,215,.3);pointer-events:none}
   /* núcleo: cerebro de partículas (canvas) */
-  .neo-core{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);z-index:3;width:clamp(200px,26vw,320px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
+  .neo-core{position:absolute;left:46.5%;top:47%;transform:translate(-50%,-50%);z-index:3;width:clamp(200px,26vw,320px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
   /* anillo fino alrededor del cerebro (ref img#3) */
   .neo-core::before{content:'';position:absolute;inset:-8%;border:1px solid rgba(200,214,240,.13);border-radius:50%;pointer-events:none}
   .neo-core::after{content:'';position:absolute;inset:-20%;border:1px dashed rgba(180,196,228,.06);border-radius:50%;pointer-events:none}
@@ -538,6 +538,17 @@
   .fz-n{font-size:17px;font-weight:800;color:#eafcff;letter-spacing:-.5px}
   .fz-pct{font-size:8.5px;color:#59c9d6;letter-spacing:.8px}
   .fz-conv{position:absolute;right:16px;top:22px;font-size:9px;letter-spacing:1.5px;color:#59c9d6;text-transform:uppercase}
+  .fz-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-10px 0 20px}
+  .fzc{font-family:var(--mono);font-size:8.5px;letter-spacing:1.2px;padding:4px 10px;border-radius:5px;border:1px solid rgba(120,220,235,.28);background:transparent;color:#7fb8c4;cursor:pointer;transition:.2s}
+  .fzc.act{background:rgba(25,211,224,.12);color:#d8f6fa;border-color:rgba(120,220,235,.55)}
+  .fzc:hover{color:#d8f6fa}
+  .fz-sep{color:#2f4a52;margin:0 3px}
+  .fzs{font-family:var(--mono);font-size:8px;letter-spacing:1px;color:#4d7680}
+  .fz-track b{position:absolute;top:-2.5px;left:var(--sx);width:3.5px;height:3.5px;border-radius:50%;background:#7ff0ff;box-shadow:0 0 8px #19d3e0;animation:fzFlow 6.6s linear infinite;opacity:0}
+  @keyframes fzFlow{0%{opacity:0;transform:translateX(0)}6%{opacity:1}94%{opacity:1}100%{opacity:0;transform:translateX(320px)}}
+  .fz-seed{position:absolute;width:7px;height:7px;border-radius:50%;border:1.5px solid #4fe3f2;box-shadow:0 0 10px rgba(25,211,224,.7);animation:fzSeed 3.2s ease-in-out infinite}
+  @keyframes fzSeed{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+  .fz-leg{display:flex;gap:16px;flex-wrap:wrap;margin-top:20px;padding-top:11px;border-top:1px solid rgba(120,220,235,.12);font-family:var(--mono);font-size:7.5px;letter-spacing:1.1px;color:#4d7680;text-transform:uppercase}
   /* ═══ PERSONAS (ref img#5) ═══ */
   .prs{display:grid;grid-template-columns:minmax(430px,1.25fr) 1fr;gap:16px;align-items:start;font-family:var(--mono)}
   .prs-left{border:1px solid var(--eng-grid);border-radius:12px;background:var(--eng-bg2);padding:18px}
@@ -664,7 +675,7 @@
   .stab.act{color:#cfe3ff;border-color:rgba(91,140,247,.5);background:rgba(59,130,246,.1)}
   /* ═══ LENS · LEGEND · DIRECTORY (panel derecho del video) ═══ */
   .neo-rail{position:absolute;right:12px;top:52px;width:186px;z-index:5;display:flex;flex-direction:column;gap:10px;font-family:var(--mono);pointer-events:auto;animation:nodeIn .6s ease both}
-  .nr-box{border:1px solid var(--eng-grid);border-radius:10px;background:rgba(8,12,19,.72);backdrop-filter:blur(14px);padding:10px 11px}
+  .nr-box{border:1px solid var(--eng-grid);border-radius:10px;background:rgba(8,12,19,.72);backdrop-filter:blur(14px);padding:10px 11px;overflow:hidden;flex:none}
   .nr-h{font-size:7.5px;letter-spacing:2.2px;color:#5f6a85;margin-bottom:7px;text-transform:uppercase}
   .nr-lens{display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#aeb8d0;padding:3px 0;cursor:pointer;transition:.2s}
   .nr-lens:hover{color:#fff}
@@ -673,7 +684,7 @@
   .nr-lg:hover{color:#dfe6f7}
   .nr-lg i{width:9px;height:9px;border-radius:50%;border:1px solid currentColor;flex:none;font-style:normal}
   .nr-lg.off{opacity:.34}
-  .nr-dir{max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+  .nr-dir{height:186px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;padding-right:3px}
   .nr-dir::-webkit-scrollbar{width:3px}.nr-dir::-webkit-scrollbar-thumb{background:rgba(255,138,61,.3)}
   .nr-d{font-size:8.5px;color:#8b93ab;padding:3px 4px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
   .nr-d:hover{background:rgba(255,255,255,.05);color:#fff}
@@ -683,6 +694,18 @@
   .neo-stage.hide-dept .neo-node{opacity:.18;pointer-events:none}
   .neo-stage.hide-core .neo-core{opacity:.12}
   @media(max-width:1400px){.neo-rail{display:none}}
+  /* ═══ CONEXIONES ═══ */
+  .cnx-head{font-family:var(--mono);font-size:9.5px;letter-spacing:2px;color:#6b7690;margin-bottom:14px}
+  .cnx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:11px}
+  .cnx-c{border:1px solid rgba(255,255,255,.07);border-left:2px solid var(--dept,#2563eb);border-radius:11px;background:rgba(13,18,28,.65);backdrop-filter:blur(14px);padding:12px 13px;transition:.25s}
+  .cnx-c:hover{border-color:rgba(59,130,246,.3);box-shadow:0 0 18px rgba(59,130,246,.12)}
+  .cnx-h{display:flex;align-items:center;gap:8px}
+  .cnx-h b{font-family:var(--mono);font-size:11.5px;color:#e2e9f7;flex:1;font-weight:500}
+  .cnx-n{font-family:var(--mono);font-size:9px;color:var(--dept);border:1px solid color-mix(in srgb,var(--dept) 40%,transparent);border-radius:20px;padding:0 7px}
+  .cnx-note{font-family:var(--mono);font-size:8.5px;letter-spacing:.6px;color:#5f6a85;margin:6px 0 9px}
+  .cnx-u{display:flex;flex-wrap:wrap;gap:4px}
+  .cnx-u button{font-family:var(--mono);font-size:8px;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:#8b93ab;cursor:pointer;transition:.2s;text-transform:capitalize}
+  .cnx-u button:hover{color:#fff;border-color:var(--dept)}
   /* ═══ ORGANIGRAMA ═══ */
   .org{font-family:var(--sans);max-width:1500px}
   .org-top{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:8px}
@@ -837,6 +860,10 @@
           </div>
           <div class="neo-drawer" id="neoDrawer" aria-hidden="true"></div>
         </div>
+      </section>
+
+      <section id="tab-conexiones" class="tabsec hidden">
+        <div class="cnx" id="cnxWrap"><div class="card empty">Cargando conexiones…</div></div>
       </section>
 
       <section id="tab-org" class="tabsec hidden">
@@ -1351,9 +1378,10 @@ const NAV = [
   {g:'AGENTES', id:'org', label:'Org Chart', sub:'La jerarquía de la empresa: vos, el Conductor y los crews de cada sector.'},
   {g:'INTELIGENCIA', id:'departamentos', label:'Optimal Engine', sub:'El cerebro: sectores, agentes y el conocimiento vivo de la agencia.'},
   {g:'INTELIGENCIA', id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
+  {g:'SISTEMA', id:'conexiones', label:'Conexiones', sub:'Todos los servicios y MCPs que usan los agentes, con su estado real.'},
   {g:'SISTEMA', id:'growth', label:'Growth', sub:'Objetivos y tareas de crecimiento de la empresa.'},
   {g:'SISTEMA', id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
-  {g:'SISTEMA', id:'personas', label:'Personas', sub:'Quién opera el OS: pilares por sector, agentes y métricas.'},
+  {g:'VARIANTES', id:'personas', label:'Personas', sub:'Quién opera el OS: pilares por sector, agentes y métricas.'},
 ];
 
 async function api(path, opts={}){
@@ -1420,6 +1448,7 @@ function loadTab(tab){
   if(tab==='departamentos') loadDepartamentos();
   if(tab==='personas') loadPersonas();
   if(tab==='org') loadOrg();
+  if(tab==='conexiones') loadConexiones();
   if(tab==='finanzas') loadFinanzas();
   if(tab==='publicaciones') loadPublicaciones();
   if(tab==='ads') loadAds();
@@ -2216,7 +2245,7 @@ function renderVaultDomLabels(){
   let h='';
   BRAIN_DOMS.slice(0,6).forEach((d,i)=>{
     const a=angs[i%angs.length]*Math.PI/180;
-    h+=`<span class="brain-dom" style="left:${(50+15*Math.cos(a)).toFixed(1)}%;top:${(47+16*Math.sin(a)).toFixed(1)}%;animation-delay:${(0.5+i*0.1).toFixed(1)}s">${esc(d[0])} · ${d[1]}</span>`;
+    h+=`<span class="brain-dom" style="left:${(46.5+14*Math.cos(a)).toFixed(1)}%;top:${(47+16*Math.sin(a)).toFixed(1)}%;animation-delay:${(0.5+i*0.1).toFixed(1)}s">${esc(d[0])} · ${d[1]}</span>`;
   });
   nodes.insertAdjacentHTML('beforeend',h);
 }
@@ -2227,7 +2256,7 @@ function renderOrbital(deps){
   el('neoStage').style.removeProperty('--amb');
   el('neoStage').classList.remove('tree-mode');
   const flat=[]; deps.forEach(d=>(d.agents||[]).forEach(a=>flat.push({a,d})));
-  const N=flat.length||1, cx=50, cy=48, Rx=39, Ry=41;
+  const N=flat.length||1, cx=46.5, cy=48, Rx=34.5, Ry=41;
   links.innerHTML=`<ellipse cx="${cx}" cy="${cy}" rx="${Rx}" ry="${Ry}" fill="none" stroke="rgba(200,214,240,.1)" stroke-width=".15"/>`
     + flat.map((f,i)=>{const a=(-90+i*(360/N))*Math.PI/180;
       const X1=cx+13*Math.cos(a), Y1=cy+14*Math.sin(a), X2=cx+(Rx-2.5)*Math.cos(a), Y2=cy+(Ry-2.5)*Math.sin(a);
@@ -2252,7 +2281,7 @@ function renderNeo(deps){
   el('neoCore').style.display='';
   el('neoStage').classList.remove('tree-mode');
   el('neoStage').style.removeProperty('--amb');
-  const n=deps.length||1, cx=50, cy=48, Rx=38, Ry=39;
+  const n=deps.length||1, cx=46.5, cy=48, Rx=33.5, Ry=39;
   // posición de cada agente-satélite (tenue, alrededor de su depto — ref img#3)
   const sats=[];
   deps.forEach((dep,i)=>{
@@ -2386,6 +2415,36 @@ function renderDeptTree(dep){
          <button class="tp-name" onclick="backToRadial()" title="Volver al cerebro">${esc(dep.label)}</button>
          <button onclick="deptNav(1)" title="Siguiente (→)">▶</button></div>`;
 }
+/* ═══ CONEXIONES (ref video: SYSTEM › Connections) ═══ */
+async function loadConexiones(){
+  const w=el('cnxWrap');
+  try{
+    const dres = NEO_DEPS.length?{departments:NEO_DEPS}:await api('/api/departments');
+    const deps=dres.departments||[]; if(!NEO_DEPS.length) NEO_DEPS=deps;
+    const health=await api('/api/system/health').catch(()=>({}));
+    // servicio → agentes que lo usan
+    const map={};
+    deps.forEach(d=>(d.agents||[]).forEach(a=>(a.connections||[]).forEach(c=>{
+      (map[c]=map[c]||{users:[],color:d.color}).users.push(a.name);})));
+    const st=s=>{const l=s.toLowerCase();
+      if(l.includes('gmail')) return [!!health.db,'OAuth Ventas@'];
+      if(l.includes('meta')||l.includes('ig')) return [!!(health.publish&&health.publish.instagram),'Graph '+((health.publish||{}).graph_version||'')];
+      if(l.includes('youtube')) return [!!(health.youtube||{}).configured,'autoupload '+((health.youtube||{}).privacy||'')];
+      if(l.includes('publish')) return [!!(health.publish||{}).configured,(health.queue||{}).pending+' en cola'];
+      if(l.includes('vertex')||l.includes('veo')||l.includes('imagen')) return [!!health.images_enabled,'Vertex AI'];
+      if(l.includes('store')||l.includes('memoria')) return [!!health.db,'volumen / Supabase'];
+      return [true,'activo'];};
+    const cards=Object.entries(map).sort((a,b)=>b[1].users.length-a[1].users.length).map(([svc,v])=>{
+      const [ok,note]=st(svc);
+      return `<div class="cnx-c" style="--dept:${esc(v.color)}">
+        <div class="cnx-h"><span class="dot ${ok?'on':'idle'}"></span><b>${esc(svc)}</b><span class="cnx-n">${v.users.length}</span></div>
+        <div class="cnx-note">${esc(note)}</div>
+        <div class="cnx-u">${v.users.map(u=>`<button onclick="agentDetail('${u}')">${esc(u.replace(/_/g,' '))}</button>`).join('')}</div>
+      </div>`;}).join('');
+    w.innerHTML=`<div class="cnx-head">▸ ${Object.keys(map).length} SERVICIOS · ${deps.reduce((a,d)=>a+(d.agents||[]).length,0)} AGENTES CONECTADOS</div>
+      <div class="cnx-grid">${cards}</div>`;
+  }catch(e){ w.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
+}
 /* ═══ ORGANIGRAMA (ref video: Operator → Conductor → crews por depto) ═══ */
 function cronShort(c){
   if(!c) return 'on-demand';
@@ -2463,9 +2522,15 @@ function funnelViz(counts){
       <span class="fz-n">${v}</span>${pct!==null?`<span class="fz-pct">· ${pct}%</span>`:'<span class="fz-pct">&nbsp;</span>'}</div>`;
   }).join('');
   const marks=[18,38,58,78].map(p=>`<i style="left:${p}%"></i>`).join('');
+  const parts=[8,26,44,62,80,92].map((p,i)=>`<b style="--sx:${p}%;animation-delay:${(i*1.1).toFixed(1)}s"></b>`).join('');
+  const seeds=[[-2,-14],[3,-8],[-6,2],[1,9],[-3,15],[5,4]].map(([dx,dy],i)=>
+    `<span class="fz-seed" style="left:${(2.5+dx*0.35).toFixed(1)}%;top:calc(56px + ${dy}px);animation-delay:${(i*0.35).toFixed(2)}s"></span>`).join('');
   return `<div class="fz-title">FUNNEL — DEL LEAD AL CLIENTE</div>
     <span class="fz-conv">${total?('CONVERSIÓN GLOBAL '+(Math.round(closed/total*1000)/10)+'%'):''}</span>
-    <div class="fz-row"><div class="fz-track">${marks}</div>${cells}</div>`;
+    <div class="fz-chips"><button class="fzc act">TODOS LOS LEADS</button><button class="fzc">◆ OUTBOUND</button><button class="fzc">◆ LINKEDIN</button>
+      <span class="fz-sep">|</span><span class="fzs">○ GMAIL VENTAS@</span><span class="fzs">○ LEADS STORE</span><span class="fzs">○ DISCOVERY AR</span><span class="fzs">○ WEBFETCH</span></div>
+    <div class="fz-row">${seeds}<div class="fz-track">${marks}${parts}</div>${cells}</div>
+    <div class="fz-leg"><span>● EL COLOR = SU ETAPA</span><span>● SE APAGA A LOS 21D SIN RESPUESTA → SE ARCHIVA A LOS 90D</span><span>● CONVERTIDO</span></div>`;
 }
 /* ═══ PERSONAS (ref img#5) ═══ */
 async function loadPersonas(){
