@@ -128,6 +128,24 @@ def _degraded_reports(settings: Settings) -> List[Tuple[str, str]]:
     return out
 
 
+BRAIN_STALE_HORAS = 48
+
+
+def _brain_stale() -> float:
+    """Horas desde la última sync del Cerebro (0 si está al día).
+
+    El sync corre en la máquina del dueño: si la apaga, el cerebro se congela y
+    los agentes siguen corriendo con la foto vieja SIN QUE NADIE SE ENTERE — que
+    es justo la clase de falla silenciosa que este watchdog existe para cazar."""
+    try:
+        raw = json.loads((_DATA / "brain-graph.json").read_text(encoding="utf-8"))
+        recibido = datetime.fromisoformat(raw["received_at"])
+        horas = (datetime.now(recibido.tzinfo) - recibido).total_seconds() / 3600
+        return horas if horas > BRAIN_STALE_HORAS else 0.0
+    except Exception:
+        return 0.0   # sin cerebro todavía: no es una regresión que alertar
+
+
 # ── entrada ──
 
 def check(settings: Settings, discord=None) -> Dict[str, Any]:
@@ -171,7 +189,18 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
                         f"la firma `{marker}` — revisá que no haya inventado/truncado.")
         fresh_keys.append(key)
 
+    # 4) Cerebro congelado (el sync corre en la compu del dueño)
+    stale = _brain_stale()
+    if stale and "brain" not in already:
+        problems.append(
+            f"🧠 **Cerebro desactualizado** — última sync hace {int(stale)} h. "
+            "Los agentes están corriendo con documentación vieja.\n"
+            "→ Prendé la máquina del vault o corré `scripts/brain_sync.bat` a mano."
+        )
+        fresh_keys.append("brain")
+
     result = {"gmail": g_status, "gmail_detail": g_detail,
+              "brain_stale_h": round(stale, 1),
               "missed": [m[0] for m in missed],
               "degraded": [d[0] for d in degraded], "alerted": len(problems)}
 

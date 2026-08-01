@@ -51,6 +51,86 @@ REF_FOLDERS = tuple(f.strip() for f in
                     os.environ.get("BRAIN_REF_FOLDERS", "06-Resources").split(",") if f.strip())
 
 
+# ── Paso 0: lo que aprendieron los agentes vuelve al vault ──
+
+LESSONS_DIR = "07-Knowledge/Lecciones-de-los-Agentes"
+
+
+def pull_lessons() -> dict:
+    """Baja las lecciones de los agentes y las escribe como notas del vault.
+
+    Cierra el círculo: hasta ahora los agentes LEÍAN el vault pero lo que
+    aprendían moría en Supabase. Ahora una lección de `media_auditor` sobre un
+    formato que funcionó queda documentada y —vía el cerebro— puede llegarle a
+    `content_creator` cuando trabaje ese tema.
+
+    Una nota POR AGENTE (no por lección): 239 lecciones sueltas inundarían el
+    vault. Van a una carpeta propia y se reescriben enteras en cada corrida, así
+    que no pisan nada escrito a mano."""
+    secret = os.environ.get("WEBHOOK_SECRET", "")
+    if not secret:
+        return {}
+    req = urllib.request.Request(PANEL.rstrip("/") + "/api/lessons",
+                                 headers={"X-Webhook-Secret": secret})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            lessons = json.loads(r.read().decode()).get("lessons", [])
+    except Exception as e:
+        print(f"  (no se pudieron bajar las lecciones: {str(e)[:80]})")
+        return {}
+    por_agente: dict[str, list] = {}
+    for l in lessons:
+        if l.get("active") and (l.get("lesson") or "").strip():
+            por_agente.setdefault(l.get("agent") or "sin-agente", []).append(l)
+    destino = VAULT / LESSONS_DIR
+    destino.mkdir(parents=True, exist_ok=True)
+    for agente, ls in por_agente.items():
+        ls.sort(key=lambda x: (-(x.get("weight") or 1), x.get("created_at") or ""))
+        cuerpo = [f"# Lecciones de {agente.replace('_', ' ')}", "",
+                  "> [!info] Generada por `brain_sync` desde las corridas del agente.",
+                  "> Se reescribe entera en cada sync — no la edites a mano.", ""]
+        for l in ls:
+            peso = l.get("weight") or 1
+            fecha = (l.get("created_at") or "")[:10]
+            refuerzo = f" `×{peso}`" if peso > 1 else ""
+            cuerpo.append(f"- {l['lesson'].strip()} —{refuerzo} _{fecha}_")
+        cuerpo += ["", "Relacionado: [[MOC-07-Knowledge]] · [[Gotchas-y-Lecciones]]", ""]
+        (destino / f"Lecciones-{agente.replace('_', '-')}.md").write_text(
+            "\n".join(cuerpo), encoding="utf-8")
+    # Índice, para que las notas cuelguen del MOC y no queden huérfanas
+    idx = ["# Lecciones de los Agentes", "",
+           "Lo que cada agente aprendió de sus propias corridas (`LECCION:` en su "
+           "output → memoria → esta carpeta). El número es cuántas veces se reforzó.", ""]
+    for agente, ls in sorted(por_agente.items()):
+        idx.append(f"- [[Lecciones-{agente.replace('_', '-')}|{agente.replace('_', ' ')}]] "
+                   f"— {len(ls)} lecciones")
+    idx += ["", "Relacionado: [[MOC-07-Knowledge]]", ""]
+    (destino / "Lecciones-de-los-Agentes.md").write_text("\n".join(idx), encoding="utf-8")
+    return por_agente
+
+
+def _lessons_layer(por_agente: dict) -> list:
+    """Cada lección es UN pasaje del cerebro.
+
+    No alcanza con escribirlas al vault y dejar que Graphify las seccione: la
+    nota de un agente es una lista larga bajo un solo encabezado, y el corte por
+    sección se comería todas menos las primeras. Una lección es exactamente una
+    unidad de conocimiento, así que va como pasaje propio."""
+    out = []
+    for agente, ls in por_agente.items():
+        for l in ls:
+            texto = (l.get("lesson") or "").strip()
+            if len(texto) < MIN_SECTION:
+                continue
+            peso = l.get("weight") or 1
+            out.append({"note": f"Lecciones-{agente.replace('_', '-')}",
+                        "folder": "07-Knowledge",
+                        "title": f"lección de {agente.replace('_', ' ')}"
+                                 + (f" (reforzada ×{peso})" if peso > 1 else ""),
+                        "text": texto[:SECTION_CHARS]})
+    return out
+
+
 # ── Capa 1: el vault (notas + secciones) ──
 
 def _excerpt(txt: str) -> str:
@@ -194,11 +274,15 @@ def build_merged_graph(workdir: Path) -> dict:
     return g
 
 
-def build_brain() -> dict:
+def build_brain(lecciones: dict | None = None) -> dict:
     with tempfile.TemporaryDirectory(prefix="brain-") as tmp:
         merged = build_merged_graph(Path(tmp))
         sections = _sections_layer(merged)
         code_nodes, code_edges = _code_layer(merged)
+    # Las notas de lecciones ya entraron por el vault (para que el dueño las vea
+    # en Obsidian); acá van además como pasajes sueltos, que es como se buscan.
+    sections = [s for s in sections if not s["note"].startswith("Lecciones-")]
+    sections += _lessons_layer(lecciones or {})
     nodes, edges, domains, _ = _notes_layer()
     brain = {"ok": True, "nodes": nodes, "edges": edges, "domains": domains,
              "sections": sections, "code": code_nodes, "code_edges": code_edges,
@@ -241,9 +325,13 @@ def push(brain: dict) -> None:
 
 if __name__ == "__main__":
     _load_env_file()
-    b = build_brain()
+    lecciones = pull_lessons()
+    n = sum(len(v) for v in lecciones.values())
+    if n:
+        print(f"lecciones de los agentes → vault: {n} en {len(lecciones)} notas")
+    b = build_brain(lecciones)
     s = b["stats"]
-    print(f"cerebro: {s['notes']} notas · {s['sections']} pasajes · "
+    print(f"cerebro: {s['notes']} notas · {s['sections']} pasajes ({n} son lecciones) · "
           f"{s['code_nodes']} nodos de código · {s['links']}+{s['code_edges']} conexiones "
           f"· {len(json.dumps(b))//1024} KB")
     push(b)

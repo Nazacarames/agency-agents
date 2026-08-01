@@ -113,6 +113,9 @@ def search(query: str, k: int = 3, layer: str = "", min_terms: int = 2) -> List[
         return []
     df, n = idx["df"], idx["n"]
     scored = []
+    # Probado y descartado: aceptar un único término RARO para mejorar el recall.
+    # En un corpus chico los términos raros son los accidentes — "milanesas
+    # napolitanas" pasaba a devolver resultados. Dos términos o nada.
     for d in idx["docs"]:
         if layer and d["layer"] != layer:
             continue

@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "app/integrations/competitor_playbook.py": {
-    "mtime": 1785249089.1140304,
-    "ast_hash": "2fae070cddc38eb2f70788298669729f",
+    "mtime": 1785626001.4113896,
+    "ast_hash": "bea32add3d7454b529b20bd2c353885f",
     "semantic_hash": ""
   },
   "app/integrations/competitor_study.py": {
@@ -305,8 +305,8 @@
     "semantic_hash": ""
   },
   "app/integrations/creative_direction.py": {
-    "mtime": 1785248865.245688,
-    "ast_hash": "9e3b4ac3e7364c2365da652128a2989e",
+    "mtime": 1785625995.728186,
+    "ast_hash": "aed5e716536178de2c2c3163728a0b6c",
     "semantic_hash": ""
   },
   "app/integrations/creative_learnings.py": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "app/integrations/reel_study.py": {
-    "mtime": 1785128532.336061,
-    "ast_hash": "0e2fda97c6b3da4b4a5413e1c2f1d1d1",
+    "mtime": 1785626004.1584144,
+    "ast_hash": "ab5ddc1a7168b0d4779867169b821534",
     "semantic_hash": ""
   },
   "app/integrations/repo_sync.py": {
@@ -545,13 +545,13 @@
     "semantic_hash": ""
   },
   "app/integrations/trend_radar.py": {
-    "mtime": 1784043779.6679978,
-    "ast_hash": "0638f0ff4057d986f184bdb0ff9d47d5",
+    "mtime": 1785625987.5784283,
+    "ast_hash": "ef93b0ccd06faf4baae4e2fca01a5784",
     "semantic_hash": ""
   },
   "app/integrations/trends.py": {
-    "mtime": 1784043612.04776,
-    "ast_hash": "a7d92b648e9e8a91f7c8389998cd90f1",
+    "mtime": 1785625979.761827,
+    "ast_hash": "0a765567fab2d391cd730921b871e001",
     "semantic_hash": ""
   },
   "app/integrations/trends_client.py": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "app/integrations/watchdog.py": {
-    "mtime": 1785030331.4896388,
-    "ast_hash": "b1288127d551d6f00d3d26f8663777c3",
+    "mtime": 1785626236.9041011,
+    "ast_hash": "f84ee1fa72267f14142622f9d8cd15e1",
     "semantic_hash": ""
   },
   "app/integrations/webscraper/adapter.py": {
@@ -1850,8 +1850,8 @@
     "semantic_hash": ""
   },
   "scripts/brain_sync.py": {
-    "mtime": 1785615716.2208443,
-    "ast_hash": "2bab885607719d446629fb417f444d9a",
+    "mtime": 1785626345.6812665,
+    "ast_hash": "24050966735325d12ff3c50894ffc042",
     "semantic_hash": ""
   },
   "scripts/test_dept_collab.py": {
@@ -1867,6 +1867,21 @@
   "scripts/test_brain_search.py": {
     "mtime": 1785615779.1440127,
     "ast_hash": "3348f221ea117564469256e412fe5677",
+    "semantic_hash": ""
+  },
+  "app/integrations/freshness.py": {
+    "mtime": 1785625956.8217883,
+    "ast_hash": "4e55f370c29e4da5113babeb9634619d",
+    "semantic_hash": ""
+  },
+  "scripts/test_freshness.py": {
+    "mtime": 1785626015.9272206,
+    "ast_hash": "6f10be3adf6231e6fcdcec79f303e158",
+    "semantic_hash": ""
+  },
+  "scripts/test_watchdog_brain.py": {
+    "mtime": 1785626245.6429017,
+    "ast_hash": "a49924b17a4f68abb988bdfccb93b85c",
     "semantic_hash": ""
   }
 }
