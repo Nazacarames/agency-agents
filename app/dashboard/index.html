@@ -268,6 +268,16 @@
   .dept-col{border:1px solid var(--line);border-top:3px solid var(--dept,#2563eb);border-radius:14px;background:rgba(255,255,255,.02);padding:14px;display:flex;flex-direction:column;animation:deptIn .45s cubic-bezier(.2,.7,.2,1) both}
   .dept-col:nth-child(2){animation-delay:.05s}.dept-col:nth-child(3){animation-delay:.1s}.dept-col:nth-child(4){animation-delay:.15s}.dept-col:nth-child(5){animation-delay:.2s}.dept-col:nth-child(6){animation-delay:.25s}.dept-col:nth-child(7){animation-delay:.3s}
   @keyframes deptIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+  /* Page transition — cada sección anima al entrar (go() ya agrega .enter) */
+  .tabsec.enter{animation:secIn .4s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes secIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .tabsec.enter>.kpi-row>*,.tabsec.enter>.grid>*,.tabsec.enter>.grid-2>*{animation:cardIn .45s cubic-bezier(.2,.7,.2,1) both}
+  .tabsec.enter>.kpi-row>*:nth-child(2),.tabsec.enter>.grid>*:nth-child(2),.tabsec.enter>.grid-2>*:nth-child(2){animation-delay:.05s}
+  .tabsec.enter>.kpi-row>*:nth-child(3),.tabsec.enter>.grid>*:nth-child(3){animation-delay:.1s}
+  .tabsec.enter>.kpi-row>*:nth-child(4),.tabsec.enter>.grid>*:nth-child(4){animation-delay:.15s}
+  .tabsec.enter>.kpi-row>*:nth-child(n+5){animation-delay:.2s}
+  @keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   /* Skeletons */
   .skel{display:block;border-radius:7px;background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 37%,rgba(255,255,255,.04) 63%);background-size:400% 100%;animation:shimmer 1.4s ease infinite}
   @keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
