@@ -2550,49 +2550,49 @@ function funnelViz(counts){
 /* ═══ PERSONAS (ref img#5) ═══ */
 const PERSONAS=[
  {id:'agency',t:'Agency OS',badge:'OPERADOR DE AGENCIA',tag:'Una persona, 19 agentes, cero pelotas en el piso.',
-  desc:'Duenio de agencia unipersonal en Argentina. El OS convierte el caos de vender-producir-cobrar en un bucle cerrado: un lead se vuelve reunion, una reunion se vuelve propuesta, una propuesta se vuelve cliente, y cada corrida de agente se vuelve memoria que mejora la siguiente.',
+  desc:'Dueño de agencia unipersonal en Argentina. El OS convierte el caos de vender-producir-cobrar en un bucle cerrado: un lead se vuelve reunión, una reunión se vuelve propuesta, una propuesta se vuelve cliente, y cada corrida de agente se vuelve memoria que mejora la siguiente.',
   ns:'MRR retenido (plata que entra y SE QUEDA, no la que se gana una vez).',
   conn:['Gmail Ventas@','Supabase','Meta IG/FB','Vertex AI','Railway','Obsidian']},
- {id:'distri',t:'Distribucion OS',badge:'DISTRIBUIDORA / MAYORISTA',tag:'El pedido entra por WhatsApp y sale facturado.',
-  desc:'Distribuidora con catalogo grande y vendedores que viven en WhatsApp. El OS atiende el canal 24/7, arma el pedido contra stock, avisa faltantes y empuja la recompra del cliente dormido sin que nadie persiga a nadie.',
+ {id:'distri',t:'Distribución OS',badge:'DISTRIBUIDORA / MAYORISTA',tag:'El pedido entra por WhatsApp y sale facturado.',
+  desc:'Distribuidora con catálogo grande y vendedores que viven en WhatsApp. El OS atiende el canal 24/7, arma el pedido contra stock, avisa faltantes y empuja la recompra del cliente dormido sin que nadie persiga a nadie.',
   ns:'Pedidos recurrentes por cliente activo / mes.',
-  pillars:[['Atencion 24/7','Que ningun pedido se pierda de noche',['agente whatsapp','catalogo bot']],
-           ['Pedido -> ERP','De la charla al remito sin recargar nada',['tomador de pedidos','sync stock']],
+  pillars:[['Atención 24/7','Que ningún pedido se pierda de noche',['agente whatsapp','catálogo bot']],
+           ['Pedido → ERP','De la charla al remito sin recargar nada',['tomador de pedidos','sync stock']],
            ['Recompra','El cliente dormido vuelve solo',['reenganche','alertas de faltante']],
-           ['Cobranza','Facturas al dia sin llamar',['cobranza bot','recordatorios']]],
-  conn:['WhatsApp Cloud','ERP / Tango','Google Sheets','CRM Automiq'],ticket:'USD 4.5K - 9.2K anual'},
- {id:'logi',t:'Logistica OS',badge:'TRANSPORTE / LOGISTICA',tag:'Cada viaje cotizado, seguido y cobrado.',
-  desc:'Operador logistico con flota y clientes que preguntan donde esta mi carga todo el dia. El OS cotiza al toque, informa el estado sin intervencion humana y cierra el ciclo con la factura.',
+           ['Cobranza','Facturas al día sin llamar',['cobranza bot','recordatorios']]],
+  conn:['WhatsApp Cloud','ERP / Tango','Google Sheets','CRM Automiq'],ticket:'USD 4.5K – 9.2K anual'},
+ {id:'logi',t:'Logística OS',badge:'TRANSPORTE / LOGÍSTICA',tag:'Cada viaje cotizado, seguido y cobrado.',
+  desc:'Operador logístico con flota y clientes que preguntan dónde está mi carga todo el día. El OS cotiza al toque, informa el estado sin intervención humana y cierra el ciclo con la factura.',
   ns:'Margen por viaje (cotizado vs. real).',
-  pillars:[['Cotizacion','Responder en minutos, no en horas',['cotizador','tarifario bot']],
+  pillars:[['Cotización','Responder en minutos, no en horas',['cotizador','tarifario bot']],
            ['Tracking','El cliente se entera antes de preguntar',['tracking bot','alertas de ruta']],
-           ['Documentacion','Remitos y CP sin traspapeleo',['doc agent']],
-           ['Facturacion','Cerrar el viaje con la factura',['facturador','cobranza bot']]],
-  conn:['WhatsApp Cloud','Google Maps','ERP','CRM Automiq'],ticket:'USD 6K - 12K anual'},
- {id:'manu',t:'Manufactura OS',badge:'PYME INDUSTRIAL',tag:'La consulta tecnica se vuelve presupuesto.',
-  desc:'PyME industrial que vende por especificacion. El OS califica la consulta, arma el presupuesto con la ficha tecnica correcta y persigue el si sin que el duenio deje el taller.',
+           ['Documentación','Remitos y CP sin traspapeleo',['doc agent']],
+           ['Facturación','Cerrar el viaje con la factura',['facturador','cobranza bot']]],
+  conn:['WhatsApp Cloud','Google Maps','ERP','CRM Automiq'],ticket:'USD 6K – 12K anual'},
+ {id:'manu',t:'Manufactura OS',badge:'PYME INDUSTRIAL',tag:'La consulta técnica se vuelve presupuesto.',
+  desc:'PyME industrial que vende por especificación. El OS califica la consulta, arma el presupuesto con la ficha técnica correcta y persigue el sí sin que el dueño deje el taller.',
   ns:'Presupuestos convertidos / mes.',
-  pillars:[['Calificacion','Separar curioso de comprador',['calificador','ficha tecnica bot']],
+  pillars:[['Calificación','Separar curioso de comprador',['calificador','ficha técnica bot']],
            ['Presupuesto','Cotizar con la spec correcta',['presupuestador']],
-           ['Seguimiento','El presupuesto no se enfria',['follow-up bot']],
+           ['Seguimiento','El presupuesto no se enfría',['follow-up bot']],
            ['Postventa','Repuestos y service recurrente',['service bot']]],
-  conn:['WhatsApp Cloud','Drive','CRM Automiq','Gmail'],ticket:'USD 3K - 7.5K anual'},
- {id:'inmo',t:'Inmobiliaria OS',badge:'INMOBILIARIA',tag:'Consulta a visita agendada, sin perder el hilo.',
+  conn:['WhatsApp Cloud','Drive','CRM Automiq','Gmail'],ticket:'USD 3K – 7.5K anual'},
+ {id:'inmo',t:'Inmobiliaria OS',badge:'INMOBILIARIA',tag:'Consulta → visita agendada, sin perder el hilo.',
   desc:'Inmobiliaria con portales que escupen consultas a toda hora. El OS filtra por presupuesto y zona, manda la ficha real desde Tokko y agenda la visita en la agenda del asesor.',
   ns:'Visitas agendadas por consulta recibida.',
-  pillars:[['Filtro','Entender ambientes, zona y presupuesto',['agente inmobiliario','filtro semantico']],
+  pillars:[['Filtro','Entender ambientes, zona y presupuesto',['agente inmobiliario','filtro semántico']],
            ['Ficha','Mandar la propiedad correcta',['tokko sync']],
-           ['Visita','Cerrar dia y hora',['agendador']],
-           ['Nurture','El que no compro hoy vuelve',['reenganche']]],
-  conn:['WhatsApp Cloud','Tokko Broker','Google Calendar','CRM Automiq'],ticket:'USD 3K - 6K anual'},
- {id:'camara',t:'Camara OS',badge:'CAMARA / ASOCIACION',tag:'La memoria regulatoria viva de todo el sector.',
-  desc:'Camara sectorial con socios que necesitan estar al dia con la norma. El OS ingiere el Boletin, avisa a quien le pega cada disposicion, y guarda el debate para que nadie reinvente la rueda. Caso vivo: CLAMEVET.',
+           ['Visita','Cerrar día y hora',['agendador']],
+           ['Nurture','El que no compró hoy vuelve',['reenganche']]],
+  conn:['WhatsApp Cloud','Tokko Broker','Google Calendar','CRM Automiq'],ticket:'USD 3K – 6K anual'},
+ {id:'camara',t:'Cámara OS',badge:'CÁMARA / ASOCIACIÓN',tag:'La memoria regulatoria viva de todo el sector.',
+  desc:'Cámara sectorial con socios que necesitan estar al día con la norma. El OS ingiere el Boletín, avisa a quién le pega cada disposicion, y guarda el debate para que nadie reinvente la rueda. Caso vivo: CLAMEVET.',
   ns:'Socios que consultan la plataforma / mes.',
-  pillars:[['Ingesta','El Boletin entra solo',['ingesta boletin','resumidor']],
+  pillars:[['Ingesta','El Boletín entra solo',['ingesta boletín','resumidor']],
            ['Asistente','Responde citando, nunca inventa',['rag con citas']],
            ['Alertas','A cada socio lo que le pega',['matching producto-norma']],
-           ['Foro','El debate queda como memoria',['foro con memoria','revision humana']]],
-  conn:['SENASA / Boletin','Supabase pgvector','Gmail','Vertex AI'],ticket:'USD 3.000 + 500/mes'}];
+           ['Foro','El debate queda como memoria',['foro con memoria','revisión humana']]],
+  conn:['SENASA / Boletín','Supabase pgvector','Gmail','Vertex AI'],ticket:'USD 3.000 + 500/mes'}];
 let PRS_I=0, PRS_STATS={}, PRS_DEPS=[];
 async function loadPersonas(){
   const w=el('prsWrap');
@@ -2638,7 +2638,7 @@ function renderPersona(){
     +'<div class="prs-pills">'+pillars+'</div>'
     +'<div class="prs-sec">&#9656; CONECTORES</div>'
     +'<div class="prs-chips">'+P.conn.map(function(c){return '<span class="prs-chip">'+esc(c)+'</span>';}).join('')+'</div>'
-    +'<div class="prs-sec">&#9656; METRICAS QUE IMPORTAN</div>'
+    +'<div class="prs-sec">&#9656; MÉTRICAS QUE IMPORTAN</div>'
     +'<div class="prs-metrics">'+M.map(function(kv){return '<div class="prs-m"><span>'+kv[0]+'</span><b>'+esc(String(kv[1]))+'</b></div>';}).join('')+'</div>'
     +'</div>'
     +'<div class="prs-right"><canvas id="prsCv" width="560" height="520"></canvas></div>';
