@@ -385,6 +385,53 @@
   .da-open{margin-left:auto;color:#5b6784;font-size:12px}
   .dept-agent:hover .da-open{color:var(--dept,#ff8a3d)}
   @media(max-width:560px){.ad-grid{grid-template-columns:1fr}}
+  /* ── Cerebro CLICKEABLE + hover physics ── */
+  .neo-core{cursor:pointer;transition:transform .7s cubic-bezier(.32,.72,0,1)}
+  .neo-core:hover{transform:translate(-50%,-50%) scale(1.06)}
+  .neo-core:hover .neo-brain{filter:drop-shadow(0 0 44px rgba(255,130,50,.7))}
+  .neo-brain{transition:filter .7s cubic-bezier(.32,.72,0,1)}
+  .neo-core-hint{display:block;margin-top:5px;font-size:8px;letter-spacing:2px;color:#ffb37a;opacity:0;transform:translateY(4px);transition:.5s cubic-bezier(.32,.72,0,1)}
+  .neo-core:hover .neo-core-hint{opacity:1;transform:none}
+  /* ── BRAIN EXPLORER (directory de anotaciones, ref img#3) ── */
+  .bx{font-family:var(--mono)}
+  .bx-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .bx-title{font-size:13px;font-weight:800;letter-spacing:2.5px;color:#ffd9b8;text-shadow:0 0 16px rgba(255,138,61,.7)}
+  .bx-stats{font-size:9.5px;letter-spacing:1px;color:#6b7690;text-transform:uppercase}
+  .bx-search{flex:1;min-width:180px;background:rgba(255,255,255,.03);border:1px solid var(--eng-grid);border-radius:8px;padding:8px 12px;color:var(--navy);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .3s}
+  .bx-search:focus{border-color:rgba(255,138,61,.5);box-shadow:0 0 18px -8px var(--eng-amber)}
+  .bx-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .bx-chip{font-family:var(--mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;padding:4px 11px;border-radius:20px;border:1px solid var(--eng-grid);background:transparent;color:#8a94ac;cursor:pointer;transition:.25s cubic-bezier(.32,.72,0,1)}
+  .bx-chip.act,.bx-chip:hover{border-color:rgba(255,138,61,.55);color:#ffd9b8;background:rgba(255,138,61,.08)}
+  .bx-body{display:grid;grid-template-columns:225px 1fr;gap:16px;align-items:start}
+  .bx-doms{border:1px solid var(--eng-grid);border-radius:11px;padding:12px;background:rgba(255,255,255,.015)}
+  .bx-doms-h{font-size:9px;letter-spacing:2px;color:#6b7690;margin-bottom:10px}
+  .bx-dom{display:flex;flex-direction:column;gap:3px;padding:5px 0;border:none;background:none;width:100%;text-align:left;cursor:pointer;color:#aeb8d0;font-family:var(--mono)}
+  .bx-dom-t{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.5px}
+  .bx-dom-t b{color:#dfe6f7;font-weight:500}
+  .bx-dom-bar{height:3px;border-radius:3px;background:rgba(255,255,255,.05);overflow:hidden}
+  .bx-dom-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--eng-amber),#ffc76b);box-shadow:0 0 8px rgba(255,138,61,.6);border-radius:3px;transition:width .8s cubic-bezier(.32,.72,0,1)}
+  .bx-dom.act .bx-dom-t b{color:var(--eng-amber)}
+  .bx-rows{display:flex;flex-direction:column;gap:8px;max-height:560px;overflow-y:auto;padding-right:4px}
+  .bx-row{border:1px solid rgba(255,255,255,.055);border-radius:10px;padding:11px 13px;background:linear-gradient(160deg,rgba(255,255,255,.022),transparent);animation:bxIn .5s cubic-bezier(.32,.72,0,1) both}
+  .bx-row:nth-child(2){animation-delay:.04s}.bx-row:nth-child(3){animation-delay:.08s}.bx-row:nth-child(4){animation-delay:.12s}.bx-row:nth-child(5){animation-delay:.16s}.bx-row:nth-child(n+6){animation-delay:.2s}
+  @keyframes bxIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .bx-row-t{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+  .bx-type{font-size:8.5px;letter-spacing:1.2px;padding:2px 8px;border-radius:5px;text-transform:uppercase;font-weight:700}
+  .bx-type.memoria{background:rgba(255,138,61,.14);color:#ffb37a;border:1px solid rgba(255,138,61,.3)}
+  .bx-type.leccion{background:rgba(33,208,122,.12);color:#5fe6a4;border:1px solid rgba(33,208,122,.3)}
+  .bx-type.nota{background:rgba(77,150,255,.12);color:#8ab6ff;border:1px solid rgba(77,150,255,.3)}
+  .bx-row-title{font-size:12px;font-weight:700;color:#e6ecfb;letter-spacing:.3px}
+  .bx-row-d{margin-left:auto;font-size:9px;color:#5b6784}
+  .bx-row-b{font-family:'Inter';font-size:12px;line-height:1.5;color:#93a0bc}
+  .bx-empty{padding:26px;text-align:center;color:#5b6784;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+  @media(max-width:700px){.bx-body{grid-template-columns:1fr}}
+  /* ── polish engine global: modal, toast, scrollbar ── */
+  .modal{background:linear-gradient(180deg,var(--eng-bg2),var(--eng-bg));border-color:rgba(255,255,255,.08)}
+  .modal-head{font-family:var(--mono);text-transform:uppercase;letter-spacing:1px}
+  .toast{font-family:var(--mono);font-size:12.5px;letter-spacing:.3px}
+  .bx-rows::-webkit-scrollbar,.neo-drawer::-webkit-scrollbar{width:5px}
+  .bx-rows::-webkit-scrollbar-thumb{background:rgba(255,138,61,.25);border-radius:4px}
+  .neo-drawer{transition:max-height .55s cubic-bezier(.32,.72,0,1),opacity .4s,padding .3s}
 
   /* Botón primario con barrido al hover */
   .btn:not(.btn-ghost){position:relative;overflow:hidden}
@@ -469,9 +516,9 @@
           </div>
           <div class="neo-stage" id="neoStage">
             <svg class="neo-links" id="neoLinks" preserveAspectRatio="none" viewBox="0 0 100 100"></svg>
-            <div class="neo-core" id="neoCore">
+            <div class="neo-core" id="neoCore" onclick="openBrain()" title="Abrir el cerebro — anotaciones, lecciones y memoria">
               <canvas class="neo-brain" id="neoBrain" width="340" height="340"></canvas>
-              <div class="neo-core-label">WHOLE BRAIN<span>Obsidian · Graphify</span></div>
+              <div class="neo-core-label">WHOLE BRAIN<span>Obsidian · Graphify</span><span class="neo-core-hint">▸ CLICK PARA ENTRAR</span></div>
             </div>
             <div class="neo-nodes" id="neoNodes"></div>
           </div>
@@ -1682,6 +1729,21 @@ async function loadDepartamentos(){
   const nodes=el('neoNodes');
   nodes.innerHTML='<div class="neo-loading">sincronizando el cerebro…</div>';
   neoBrain();
+  // barra "dump into the brain…" FUNCIONAL: Enter → anotación en la memoria de la agencia
+  const np=el('neoPrompt');
+  if(np && !np.dataset.w){ np.dataset.w='1';
+    np.addEventListener('keydown', async e=>{
+      if(e.key!=='Enter') return;
+      const t=(np.value||'').trim(); if(!t) return;
+      np.value=''; np.placeholder='guardando…';
+      try{
+        await api('/api/memory',{method:'POST',body:JSON.stringify({section:'general',title:t.slice(0,70),content:t,source:'panel · dump'})});
+        toast('🧠 Guardado en el cerebro');
+        if(el('neoDrawer').classList.contains('open') && BRAIN) openBrain();
+      }catch(err){ toast('Error: '+err.message); }
+      np.placeholder='dump into the brain… o soltá documentos';
+    });
+  }
   try{
     const d = await api('/api/departments');
     NEO_DEPS = d.departments||[];
@@ -1738,6 +1800,64 @@ function openDept(dep){
     </div>
     <div class="dept-agents neo-drawer-a">${(dep.agents||[]).map(deptAgentCard).join('')||'<div class="faint">Sin agentes.</div>'}</div>`;
   dr.classList.add('open');
+}
+/* ── BRAIN EXPLORER: click en el cerebro → anotaciones/lecciones/notas reales ── */
+let BRAIN=null, BRAIN_F={q:'',type:'',dom:''};
+async function openBrain(){
+  const dr=el('neoDrawer');
+  dr.style.setProperty('--dept','#ff8a3d');
+  dr.innerHTML='<div class="bx"><div class="bx-empty">▸ cargando el cerebro…</div></div>';
+  dr.classList.add('open');
+  try{
+    const [m,l,n]=await Promise.all([
+      api('/api/memory'), api('/api/lessons'), api('/api/agent-notes').catch(()=>({notes:[]}))]);
+    BRAIN={mem:m.memory||[], les:l.lessons||[], notes:n.notes||[]};
+    BRAIN_F={q:'',type:'',dom:''};
+    renderBrain();
+  }catch(e){ dr.innerHTML='<div class="bx"><div class="bx-empty">'+esc(e.message)+'</div></div>'; }
+}
+function brainItems(){
+  const out=[];
+  (BRAIN.mem||[]).forEach(m=>out.push({type:'memoria',dom:m.section||'general',title:m.title||'(sin título)',body:m.content||'',date:String(m.updated_at||m.created_at||'').slice(0,10)}));
+  (BRAIN.les||[]).forEach(l=>out.push({type:'leccion',dom:(l.agent||'general').replace(/_/g,' '),title:l.kind||'lección',body:l.lesson||'',date:String(l.created_at||'').slice(0,10)}));
+  (BRAIN.notes||[]).forEach(n=>out.push({type:'nota',dom:(n.to||'?').replace(/_/g,' '),title:(n.from||'?')+' → '+(n.to||'?').replace(/_/g,' '),body:n.note||'',date:String(n.created_at||'').slice(0,10)}));
+  return out;
+}
+function renderBrain(){
+  const dr=el('neoDrawer');
+  dr.innerHTML=`<div class="bx">
+    <div class="bx-head">
+      <span class="bx-title">WHOLE BRAIN</span>
+      <span class="bx-stats" id="bxStats"></span>
+      <input class="bx-search" id="bxQ" placeholder="buscar en el cerebro…" value="${esc(BRAIN_F.q)}" autocomplete="off">
+      <button class="neo-close" onclick="el('neoDrawer').classList.remove('open')" title="Cerrar">✕</button>
+    </div>
+    <div class="bx-chips">${['','memoria','leccion','nota'].map(t=>`<button class="bx-chip ${BRAIN_F.type===t?'act':''}" data-t="${t}">${t||'todas'}</button>`).join('')}</div>
+    <div class="bx-body"><div class="bx-doms" id="bxDoms"></div><div class="bx-rows" id="bxRows"></div></div></div>`;
+  el('bxQ').addEventListener('input',e=>{BRAIN_F.q=e.target.value;renderBrainRows();});
+  dr.querySelectorAll('.bx-chip').forEach(c=>c.addEventListener('click',()=>{BRAIN_F.type=c.dataset.t;BRAIN_F.dom='';renderBrain();}));
+  renderBrainDoms(); renderBrainRows();
+}
+function renderBrainDoms(){
+  const items=brainItems().filter(i=>!BRAIN_F.type||i.type===BRAIN_F.type);
+  const g={}; items.forEach(i=>{g[i.dom]=(g[i.dom]||0)+1;});
+  const doms=Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,10); const max=doms.length?doms[0][1]:1;
+  el('bxDoms').innerHTML='<div class="bx-doms-h">▸ DOMINIOS</div>'+(doms.length?doms.map(([d,c])=>
+    `<button class="bx-dom ${BRAIN_F.dom===d?'act':''}" data-d="${esc(d)}"><span class="bx-dom-t"><b>${esc(d)}</b><span>${c}</span></span><span class="bx-dom-bar"><i style="width:${Math.max(8,(c/max*100)|0)}%"></i></span></button>`).join('')
+    :'<div class="bx-empty" style="padding:10px">—</div>');
+  el('bxDoms').querySelectorAll('.bx-dom').forEach(b=>b.addEventListener('click',()=>{
+    BRAIN_F.dom=BRAIN_F.dom===b.dataset.d?'':b.dataset.d; renderBrainDoms(); renderBrainRows();}));
+}
+function renderBrainRows(){
+  const q=(BRAIN_F.q||'').toLowerCase();
+  let items=brainItems();
+  if(BRAIN_F.type) items=items.filter(i=>i.type===BRAIN_F.type);
+  if(BRAIN_F.dom)  items=items.filter(i=>i.dom===BRAIN_F.dom);
+  if(q) items=items.filter(i=>(i.title+' '+i.body+' '+i.dom).toLowerCase().includes(q));
+  el('bxStats').textContent=`${(BRAIN.mem||[]).length} memorias · ${(BRAIN.les||[]).length} lecciones · ${(BRAIN.notes||[]).length} notas`;
+  el('bxRows').innerHTML=items.length?items.slice(0,120).map(i=>
+    `<div class="bx-row"><div class="bx-row-t"><span class="bx-type ${i.type}">${i.type}</span><span class="bx-row-title">${esc(i.title)}</span><span class="bx-row-d">${esc(i.dom)}${i.date?' · '+esc(i.date):''}</span></div><div class="bx-row-b">${esc((i.body||'').slice(0,300))}</div></div>`).join('')
+    :'<div class="bx-empty">— sin anotaciones acá; tirá algo en "dump into the brain" —</div>';
 }
 function deptAgentCard(a){
   const on = a.has_output && a.today;
