@@ -521,6 +521,47 @@
   .sub,#pageSub{color:#7f8aa6}
   .cal-arrow,.cal-today{font-family:var(--mono);background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.08)}
   select.inp option{background:var(--eng-bg2)}
+  /* ═══ FUNNEL timeline glow (ref img#6) ═══ */
+  .fz{position:relative;font-family:var(--mono);border:1px solid var(--eng-grid);border-radius:12px;padding:26px 20px 20px;margin-bottom:16px;background:radial-gradient(circle at 50% 0%,rgba(25,211,224,.05),transparent 60%),var(--eng-bg2)}
+  .fz-title{font-size:12px;font-weight:800;letter-spacing:3px;color:#d8f6fa;margin-bottom:22px}
+  .fz-row{position:relative;display:flex;justify-content:space-between;align-items:flex-start;padding:0 3%}
+  .fz-track{position:absolute;left:5%;right:5%;top:56px;border-top:1px solid rgba(120,220,235,.22)}
+  .fz-track i{position:absolute;top:-2.5px;width:4px;height:4px;transform:rotate(45deg);background:rgba(140,225,240,.5)}
+  .fz-st{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;width:120px}
+  .fz-lbl{font-size:8.5px;letter-spacing:1.8px;color:#9fb6bf;text-transform:uppercase;text-align:center}
+  .fz-node{position:relative;width:44px;height:44px;border-radius:50%;border:1px dashed rgba(120,220,235,.55);display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,rgba(25,211,224,.14),transparent 70%)}
+  .fz-node::before{content:'';width:9px;height:9px;border-radius:50%;background:#4fe3f2;box-shadow:0 0 14px #19d3e0,0 0 3px #fff}
+  .fz-node::after{content:'';position:absolute;width:4px;height:4px;border-radius:50%;background:rgba(140,230,245,.8);top:9px;right:10px;box-shadow:-14px 14px 0 -1px rgba(140,230,245,.5)}
+  .fz-n{font-size:17px;font-weight:800;color:#eafcff;letter-spacing:-.5px}
+  .fz-pct{font-size:8.5px;color:#59c9d6;letter-spacing:.8px}
+  .fz-conv{position:absolute;right:16px;top:22px;font-size:9px;letter-spacing:1.5px;color:#59c9d6;text-transform:uppercase}
+  /* ═══ PERSONAS (ref img#5) ═══ */
+  .prs{display:grid;grid-template-columns:minmax(430px,1.25fr) 1fr;gap:16px;align-items:start;font-family:var(--mono)}
+  .prs-left{border:1px solid var(--eng-grid);border-radius:12px;background:var(--eng-bg2);padding:18px}
+  .prs-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .prs-tab{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5fe6c8;border:1px solid rgba(47,212,196,.4);border-radius:6px;padding:4px 11px;background:rgba(47,212,196,.06)}
+  .prs-badge{margin-left:auto;font-size:8.5px;letter-spacing:1.5px;color:#5f6a85;text-transform:uppercase}
+  .prs-desc{font-family:'Inter';font-size:13px;line-height:1.6;color:#c2ccdf;border-left:2px solid rgba(47,212,196,.5);background:rgba(47,212,196,.035);padding:11px 13px;border-radius:0 8px 8px 0;margin-bottom:12px}
+  .prs-ns{font-size:10px;letter-spacing:.8px;color:#5fe6c8;border:1px dashed rgba(47,212,196,.35);border-radius:8px;padding:9px 12px;margin-bottom:16px}
+  .prs-ns b{color:#b5f5e6;letter-spacing:1.5px}
+  .prs-sec{font-size:9px;letter-spacing:2px;color:#6b7690;text-transform:uppercase;margin:14px 0 8px}
+  .prs-pills{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .prs-pillar{border:1px solid var(--eng-grid);border-radius:9px;padding:9px 11px;background:rgba(255,255,255,.015)}
+  .prs-pillar b{display:block;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:#dfe8f8;margin-bottom:6px}
+  .prs-chips{display:flex;flex-wrap:wrap;gap:4px}
+  .prs-chip{font-size:8px;letter-spacing:.5px;padding:2px 7px;border-radius:4px;border:1px solid color-mix(in srgb,var(--pc,#2fd4c4) 40%,var(--eng-grid));color:#aeb8d0;background:color-mix(in srgb,var(--pc,#2fd4c4) 8%,transparent);cursor:pointer;transition:.2s}
+  .prs-chip:hover{color:#fff;border-color:var(--pc,#2fd4c4)}
+  .prs-metrics{display:flex;flex-direction:column;gap:6px}
+  .prs-m{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.6px;color:#9aa8c0;border-bottom:1px solid rgba(255,255,255,.045);padding:5px 2px}
+  .prs-m b{color:#5fe6c8;font-weight:700}
+  .prs-right{border:1px solid var(--eng-grid);border-radius:12px;background:radial-gradient(circle at 50% 40%,rgba(47,212,196,.06),transparent 65%),var(--eng-bg);padding:10px;display:flex;align-items:center;justify-content:center;min-height:520px}
+  .prs-right canvas{width:100%;max-width:560px}
+  @media(max-width:900px){.prs{grid-template-columns:1fr}}
+  /* satélites de agentes en el radial (tenues, ref img#3) */
+  .neo-sat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;pointer-events:auto;opacity:.55;transition:opacity .25s;animation:nodeIn .8s ease both;font-family:var(--mono)}
+  .neo-sat:hover{opacity:1;z-index:6}
+  .ns-c{width:17px;height:17px;border-radius:50%;border:1px solid rgba(190,205,235,.45);display:flex;align-items:center;justify-content:center;font-size:7.5px;color:#aeb8d0;background:rgba(10,12,20,.8)}
+  .ns-l{font-size:6.5px;letter-spacing:.8px;color:#6b7690;text-transform:uppercase;max-width:76px;text-align:center;line-height:1.3}
 
   /* Botón primario con barrido al hover */
   .btn:not(.btn-ghost){position:relative;overflow:hidden}
@@ -613,6 +654,10 @@
           </div>
           <div class="neo-drawer" id="neoDrawer" aria-hidden="true"></div>
         </div>
+      </section>
+
+      <section id="tab-personas" class="tabsec hidden">
+        <div class="prs" id="prsWrap"><div class="card empty">Cargando personas…</div></div>
       </section>
 
       <section id="tab-resumen" class="tabsec">
@@ -825,6 +870,7 @@
 
       <!-- PIPELINE -->
       <section id="tab-pipeline" class="tabsec hidden">
+        <div class="fz" id="funnelViz"></div>
         <div class="kpi-row" id="pipeKpis"></div>
         <div class="panel" style="margin-bottom:18px">
           <div style="display:flex;justify-content:space-between;align-items:center">
@@ -1117,6 +1163,7 @@ const NAV = [
   {g:'SISTEMA', id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
   {g:'SISTEMA', id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
   {g:'SISTEMA', id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
+  {g:'PERSONAS', id:'personas', label:'Personas', sub:'Quién opera el OS: pilares por sector, agentes que lo sostienen y las métricas que importan.'},
 ];
 
 async function api(path, opts={}){
@@ -1165,6 +1212,7 @@ function go(tab){
 function loadTab(tab){
   if(tab==='resumen') loadOverview();
   if(tab==='departamentos') loadDepartamentos();
+  if(tab==='personas') loadPersonas();
   if(tab==='finanzas') loadFinanzas();
   if(tab==='publicaciones') loadPublicaciones();
   if(tab==='ads') loadAds();
@@ -1867,10 +1915,22 @@ function renderNeo(deps){
   el('neoCore').style.display='';
   el('neoStage').style.removeProperty('--amb');
   const n=deps.length||1, cx=50, cy=48, Rx=38, Ry=39;
+  // posición de cada agente-satélite (tenue, alrededor de su depto — ref img#3)
+  const sats=[];
+  deps.forEach((dep,i)=>{
+    const base=-90+i*(360/n), ags=dep.agents||[], k=ags.length;
+    ags.forEach((ag,j)=>{
+      const off=(j-(k-1)/2)*Math.min(11, 40/Math.max(k,1));
+      const a=(base+off)*Math.PI/180;
+      sats.push({x:cx+(Rx+8.5)*Math.cos(a), y:cy+(Ry+8.5)*Math.sin(a),
+                 dx:cx+Rx*Math.cos(base*Math.PI/180), dy:cy+Ry*Math.sin(base*Math.PI/180), ag});
+    });
+  });
   links.innerHTML = deps.map((dep,i)=>{
     const a=(-90+i*(360/n))*Math.PI/180, x=cx+Rx*Math.cos(a), y=cy+Ry*Math.sin(a);
     return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(2)}" y2="${y.toFixed(2)}" stroke="${esc(dep.color||'#ff8a3d')}" class="neo-link" style="--d:${(i*0.4).toFixed(2)}s"/>`;
-  }).join('');
+  }).join('')
+  + sats.map(s=>`<line x1="${s.dx.toFixed(1)}" y1="${s.dy.toFixed(1)}" x2="${s.x.toFixed(1)}" y2="${s.y.toFixed(1)}" stroke="#aebbdc" stroke-width=".12" opacity=".14"/>`).join('');
   // anillos fantasma decorativos entre los deptos + puntos sueltos (ref img#3)
   let ghosts='';
   for(let i=0;i<n;i++){
@@ -1881,7 +1941,10 @@ function renderNeo(deps){
     const a2=(-70+i*(360/n))*Math.PI/180;
     ghosts+=`<span class="neo-gdot" style="left:${(cx+(Rx-9)*Math.cos(a2)).toFixed(1)}%;top:${(cy+(Ry-9)*Math.sin(a2)).toFixed(1)}%"></span>`;
   }
-  nodes.innerHTML = ghosts + deps.map((dep,i)=>{
+  nodes.innerHTML = ghosts
+  + sats.map((s,i)=>`<button class="neo-sat" style="left:${s.x.toFixed(1)}%;top:${s.y.toFixed(1)}%;animation-delay:${(0.3+i*0.02).toFixed(2)}s" onclick="agentDetail('${s.ag.name}')" title="${esc(s.ag.description||'')}">
+      <span class="ns-c">${esc((s.ag.name||'?')[0].toUpperCase())}</span><span class="ns-l">${esc((s.ag.name||'').replace(/_/g,' '))}</span></button>`).join('')
+  + deps.map((dep,i)=>{
     const a=(-90+i*(360/n))*Math.PI/180, x=cx+Rx*Math.cos(a), y=cy+Ry*Math.sin(a);
     const live=(dep.agents||[]).filter(z=>z.has_output&&z.today).length;
     return `<button class="neo-node" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--dept:${esc(dep.color||'#ff8a3d')};--in:${(i*0.07).toFixed(2)}s" data-i="${i}" title="${esc(dep.label)}">
@@ -1963,6 +2026,86 @@ function renderDeptTree(dep){
     + `<button class="tree-brain" style="left:${BX}%;top:${BY}%;--dept:${esc(col)}" onclick="openBrain()" title="Abrir el cerebro">
          <span class="tb-circ">${SVG_PERSON}</span><span class="tb-l">${esc(dep.label)}</span></button>`
     + `<button class="tree-back" onclick="backToRadial()">◀ volver al cerebro</button>`;
+}
+/* ═══ FUNNEL timeline glow (ref img#6) — data real del pipeline ═══ */
+function funnelViz(counts){
+  const stages=[['nuevo','PRIMER TOQUE'],['contactado','CONTACTADO'],['respondió','RESPONDIÓ'],['reunión','REUNIÓN'],['propuesta','PROPUESTA'],['cerrado','CONVERTIDO']];
+  const st=stages.filter(s=>(counts[s[0]]||0)>0 || ['nuevo','contactado','respondió'].includes(s[0]));
+  if(!st.length) return '';
+  const total=counts.total||0, closed=counts['cerrado']||0;
+  let prev=null;
+  const cells=st.map(([k,l])=>{
+    const v=counts[k]||0;
+    const pct=(prev===null||prev===0)?null:Math.round(v/prev*1000)/10;
+    prev=v;
+    return `<div class="fz-st"><span class="fz-lbl">${l}</span><span class="fz-node"></span>
+      <span class="fz-n">${v}</span>${pct!==null?`<span class="fz-pct">· ${pct}%</span>`:'<span class="fz-pct">&nbsp;</span>'}</div>`;
+  }).join('');
+  const marks=[18,38,58,78].map(p=>`<i style="left:${p}%"></i>`).join('');
+  return `<div class="fz-title">FUNNEL — DEL LEAD AL CLIENTE</div>
+    <span class="fz-conv">${total?('CONVERSIÓN GLOBAL '+(Math.round(closed/total*1000)/10)+'%'):''}</span>
+    <div class="fz-row"><div class="fz-track">${marks}</div>${cells}</div>`;
+}
+/* ═══ PERSONAS (ref img#5) ═══ */
+async function loadPersonas(){
+  const w=el('prsWrap');
+  try{
+    const dres = NEO_DEPS.length?{departments:NEO_DEPS}:await api('/api/departments');
+    const deps=dres.departments||[]; if(!NEO_DEPS.length) NEO_DEPS=deps;
+    const stats=await api('/api/dashboard/stats').catch(()=>null);
+    const eng=(stats&&stats.engine)||{};
+    const live=deps.reduce((a,d)=>a+(d.agents||[]).filter(x=>x.has_output&&x.today).length,0);
+    const nag=deps.reduce((a,d)=>a+(d.agents||[]).length,0);
+    const pillars=deps.map(d=>`<div class="prs-pillar" style="--pc:${esc(d.color||'#2fd4c4')}"><b>${d.icon||''} ${esc(d.label)}</b>
+      <div class="prs-chips">${(d.agents||[]).map(a=>`<span class="prs-chip" onclick="agentDetail('${a.name}')">${esc((a.name||'').replace(/_/g,' '))}</span>`).join('')}</div></div>`).join('');
+    const M=[['MRR retenido','US$ '+(eng.mrr_usd||0)],['Clientes activos',eng.clients_active??'—'],
+      ['Leads en pipeline',eng.leads??'—'],['Objetivos growth abiertos',(stats&&stats.growth_open)??'—'],
+      ['Agentes activos hoy',live+' / '+nag]];
+    w.innerHTML=`<div class="prs-left">
+        <div class="prs-h"><span class="prs-tab">◆ Dueño de agencia</span><span class="prs-badge">persona operativa · ${nag} agentes</span></div>
+        <div class="prs-desc">Maneja una agencia unipersonal con ${nag} agentes de IA sin que se le caiga ninguna pelota: ventas, contenido, delivery y finanzas corren solos por departamento; él decide, aprueba lo sensible y cierra clientes. El OS convierte cada corrida en memoria y cada reporte en una decisión.</div>
+        <div class="prs-ns">★ NORTH STAR — <b>MRR RETENIDO</b> (plata que entra y SE QUEDA, no solo la que se gana)</div>
+        <div class="prs-sec">▸ PILARES · ${deps.length}</div>
+        <div class="prs-pills">${pillars}</div>
+        <div class="prs-sec">▸ MÉTRICAS QUE IMPORTAN</div>
+        <div class="prs-metrics">${M.map(([k,v])=>`<div class="prs-m"><span>${k}</span><b>${esc(String(v))}</b></div>`).join('')}</div>
+      </div>
+      <div class="prs-right"><canvas id="prsCv" width="560" height="520"></canvas></div>`;
+    prsGraph(deps);
+  }catch(e){ w.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
+}
+function prsGraph(deps){
+  const cv=el('prsCv'); if(!cv) return;
+  const x=cv.getContext('2d'), W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=185;
+  x.clearRect(0,0,W,H);
+  const T='rgba(47,212,196,', n=deps.length||1;
+  const pos=deps.map((d,i)=>{const a=(-90+i*(360/n))*Math.PI/180;return{x:cx+R*Math.cos(a),y:cy+R*0.86*Math.sin(a),d};});
+  // enlaces centro→pilar + entre vecinos (wireframe)
+  x.shadowColor='#2fd4c4'; x.shadowBlur=6;
+  pos.forEach((p,i)=>{
+    x.strokeStyle=T+'.35)'; x.lineWidth=.7;
+    x.beginPath(); x.moveTo(cx,cy); x.lineTo(p.x,p.y); x.stroke();
+    const q=pos[(i+1)%n];
+    x.strokeStyle=T+'.14)'; x.beginPath(); x.moveTo(p.x,p.y); x.lineTo(q.x,q.y); x.stroke();
+  });
+  // nodos pilar + mini-dots de agentes
+  pos.forEach((p,i)=>{
+    x.fillStyle='#07110f'; x.strokeStyle=T+'.8)'; x.lineWidth=1.1;
+    x.beginPath(); x.arc(p.x,p.y,13,0,6.283); x.fill(); x.stroke();
+    x.fillStyle=T+'.9)'; x.beginPath(); x.arc(p.x,p.y,3.2,0,6.283); x.fill();
+    const k=(p.d.agents||[]).length;
+    for(let j=0;j<k;j++){const a=(j*(360/Math.max(k,1))-90)*Math.PI/180;
+      x.fillStyle=T+'.55)'; x.beginPath(); x.arc(p.x+22*Math.cos(a),p.y+22*Math.sin(a),1.6,0,6.283); x.fill();}
+    x.shadowBlur=0; x.fillStyle='#bfeee6'; x.font='500 8px "JetBrains Mono",monospace'; x.textAlign='center';
+    const lbl=(p.d.label||'').toUpperCase().split(' / ')[0];
+    x.fillText(lbl, p.x, p.y+30); x.shadowBlur=6;
+  });
+  // núcleo DUEÑO
+  x.fillStyle='#04100d'; x.strokeStyle=T+'1)'; x.lineWidth=1.4;
+  x.beginPath(); x.arc(cx,cy,24,0,6.283); x.fill(); x.stroke();
+  x.shadowBlur=14; x.strokeStyle=T+'.5)'; x.beginPath(); x.arc(cx,cy,32,0,6.283); x.stroke();
+  x.shadowBlur=0; x.fillStyle='#d9fbf4'; x.font='700 9px "JetBrains Mono",monospace'; x.textAlign='center';
+  x.fillText('DUEÑO', cx, cy+3);
 }
 function backToRadial(){
   NEO_CUR=-1;
@@ -2378,6 +2521,7 @@ async function loadPipeline(){
   try{
     const [d, bill]=await Promise.all([ api('/api/pipeline'), api('/api/finance/summary').catch(()=>null) ]);
     CACHE.pipeline=d;
+    try{ el('funnelViz').innerHTML = funnelViz(d.counts||{}); }catch(e){}
     setNavCount('pipeline', d.counts.total||null);
     const order=['nuevo','contactado','respondió','reunión','propuesta','cerrado','perdido','sin_respuesta'];
     const keys=Object.keys(d.counts).filter(k=>k!=='total');
