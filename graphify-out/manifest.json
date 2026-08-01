@@ -1845,8 +1845,8 @@
     "semantic_hash": ""
   },
   "data/brain-graph.json": {
-    "mtime": 1785615641.4786925,
-    "ast_hash": "b048fe7fd662aac299cb3a5ff1af0ac2",
+    "mtime": 1785615760.3262663,
+    "ast_hash": "2f4e4a8dd15dd83db80c098264d9cf82",
     "semantic_hash": ""
   },
   "scripts/brain_sync.py": {
@@ -1865,8 +1865,8 @@
     "semantic_hash": ""
   },
   "scripts/test_brain_search.py": {
-    "mtime": 1785615330.213263,
-    "ast_hash": "f4be7ab083377fa228bad710d05cbb0f",
+    "mtime": 1785615779.1440127,
+    "ast_hash": "3348f221ea117564469256e412fe5677",
     "semantic_hash": ""
   }
 }
