@@ -695,9 +695,12 @@
   .nr-lg:hover{color:#dfe6f7}
   .nr-lg i{width:9px;height:9px;border-radius:50%;border:1px solid currentColor;flex:none;font-style:normal}
   .nr-lg.off{opacity:.34}
-  .nr-dir{height:186px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;padding-right:3px}
+  .nr-dir{height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;padding-right:3px}
   .nr-dir::-webkit-scrollbar{width:3px}.nr-dir::-webkit-scrollbar-thumb{background:rgba(255,138,61,.3)}
-  .nr-d{font-size:8px;line-height:1.5;color:#8b93ab;padding:3px 4px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+  .nr-d{display:flex;align-items:center;gap:6px;font-size:9.5px;line-height:1.35;color:#aeb8d0;padding:3px 5px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);text-transform:capitalize;width:100%}
+  .nr-d i{width:5px;height:5px;border-radius:50%;flex:none;font-style:normal}
+  .nr-dh{font-size:7px;letter-spacing:1.6px;text-transform:uppercase;margin:7px 0 3px;opacity:.85}
+  .nr-dh:first-child{margin-top:0}
   .nr-d:hover{background:rgba(255,255,255,.05);color:#fff}
   .neo-stage.tree-mode .neo-rail{display:none}
   .neo-stage.hide-sat .neo-sat,.neo-stage.hide-sat .orb-a{display:none}
@@ -2242,8 +2245,10 @@ function renderRail(deps){
       ${NR_LEG.map(([k,l,c])=>`<div class="nr-lg${st.classList.contains('hide-'+k)?' off':''}" data-k="${k}" style="color:${c}"><i></i><span style="color:inherit">${l}</span></div>`).join('')}
     </div>
     <div class="nr-box"><div class="nr-h">DIRECTORY</div>
-      <div class="nr-dir">${deps.flatMap(d=>(d.agents||[]).map(a=>
-        `<button class="nr-d" style="color:${esc(d.color)}" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}">▸ ${esc((a.name||'').replace(/_/g,' '))}</button>`)).join('')}</div>
+      <div class="nr-dir">${deps.map(d=>
+        `<div class="nr-dh" style="color:${esc(d.color)}">${esc((d.label||'').split(' / ')[0])}</div>`
+        +(d.agents||[]).map(a=>`<button class="nr-d" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}"><i style="background:${esc(d.color)}"></i>${esc((a.name||'').replace(/_/g,' '))}</button>`).join('')
+      ).join('')}</div>
     </div>`;
   r.querySelectorAll('.nr-lg').forEach(b=>b.addEventListener('click',()=>{
     st.classList.toggle('hide-'+b.dataset.k); b.classList.toggle('off');
