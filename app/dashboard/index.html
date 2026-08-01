@@ -544,8 +544,9 @@
   .fzc:hover{color:#d8f6fa}
   .fz-sep{color:#2f4a52;margin:0 3px}
   .fzs{font-family:var(--mono);font-size:8px;letter-spacing:1px;color:#4d7680}
-  .fz-track b{position:absolute;top:-2.5px;left:var(--sx);width:3.5px;height:3.5px;border-radius:50%;background:#7ff0ff;box-shadow:0 0 8px #19d3e0;animation:fzFlow 6.6s linear infinite;opacity:0}
-  @keyframes fzFlow{0%{opacity:0;transform:translateX(0)}6%{opacity:1}94%{opacity:1}100%{opacity:0;transform:translateX(320px)}}
+  .fz-track b{position:absolute;top:50%;left:var(--sx);transform:translateY(-50%);border-radius:50%;background:radial-gradient(circle at 40% 35%,#bffaff,#19d3e0 60%,rgba(25,211,224,.25));box-shadow:0 0 12px rgba(25,211,224,.85),inset 0 0 3px rgba(255,255,255,.6);animation:fzFlow 7.4s linear infinite;opacity:0}
+  .fz-node i{position:absolute;width:4px;height:4px;border-radius:50%;background:#8ff2ff;box-shadow:0 0 7px #19d3e0;transform:translate(-50%,-50%);font-style:normal;animation:fzSeed 2.8s ease-in-out infinite}
+  @keyframes fzFlow{0%{opacity:0;transform:translate(0,-50%) scale(.6)}8%{opacity:1;transform:translate(30px,-50%) scale(1)}92%{opacity:1}100%{opacity:0;transform:translate(300px,-50%) scale(.7)}}
   .fz-seed{position:absolute;width:7px;height:7px;border-radius:50%;border:1.5px solid #4fe3f2;box-shadow:0 0 10px rgba(25,211,224,.7);animation:fzSeed 3.2s ease-in-out infinite}
   @keyframes fzSeed{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
   .fz-leg{display:flex;gap:16px;flex-wrap:wrap;margin-top:20px;padding-top:11px;border-top:1px solid rgba(120,220,235,.12);font-family:var(--mono);font-size:7.5px;letter-spacing:1.1px;color:#4d7680;text-transform:uppercase}
@@ -2518,11 +2519,15 @@ function funnelViz(counts){
     const v=counts[k]||0;
     const pct=(prev===null||prev===0)?null:Math.round(v/prev*1000)/10;
     prev=v;
-    return `<div class="fz-st"><span class="fz-lbl">${l}</span><span class="fz-node"></span>
+    const inner=Math.min(5,Math.max(0,Math.round(Math.log2(v+1))));
+    const seeds=[[0,0],[-6,4],[5,-5],[-4,-6],[7,3]].slice(0,inner)
+      .map(([dx,dy],j)=>`<i style="left:calc(50% + ${dx}px);top:calc(50% + ${dy}px);animation-delay:${(j*0.4).toFixed(1)}s"></i>`).join('');
+    return `<div class="fz-st"><span class="fz-lbl">${l}</span><span class="fz-node">${seeds}</span>
       <span class="fz-n">${v}</span>${pct!==null?`<span class="fz-pct">· ${pct}%</span>`:'<span class="fz-pct">&nbsp;</span>'}</div>`;
   }).join('');
   const marks=[18,38,58,78].map(p=>`<i style="left:${p}%"></i>`).join('');
-  const parts=[8,26,44,62,80,92].map((p,i)=>`<b style="--sx:${p}%;animation-delay:${(i*1.1).toFixed(1)}s"></b>`).join('');
+  const parts=[[10,7],[24,10],[38,6],[52,9],[66,7],[82,11]].map(([p,sz],i)=>
+    `<b style="--sx:${p}%;width:${sz}px;height:${sz}px;animation-delay:${(i*1.05).toFixed(2)}s"></b>`).join('');
   const seeds=[[-2,-14],[3,-8],[-6,2],[1,9],[-3,15],[5,4]].map(([dx,dy],i)=>
     `<span class="fz-seed" style="left:${(2.5+dx*0.35).toFixed(1)}%;top:calc(56px + ${dy}px);animation-delay:${(i*0.35).toFixed(2)}s"></span>`).join('');
   return `<div class="fz-title">FUNNEL — DEL LEAD AL CLIENTE</div>
