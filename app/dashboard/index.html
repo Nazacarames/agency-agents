@@ -265,7 +265,16 @@
   .nav-item.active{background:linear-gradient(120deg,rgba(43,91,232,.4),rgba(59,130,246,.16));box-shadow:inset 0 0 0 1px rgba(91,140,247,.45),0 4px 16px rgba(43,91,232,.2)}
   /* Panel OS — departamentos */
   .dept-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-  .dept-col{border:1px solid var(--line);border-top:3px solid var(--dept,#2563eb);border-radius:14px;background:rgba(255,255,255,.02);padding:14px;display:flex;flex-direction:column}
+  .dept-col{border:1px solid var(--line);border-top:3px solid var(--dept,#2563eb);border-radius:14px;background:rgba(255,255,255,.02);padding:14px;display:flex;flex-direction:column;animation:deptIn .45s cubic-bezier(.2,.7,.2,1) both}
+  .dept-col:nth-child(2){animation-delay:.05s}.dept-col:nth-child(3){animation-delay:.1s}.dept-col:nth-child(4){animation-delay:.15s}.dept-col:nth-child(5){animation-delay:.2s}.dept-col:nth-child(6){animation-delay:.25s}.dept-col:nth-child(7){animation-delay:.3s}
+  @keyframes deptIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+  /* Skeletons */
+  .skel{display:block;border-radius:7px;background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 37%,rgba(255,255,255,.04) 63%);background-size:400% 100%;animation:shimmer 1.4s ease infinite}
+  @keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+  .skel-col{animation:none}
+  .skel-icon{width:38px;height:38px;border-radius:10px;flex:none}
+  .skel-line{height:12px;margin:3px 0}
+  .skel-agent{height:64px;border-radius:11px}
   .dept-head{display:flex;align-items:center;gap:11px;margin-bottom:12px}
   .dept-icon{width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:10px;background:color-mix(in srgb,var(--dept,#2563eb) 22%,transparent)}
   .dept-title{font-weight:800;font-size:15px;color:var(--navy);letter-spacing:-.2px}
@@ -847,8 +856,8 @@ const ICONS = {
   tendencias: ico('<path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/>'),
 };
 const NAV = [
-  {id:'resumen', label:'Resumen', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
   {id:'departamentos', label:'Departamentos', sub:'La empresa por sectores: cada departamento con sus agentes. Corrélos y mirá su último output.'},
+  {id:'resumen', label:'Resumen', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
   {id:'finanzas', label:'Finanzas', sub:'Ingresos, gastos y ganancia. Tipos de cambio y facturación por cliente.'},
   {id:'clientes', label:'Clientes', sub:'Facturación, servicios, estado y memoria de cada cliente.'},
   {id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound. Convertí a cliente.'},
@@ -1562,6 +1571,9 @@ function agentCard(a){
 }
 async function loadDepartamentos(){
   const board = el('deptBoard');
+  board.innerHTML = Array.from({length:6}).map(()=>`<div class="dept-col skel-col">
+    <div class="dept-head"><span class="skel skel-icon"></span><div style="flex:1"><span class="skel skel-line" style="width:55%"></span><span class="skel skel-line" style="width:85%;height:8px"></span></div></div>
+    <div class="dept-agents">${'<div class="skel skel-agent"></div>'.repeat(2)}</div></div>`).join('');
   try{
     const d = await api('/api/departments');
     const deps = d.departments||[];
@@ -2610,7 +2622,7 @@ function closeModal(){ el('modalRoot').innerHTML=''; }
 
 function bootApp(){
   el('whoami').textContent='conectado · '+location.hostname;
-  buildNav(); go('resumen');
+  buildNav(); go('departamentos');
 }
 el('loginBtn').addEventListener('click', doLogin);
 el('key').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
