@@ -1241,16 +1241,23 @@ class AgentNoteBody(BaseModel):
 
 @app.post("/api/agent-notes")
 async def api_leave_agent_note(body: AgentNoteBody, request: Request):
-    """El operador deja una nota a un agente (llega en su próxima corrida como
-    'nota del dueño' — pisa/corrige lo que haya dejado la mesa u otro agente)."""
+    """El operador deja una nota a un agente —o a un DEPARTAMENTO entero— (llega
+    en su próxima corrida como 'nota del dueño' — pisa/corrige lo que haya dejado
+    la mesa u otro agente)."""
     _verify_webhook_secret(request)
-    if body.to not in list_agents():
-        raise HTTPException(status_code=404, detail=f"agente desconocido: {body.to}")
+    from .agents.departments import DEPARTMENTS
+    targets = ([body.to] if body.to in list_agents()
+               else DEPARTMENTS.get(body.to, {}).get("agents", []))
+    if not targets:
+        raise HTTPException(status_code=404, detail=f"destinatario desconocido: {body.to}")
     if len((body.note or "").strip()) < 10:
         raise HTTPException(status_code=400, detail="nota demasiado corta")
     from .integrations import agent_inbox
-    ok = await run_in_threadpool(agent_inbox.leave, "dueño", body.to, body.note.strip())
-    return {"ok": ok}
+    sent = 0
+    for t in targets:
+        if await run_in_threadpool(agent_inbox.leave, "dueño", t, body.note.strip()):
+            sent += 1
+    return {"ok": sent > 0, "sent": sent}
 
 
 # ── Lecciones por agente (loop de mejora continua) ──

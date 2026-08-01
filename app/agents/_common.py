@@ -749,3 +749,31 @@ def upstream_handoff_block(*agent_names: str, titulo: str = "Insumo de un agente
         "USÁ este material como insumo real: anclá tu entregable en los datos/dolores "
         "concretos de arriba (personalización N3), no en generalidades.\n"
     )
+
+
+def team_brief(mates, max_mates: int = 4, max_chars: int = 420,
+               fresh_hours: int = 36) -> str:
+    """Qué produjeron recién los compañeros de departamento de un agente.
+
+    Es lo que convierte un departamento en equipo y no en agentes sueltos:
+    todo Marketing ve el ángulo que eligió el estratega, la pieza que armó el
+    creador y el QA del auditor sin que nadie cablee el par a mano. Devuelve ""
+    si nadie del equipo corrió reciente (disco efímero incluido)."""
+    import time
+    from pathlib import Path
+    cutoff = time.time() - fresh_hours * 3600
+    lines = []
+    for mate in mates:
+        if len(lines) >= max_mates:
+            break
+        _, path, txt = read_latest_artifact(mate, max_chars=max_chars)
+        if not txt or not path:
+            continue
+        try:
+            if Path(path).stat().st_mtime < cutoff:
+                continue
+        except Exception:
+            continue
+        body = " ".join(l.strip() for l in txt.splitlines() if l.strip())[:max_chars]
+        lines.append(f"- **{mate}**: {body}…")
+    return "\n".join(lines)

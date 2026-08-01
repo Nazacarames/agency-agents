@@ -146,6 +146,15 @@ def department_of(agent_name: str) -> str:
     return "sin_departamento"
 
 
+def teammates_of(agent_name: str) -> List[str]:
+    """Compañeros del MISMO departamento (sin incluirlo a él).
+
+    Base de la colaboración departamental: cada agente sabe con quién comparte
+    sector, ve lo que produjeron y puede dejarle una nota a todo el equipo."""
+    dept = DEPARTMENTS.get(department_of(agent_name))
+    return [a for a in dept["agents"] if a != agent_name] if dept else []
+
+
 def all_department_agents() -> List[str]:
     """Todos los agentes mapeados a algún departamento."""
     out: List[str] = []

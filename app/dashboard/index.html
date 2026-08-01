@@ -3182,7 +3182,11 @@ async function loadMemory(){
   }catch(e){ el('memList').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
   // agentes para los selects de lecciones y notas
   const sel=el('lAgent');
-  if(!sel.options.length){ try{ const d=CACHE.agents||await api('/api/agents'); const opts=d.agents.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replace(/_/g,' '))+'</option>').join(''); sel.innerHTML=opts; el('nAgent').innerHTML=opts; }catch(e){} }
+  if(!sel.options.length){ try{ const d=CACHE.agents||await api('/api/agents'); const opts=d.agents.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replace(/_/g,' '))+'</option>').join(''); sel.innerHTML=opts;
+    // El buzón acepta un DEPARTAMENTO entero: una nota le llega a todo el sector.
+    let deps=NEO_DEPS; if(!deps.length){ try{ deps=(await api('/api/departments')).departments||[]; NEO_DEPS=deps; }catch(e){ deps=[]; } }
+    el('nAgent').innerHTML=(deps.length?'<optgroup label="Departamentos (le llega a todo el sector)">'+deps.map(x=>'<option value="'+esc(x.id)+'">'+esc((x.icon||'')+' '+x.label)+' · '+(x.agents||[]).length+' agentes</option>').join('')+'</optgroup>':'')
+      +'<optgroup label="Agentes">'+opts+'</optgroup>'; }catch(e){} }
   loadGrowth(); loadLessons(); loadNotes();
 }
 function renderMemory(items){
@@ -3268,8 +3272,8 @@ async function loadNotes(){
 el('nBtn').addEventListener('click', async ()=>{
   const to=el('nAgent').value, note=el('nNote').value.trim();
   if(note.length<10){ toast('Escribí la nota (mín. 10 caracteres)'); return; }
-  try{ await api('/api/agent-notes',{method:'POST',body:JSON.stringify({to,note})});
-    el('nNote').value=''; toast('✅ Nota dejada — le llega en su próxima corrida'); loadNotes(); }
+  try{ const r=await api('/api/agent-notes',{method:'POST',body:JSON.stringify({to,note})});
+    el('nNote').value=''; toast('✅ Nota dejada'+((r.sent||1)>1?' a '+r.sent+' agentes':'')+' — le llega en su próxima corrida'); loadNotes(); }
   catch(e){ toast('Error: '+e.message); }
 });
 

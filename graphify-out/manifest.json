@@ -1,0 +1,1817 @@
+{
+  ".claude/skills/ad-creative/evals/evals.json": {
+    "mtime": 1785113677.1493244,
+    "ast_hash": "9224e34cea5c5bab8878f74ee44b50d6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/evals/evals.json": {
+    "mtime": 1785113677.209533,
+    "ast_hash": "6239df528065c231d786b772549ebf9c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ai-seo/evals/evals.json": {
+    "mtime": 1785113677.272752,
+    "ast_hash": "8a1b4b5db32e877ab88568781454e3c6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/competitors/evals/evals.json": {
+    "mtime": 1785113677.332961,
+    "ast_hash": "101bd28cf664f4eb9e939fb7e1972e77",
+    "semantic_hash": ""
+  },
+  ".claude/skills/copywriting/evals/evals.json": {
+    "mtime": 1783090929.2866807,
+    "ast_hash": "c7f1fcb95b9bf134682d00d0fcdd22e2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cro/evals/evals.json": {
+    "mtime": 1783090929.3037782,
+    "ast_hash": "64a8cb9d464f5e21a01bcae3ebad7a60",
+    "semantic_hash": ""
+  },
+  ".claude/skills/customer-research/evals/evals.json": {
+    "mtime": 1785113785.838179,
+    "ast_hash": "03b6f8833a24b377069f0c3b46fee0ca",
+    "semantic_hash": ""
+  },
+  ".claude/skills/pricing/evals/evals.json": {
+    "mtime": 1785113785.9475586,
+    "ast_hash": "a642af17acae5db4817712635ec8159c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/evals/evals.json": {
+    "mtime": 1785113677.4935174,
+    "ast_hash": "6f778c9db22e2a21dbc5448497bb7dae",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/scripts/runner_test.sh": {
+    "mtime": 1785113909.0182078,
+    "ast_hash": "1b1a43e373fc588d56e8366df3ea0d41",
+    "semantic_hash": ""
+  },
+  ".claude/skills/schema/evals/evals.json": {
+    "mtime": 1783090929.3329113,
+    "ast_hash": "b65037108b0ab1dcb6440e62c66e63bc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/seo-audit/evals/evals.json": {
+    "mtime": 1783090929.313813,
+    "ast_hash": "48b9d32264f29f64cef6654b5e56fa02",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/evals/evals.json": {
+    "mtime": 1785113677.3931696,
+    "ast_hash": "e3c2b1a0919dc9a939da947a378487bc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ui-ux-pro-max/data/_sync_all.py": {
+    "mtime": 1783090929.3600051,
+    "ast_hash": "ce3fd6613eee315556671046b7a76a6f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ui-ux-pro-max/scripts/core.py": {
+    "mtime": 1783090929.3710434,
+    "ast_hash": "a5c97e7b4effd9bef5e7ea45527d0eee",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ui-ux-pro-max/scripts/design_system.py": {
+    "mtime": 1783090929.3720472,
+    "ast_hash": "2cfe52a847b157f3b613cfc56f514891",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ui-ux-pro-max/scripts/search.py": {
+    "mtime": 1783090929.3720472,
+    "ast_hash": "5554b288de0aa25789e28bc4be94fd58",
+    "semantic_hash": ""
+  },
+  "app/__init__.py": {
+    "mtime": 1781316242.1228247,
+    "ast_hash": "e9a0663e214308ab695be34db244ded1",
+    "semantic_hash": ""
+  },
+  "app/agents/__init__.py": {
+    "mtime": 1780609685.9782,
+    "ast_hash": "b916db9008ef60527f25cf598d6570f5",
+    "semantic_hash": ""
+  },
+  "app/agents/_common.py": {
+    "mtime": 1784650967.9861565,
+    "ast_hash": "654a3b239a8e92c67d136cad304a7e48",
+    "semantic_hash": ""
+  },
+  "app/agents/base.py": {
+    "mtime": 1785525675.3951485,
+    "ast_hash": "ba1de3a36fbd1053edcbb1bb6dd9e5e8",
+    "semantic_hash": ""
+  },
+  "app/agents/chief_of_staff.py": {
+    "mtime": 1785030513.911497,
+    "ast_hash": "dc7d2c033800628c137f366dedc55465",
+    "semantic_hash": ""
+  },
+  "app/agents/content_creator.py": {
+    "mtime": 1785129236.9457684,
+    "ast_hash": "ccf976455807a84ada587ee2c36c15ed",
+    "semantic_hash": ""
+  },
+  "app/agents/creative_strategist.py": {
+    "mtime": 1783542939.1355512,
+    "ast_hash": "72f2efe29af926f5977e104660e3dcb3",
+    "semantic_hash": ""
+  },
+  "app/agents/growth_hacker.py": {
+    "mtime": 1784050180.6679196,
+    "ast_hash": "93adffa872c508c9361fb2c07330988b",
+    "semantic_hash": ""
+  },
+  "app/agents/inbox_assistant.py": {
+    "mtime": 1784912143.3593156,
+    "ast_hash": "3a1d328474dd5f4a90428b803a82de1f",
+    "semantic_hash": ""
+  },
+  "app/agents/leadhunter.py": {
+    "mtime": 1784685592.0545468,
+    "ast_hash": "f36fc57a8d35a1293ccab04b86cb8067",
+    "semantic_hash": ""
+  },
+  "app/agents/leadhunter_parser.py": {
+    "mtime": 1783746505.562682,
+    "ast_hash": "9c44123a6c05dcf81ed6f7d4c2105cd4",
+    "semantic_hash": ""
+  },
+  "app/agents/media_auditor.py": {
+    "mtime": 1783130797.4403162,
+    "ast_hash": "b7564de67cff1b6156c8e6e99cfd8747",
+    "semantic_hash": ""
+  },
+  "app/agents/meeting_prep.py": {
+    "mtime": 1785127530.4800212,
+    "ast_hash": "7ce0bef36ad8092c4f003f575021a71d",
+    "semantic_hash": ""
+  },
+  "app/agents/outbound.py": {
+    "mtime": 1785113794.825345,
+    "ast_hash": "be177bddd2a66c3139e674d17a9c3584",
+    "semantic_hash": ""
+  },
+  "app/agents/registry.py": {
+    "mtime": 1783544776.2896638,
+    "ast_hash": "932c2eafcb252e4736ab00aa9f55e79a",
+    "semantic_hash": ""
+  },
+  "app/agents/seo_specialist.py": {
+    "mtime": 1783296906.6419404,
+    "ast_hash": "6ca0bbc059a7abaed65d498597fbc4f7",
+    "semantic_hash": ""
+  },
+  "app/agents/social_media.py": {
+    "mtime": 1785129245.164521,
+    "ast_hash": "d8c09d4557613514d5a1da8d25309d56",
+    "semantic_hash": ""
+  },
+  "app/agents/tiktok_creator.py": {
+    "mtime": 1785539730.3525355,
+    "ast_hash": "80bca6127d75721772a0e6a6bcc0a246",
+    "semantic_hash": ""
+  },
+  "app/agents/web_auditor.py": {
+    "mtime": 1783090941.9113448,
+    "ast_hash": "15d4bba599e3412a524542157f5e24eb",
+    "semantic_hash": ""
+  },
+  "app/agents/web_optimizer.py": {
+    "mtime": 1784650881.5179753,
+    "ast_hash": "e5e9b1c44092809c79542c62ac329730",
+    "semantic_hash": ""
+  },
+  "app/clients/__init__.py": {
+    "mtime": 1780609635.33179,
+    "ast_hash": "0f6bf10e27d55baaf933e485b2f21646",
+    "semantic_hash": ""
+  },
+  "app/clients/claude_code.py": {
+    "mtime": 1783699878.370484,
+    "ast_hash": "1ce89e30cb0edf9912a67f4218e95b44",
+    "semantic_hash": ""
+  },
+  "app/clients/discord.py": {
+    "mtime": 1782318587.5798485,
+    "ast_hash": "515c122233e892564e20e607219c644e",
+    "semantic_hash": ""
+  },
+  "app/clients/hermes.py": {
+    "mtime": 1784665970.463662,
+    "ast_hash": "ef8e0a72ff0e63284a50251655e0bf69",
+    "semantic_hash": ""
+  },
+  "app/clients/minimax.py": {
+    "mtime": 1781202578.9658518,
+    "ast_hash": "bda06f50671cf443803a55d4e6726749",
+    "semantic_hash": ""
+  },
+  "app/clients/nvidia.py": {
+    "mtime": 1783130696.2476723,
+    "ast_hash": "bd057207327222e61dd2fd95f80ea991",
+    "semantic_hash": ""
+  },
+  "app/clients/opencode.py": {
+    "mtime": 1783700569.7840729,
+    "ast_hash": "b7f6ff6a13867e9cefbea475a2f60aa7",
+    "semantic_hash": ""
+  },
+  "app/clients/tokenrouter.py": {
+    "mtime": 1785525661.7929845,
+    "ast_hash": "b50c70a80a2f72e8b96cd590feed890d",
+    "semantic_hash": ""
+  },
+  "app/config.py": {
+    "mtime": 1785525648.3159819,
+    "ast_hash": "c5d8c8b469c67977513782f69c4c9c83",
+    "semantic_hash": ""
+  },
+  "app/container.py": {
+    "mtime": 1783700249.3107488,
+    "ast_hash": "f732ace68e1661c67d24ea425725f29c",
+    "semantic_hash": ""
+  },
+  "app/integrations/__init__.py": {
+    "mtime": 1781042046.335926,
+    "ast_hash": "c7645357429c43ff1278b6573dd2f64c",
+    "semantic_hash": ""
+  },
+  "app/integrations/ads_store.py": {
+    "mtime": 1782434794.5853584,
+    "ast_hash": "9fcc4b42be40ef6076b0eeb1dcc059ad",
+    "semantic_hash": ""
+  },
+  "app/integrations/agent_inbox.py": {
+    "mtime": 1783701828.8629725,
+    "ast_hash": "c989f1d86fd01425431d21589e84046f",
+    "semantic_hash": ""
+  },
+  "app/integrations/calendar_client.py": {
+    "mtime": 1783700213.7530532,
+    "ast_hash": "3bae4607c001c9f70633426e75c7c3d3",
+    "semantic_hash": ""
+  },
+  "app/integrations/ceo_planner.py": {
+    "mtime": 1785013398.564036,
+    "ast_hash": "2aa46e8e4a35f6c492327c37ea3de456",
+    "semantic_hash": ""
+  },
+  "app/integrations/chat_mockup.py": {
+    "mtime": 1782958833.0566235,
+    "ast_hash": "fba6013f8a794265127cca4d90081240",
+    "semantic_hash": ""
+  },
+  "app/integrations/client_memory_store.py": {
+    "mtime": 1782275159.0905342,
+    "ast_hash": "97f9adac9e11823973bb977aa44487f9",
+    "semantic_hash": ""
+  },
+  "app/integrations/clients_store.py": {
+    "mtime": 1782953487.9289384,
+    "ast_hash": "32dd646ecee0a26c757f53b4d1ea904c",
+    "semantic_hash": ""
+  },
+  "app/integrations/comment_gate.py": {
+    "mtime": 1783957544.4139524,
+    "ast_hash": "7c6e609243a4cd89dfafe9cf78f9d6a1",
+    "semantic_hash": ""
+  },
+  "app/integrations/comment_watch.py": {
+    "mtime": 1783957553.3750548,
+    "ast_hash": "1e7c36e419d831da6818b67321190590",
+    "semantic_hash": ""
+  },
+  "app/integrations/competitor_playbook.py": {
+    "mtime": 1785249089.1140304,
+    "ast_hash": "2fae070cddc38eb2f70788298669729f",
+    "semantic_hash": ""
+  },
+  "app/integrations/competitor_study.py": {
+    "mtime": 1783133071.8034737,
+    "ast_hash": "5505fb0bea68e12cfa546ddd596b0ba7",
+    "semantic_hash": ""
+  },
+  "app/integrations/content_autopsy.py": {
+    "mtime": 1785248882.1667213,
+    "ast_hash": "b41a63249f2a89cb78f572becb8c54aa",
+    "semantic_hash": ""
+  },
+  "app/integrations/content_scout.py": {
+    "mtime": 1783882220.0140555,
+    "ast_hash": "0fb7d75b883750a67f106dd7093e7a41",
+    "semantic_hash": ""
+  },
+  "app/integrations/creative_direction.py": {
+    "mtime": 1785248865.245688,
+    "ast_hash": "9e3b4ac3e7364c2365da652128a2989e",
+    "semantic_hash": ""
+  },
+  "app/integrations/creative_learnings.py": {
+    "mtime": 1784072541.165896,
+    "ast_hash": "51d78c815d0874e4fe78cb16bdee20c9",
+    "semantic_hash": ""
+  },
+  "app/integrations/db.py": {
+    "mtime": 1782275104.2919662,
+    "ast_hash": "67afd8e220e375fc1f312dd2e559228c",
+    "semantic_hash": ""
+  },
+  "app/integrations/discovery_ar.py": {
+    "mtime": 1781042984.6376479,
+    "ast_hash": "5b04fb0633c3dc9eec6d3f725a579aec",
+    "semantic_hash": ""
+  },
+  "app/integrations/drive_client.py": {
+    "mtime": 1783881119.2114875,
+    "ast_hash": "88a945d64e5f52c6acc8a038211ed209",
+    "semantic_hash": ""
+  },
+  "app/integrations/drive_sync.py": {
+    "mtime": 1785253676.7110817,
+    "ast_hash": "ec31e6c01104438c771fbf03bf28fa50",
+    "semantic_hash": ""
+  },
+  "app/integrations/email_guard.py": {
+    "mtime": 1784664208.3998337,
+    "ast_hash": "c6cd402e0e057b3b778b72ae7a3786ef",
+    "semantic_hash": ""
+  },
+  "app/integrations/finance_store.py": {
+    "mtime": 1783011574.6130602,
+    "ast_hash": "83959d48c71d0c04f68986c98cbf514a",
+    "semantic_hash": ""
+  },
+  "app/integrations/fx_store.py": {
+    "mtime": 1782953553.964615,
+    "ast_hash": "4a829e5ea650814defcf32af9c44b95b",
+    "semantic_hash": ""
+  },
+  "app/integrations/gmail_client.py": {
+    "mtime": 1783700191.2267375,
+    "ast_hash": "efda61b7d9737f4e5ac8b08162370e15",
+    "semantic_hash": ""
+  },
+  "app/integrations/hook_vault.py": {
+    "mtime": 1783700086.0039485,
+    "ast_hash": "7cc8c9483c9d43e69435ab29e9bbe925",
+    "semantic_hash": ""
+  },
+  "app/integrations/housekeeping.py": {
+    "mtime": 1785253036.0664182,
+    "ast_hash": "527d6c27fd51d8c1618defb823c0c5d0",
+    "semantic_hash": ""
+  },
+  "app/integrations/ig_discovery.py": {
+    "mtime": 1783882194.0739007,
+    "ast_hash": "2aeac714954c9f868d522a6e9936d047",
+    "semantic_hash": ""
+  },
+  "app/integrations/image_gen.py": {
+    "mtime": 1784072598.937936,
+    "ast_hash": "5e082c9c166f89c2ea253610bf82f61c",
+    "semantic_hash": ""
+  },
+  "app/integrations/image_prompt.py": {
+    "mtime": 1784072613.298503,
+    "ast_hash": "4d2385649b0e788b91933a31ecca80c3",
+    "semantic_hash": ""
+  },
+  "app/integrations/inbox_state.py": {
+    "mtime": 1782937065.5317848,
+    "ast_hash": "3bda5d5a4079bf9bfd66e059031a443a",
+    "semantic_hash": ""
+  },
+  "app/integrations/jsonstore.py": {
+    "mtime": 1783700078.883667,
+    "ast_hash": "7eb2446da76b2843ab1870d43a2dda11",
+    "semantic_hash": ""
+  },
+  "app/integrations/lead_demo.py": {
+    "mtime": 1784352030.2608173,
+    "ast_hash": "fca4b582c969d9ab28c5f13dc69c3617",
+    "semantic_hash": ""
+  },
+  "app/integrations/lead_enrich.py": {
+    "mtime": 1785031201.9548724,
+    "ast_hash": "7ee4360e041932fd3aa32bf535f43d50",
+    "semantic_hash": ""
+  },
+  "app/integrations/leads_store.py": {
+    "mtime": 1784573067.649274,
+    "ast_hash": "8c88e67e81441bf1b911fae89a10d088",
+    "semantic_hash": ""
+  },
+  "app/integrations/learning.py": {
+    "mtime": 1783127872.1552792,
+    "ast_hash": "73d964cfa88c33753e82c6d262e69905",
+    "semantic_hash": ""
+  },
+  "app/integrations/linkedin_client.py": {
+    "mtime": 1783700090.3354335,
+    "ast_hash": "10d76b0bfe550331cc3f1abf58510481",
+    "semantic_hash": ""
+  },
+  "app/integrations/linkedin_leads.py": {
+    "mtime": 1784757887.4962952,
+    "ast_hash": "660bfc11a6e25a22052572726285b3b8",
+    "semantic_hash": ""
+  },
+  "app/integrations/localization.py": {
+    "mtime": 1782318284.2186978,
+    "ast_hash": "2230f6cea9068d18f2ab659d07346260",
+    "semantic_hash": ""
+  },
+  "app/integrations/media_offload.py": {
+    "mtime": 1785253697.7726526,
+    "ast_hash": "9ef21fe189990c958c9306593942d0ef",
+    "semantic_hash": ""
+  },
+  "app/integrations/meetings_store.py": {
+    "mtime": 1782276312.330513,
+    "ast_hash": "85456e5134be7137206b768521e16bcf",
+    "semantic_hash": ""
+  },
+  "app/integrations/memory_store.py": {
+    "mtime": 1782953504.852019,
+    "ast_hash": "c3419a372b0c41e9be7c848041735601",
+    "semantic_hash": ""
+  },
+  "app/integrations/meta_ad_library.py": {
+    "mtime": 1783133025.0397584,
+    "ast_hash": "55235964cce3ee6972dbdbdd390c4aa6",
+    "semantic_hash": ""
+  },
+  "app/integrations/meta_ads.py": {
+    "mtime": 1782436270.5238914,
+    "ast_hash": "b85038b469f6433d797c1230f153f36c",
+    "semantic_hash": ""
+  },
+  "app/integrations/metrics_store.py": {
+    "mtime": 1782953560.4947486,
+    "ast_hash": "d0e9aaf66474da749efb984f28c4cf09",
+    "semantic_hash": ""
+  },
+  "app/integrations/minimax_video.py": {
+    "mtime": 1782660026.4956093,
+    "ast_hash": "5e8db3b98582930edc8d2802fe7a25bd",
+    "semantic_hash": ""
+  },
+  "app/integrations/missions_store.py": {
+    "mtime": 1782318358.359543,
+    "ast_hash": "dda1aa3c7e9352e3f670435835c3fe77",
+    "semantic_hash": ""
+  },
+  "app/integrations/montage_client.py": {
+    "mtime": 1783199009.3068922,
+    "ast_hash": "f9823569a47038201fafb6a5ac1b3f2e",
+    "semantic_hash": ""
+  },
+  "app/integrations/omni_video.py": {
+    "mtime": 1783356135.1948297,
+    "ast_hash": "4533eb035d347f598247d730b0831647",
+    "semantic_hash": ""
+  },
+  "app/integrations/osm_leads.py": {
+    "mtime": 1784686509.14557,
+    "ast_hash": "657346df8694429101d342ad3dc1d136",
+    "semantic_hash": ""
+  },
+  "app/integrations/practice_research.py": {
+    "mtime": 1783746854.3799505,
+    "ast_hash": "af8fcda2920c582e3ddf120184df0cde",
+    "semantic_hash": ""
+  },
+  "app/integrations/publish_queue.py": {
+    "mtime": 1784130849.3501759,
+    "ast_hash": "77372d32903df24d4346566b143874aa",
+    "semantic_hash": ""
+  },
+  "app/integrations/reel_study.py": {
+    "mtime": 1785128532.336061,
+    "ast_hash": "0e2fda97c6b3da4b4a5413e1c2f1d1d1",
+    "semantic_hash": ""
+  },
+  "app/integrations/repo_sync.py": {
+    "mtime": 1781042105.2761693,
+    "ast_hash": "55d6d6b6f87684c3c7adf6865966781f",
+    "semantic_hash": ""
+  },
+  "app/integrations/roundtable.py": {
+    "mtime": 1783745495.4685626,
+    "ast_hash": "d402bd02975a537666fa56ef49fdafb0",
+    "semantic_hash": ""
+  },
+  "app/integrations/search_console.py": {
+    "mtime": 1784610891.106791,
+    "ast_hash": "beb570f719c3918ff7eadbc392b654ff",
+    "semantic_hash": ""
+  },
+  "app/integrations/seo_progress.py": {
+    "mtime": 1784599767.7510717,
+    "ast_hash": "8e61e69e6a9356b46a7f1a950a9bb05d",
+    "semantic_hash": ""
+  },
+  "app/integrations/site_validator.py": {
+    "mtime": 1784663948.9810002,
+    "ast_hash": "e6095a6077b93c0336a1a916c2744666",
+    "semantic_hash": ""
+  },
+  "app/integrations/skills_sync.py": {
+    "mtime": 1784610146.2128944,
+    "ast_hash": "21024247fdbb425654a4ebaa5a8fe158",
+    "semantic_hash": ""
+  },
+  "app/integrations/social_publish.py": {
+    "mtime": 1783011328.3576374,
+    "ast_hash": "39ce7a7c698b6fb5862e2f494627546a",
+    "semantic_hash": ""
+  },
+  "app/integrations/tasks_store.py": {
+    "mtime": 1782953522.611755,
+    "ast_hash": "2be23ef82fb9958c042dd519ba3b8888",
+    "semantic_hash": ""
+  },
+  "app/integrations/text_judge.py": {
+    "mtime": 1785248899.9498334,
+    "ast_hash": "a71bd7202e5dbcd62eb1483311b9b8dc",
+    "semantic_hash": ""
+  },
+  "app/integrations/tiktok_client.py": {
+    "mtime": 1782592532.293341,
+    "ast_hash": "59243e4db954e39c4aa2fd6e83c52ea6",
+    "semantic_hash": ""
+  },
+  "app/integrations/trend_radar.py": {
+    "mtime": 1784043779.6679978,
+    "ast_hash": "0638f0ff4057d986f184bdb0ff9d47d5",
+    "semantic_hash": ""
+  },
+  "app/integrations/trends.py": {
+    "mtime": 1784043612.04776,
+    "ast_hash": "a7d92b648e9e8a91f7c8389998cd90f1",
+    "semantic_hash": ""
+  },
+  "app/integrations/trends_client.py": {
+    "mtime": 1784043634.8592424,
+    "ast_hash": "7020a309145c3ed36472504778267399",
+    "semantic_hash": ""
+  },
+  "app/integrations/ugc_video.py": {
+    "mtime": 1783356154.913455,
+    "ast_hash": "8dc8aeefe392fd22f2e0a6c9f2fb74db",
+    "semantic_hash": ""
+  },
+  "app/integrations/veo_video.py": {
+    "mtime": 1784072674.5426686,
+    "ast_hash": "1199be1a2239f847d64ae4047aa1b09a",
+    "semantic_hash": ""
+  },
+  "app/integrations/vercel_client.py": {
+    "mtime": 1782958968.2063127,
+    "ast_hash": "795e5f57b8efada2bddd6257299dc091",
+    "semantic_hash": ""
+  },
+  "app/integrations/video_assembler.py": {
+    "mtime": 1785129563.5708919,
+    "ast_hash": "ed6c12e4be96071c237a220ce323fb34",
+    "semantic_hash": ""
+  },
+  "app/integrations/vision.py": {
+    "mtime": 1785128441.6017659,
+    "ast_hash": "b6c94c93752c2bf650582c75aa3c2291",
+    "semantic_hash": ""
+  },
+  "app/integrations/watchdog.py": {
+    "mtime": 1785030331.4896388,
+    "ast_hash": "b1288127d551d6f00d3d26f8663777c3",
+    "semantic_hash": ""
+  },
+  "app/integrations/webscraper/adapter.py": {
+    "mtime": 1781040293.4500434,
+    "ast_hash": "dde608c255842ee4fa79fb1a78b15893",
+    "semantic_hash": ""
+  },
+  "app/integrations/youtube_client.py": {
+    "mtime": 1783700231.0141642,
+    "ast_hash": "cffcfde55645f75ac6bbe8f0c2f943f0",
+    "semantic_hash": ""
+  },
+  "app/legal.py": {
+    "mtime": 1782878274.4676497,
+    "ast_hash": "7b4261048b1c254c029060e2fc91f809",
+    "semantic_hash": ""
+  },
+  "app/log.py": {
+    "mtime": 1780609635.33179,
+    "ast_hash": "d201dbfb00cde416f0bf47604c17f1e5",
+    "semantic_hash": ""
+  },
+  "app/main.py": {
+    "mtime": 1785538393.3636296,
+    "ast_hash": "00a11325b330589090f4d2b24285a137",
+    "semantic_hash": ""
+  },
+  "app/scheduler.py": {
+    "mtime": 1785253712.855265,
+    "ast_hash": "e2e0b06cbc183edf0341bc9733a075b5",
+    "semantic_hash": ""
+  },
+  "data/osm-leads-cache.json": {
+    "mtime": 1784665776.504952,
+    "ast_hash": "372e8f2895711f4ec4a4abee2fe4cf4e",
+    "semantic_hash": ""
+  },
+  "opencode.json": {
+    "mtime": 1783700559.1640897,
+    "ast_hash": "7a953dac41b8107b028f012bc130b369",
+    "semantic_hash": ""
+  },
+  "packs/automiq/__init__.py": {
+    "mtime": 1783700506.566594,
+    "ast_hash": "611126bc8102a286b9b78210368cb846",
+    "semantic_hash": ""
+  },
+  "packs/automiq/loader.py": {
+    "mtime": 1783700493.9414072,
+    "ast_hash": "f03e12b95d68e8a04c3cb559d3fff133",
+    "semantic_hash": ""
+  },
+  "packs/automiq/tools/__init__.py": {
+    "mtime": 1781058899.6948867,
+    "ast_hash": "adf065ca7a331ec2684c98317f008d2d",
+    "semantic_hash": ""
+  },
+  "packs/automiq/tools/_http.py": {
+    "mtime": 1784573594.2852066,
+    "ast_hash": "812d3022939134282ff8942599d94b46",
+    "semantic_hash": ""
+  },
+  "packs/automiq/tools/notify_discord.py": {
+    "mtime": 1781058953.6982398,
+    "ast_hash": "ba2d5baabc6710f020c0bd8d33042a72",
+    "semantic_hash": ""
+  },
+  "packs/automiq/tools/scrape_url.py": {
+    "mtime": 1784573630.8697538,
+    "ast_hash": "0a7a86672b884587ec7750cfc0e0d312",
+    "semantic_hash": ""
+  },
+  "packs/automiq/tools/validate_site.py": {
+    "mtime": 1784573636.8885944,
+    "ast_hash": "4f2da3a79f28083aab8087022c8f99f1",
+    "semantic_hash": ""
+  },
+  "packs/automiq/tools/web_search.py": {
+    "mtime": 1784646363.0898879,
+    "ast_hash": "436d1f43edb639a0f2ec2650e1ab7854",
+    "semantic_hash": ""
+  },
+  "pyproject.toml": {
+    "mtime": 1780609938.3980045,
+    "ast_hash": "435e2c9025799d55418ff2f27b6e08fb",
+    "semantic_hash": ""
+  },
+  "scripts/__init__.py": {
+    "mtime": 1780609938.39851,
+    "ast_hash": "6a0977e791f13d1043e169d60991ef2a",
+    "semantic_hash": ""
+  },
+  "scripts/fetch_leadhunter.py": {
+    "mtime": 1781057758.501372,
+    "ast_hash": "9d5e9c3721a6321ca762401c829d3dd9",
+    "semantic_hash": ""
+  },
+  "scripts/get-digest.sh": {
+    "mtime": 1781107015.9036076,
+    "ast_hash": "7c7ab8dac08c16b91f437f657822d985",
+    "semantic_hash": ""
+  },
+  "scripts/gmail_oauth_setup.py": {
+    "mtime": 1783879705.9795783,
+    "ast_hash": "f242b8adbe28984703b6987435282da7",
+    "semantic_hash": ""
+  },
+  "scripts/launcher.py": {
+    "mtime": 1781059124.60121,
+    "ast_hash": "b5e08c109fa786e40a402dd7d9c5173f",
+    "semantic_hash": ""
+  },
+  "scripts/launcher_hermes.py": {
+    "mtime": 1781102853.513813,
+    "ast_hash": "18ca3ffdc661fd8f465b3969ebc3135a",
+    "semantic_hash": ""
+  },
+  "scripts/list_render_services.sh": {
+    "mtime": 1780636192.4223607,
+    "ast_hash": "264c83ab11880793d4103042f6d03531",
+    "semantic_hash": ""
+  },
+  "scripts/poll_report.sh": {
+    "mtime": 1781067915.4578452,
+    "ast_hash": "0a484994197cdd3be0a682bc03b4bd28",
+    "semantic_hash": ""
+  },
+  "scripts/run_agent.py": {
+    "mtime": 1780610160.4530735,
+    "ast_hash": "1a57aded67ad3ff4baa1f49ea6e4fdb7",
+    "semantic_hash": ""
+  },
+  "scripts/scout_watch.py": {
+    "mtime": 1783296763.9468913,
+    "ast_hash": "c52106ace125e1a145d108c89765804e",
+    "semantic_hash": ""
+  },
+  "scripts/seed_memory_from_obsidian.py": {
+    "mtime": 1782275639.8994274,
+    "ast_hash": "e7fa014a7d673c4b12a5bce3ad82a374",
+    "semantic_hash": ""
+  },
+  "scripts/smoke_test.py": {
+    "mtime": 1780609938.371908,
+    "ast_hash": "688f351953765f89f301413c9ae6328a",
+    "semantic_hash": ""
+  },
+  "scripts/sql/001_agency_memory.sql": {
+    "mtime": 1782275025.976397,
+    "ast_hash": "68bd41657715a8e403103a488b7193c1",
+    "semantic_hash": ""
+  },
+  "scripts/sql/002_agenda_missions.sql": {
+    "mtime": 1782276279.471249,
+    "ast_hash": "7d95d679259b24bf461b1442f6be12af",
+    "semantic_hash": ""
+  },
+  "scripts/sql/003_client_stages.sql": {
+    "mtime": 1782277024.0268362,
+    "ast_hash": "5a222a49bab00ebeae0de227462bd10f",
+    "semantic_hash": ""
+  },
+  "scripts/sql/004_ceo_plan_localization.sql": {
+    "mtime": 1782318259.8097613,
+    "ast_hash": "569b6c891b4eb7dfee1b77a4989cbd8f",
+    "semantic_hash": ""
+  },
+  "scripts/sql/005_client_billing_finance.sql": {
+    "mtime": 1782421060.4562953,
+    "ast_hash": "49630787328e9d3fcf44ecef2007a56a",
+    "semantic_hash": ""
+  },
+  "scripts/youtube_oauth_setup.py": {
+    "mtime": 1782876622.2910712,
+    "ast_hash": "d51c5f77647869277a0a7916d0ca6528",
+    "semantic_hash": ""
+  },
+  "tests/__init__.py": {
+    "mtime": 1780610381.1803193,
+    "ast_hash": "5aede58c28fb9bfd9881c935badb8659",
+    "semantic_hash": ""
+  },
+  "tests/test_app.py": {
+    "mtime": 1782953807.7466786,
+    "ast_hash": "ff025b81307bc8b0254afd68ca2259a5",
+    "semantic_hash": ""
+  },
+  "tests/test_clients.py": {
+    "mtime": 1782953809.5893223,
+    "ast_hash": "3de9179482fea1d609e4fcdea5816b80",
+    "semantic_hash": ""
+  },
+  "tests/test_leads_store.py": {
+    "mtime": 1782190783.3152187,
+    "ast_hash": "baa6531e88b282dac07ffcbea8d108e5",
+    "semantic_hash": ""
+  },
+  "tests/test_minimax.py": {
+    "mtime": 1780610381.1818361,
+    "ast_hash": "20b789d94d893b40587dcdf604d81501",
+    "semantic_hash": ""
+  },
+  "tests/test_sanitize.py": {
+    "mtime": 1782189091.870226,
+    "ast_hash": "025b45db9ac7920c91584d2fbf4f8bf6",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/anti-blocking/.actor/actor.json": {
+    "mtime": 1781039560.9884517,
+    "ast_hash": "cc6a5c7826e8d65c04dd85588860a569",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/anti-blocking/.actor/input_schema.json": {
+    "mtime": 1781039560.9884517,
+    "ast_hash": "0d65e7fadd268b01fe4b857c17f7760e",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/anti-blocking/src/main.ts": {
+    "mtime": 1781039560.9884517,
+    "ast_hash": "39e9bdcf7295c0779c727db3787087a0",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/basic-scraper/.actor/actor.json": {
+    "mtime": 1781039560.9894552,
+    "ast_hash": "bb3b5fe0bf251e385aa89cee6f009aff",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/basic-scraper/.actor/input_schema.json": {
+    "mtime": 1781039560.9894552,
+    "ast_hash": "03c4114c4e592c9584712cf92af886a0",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/basic-scraper/src/main.ts": {
+    "mtime": 1781039560.9894552,
+    "ast_hash": "0e288ecaba4bce003992d366dde3df92",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/hybrid-api/.actor/actor.json": {
+    "mtime": 1781039560.9904585,
+    "ast_hash": "a68189a88b6635c4b9739abc0283c030",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/hybrid-api/.actor/input_schema.json": {
+    "mtime": 1781039560.9904585,
+    "ast_hash": "cf46b1b4cbcc43163462c5d79f8ebc3f",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/hybrid-api/src/main.ts": {
+    "mtime": 1781039560.9904585,
+    "ast_hash": "762bf3af9b50315c917368cb678ac2ff",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/templates/main.ts": {
+    "mtime": 1781039560.9914627,
+    "ast_hash": "b89daae28806d52215f3f035af91ecee",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/templates/typescript-actor/.actor/actor.json": {
+    "mtime": 1781039560.9914627,
+    "ast_hash": "c56408a7d614cd8ff0fa6bbadf9ed871",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/templates/typescript-actor/.actor/input_schema.json": {
+    "mtime": 1781039560.9914627,
+    "ast_hash": "740685cb10db74641de781ad07bc390d",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/templates/typescript-actor/package.json": {
+    "mtime": 1781039560.9914627,
+    "ast_hash": "505653abff8d8384641c9f19df347a48",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/templates/typescript-actor/src/main.ts": {
+    "mtime": 1781039560.9924662,
+    "ast_hash": "7599d05d2587fdf597b3c39aa7f79ad8",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/templates/typescript-actor/src/types.ts": {
+    "mtime": 1781039560.9924662,
+    "ast_hash": "f011b63b952333c1369804e8a836b375",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/templates/typescript-actor/tsconfig.json": {
+    "mtime": 1781039560.9924662,
+    "ast_hash": "255624819d0b3f43c4c71c2de517aee6",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/examples/api-scraper.js": {
+    "mtime": 1781039560.9924662,
+    "ast_hash": "b65480b9d3ce394fa1bf6696ecdc136f",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/examples/hybrid-sitemap-api.js": {
+    "mtime": 1781039560.9934695,
+    "ast_hash": "5decc4dd5d0b677b34813dae2a8db951",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/examples/iterative-fallback.js": {
+    "mtime": 1781039560.9934695,
+    "ast_hash": "da21510e611f9cb3761d9ee5d301fc7a",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/examples/sitemap-basic.js": {
+    "mtime": 1781039560.9934695,
+    "ast_hash": "49c7e8ec3988a02a1be38eeba7c4ac35",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/examples/traffic-interception-basic.js": {
+    "mtime": 1781039560.9934695,
+    "ast_hash": "3e1c79b281d0ea4991a2a803ac777060",
+    "semantic_hash": ""
+  },
+  ".claude/agents/brand-guardian.md": {
+    "mtime": 1783044504.9315379,
+    "ast_hash": "f8ef24dba26b0400ff73563be730a433",
+    "semantic_hash": ""
+  },
+  ".claude/agents/engineering-code-reviewer.md": {
+    "mtime": 1781211507.994442,
+    "ast_hash": "b954cd1da68df37314efaa106fee4501",
+    "semantic_hash": ""
+  },
+  ".claude/agents/image-prompt-engineer.md": {
+    "mtime": 1783044504.9315379,
+    "ast_hash": "f2e62494ab43612697314df129290937",
+    "semantic_hash": ""
+  },
+  ".claude/agents/instagram-curator.md": {
+    "mtime": 1783044504.932541,
+    "ast_hash": "0c7e583e85e53eab4f27a0eb5c5c8d97",
+    "semantic_hash": ""
+  },
+  ".claude/agents/marketing-growth-hacker.md": {
+    "mtime": 1781211508.0155149,
+    "ast_hash": "fcfcc882b051c939b066518ce7dd1076",
+    "semantic_hash": ""
+  },
+  ".claude/agents/outbound-strategist.md": {
+    "mtime": 1783044504.932541,
+    "ast_hash": "db1ab41768716060f73791a027652247",
+    "semantic_hash": ""
+  },
+  ".claude/agents/paid-media-auditor.md": {
+    "mtime": 1781211508.0014665,
+    "ast_hash": "1c6b89e22425d53c56a4bc961fd0ec27",
+    "semantic_hash": ""
+  },
+  ".claude/agents/sales-offer-lead-gen-strategist.md": {
+    "mtime": 1781211508.008491,
+    "ast_hash": "d5088e6aaa09d91bd03eb72b945fe129",
+    "semantic_hash": ""
+  },
+  ".claude/agents/testing-accessibility-auditor.md": {
+    "mtime": 1781211507.987418,
+    "ast_hash": "bdbda6d649a884b9952814737f34317b",
+    "semantic_hash": ""
+  },
+  ".claude/agents/tiktok-strategist.md": {
+    "mtime": 1783044504.932541,
+    "ast_hash": "4cf67a204e95cd3132d0d84fd3550f87",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-campaign-management/SKILL.md": {
+    "mtime": 1783369828.6512723,
+    "ast_hash": "6386e8d96c0b702409abd29e80decf7e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/SKILL.md": {
+    "mtime": 1785113677.1473174,
+    "ast_hash": "67d0cffb999d46190dbe0e6dbd12a398",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/assets/creative-review-template.html": {
+    "mtime": 1785113677.148321,
+    "ast_hash": "8b9b8c12b463628d0b1327f41c1b99ea",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/references/creative-review-page.md": {
+    "mtime": 1785113677.1503277,
+    "ast_hash": "de249a0c961502b4c84295273a979579",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/references/creative-roadmap.md": {
+    "mtime": 1785113677.1503277,
+    "ast_hash": "583a4b89b9af2576153d8464a6fa82f7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/references/generative-tools.md": {
+    "mtime": 1785113677.152335,
+    "ast_hash": "4e3958ee14e1551a025c39b9cf6d905c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/references/hook-system.md": {
+    "mtime": 1785113677.1503277,
+    "ast_hash": "3baa76d4d908e663a9f9ae4245e6d69f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/references/imessage-video-ads.md": {
+    "mtime": 1785113677.1513312,
+    "ast_hash": "239a34bdc561610d1b0e631beddb3861",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/references/motion-video-ads.md": {
+    "mtime": 1785113677.152335,
+    "ast_hash": "bb9d88801092413c5f5a00a688e013b7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/references/platform-specs.md": {
+    "mtime": 1785113677.1513312,
+    "ast_hash": "d7ae838b7bc4b985ed5805e653b2d7c1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ad-creative/references/static-ad-templates.md": {
+    "mtime": 1785113677.152335,
+    "ast_hash": "f9610404360d32b83466b213e0faf93b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/SKILL.md": {
+    "mtime": 1785113677.2145505,
+    "ast_hash": "07eb90ab466eee7c7de4e77b718b5a5f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/abm-playbook.md": {
+    "mtime": 1785113677.2125432,
+    "ast_hash": "1e48fb6023178eecc3584afbc4c46c69",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/ad-copy-templates.md": {
+    "mtime": 1785113677.2105367,
+    "ast_hash": "c747d83a6b61af15e7b1e1cb49268d99",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/audience-targeting.md": {
+    "mtime": 1785113677.2105367,
+    "ast_hash": "355572fdf6e4e906599964a747aa46dd",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/b2b-paid-playbook.md": {
+    "mtime": 1785113677.2115395,
+    "ast_hash": "6a926be103947ef2a92ec9a4413469b3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/conversion-tracking.md": {
+    "mtime": 1785113677.2115395,
+    "ast_hash": "39357596e8a7ab35caf10c0b0c25252f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/google-search-playbook.md": {
+    "mtime": 1785113677.2125432,
+    "ast_hash": "cb0cb28e1479ae3faedf8d85b1c88b27",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/linkedin-b2b-playbook.md": {
+    "mtime": 1785113677.213547,
+    "ast_hash": "018418478b66e3ee0a5a33140bcfa673",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/meta-decision-system.md": {
+    "mtime": 1785113677.213547,
+    "ast_hash": "04fd9c11f36b8f9705d8bdc22ce8d27d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/platform-setup-checklists.md": {
+    "mtime": 1785113677.213547,
+    "ast_hash": "aa3dc04192a829e01fa76c4e5d59877d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ads/references/rsa-output-spec.md": {
+    "mtime": 1785113677.2145505,
+    "ast_hash": "7df124eaaad73c7c3c82a348abc1914a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ai-seo/SKILL.md": {
+    "mtime": 1785113677.272752,
+    "ast_hash": "786b9f188ab4745f6fea628111826528",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ai-seo/references/citations-vs-recommendations.md": {
+    "mtime": 1785113677.2737563,
+    "ast_hash": "10da2ecb537674b126ba6e1872ec4509",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ai-seo/references/content-patterns.md": {
+    "mtime": 1785113677.2747593,
+    "ast_hash": "367985811805e6d3c8c3a1d885b28506",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ai-seo/references/content-types.md": {
+    "mtime": 1785113677.2747593,
+    "ast_hash": "7fe75e34879a69c12148bf2e3407843a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ai-seo/references/okf.md": {
+    "mtime": 1785113677.2737563,
+    "ast_hash": "ba5be49b9a1c3445b5d18c1ae008589b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ai-seo/references/platform-ranking-factors.md": {
+    "mtime": 1785113677.2747593,
+    "ast_hash": "deb43b5f2b97d422295adbb2ef539752",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cold-email/SKILL.md": {
+    "mtime": 1781211936.367078,
+    "ast_hash": "3862c75a4de66ea991b07b6e69e369be",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cold-email/references/benchmarks.md": {
+    "mtime": 1781211936.3760867,
+    "ast_hash": "89805bac471a7d1ab6326c80a4a712d0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cold-email/references/follow-up-sequences.md": {
+    "mtime": 1781211936.3760867,
+    "ast_hash": "1359d0f8d7d57e9798f9847e1a327790",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cold-email/references/frameworks.md": {
+    "mtime": 1781211936.3770957,
+    "ast_hash": "583479f3c3d870070654d497304765be",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cold-email/references/personalization.md": {
+    "mtime": 1781211936.3770957,
+    "ast_hash": "e12c572baec87afc7ee69c4e6225b753",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cold-email/references/subject-lines.md": {
+    "mtime": 1781211936.3770957,
+    "ast_hash": "a9bfcdd230fce155a241612edbd1249c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/competitors/SKILL.md": {
+    "mtime": 1785113677.332961,
+    "ast_hash": "311249fe55b2a90488690a9795f7e600",
+    "semantic_hash": ""
+  },
+  ".claude/skills/competitors/references/content-architecture.md": {
+    "mtime": 1785113677.3339643,
+    "ast_hash": "01d37d4606f212daceaa96a5ea76817d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/competitors/references/templates.md": {
+    "mtime": 1785113677.3339643,
+    "ast_hash": "f2536442337f93c2f6248ab492db5b01",
+    "semantic_hash": ""
+  },
+  ".claude/skills/content-matrix/SKILL.md": {
+    "mtime": 1783024900.8738027,
+    "ast_hash": "4a0692cc307d53bcce11b4877b160e0a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/copywriting/SKILL.md": {
+    "mtime": 1783090929.2846742,
+    "ast_hash": "807d82a9b5ba008b4d6c1b040dfd7430",
+    "semantic_hash": ""
+  },
+  ".claude/skills/copywriting/references/copy-frameworks.md": {
+    "mtime": 1783090929.2856777,
+    "ast_hash": "5c163d9a4f30d1736d83903921ace419",
+    "semantic_hash": ""
+  },
+  ".claude/skills/copywriting/references/natural-transitions.md": {
+    "mtime": 1783090929.2856777,
+    "ast_hash": "08003a7f59fb82bea6121dbdabbfb9cf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cro/SKILL.md": {
+    "mtime": 1783090929.304782,
+    "ast_hash": "70de95f960a2fd80edd339d83d925dba",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cro/references/experiments.md": {
+    "mtime": 1783090929.304782,
+    "ast_hash": "e2ab36d280622b496311882374993f3e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/cro/references/form.md": {
+    "mtime": 1783090929.304782,
+    "ast_hash": "146961cd21222dd49b5958663a348eec",
+    "semantic_hash": ""
+  },
+  ".claude/skills/customer-research/SKILL.md": {
+    "mtime": 1785113785.8391826,
+    "ast_hash": "3bb6a79d22cfa7754cf67d0708ca1da2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/customer-research/references/source-guides.md": {
+    "mtime": 1785113785.8391826,
+    "ast_hash": "43774e691f1db04255fa319ee2ff459b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/hook-generator/SKILL.md": {
+    "mtime": 1783024900.857923,
+    "ast_hash": "f0fe221b9a3b5f1964297fa2caaf7fa4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/humanizer/SKILL.md": {
+    "mtime": 1783542920.2638402,
+    "ast_hash": "10f8ba6cac26813a376fd069b0179aee",
+    "semantic_hash": ""
+  },
+  ".claude/skills/image/SKILL.md": {
+    "mtime": 1783369762.7889812,
+    "ast_hash": "5f2de56dabf206c80278a7e1a6000588",
+    "semantic_hash": ""
+  },
+  ".claude/skills/lead-magnets/SKILL.md": {
+    "mtime": 1783369672.8400483,
+    "ast_hash": "7e9567f257583ca161e6ad25d15625f0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/lead-magnets/references/benchmarks.md": {
+    "mtime": 1783369672.8450623,
+    "ast_hash": "73f15eab8f98661c75bca89182456a78",
+    "semantic_hash": ""
+  },
+  ".claude/skills/lead-magnets/references/format-guide.md": {
+    "mtime": 1783369672.8450623,
+    "ast_hash": "569ff2a94a7c06f13ae4bf797b6fbcd8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-ads/SKILL.md": {
+    "mtime": 1783369908.5350711,
+    "ast_hash": "b02f88c9e8e46ba9e368677199959d31",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-auditoria/SKILL.md": {
+    "mtime": 1783369908.5350711,
+    "ast_hash": "a8cbf39be3182d795c4a1aaf965e9ad6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-competidores/SKILL.md": {
+    "mtime": 1783369908.5350711,
+    "ast_hash": "0820b8bdb2a320e5c4cdcf20207ae2d8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-copy/SKILL.md": {
+    "mtime": 1783369908.5350711,
+    "ast_hash": "0b3f5102d19da1e94aa4c9ab3c26237c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-emails/SKILL.md": {
+    "mtime": 1783369908.5350711,
+    "ast_hash": "fb7f5508d09857be1e087093862301e0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-funnel/SKILL.md": {
+    "mtime": 1783369908.5400753,
+    "ast_hash": "e6d7f7ec604d702720dc412e1e928538",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-informe-pdf/SKILL.md": {
+    "mtime": 1783369908.5405836,
+    "ast_hash": "2f2a451816057a55b95b951970c35293",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-informe/SKILL.md": {
+    "mtime": 1783369908.5405836,
+    "ast_hash": "9854a67366afbb338c4e224f69b6b812",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-landing/SKILL.md": {
+    "mtime": 1783369908.5405836,
+    "ast_hash": "254d6b29b13dbdc55ddf309e94a766c7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-lanzamiento/SKILL.md": {
+    "mtime": 1783369908.5415936,
+    "ast_hash": "9fce99087c4cd2441d2367c81d833a84",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-marca/SKILL.md": {
+    "mtime": 1783369908.5415936,
+    "ast_hash": "7623b7905c912949776ffcf720cf6e29",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-propuesta/SKILL.md": {
+    "mtime": 1783369908.5415936,
+    "ast_hash": "7ea5dc697b32433169fbc8b1a8662273",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-redes/SKILL.md": {
+    "mtime": 1783369908.5415936,
+    "ast_hash": "8d7ca7af0f6ca0e4feecb8ea9cf34f8c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-reunion/SKILL.md": {
+    "mtime": 1783369908.5415936,
+    "ast_hash": "aa71ca370ac67b3a6d41d9b93dfc605d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/marketing-seo-contenido/SKILL.md": {
+    "mtime": 1783369908.5415936,
+    "ast_hash": "ea84626a706ec12c66276d7616dfbbc3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/offers/SKILL.md": {
+    "mtime": 1785113785.8923671,
+    "ast_hash": "e689385ae8c1d9b1885ca5f2d04f6ea6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/offers/references/bonus-stacking.md": {
+    "mtime": 1785113785.8943744,
+    "ast_hash": "c9ddc854a121bc9013d083e9b05f0774",
+    "semantic_hash": ""
+  },
+  ".claude/skills/offers/references/examples.md": {
+    "mtime": 1785113785.8933709,
+    "ast_hash": "e91af95a65089ee51eebf47567dbcf98",
+    "semantic_hash": ""
+  },
+  ".claude/skills/offers/references/guarantee-design.md": {
+    "mtime": 1785113785.8933709,
+    "ast_hash": "96bf8bcde7160e7c167aae1b76ed01a2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/offers/references/offer-anatomy.md": {
+    "mtime": 1785113785.8953776,
+    "ast_hash": "093a5be207838702d55ed1e907b3f1c1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/offers/references/offer-formats.md": {
+    "mtime": 1785113785.8933709,
+    "ast_hash": "0ed0a1f86c471aaaa1d1950c04426788",
+    "semantic_hash": ""
+  },
+  ".claude/skills/offers/references/scarcity-urgency.md": {
+    "mtime": 1785113785.8943744,
+    "ast_hash": "a83f838c146ee399b5520f3f157ec945",
+    "semantic_hash": ""
+  },
+  ".claude/skills/offers/references/value-equation.md": {
+    "mtime": 1785113785.8933709,
+    "ast_hash": "c14c91589c93c25a25974cbcb2c79fa8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/post-formatter/SKILL.md": {
+    "mtime": 1783024900.8659186,
+    "ast_hash": "a844e05fc5f22df2c6f39aee26430556",
+    "semantic_hash": ""
+  },
+  ".claude/skills/pricing/SKILL.md": {
+    "mtime": 1785113785.9465554,
+    "ast_hash": "bbea67d48d177a523f9889dbb3a67888",
+    "semantic_hash": ""
+  },
+  ".claude/skills/pricing/references/research-methods.md": {
+    "mtime": 1785113785.948562,
+    "ast_hash": "a8415d984f125a4308d7c85eb71e2289",
+    "semantic_hash": ""
+  },
+  ".claude/skills/pricing/references/tier-structure.md": {
+    "mtime": 1785113785.9475586,
+    "ast_hash": "d5c223605ccd0a7897f716c8e90fbe26",
+    "semantic_hash": ""
+  },
+  ".claude/skills/programmatic-seo/SKILL.md": {
+    "mtime": 1783369672.7954252,
+    "ast_hash": "ed76e42812e476ad77484a97bc2dc680",
+    "semantic_hash": ""
+  },
+  ".claude/skills/programmatic-seo/references/playbooks.md": {
+    "mtime": 1783369672.799927,
+    "ast_hash": "78a581f8e37b8381b10d3b3aa1f68d03",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/SKILL.md": {
+    "mtime": 1785113677.5266323,
+    "ast_hash": "a7c2dd66d1c209c6e1bfe20b7cd81526",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/b2b-prospecting.md": {
+    "mtime": 1785113677.494521,
+    "ast_hash": "8efa10750f1e0da7c996c3233e078cca",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/compliance.md": {
+    "mtime": 1785113677.4955244,
+    "ast_hash": "c1951af311ca854a387489bda97eaba3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/data-sources.md": {
+    "mtime": 1785113677.4955244,
+    "ast_hash": "3ed5affe8134343db15ea47ada455472",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/demand-signals.md": {
+    "mtime": 1785113677.4955244,
+    "ast_hash": "dd8ab916d85968449bfac16db1e4d852",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/leadhunter-integration.md": {
+    "mtime": 1785113909.017204,
+    "ast_hash": "6caf8278c9efcb154dd59d1c87850824",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/local-prospecting.md": {
+    "mtime": 1785113677.4955244,
+    "ast_hash": "f0e10e788776bfd6d99e247fa792737a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/saas-prospecting.md": {
+    "mtime": 1785113677.496528,
+    "ast_hash": "3681d5904c585413db2876038296016f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/prospecting/references/templates/leadhunter-dryrun-template.md": {
+    "mtime": 1785113909.0182078,
+    "ast_hash": "43d4b5c9fca778a962a9f51699c8af47",
+    "semantic_hash": ""
+  },
+  ".claude/skills/reels-scripting/SKILL.md": {
+    "mtime": 1783369787.1996968,
+    "ast_hash": "840655a2574d9417bcfe151558fe77f6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/schema/SKILL.md": {
+    "mtime": 1783090929.331908,
+    "ast_hash": "0ffff0f67407232221704886b4cf43df",
+    "semantic_hash": ""
+  },
+  ".claude/skills/schema/references/schema-examples.md": {
+    "mtime": 1783090929.3339148,
+    "ast_hash": "824f6ddd8ac68ff7b17fe997a79d2928",
+    "semantic_hash": ""
+  },
+  ".claude/skills/seo-audit/SKILL.md": {
+    "mtime": 1783090929.3128097,
+    "ast_hash": "b8532581b6992bc2e1031acd9622e492",
+    "semantic_hash": ""
+  },
+  ".claude/skills/seo-audit/references/ai-writing-detection.md": {
+    "mtime": 1783090929.313813,
+    "ast_hash": "a5489f71fca1525b35d5822d3426fc90",
+    "semantic_hash": ""
+  },
+  ".claude/skills/seo-audit/references/international-seo.md": {
+    "mtime": 1783090929.3148167,
+    "ast_hash": "f98a2faff322c07b79ac99546e7cf523",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/SKILL.md": {
+    "mtime": 1785113677.3931696,
+    "ast_hash": "db372102d5cc2c3913c77e645524fc44",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/references/carousel-frameworks.md": {
+    "mtime": 1785113677.3941731,
+    "ast_hash": "36a25990d0a785c9688d6c0d5e41b00c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/references/listening-sources-template.md": {
+    "mtime": 1785113677.3941731,
+    "ast_hash": "1552c3a2e9ac820bf6a98b8249191729",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/references/listening.md": {
+    "mtime": 1785113677.3951766,
+    "ast_hash": "0541ed332025d5d0930abeacd1f0ecbc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/references/platform-limits.md": {
+    "mtime": 1785113677.3951766,
+    "ast_hash": "483439ad3e39db1a93eed86fb396258f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/references/platforms.md": {
+    "mtime": 1785113677.3951766,
+    "ast_hash": "8832bb4316df220f3ea562c707d22b90",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/references/post-templates.md": {
+    "mtime": 1785113677.3961802,
+    "ast_hash": "dcc959f3193c98e6c6b24758890005a7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/references/reverse-engineering.md": {
+    "mtime": 1785113677.3961802,
+    "ast_hash": "50d6ecca601991d172a61fc7e6aedf15",
+    "semantic_hash": ""
+  },
+  ".claude/skills/social/references/short-form-video.md": {
+    "mtime": 1785113677.3971837,
+    "ast_hash": "38126530b3ff1474c7d6c5ce33c2e848",
+    "semantic_hash": ""
+  },
+  ".claude/skills/stop-slop/SKILL.md": {
+    "mtime": 1783090929.3499703,
+    "ast_hash": "bd30ea398b7b9a7d93d1c5d2b8d8a2af",
+    "semantic_hash": ""
+  },
+  ".claude/skills/stop-slop/references/examples.md": {
+    "mtime": 1783090929.350974,
+    "ast_hash": "b31054549c3440d651dd687034eb2150",
+    "semantic_hash": ""
+  },
+  ".claude/skills/stop-slop/references/phrases.md": {
+    "mtime": 1783090929.350974,
+    "ast_hash": "9e363a08e8cb05dd21c419cd5ac2f18b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/stop-slop/references/structures.md": {
+    "mtime": 1783090929.350974,
+    "ast_hash": "47e9cae0268aa16085a797ef02d39ef4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ui-ux-pro-max/SKILL.md": {
+    "mtime": 1783090929.3590019,
+    "ast_hash": "66c4a25fc24f477dffa9a85664f56b65",
+    "semantic_hash": ""
+  },
+  ".github/workflows/README.md": {
+    "mtime": 1780635959.8044896,
+    "ast_hash": "151940a4782b7c3b0c63e0af5abd578c",
+    "semantic_hash": ""
+  },
+  ".github/workflows/deploy.yml": {
+    "mtime": 1781103740.7714963,
+    "ast_hash": "13719d0b76ac9a6cfa636ad6c50a952e",
+    "semantic_hash": ""
+  },
+  ".github/workflows/docker.yml": {
+    "mtime": 1781203366.603521,
+    "ast_hash": "7a6b75c3f299acb5fdad14080d4b0924",
+    "semantic_hash": ""
+  },
+  ".github/workflows/keep-alive.yml": {
+    "mtime": 1780942048.4131804,
+    "ast_hash": "dc596c45a25cffd2f0cd8a332bcabd0b",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1780610318.0288405,
+    "ast_hash": "bc32350576e8adc5a07300995faa1e63",
+    "semantic_hash": ""
+  },
+  "CLEANUP_PLAN.md": {
+    "mtime": 1780636081.4276624,
+    "ast_hash": "ff20471db8d3ef90423f0b2c2112a5aa",
+    "semantic_hash": ""
+  },
+  "DEPLOY_PLAN.md": {
+    "mtime": 1780626004.661008,
+    "ast_hash": "f8fb93a535e7cc6434baffbfc8077f16",
+    "semantic_hash": ""
+  },
+  "DEPLOY_STATUS.md": {
+    "mtime": 1780634822.4373596,
+    "ast_hash": "4c43b5f68ee7c3dcfa328b3accda6862",
+    "semantic_hash": ""
+  },
+  "FINAL_REPORT.md": {
+    "mtime": 1780636839.0201483,
+    "ast_hash": "6ea5a5d8e7e346282e17de68d1356ddf",
+    "semantic_hash": ""
+  },
+  "HONEST_STATUS.md": {
+    "mtime": 1780635774.7562642,
+    "ast_hash": "0a85872e9b5e67247ac290d99757c0f0",
+    "semantic_hash": ""
+  },
+  "MIGRATION.md": {
+    "mtime": 1780610318.0318556,
+    "ast_hash": "928fd22b64b4af8c2f4eac463932ff9d",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1780610318.0579295,
+    "ast_hash": "65cd14f8b6a7e6a4a15ca3741807637b",
+    "semantic_hash": ""
+  },
+  "app/dashboard/index.html": {
+    "mtime": 1785253777.1414025,
+    "ast_hash": "dc61d925c98cd3fc94c22c26368bebe9",
+    "semantic_hash": ""
+  },
+  "data/trends-block.md": {
+    "mtime": 1783174964.008763,
+    "ast_hash": "ea22ab81efe5ed30f54bfdc03b07f89e",
+    "semantic_hash": ""
+  },
+  "data/visual-scout.md": {
+    "mtime": 1783352967.560365,
+    "ast_hash": "daa804267c3b7fe55684364108d9ac73",
+    "semantic_hash": ""
+  },
+  "docs/INITIAL_PROMPT.md": {
+    "mtime": 1780610176.4980786,
+    "ast_hash": "476372d35516bebb72d28b8cc836bb27",
+    "semantic_hash": ""
+  },
+  "packs/automiq/README.md": {
+    "mtime": 1781058687.8116498,
+    "ast_hash": "88b439674015c7ea8321fc2211ce482c",
+    "semantic_hash": ""
+  },
+  "packs/automiq/skills/content_creator/SKILL.md": {
+    "mtime": 1781058888.4684958,
+    "ast_hash": "5c336e86acad49f6dbe008729cec5328",
+    "semantic_hash": ""
+  },
+  "packs/automiq/skills/creative_strategist/SKILL.md": {
+    "mtime": 1781058888.4694993,
+    "ast_hash": "098917f0f2f1ae6196d642c461a7697f",
+    "semantic_hash": ""
+  },
+  "packs/automiq/skills/growth_hacker/SKILL.md": {
+    "mtime": 1781058888.4694993,
+    "ast_hash": "c943a4754926d25f79938c36f607053c",
+    "semantic_hash": ""
+  },
+  "packs/automiq/skills/leadhunter/SKILL.md": {
+    "mtime": 1781058875.241574,
+    "ast_hash": "b6b0f9f952126f0441fa90d84ee197c2",
+    "semantic_hash": ""
+  },
+  "packs/automiq/skills/media_auditor/SKILL.md": {
+    "mtime": 1781058888.4705026,
+    "ast_hash": "ed0e5b24c259d96a50be7a7654691121",
+    "semantic_hash": ""
+  },
+  "packs/automiq/skills/outbound/SKILL.md": {
+    "mtime": 1781058888.4694993,
+    "ast_hash": "1ba98b755588c3dd6169f540aba668e4",
+    "semantic_hash": ""
+  },
+  "packs/automiq/skills/seo_specialist/SKILL.md": {
+    "mtime": 1781058888.4705026,
+    "ast_hash": "7378170b63858b89b52fa960340fa473",
+    "semantic_hash": ""
+  },
+  "packs/automiq/skills/social_media/SKILL.md": {
+    "mtime": 1781058888.4694993,
+    "ast_hash": "80997962e45f21a643d4935a89849664",
+    "semantic_hash": ""
+  },
+  "render.yaml": {
+    "mtime": 1782508657.8079877,
+    "ast_hash": "9b4094ad0167d52455b4ffe8b5f8bcf4",
+    "semantic_hash": ""
+  },
+  "requirements.txt": {
+    "mtime": 1782278955.6082907,
+    "ast_hash": "c70894182230a129f85587ad703a655a",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/README.md": {
+    "mtime": 1781039560.9864452,
+    "ast_hash": "2d4d345e5c6ed1fb4aa20161db37f827",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/SKILL.md": {
+    "mtime": 1781039560.9864452,
+    "ast_hash": "bdda969a7c3de23d323521f6c872737a",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/README.md": {
+    "mtime": 1781039560.9874482,
+    "ast_hash": "db37ca6585924f57c02b912735133e41",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/agents-md-guide.md": {
+    "mtime": 1781039560.9874482,
+    "ast_hash": "6b2d3694ed31f511d03e0978e7f03a87",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/cli-workflow.md": {
+    "mtime": 1781039560.9874482,
+    "ast_hash": "8c6520a51841ebaabddbb95e5310c0b0",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/configuration.md": {
+    "mtime": 1781039560.9874482,
+    "ast_hash": "7d598786b50bded3a2b7521d9af4d6e9",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/deployment.md": {
+    "mtime": 1781039560.9874482,
+    "ast_hash": "af38213a9c36098360f7affd2bf599d2",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/anti-blocking/README.md": {
+    "mtime": 1781039560.9884517,
+    "ast_hash": "5585f7a41e5909c3ec8af143de6cacc3",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/basic-scraper/README.md": {
+    "mtime": 1781039560.9894552,
+    "ast_hash": "e69d49649f1f179c38d94a61c2d597e0",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/examples/hybrid-api/README.md": {
+    "mtime": 1781039560.9904585,
+    "ast_hash": "ca5a537de0675d51fe437859d3dfd799",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/initialization.md": {
+    "mtime": 1781039560.9904585,
+    "ast_hash": "1b7151cb13ef8928d2ccc51f4f8b1d7d",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/input-schemas.md": {
+    "mtime": 1781039560.9904585,
+    "ast_hash": "f78a8d080ce41d0b1fe7678698bacabb",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/apify/typescript-first.md": {
+    "mtime": 1781039560.9924662,
+    "ast_hash": "1678502c8803975de6fef225138ecabf",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/examples/README.md": {
+    "mtime": 1781039560.9924662,
+    "ast_hash": "59646b5e67fbd8ff06184e3e2addbb57",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/reference/README.md": {
+    "mtime": 1781039560.9934695,
+    "ast_hash": "c41f0c76d109ba18572af8cc4cdd82ff",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/reference/anti-patterns.md": {
+    "mtime": 1781039560.9944725,
+    "ast_hash": "254b6fd87d919fbffd20e960d2cf7ac3",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/reference/fingerprint-patterns.md": {
+    "mtime": 1781039560.9944725,
+    "ast_hash": "f4e8099e0d8a6ceea58151dc090a9b66",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/reference/proxy-tool-reference.md": {
+    "mtime": 1781039560.9944725,
+    "ast_hash": "97a59a1b72650ded92cc1aa059b0f5b2",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/reference/regex-patterns.md": {
+    "mtime": 1781039560.9944725,
+    "ast_hash": "ea1a9441276a393df8aecf5bc28bd195",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/reference/report-schema.md": {
+    "mtime": 1781039560.9944725,
+    "ast_hash": "01286fa431dc38230f16c12d40735dc1",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/README.md": {
+    "mtime": 1781039560.995476,
+    "ast_hash": "765e2e402f900b51df5ef6a3998fea63",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/anti-blocking.md": {
+    "mtime": 1781039560.995476,
+    "ast_hash": "af1c2c2dddf782749885cdd049de9f09",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/api-discovery.md": {
+    "mtime": 1781039560.995476,
+    "ast_hash": "f552b381d73c54eb754e239c4b5f6518",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/cheerio-scraping.md": {
+    "mtime": 1781039560.995476,
+    "ast_hash": "d2094d73be086f993388be5aa77abd88",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/cheerio-vs-browser-test.md": {
+    "mtime": 1781039560.995476,
+    "ast_hash": "6faf0bcefe5fce5ac852bdce34f953e9",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/dom-scraping.md": {
+    "mtime": 1781039560.995476,
+    "ast_hash": "8813677bd0f2c08c572d59d460eea901",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/framework-signatures.md": {
+    "mtime": 1781039560.9964795,
+    "ast_hash": "0c72c16dd33ff731dbb8754743b31f7c",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/hybrid-approaches.md": {
+    "mtime": 1781039560.9964795,
+    "ast_hash": "d38a47462e305ab803d6aeb349eb9a6d",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/proxy-escalation.md": {
+    "mtime": 1781039560.9964795,
+    "ast_hash": "0edba3d811e59303be1e43bde2b07883",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/session-workflows.md": {
+    "mtime": 1781039560.9964795,
+    "ast_hash": "938c066729334828bd3b6331f773464a",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/sitemap-discovery.md": {
+    "mtime": 1781039560.9964795,
+    "ast_hash": "a7274c1c4ef5035b484ccb16f2a406b3",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/strategies/traffic-interception.md": {
+    "mtime": 1781039560.9964795,
+    "ast_hash": "f355cee84188b9094d3bfc70446f4e05",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/workflows/implementation.md": {
+    "mtime": 1781039560.997483,
+    "ast_hash": "da0a6a67b0c3cbdce5c71a694f7fd434",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/workflows/productionization.md": {
+    "mtime": 1781039560.997483,
+    "ast_hash": "b481af9843f0aba0bc9d2e17ac490fd4",
+    "semantic_hash": ""
+  },
+  "vendor/web-scraper/workflows/reconnaissance.md": {
+    "mtime": 1781039560.997483,
+    "ast_hash": "af9c9ab302d47bc17425adfa9fe441eb",
+    "semantic_hash": ""
+  },
+  "app/dashboard/favicon.png": {
+    "mtime": 1784157463.1918805,
+    "ast_hash": "0ab561608ff521a970e688c5ee6db79a",
+    "semantic_hash": ""
+  }
+}

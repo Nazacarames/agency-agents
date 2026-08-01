@@ -150,9 +150,24 @@ class BaseAgent(ABC):
         potencian entre sí y mejoran con el tiempo."""
         try:
             from ..integrations import agent_inbox
+            from . import departments as dp
+            from ._common import team_brief
             from .registry import list_agents as _all
             names = ", ".join(a.name for a in _all() if a.name != self.name)
+            dept_id = dp.department_of(self.name)
+            dept = dp.DEPARTMENTS.get(dept_id, {})
+            mates = dp.teammates_of(self.name)
             parts = ["## 🤝 COLABORACIÓN ENTRE AGENTES"]
+            # Equipo primero: con quién comparte departamento y qué produjeron recién.
+            # Un agente que ve el trabajo de su sector no repite ni se contradice.
+            if mates:
+                parts.append(
+                    f"### Tu equipo: {dept.get('label', dept_id)}\n"
+                    f"Trabajás con **{', '.join(mates)}**. Son tu sector: apoyate en lo que "
+                    "ya hicieron, no dupliques su trabajo y no te contradigas con ellos.")
+                brief = team_brief(mates)
+                if brief:
+                    parts.append("**Lo último que produjo tu equipo:**\n" + brief)
             notes = agent_inbox.pop_for(self.name)
             if notes:
                 parts.append("### Notas que te dejaron tus compañeros (usalas HOY si aplican)")
@@ -175,6 +190,11 @@ class BaseAgent(ABC):
                 "(máx 2; se te inyecta en el futuro y gana peso si se repite). "
                 "No registres obviedades ni cosas de un solo día."
             )
+            if mates:
+                parts.append(
+                    f"- Si lo que descubriste le sirve a TODO tu sector, mandáselo de una "
+                    f"con `NOTA_PARA({dept_id}): …` — le llega a los {len(mates)} de "
+                    f"{dept.get('label', dept_id)} ({', '.join(mates)}).")
             return "\n".join(parts)
         except Exception as e:
             log.warning("collab_block_failed", agent=self.name, error=str(e)[:120])
@@ -188,15 +208,24 @@ class BaseAgent(ABC):
         try:
             import re as _re2
             from ..integrations import agent_inbox, memory_store as ms
+            from . import departments as dp
             from .registry import list_agents as _all
             valid = {a.name for a in _all()}
             sent = 0
             for m in _re2.finditer(r"^[\s>*`\-]*NOTA_PARA\(([a-z_]+)\)\s*[:：]\s*(.+)$",
                                    text, _re2.IGNORECASE | _re2.MULTILINE):
                 to, note = m.group(1).lower(), m.group(2).strip().strip("`*")
-                if to in valid and to != self.name and len(note) >= 10 and sent < 3:
-                    if agent_inbox.leave(self.name, to, note):
-                        sent += 1
+                if len(note) < 10 or sent >= 3:
+                    continue
+                # El destinatario puede ser un agente o un DEPARTAMENTO entero
+                # (broadcast al sector). Agente primero: `customer_success` es
+                # ambos y ahí gana el agente.
+                targets = [to] if to in valid else dp.DEPARTMENTS.get(to, {}).get("agents", [])
+                # lista, NO generador: any() cortaría el broadcast en el primero.
+                ok = [agent_inbox.leave(self.name, t, note)
+                      for t in targets if t != self.name]
+                if any(ok):
+                    sent += 1
             learned = 0
             for m in _re2.finditer(r"^[\s>*`\-]*LECCI[OÓ]N\s*[:：]\s*(.+)$",
                                    text, _re2.IGNORECASE | _re2.MULTILINE):
