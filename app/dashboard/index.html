@@ -557,8 +557,18 @@
   .prs-tab{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5fe6c8;border:1px solid rgba(47,212,196,.4);border-radius:6px;padding:4px 11px;background:rgba(47,212,196,.06)}
   .prs-badge{margin-left:auto;font-size:8.5px;letter-spacing:1.5px;color:#5f6a85;text-transform:uppercase}
   .prs-desc{font-family:var(--sans);font-size:13px;line-height:1.6;color:#c2ccdf;border-left:2px solid rgba(47,212,196,.5);background:rgba(47,212,196,.035);padding:11px 13px;border-radius:0 8px 8px 0;margin-bottom:12px}
-  .prs-ns{font-size:10px;letter-spacing:.8px;color:#5fe6c8;border:1px dashed rgba(47,212,196,.35);border-radius:8px;padding:9px 12px;margin-bottom:16px}
-  .prs-ns b{color:#b5f5e6;letter-spacing:1.5px}
+  .prs-ns{font-size:8.5px;letter-spacing:2px;color:#5fe6c8;border:1px dashed rgba(47,212,196,.35);border-radius:8px;padding:9px 12px;margin-bottom:16px;text-transform:uppercase}
+  .prs-ns b{display:block;margin-top:5px;color:#d6fff2;letter-spacing:.2px;font-family:var(--sans);font-size:12.5px;text-transform:none;line-height:1.5}
+  /* pager de personas (ref video: ‹ › 08/11 Field Service OS) */
+  .prs-pager{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+  .prs-pager button{width:24px;height:24px;border-radius:6px;border:1px solid var(--eng-grid);background:rgba(255,255,255,.03);color:#aeb8d0;font-size:13px;line-height:1;cursor:pointer;transition:.2s}
+  .prs-pager button:hover{border-color:rgba(47,212,196,.5);color:#5fe6c8}
+  .pg-n{font-family:var(--mono);font-size:13px;color:#5fe6c8;font-weight:700;margin-left:4px}
+  .pg-t{font-family:var(--mono);font-size:9px;color:#5f6a85}
+  .prs-pager b{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:#dfe8f8;margin-left:5px}
+  .prs-badge2{margin-left:auto;font-family:var(--mono);font-size:8px;letter-spacing:1.6px;color:#7ee7f5;border:1px solid rgba(0,242,254,.4);border-radius:5px;padding:3px 9px}
+  .prs-tag{font-family:var(--mono);font-size:11px;color:#8fd8c9;letter-spacing:.4px;margin-bottom:10px}
+  .prs-pd{font-family:var(--sans);font-size:10.5px;color:#7f8aa6;line-height:1.5;margin-bottom:7px}
   .prs-sec{font-size:9px;letter-spacing:2px;color:#6b7690;text-transform:uppercase;margin:14px 0 8px}
   .prs-pills{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .prs-pillar{border:1px solid var(--eng-grid);border-radius:9px;padding:9px 11px;background:rgba(255,255,255,.015)}
@@ -2538,32 +2548,101 @@ function funnelViz(counts){
     <div class="fz-leg"><span>● EL COLOR = SU ETAPA</span><span>● SE APAGA A LOS 21D SIN RESPUESTA → SE ARCHIVA A LOS 90D</span><span>● CONVERTIDO</span></div>`;
 }
 /* ═══ PERSONAS (ref img#5) ═══ */
+const PERSONAS=[
+ {id:'agency',t:'Agency OS',badge:'OPERADOR DE AGENCIA',tag:'Una persona, 19 agentes, cero pelotas en el piso.',
+  desc:'Duenio de agencia unipersonal en Argentina. El OS convierte el caos de vender-producir-cobrar en un bucle cerrado: un lead se vuelve reunion, una reunion se vuelve propuesta, una propuesta se vuelve cliente, y cada corrida de agente se vuelve memoria que mejora la siguiente.',
+  ns:'MRR retenido (plata que entra y SE QUEDA, no la que se gana una vez).',
+  conn:['Gmail Ventas@','Supabase','Meta IG/FB','Vertex AI','Railway','Obsidian']},
+ {id:'distri',t:'Distribucion OS',badge:'DISTRIBUIDORA / MAYORISTA',tag:'El pedido entra por WhatsApp y sale facturado.',
+  desc:'Distribuidora con catalogo grande y vendedores que viven en WhatsApp. El OS atiende el canal 24/7, arma el pedido contra stock, avisa faltantes y empuja la recompra del cliente dormido sin que nadie persiga a nadie.',
+  ns:'Pedidos recurrentes por cliente activo / mes.',
+  pillars:[['Atencion 24/7','Que ningun pedido se pierda de noche',['agente whatsapp','catalogo bot']],
+           ['Pedido -> ERP','De la charla al remito sin recargar nada',['tomador de pedidos','sync stock']],
+           ['Recompra','El cliente dormido vuelve solo',['reenganche','alertas de faltante']],
+           ['Cobranza','Facturas al dia sin llamar',['cobranza bot','recordatorios']]],
+  conn:['WhatsApp Cloud','ERP / Tango','Google Sheets','CRM Automiq'],ticket:'USD 4.5K - 9.2K anual'},
+ {id:'logi',t:'Logistica OS',badge:'TRANSPORTE / LOGISTICA',tag:'Cada viaje cotizado, seguido y cobrado.',
+  desc:'Operador logistico con flota y clientes que preguntan donde esta mi carga todo el dia. El OS cotiza al toque, informa el estado sin intervencion humana y cierra el ciclo con la factura.',
+  ns:'Margen por viaje (cotizado vs. real).',
+  pillars:[['Cotizacion','Responder en minutos, no en horas',['cotizador','tarifario bot']],
+           ['Tracking','El cliente se entera antes de preguntar',['tracking bot','alertas de ruta']],
+           ['Documentacion','Remitos y CP sin traspapeleo',['doc agent']],
+           ['Facturacion','Cerrar el viaje con la factura',['facturador','cobranza bot']]],
+  conn:['WhatsApp Cloud','Google Maps','ERP','CRM Automiq'],ticket:'USD 6K - 12K anual'},
+ {id:'manu',t:'Manufactura OS',badge:'PYME INDUSTRIAL',tag:'La consulta tecnica se vuelve presupuesto.',
+  desc:'PyME industrial que vende por especificacion. El OS califica la consulta, arma el presupuesto con la ficha tecnica correcta y persigue el si sin que el duenio deje el taller.',
+  ns:'Presupuestos convertidos / mes.',
+  pillars:[['Calificacion','Separar curioso de comprador',['calificador','ficha tecnica bot']],
+           ['Presupuesto','Cotizar con la spec correcta',['presupuestador']],
+           ['Seguimiento','El presupuesto no se enfria',['follow-up bot']],
+           ['Postventa','Repuestos y service recurrente',['service bot']]],
+  conn:['WhatsApp Cloud','Drive','CRM Automiq','Gmail'],ticket:'USD 3K - 7.5K anual'},
+ {id:'inmo',t:'Inmobiliaria OS',badge:'INMOBILIARIA',tag:'Consulta a visita agendada, sin perder el hilo.',
+  desc:'Inmobiliaria con portales que escupen consultas a toda hora. El OS filtra por presupuesto y zona, manda la ficha real desde Tokko y agenda la visita en la agenda del asesor.',
+  ns:'Visitas agendadas por consulta recibida.',
+  pillars:[['Filtro','Entender ambientes, zona y presupuesto',['agente inmobiliario','filtro semantico']],
+           ['Ficha','Mandar la propiedad correcta',['tokko sync']],
+           ['Visita','Cerrar dia y hora',['agendador']],
+           ['Nurture','El que no compro hoy vuelve',['reenganche']]],
+  conn:['WhatsApp Cloud','Tokko Broker','Google Calendar','CRM Automiq'],ticket:'USD 3K - 6K anual'},
+ {id:'camara',t:'Camara OS',badge:'CAMARA / ASOCIACION',tag:'La memoria regulatoria viva de todo el sector.',
+  desc:'Camara sectorial con socios que necesitan estar al dia con la norma. El OS ingiere el Boletin, avisa a quien le pega cada disposicion, y guarda el debate para que nadie reinvente la rueda. Caso vivo: CLAMEVET.',
+  ns:'Socios que consultan la plataforma / mes.',
+  pillars:[['Ingesta','El Boletin entra solo',['ingesta boletin','resumidor']],
+           ['Asistente','Responde citando, nunca inventa',['rag con citas']],
+           ['Alertas','A cada socio lo que le pega',['matching producto-norma']],
+           ['Foro','El debate queda como memoria',['foro con memoria','revision humana']]],
+  conn:['SENASA / Boletin','Supabase pgvector','Gmail','Vertex AI'],ticket:'USD 3.000 + 500/mes'}];
+let PRS_I=0, PRS_STATS={}, PRS_DEPS=[];
 async function loadPersonas(){
   const w=el('prsWrap');
   try{
     const dres = NEO_DEPS.length?{departments:NEO_DEPS}:await api('/api/departments');
     const deps=dres.departments||[]; if(!NEO_DEPS.length) NEO_DEPS=deps;
     const stats=await api('/api/dashboard/stats').catch(()=>null);
-    const eng=(stats&&stats.engine)||{};
-    const live=deps.reduce((a,d)=>a+(d.agents||[]).filter(x=>x.has_output&&x.today).length,0);
-    const nag=deps.reduce((a,d)=>a+(d.agents||[]).length,0);
-    const pillars=deps.map(d=>`<div class="prs-pillar" style="--pc:${esc(d.color||'#2fd4c4')}"><b>${d.icon||''} ${esc(d.label)}</b>
-      <div class="prs-chips">${(d.agents||[]).map(a=>`<span class="prs-chip" onclick="agentDetail('${a.name}')">${esc((a.name||'').replace(/_/g,' '))}</span>`).join('')}</div></div>`).join('');
-    const M=[['MRR retenido','US$ '+(eng.mrr_usd||0)],['Clientes activos',eng.clients_active??'—'],
-      ['Leads en pipeline',eng.leads??'—'],['Objetivos growth abiertos',(stats&&stats.growth_open)??'—'],
-      ['Agentes activos hoy',live+' / '+nag]];
-    w.innerHTML=`<div class="prs-left">
-        <div class="prs-h"><span class="prs-tab">◆ Dueño de agencia</span><span class="prs-badge">persona operativa · ${nag} agentes</span></div>
-        <div class="prs-desc">Maneja una agencia unipersonal con ${nag} agentes de IA sin que se le caiga ninguna pelota: ventas, contenido, delivery y finanzas corren solos por departamento; él decide, aprueba lo sensible y cierra clientes. El OS convierte cada corrida en memoria y cada reporte en una decisión.</div>
-        <div class="prs-ns">★ NORTH STAR — <b>MRR RETENIDO</b> (plata que entra y SE QUEDA, no solo la que se gana)</div>
-        <div class="prs-sec">▸ PILARES · ${deps.length}</div>
-        <div class="prs-pills">${pillars}</div>
-        <div class="prs-sec">▸ MÉTRICAS QUE IMPORTAN</div>
-        <div class="prs-metrics">${M.map(([k,v])=>`<div class="prs-m"><span>${k}</span><b>${esc(String(v))}</b></div>`).join('')}</div>
-      </div>
-      <div class="prs-right"><canvas id="prsCv" width="560" height="520"></canvas></div>`;
-    prsGraph(deps);
+    PRS_STATS=(stats&&stats.engine)||{}; PRS_DEPS=deps;
+    renderPersona();
   }catch(e){ w.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
+}
+function prsNav(d){ PRS_I=((PRS_I+d)%PERSONAS.length+PERSONAS.length)%PERSONAS.length; renderPersona(); }
+function renderPersona(){
+  const w=el('prsWrap'), P=PERSONAS[PRS_I], deps=PRS_DEPS, eng=PRS_STATS;
+  const live=deps.reduce((a,d)=>a+(d.agents||[]).filter(x=>x.has_output&&x.today).length,0);
+  const nag=deps.reduce((a,d)=>a+(d.agents||[]).length,0);
+  const isAgency=P.id==='agency';
+  const rows=isAgency
+    ? deps.map(d=>[d.label,d.desc,(d.agents||[]).map(a=>(a.name||'').replace(/_/g,' ')),d.color])
+    : P.pillars.map(x=>[x[0],x[1],x[2],'#2fd4c4']);
+  const pillars=rows.map(function(r){
+    const t=r[0],d2=r[1],chips=r[2],col=r[3];
+    return '<div class="prs-pillar" style="--pc:'+esc(col)+'"><b>'+esc(t)+'</b>'
+      +'<div class="prs-pd">'+esc(d2||'')+'</div>'
+      +'<div class="prs-chips">'+(chips||[]).map(function(c){
+        return isAgency
+          ? '<span class="prs-chip" onclick="agentDetail(\''+c.replace(/ /g,'_')+'\')">'+esc(c)+'</span>'
+          : '<span class="prs-chip">'+esc(c)+'</span>';}).join('')+'</div></div>';
+  }).join('');
+  const M=isAgency
+    ? [['MRR retenido','US$ '+(eng.mrr_usd||0)],['Clientes activos',eng.clients_active==null?'-':eng.clients_active],
+       ['Leads en pipeline',eng.leads==null?'-':eng.leads],['Agentes activos hoy',live+' / '+nag]]
+    : [['Ticket estimado',P.ticket||'-'],['Pilares',P.pillars.length],['Conectores',P.conn.length],['Estado','plantilla lista']];
+  w.innerHTML='<div class="prs-left">'
+    +'<div class="prs-pager"><button onclick="prsNav(-1)">&lsaquo;</button><button onclick="prsNav(1)">&rsaquo;</button>'
+    +'<span class="pg-n">'+String(PRS_I+1).padStart(2,'0')+'</span><span class="pg-t">/ '+PERSONAS.length+'</span>'
+    +'<b>'+esc(P.t)+'</b></div>'
+    +'<div class="prs-h"><span class="prs-tab">&#9635; '+esc(P.t)+'</span><span class="prs-badge2">'+esc(P.badge)+'</span></div>'
+    +'<div class="prs-tag">'+esc(P.tag)+'</div>'
+    +'<div class="prs-desc">'+esc(P.desc)+'</div>'
+    +'<div class="prs-ns">&#9733; NORTH STAR<b>'+esc(P.ns)+'</b></div>'
+    +'<div class="prs-sec">&#9656; PILARES &middot; '+rows.length+'</div>'
+    +'<div class="prs-pills">'+pillars+'</div>'
+    +'<div class="prs-sec">&#9656; CONECTORES</div>'
+    +'<div class="prs-chips">'+P.conn.map(function(c){return '<span class="prs-chip">'+esc(c)+'</span>';}).join('')+'</div>'
+    +'<div class="prs-sec">&#9656; METRICAS QUE IMPORTAN</div>'
+    +'<div class="prs-metrics">'+M.map(function(kv){return '<div class="prs-m"><span>'+kv[0]+'</span><b>'+esc(String(kv[1]))+'</b></div>';}).join('')+'</div>'
+    +'</div>'
+    +'<div class="prs-right"><canvas id="prsCv" width="560" height="520"></canvas></div>';
+  prsGraph(isAgency?deps:P.pillars.map(function(x){return {label:x[0],agents:x[2].map(function(n){return {name:n};}),color:'#2fd4c4'};}));
 }
 function prsGraph(deps){
   const cv=el('prsCv'); if(!cv) return;
