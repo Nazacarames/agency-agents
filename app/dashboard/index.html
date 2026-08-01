@@ -1663,8 +1663,8 @@ async function loadDepartamentos(){
 }
 function neoBrain(){
   const cv=el('neoBrain'); if(!cv) return;
-  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=W*0.44, N=88, LINK=W*0.17;
-  const P=Array.from({length:N},()=>{const a=Math.random()*6.283,r=Math.pow(Math.random(),.62)*R;return{x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,r:Math.random()*1.5+.5};});
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=W*0.36, N=140, LINK=W*0.135;
+  const P=Array.from({length:N},()=>{const a=Math.random()*6.283,r=Math.pow(Math.random(),.5)*R;return{x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,vx:(Math.random()-.5)*.16,vy:(Math.random()-.5)*.16,r:Math.random()*1.6+.6};});
   cancelAnimationFrame(NEO_RAF);
   function frame(){
     const sec=el('tab-departamentos');
