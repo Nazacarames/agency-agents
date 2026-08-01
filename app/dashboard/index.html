@@ -339,7 +339,9 @@
   .neo-core-label{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);text-align:center;font-size:11px;font-weight:800;letter-spacing:2.5px;color:#ffd9b8;text-shadow:0 0 14px rgba(255,138,61,.8);pointer-events:none}
   .neo-core-label span{display:block;font-weight:500;font-size:8.5px;letter-spacing:1.5px;color:#8a94ac;margin-top:2px}
   /* nodos: orbe circular con ícono + label debajo */
-  .neo-nodes{position:absolute;inset:0;z-index:4}
+  .neo-nodes{position:absolute;inset:0;z-index:4;pointer-events:none}
+  .neo-node{pointer-events:auto}
+  .neo-links{pointer-events:none}
   .neo-node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;width:120px;background:none;border:none;cursor:pointer;color:var(--navy);animation:nodeIn .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--in)}
   @keyframes nodeIn{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}to{opacity:1}}
   .neo-orb{position:relative;width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;
