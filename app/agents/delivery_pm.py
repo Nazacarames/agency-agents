@@ -44,7 +44,7 @@ Un tablero en markdown:
 class DeliveryPMAgent(BaseAgent):
     name = "delivery_pm"
     description = "Project manager de entrega: etapas, bloqueos y próximos hitos por proyecto"
-    schedule = None
+    schedule = "15 7 * * mon"  # activo: lun 07:15 (cron en scheduler.DEFAULT_SCHEDULES)
     max_tokens = 5000
     llm_provider = "deepseek"
 

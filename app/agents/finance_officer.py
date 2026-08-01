@@ -49,9 +49,10 @@ Un brief en markdown, corto y directo:
 class FinanceOfficerAgent(BaseAgent):
     name = "finance_officer"
     description = "CFO: brief financiero (gastos, MRR, cobranzas, decisiones de plata)"
-    schedule = None            # on-demand (no suma a la cuota diaria)
+    schedule = "0 7 * * mon"   # activo: lun 07:00 (cron real en scheduler.DEFAULT_SCHEDULES)
     max_tokens = 5000
     llm_provider = "deepseek"  # razonamiento/finanzas; fallback MiniMax
+    claude_code_skill = "pricing"  # decisiones de precio/monetización cuando aplican
 
     @property
     def system_prompt(self) -> str:
