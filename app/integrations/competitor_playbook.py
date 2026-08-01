@@ -226,9 +226,33 @@ def save_playbook(text: str) -> None:
         log.error("playbook_save_failed", error=str(e)[:150])
 
 
+def visual_scout_text() -> str:
+    """Playbook de EDICIÓN/hooks/visual del scout (destilado de mirar video real).
+    Archivo del volumen si existe (lo escribe scripts/scout_watch.py + curación
+    humana); si no, el SEED del código, que llega seguro a producción."""
+    try:
+        t = (_DATA_DIR / "visual-scout.md").read_text(encoding="utf-8").strip()
+        if t:
+            return t
+    except Exception:
+        pass
+    return SEED_VISUAL_SCOUT
+
+
 def playbook_block() -> str:
-    """Bloque para inyectar en los prompts de los agentes de contenido: el playbook
-    dinámico (se refresca solo) + el dossier de competidores (contexto fijo profundo)."""
+    """Reglas creativas fijas + señales cortas del día, para los agentes de contenido.
+
+    El MATERIAL de referencia (playbook, dirección de arte, scout visual, estudio
+    de reels) ya NO se inyecta entero: eran 33 mil caracteres idénticos para los
+    cuatro agentes, compitiendo por la atención del modelo con lo que sí importa.
+    Ahora está indexado en el cerebro (`brain_search`, capa `material`) y cada
+    agente recibe solo los pasajes que aplican a la pieza del día — ver
+    `BaseAgent.needs_creative_material`.
+
+    Acá quedan las REGLAS (el dossier, los clichés a evitar, la regla de los 2
+    segundos), que no son material consultable sino restricciones que valen
+    siempre, más las señales cortas y perecederas (radar, tendencias, baúl) y el
+    QA de nuestro propio contenido."""
     trends = ""
     try:
         from . import trends as _t
@@ -237,17 +261,6 @@ def playbook_block() -> str:
             trends = "\n\n" + tb
     except Exception:
         trends = ""
-    # Playbook de EDICIÓN/hooks/visual del "visual scout" (destilado de mirar video real).
-    # Igual que el playbook: SEED en código (llega seguro a prod) + override opcional del
-    # archivo data/visual-scout.md que escribe scripts/scout_watch.py + curación humana.
-    scout_txt = SEED_VISUAL_SCOUT
-    try:
-        t = (_DATA_DIR / "visual-scout.md").read_text(encoding="utf-8").strip()
-        if t:
-            scout_txt = t
-    except Exception:
-        pass
-    scout = "\n\n" + scout_txt
     # Autopsy de NUESTRO contenido (datos reales de IG): qué funcionó de lo propio.
     # Best-effort y silencioso hasta que haya engagement real.
     autopsy = ""
@@ -256,13 +269,6 @@ def playbook_block() -> str:
         autopsy = content_autopsy.cached_block()
     except Exception:
         autopsy = ""
-    # Dirección de arte viva (formatos/estilos de imagen — estudio mensual automático).
-    direction = ""
-    try:
-        from . import creative_direction
-        direction = creative_direction.block()
-    except Exception:
-        pass
     # Baúl de ganchos (plantillas acumuladas) + radar de novedades de HOY (trend-jacking).
     vault = radar = ""
     try:
@@ -275,13 +281,6 @@ def playbook_block() -> str:
         radar = trend_radar.block()
     except Exception:
         pass
-    # Estudio de video del competidor (Gemini mira sus reels — semanal).
-    reels = ""
-    try:
-        from . import reel_study
-        reels = reel_study.block()
-    except Exception:
-        pass
     # Lecciones del QA de Gemini sobre NUESTRO output (imágenes y shorts propios).
     learnings = ""
     try:
@@ -290,18 +289,11 @@ def playbook_block() -> str:
     except Exception:
         pass
     return (
-        "\n\n=== PLAYBOOK DE COMPETENCIA (lo que HOY funciona — respetalo"
-        + _fresh.sello(_FILE) + ") ===\n"
-        + load_playbook().strip()
-        + "\n=== fin playbook ===\n"
-        + COMPETITOR_DEEP_DIVE
-        + scout
-        + direction
+        COMPETITOR_DEEP_DIVE
         + autopsy
         + vault
         + radar
         + trends
-        + reels
         + learnings
         + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
         "plataforma, robá las tácticas del dossier adaptadas a distribuidoras argentinas, "

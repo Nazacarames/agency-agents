@@ -68,6 +68,11 @@ class BaseAgent(ABC):
     # de una corrida es `claude_code_timeout`, no los turnos: un agente que busca
     # y verifica 10 empresas necesita decenas de tool calls.
     hermes_max_turns: int = 40
+    # Los agentes de contenido reciben material de competencia (playbook, dirección
+    # de arte, scout visual, estudio de reels). Antes iba ENTERO en el prompt —33 mil
+    # caracteres iguales para los cuatro—; ahora se sirve por relevancia desde el
+    # cerebro, así que cada uno recibe lo que aplica a la pieza del día.
+    needs_creative_material: bool = False
     # Backend LLM alternativo (NVIDIA): "glm" | "deepseek" | "" (default MiniMax/CC).
     # Si está seteado y hay NVIDIA_API_KEY, el agente corre por completion directa con
     # ese modelo (salteando Claude Code); si NVIDIA falla, cae al flujo normal.
@@ -264,6 +269,14 @@ class BaseAgent(ABC):
             brain = brain_search.block(user_msg[:2000])
             if brain:
                 blocks.append(brain)
+            if self.needs_creative_material:
+                # Acá SÍ suma la descripción del agente: la capa material no tiene
+                # fichas de agentes, así que no puede "encontrarse a sí mismo", y
+                # el dominio ayuda a traer las tácticas de su formato.
+                mat = brain_search.block(f"{self.description} {user_msg[:2000]}",
+                                         k=5, layer="material")
+                if mat:
+                    blocks.append(mat)
         except Exception as e:
             log.warning("brain_block_failed", agent=self.name, error=str(e)[:120])
         # cliente objetivo (args.client_id) → su memoria acumulada

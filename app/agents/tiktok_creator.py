@@ -191,6 +191,7 @@ bot | 21:15 | <...>
 
 class TikTokCreatorAgent(BaseAgent):
     name = "tiktok_creator"
+    needs_creative_material = True
     description = "Marca personal de Nazareno en TikTok: guiones (no-ad) + clip Veo + mockup de chatbot"
     schedule = "0 19 * * mon,wed,fri"
     timezone = "America/Buenos_Aires"

@@ -71,6 +71,7 @@ a las de la semana pasada.
 
 class ContentCreatorAgent(BaseAgent):
     name = "content_creator"
+    needs_creative_material = True
     description = "Genera 3 ideas de contenido listas para redes (alineadas al Big Domino)"
     schedule = "0 9 * * 1"   # 2026-06-12: cambiado a lunes 09:00 (antes 13:00 3x semana)
     timezone = "America/Buenos_Aires"

@@ -25,7 +25,21 @@ from ..log import get_logger
 
 log = get_logger("brain_search")
 
-_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "brain-graph.json"
+_DATA = Path(__file__).resolve().parent.parent.parent / "data"
+_FILE = _DATA / "brain-graph.json"
+# Material creativo/de competencia que hasta ahora se inyectaba ENTERO en el
+# prompt de los 4 agentes de contenido (33 mil caracteres, iguales para todos).
+# Indexado acá, se sirve por relevancia como el resto del cerebro.
+#
+# Se pide el texto EFECTIVO a cada módulo en vez de leer el .md: varios traen un
+# SEED en código que se usa mientras el archivo del volumen no exista, y leyendo
+# solo el archivo un deploy limpio se quedaría sin material.
+_MATERIAL = {
+    "playbook de competencia": ("competitor_playbook", "load_playbook"),
+    "dirección de arte": ("creative_direction", "load"),
+    "scout visual (edición/hooks)": ("competitor_playbook", "visual_scout_text"),
+    "estudio de reels del competidor": ("reel_study", "digest_text"),
+}
 _WORD = re.compile(r"[a-záéíóúüñ0-9]{4,}")
 # Ruido del español + palabras que aparecen en CASI todo lo nuestro (agencia,
 # agente, automiq…): sin filtrarlas, cualquier consulta matchea con todo.
@@ -52,20 +66,53 @@ def _terms(text: str) -> set:
     return {w for w in _WORD.findall(plano) if w not in _STOP}
 
 
+_MATERIAL_FILES = ("competitor-playbook.md", "creative-direction.md",
+                   "visual-scout.md", "reel-study.md")
+
+
+def _mtimes() -> tuple:
+    """Huella de todas las fuentes: si cambia cualquiera, se reindexa."""
+    out = []
+    for p in [_FILE] + [_DATA / f for f in _MATERIAL_FILES]:
+        try:
+            out.append(p.stat().st_mtime)
+        except Exception:
+            out.append(0.0)
+    return tuple(out)
+
+
+def _secciones_md(texto: str, limite: int) -> list:
+    """Parte un .md por encabezado y devuelve (título, cuerpo) por sección.
+
+    Mismo criterio que usa brain_sync con el vault, pero acá el archivo vive en
+    el volumen de Railway y se refresca por cron, así que se secciona al vuelo."""
+    out, titulo, buf = [], "", []
+    for linea in texto.splitlines():
+        if linea.startswith("#"):
+            if buf:
+                cuerpo = " ".join(" ".join(buf).split())[:limite]
+                if len(cuerpo) >= 60:
+                    out.append((titulo, cuerpo))
+            titulo, buf = linea.lstrip("# ").strip()[:120], []
+        else:
+            buf.append(linea.strip())
+    if buf:
+        cuerpo = " ".join(" ".join(buf).split())[:limite]
+        if len(cuerpo) >= 60:
+            out.append((titulo, cuerpo))
+    return out
+
+
 def _index() -> Dict[str, Any]:
-    """Índice en memoria, reconstruido solo cuando cambia brain-graph.json."""
-    try:
-        mtime = _FILE.stat().st_mtime
-    except Exception:
-        return {"docs": [], "df": {}, "n": 0}
+    """Índice en memoria, reconstruido cuando cambia alguna de sus fuentes."""
+    mtime = _mtimes()
     if _cache["mtime"] == mtime:
         return _cache
     import json
     try:
         raw = json.loads(_FILE.read_text(encoding="utf-8"))
-    except Exception as e:
-        log.warning("brain_index_failed", error=str(e)[:120])
-        return {"docs": [], "df": {}, "n": 0}
+    except Exception:
+        raw = {}     # sin cerebro todavía: la capa material igual sirve
     docs, df = [], {}
 
     def add(layer: str, head: str, body: str, meta: dict, ref: bool = False) -> None:
@@ -96,18 +143,35 @@ def _index() -> Dict[str, Any]:
     for c in raw.get("code") or []:
         add("code", c.get("label") or "", c.get("file") or "",
             {"file": c.get("file") or "", "kind": c.get("kind") or ""})
+    from importlib import import_module
+    for etiqueta, (modulo, fn) in _MATERIAL.items():
+        try:
+            txt = getattr(import_module(f".{modulo}", __package__), fn)() or ""
+        except Exception as e:
+            log.warning("material_load_failed", fuente=etiqueta, error=str(e)[:100])
+            continue
+        for titulo, cuerpo in _secciones_md(txt, 600):
+            add("material", f"{etiqueta} {titulo}", cuerpo,
+                {"fuente": etiqueta, "titulo": titulo})
 
     _cache.update({"mtime": mtime, "docs": docs, "df": df, "n": len(docs)})
-    log.info("brain_indexed", docs=len(docs))
+    log.info("brain_indexed", docs=len(docs),
+             material=sum(1 for d in docs if d["layer"] == "material"))
     return _cache
 
 
-def search(query: str, k: int = 3, layer: str = "", min_terms: int = 2) -> List[Dict[str, Any]]:
-    """Pasajes más relevantes. Exige `min_terms` términos en común: con uno solo
-    entraba cualquier cosa que compartiera una palabra suelta."""
+def search(query: str, k: int = 3, layer: str = "", min_terms: int = 0) -> List[Dict[str, Any]]:
+    """Pasajes más relevantes. Por defecto exige 2 términos en común: con uno solo
+    entraba cualquier cosa que compartiera una palabra suelta.
+
+    La capa `material` es la excepción y pide uno: son decenas de secciones
+    curadas, todas del dominio creativo, así que el riesgo no es traer ruido sino
+    dejar al agente sin nada."""
     idx = _index()
     if not idx["n"]:
         return []
+    if not min_terms:
+        min_terms = 1 if layer == "material" else 2
     qt = _terms(query)
     if not qt:
         return []
@@ -117,7 +181,10 @@ def search(query: str, k: int = 3, layer: str = "", min_terms: int = 2) -> List[
     # En un corpus chico los términos raros son los accidentes — "milanesas
     # napolitanas" pasaba a devolver resultados. Dos términos o nada.
     for d in idx["docs"]:
-        if layer and d["layer"] != layer:
+        # Sin capa pedida se busca doctrina (vault + código). El material de
+        # competencia se pide aparte: si compitiera acá, sus 33 mil caracteres
+        # de tácticas taparían las decisiones propias de la agencia.
+        if (d["layer"] != layer) if layer else (d["layer"] == "material"):
             continue
         hits = qt & d["terms"]
         if len(hits) < min_terms:
@@ -134,16 +201,35 @@ def search(query: str, k: int = 3, layer: str = "", min_terms: int = 2) -> List[
              "score": round(s, 2), **d["meta"]} for s, d in scored[:k]]
 
 
-def block(query: str, k: int = 3) -> str:
+def block(query: str, k: int = 3, layer: str = "") -> str:
     """Bloque listo para el prompt, o "" si no hay nada relevante (o si el cerebro
     todavía no se sincronizó — el agente sigue corriendo igual)."""
     try:
-        hits = search(query, k=k)
+        hits = search(query, k=k, layer=layer)
     except Exception as e:
         log.warning("brain_search_failed", error=str(e)[:120])
         return ""
-    if not hits:
+    if not hits and layer != "material":
         return ""
+    if layer == "material":
+        # Piso: si nada matcheó, el agente igual sale con las reglas base. Antes
+        # recibía el material entero, así que quedarse en cero sería un retroceso.
+        if len(hits) < 2:
+            vistos = {h.get("titulo") for h in hits}
+            for d in _index()["docs"]:
+                if d["layer"] == "material" and d["meta"].get("titulo") not in vistos:
+                    hits.append({"layer": "material", "text": d["body"], **d["meta"]})
+                    if len(hits) >= 2:
+                        break
+        parts = ["## 🎯 MATERIAL DE COMPETENCIA APLICABLE A ESTA PIEZA",
+                 "Del playbook, la dirección de arte y el estudio de la competencia, esto es "
+                 "lo que aplica a lo que estás haciendo hoy. Usalo; lo que no está acá no "
+                 "hace falta para esta pieza."]
+        if not hits:
+            return ""
+        for h in hits:
+            parts.append(f"### {h.get('fuente')} › {h.get('titulo') or '—'}\n{h['text']}")
+        return "\n".join(parts)
     parts = ["## 🧠 DEL CEREBRO DE LA EMPRESA (Obsidian + código)",
              "Lo que la agencia YA sabe sobre este tema. Es doctrina propia: "
              "respetala y citala en vez de improvisar. Si la contradecís, decí por qué."]

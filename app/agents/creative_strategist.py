@@ -66,6 +66,7 @@ formato de campos que abajo. Basate en la oferta/servicios/tono REALES del sitio
 
 class CreativeStrategistAgent(BaseAgent):
     name = "creative_strategist"
+    needs_creative_material = True
     description = "Genera copy para ads de Meta + headlines landing"
     schedule = "0 14 * * 2,4"
     timezone = "America/Buenos_Aires"

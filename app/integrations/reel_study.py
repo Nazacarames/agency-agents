@@ -213,6 +213,15 @@ def study(n: int = 2, per_secondary: int = 1) -> Dict[str, int]:
     return {"ok": True, "estudiados": len(sections)}
 
 
+def digest_text() -> str:
+    """Último estudio en crudo ("" si todavía no corrió). Lo indexa brain_search
+    para servirlo por relevancia en vez de inyectarlo entero."""
+    try:
+        return _DIGEST.read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
 def block() -> str:
     """Bloque para inyectar a los agentes (último estudio, capado)."""
     try:

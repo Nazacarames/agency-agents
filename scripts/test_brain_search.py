@@ -68,7 +68,29 @@ b = bs.block("cuanto cotizo la competencia de la camara veterinaria")
 assert "Neurentia" in b and "CEREBRO DE LA EMPRESA" in b, b
 assert bs.block("receta de milanesas napolitanas") == ""
 
+# 5b. Capa MATERIAL (playbook/dirección de arte): se pide aparte y NUNCA compite
+#     con la doctrina en la búsqueda general.
+bs._MATERIAL = {"playbook de prueba": ("_test_material", "texto")}
+bs._cache["mtime"] = None
+import types
+mod = types.ModuleType("app.integrations._test_material")
+mod.texto = lambda: ("# Regla de los 2 segundos\nEl gancho entra antes del segundo dos "
+                     "o el scroll se lo lleva puesto, siempre.\n"
+                     "# Carruseles\nEl carrusel educativo es el formato que mas guarda "
+                     "genera en instagram para cuentas de servicios.\n")
+sys.modules["app.integrations._test_material"] = mod
+
+hits = bs.search("carrusel educativo instagram", layer="material")
+assert hits and hits[0]["fuente"] == "playbook de prueba", hits
+assert all(h["layer"] != "material" for h in bs.search("carrusel educativo instagram"))
+
+# Piso: una consulta que no matchea NADA igual sale con reglas base — antes el
+# agente recibía el material entero, quedarse en cero sería un retroceso.
+b = bs.block("xyz sin relacion alguna", layer="material")
+assert "MATERIAL DE COMPETENCIA" in b and "2 segundos" in b, b
+
 # 6. Sin cerebro sincronizado el agente sigue corriendo (no explota)
+bs._MATERIAL = {}
 bs._FILE = Path(tempfile.gettempdir()) / "no-existe-brain.json"
 bs._cache["mtime"] = None
 assert bs.search("lo que sea") == [] and bs.block("lo que sea") == ""

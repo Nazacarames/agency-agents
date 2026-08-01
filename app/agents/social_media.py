@@ -57,6 +57,7 @@ Y debajo de la tabla, el detalle de:
 
 class SocialMediaAgent(BaseAgent):
     name = "social_media"
+    needs_creative_material = True
     description = "Calendario semanal de contenido (IG + FB)"
     schedule = "0 18 * * 0"   # Domingo 18:00 ART
     timezone = "America/Buenos_Aires"
