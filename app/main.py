@@ -782,15 +782,16 @@ async def api_agents(request: Request):
 
 @app.post("/api/brain/graph")
 async def api_brain_graph_upload(request: Request):
-    """Recibe el grafo destilado del vault de Obsidian (generado LOCAL por
-    scripts/brain_sync.py: notas + [[links]] + carpetas). Se persiste en el
-    volumen y el Brain Explorer lo sirve. El vault NO vive en Railway: viaja
-    solo este JSON liviano."""
+    """Recibe el Cerebro destilado (generado LOCAL por scripts/brain_sync.py:
+    Obsidian + Graphify fusionados — notas, pasajes por sección, nodos de código
+    y sus relaciones). Se persiste en el volumen; el Brain Explorer lo dibuja y
+    brain_search lo consulta. Ni el vault ni el repo viven en Railway: viaja solo
+    este JSON destilado (~3 MB con las dos capas)."""
     _verify_webhook_secret(request)
     body = await request.json()
     if not isinstance(body, dict) or not isinstance(body.get("nodes"), list):
         raise HTTPException(status_code=400, detail="grafo inválido (falta nodes)")
-    if len(json.dumps(body)) > 2_000_000:
+    if len(json.dumps(body)) > 6_000_000:
         raise HTTPException(status_code=413, detail="grafo demasiado grande")
     from .integrations.jsonstore import write_json_atomic
     body["received_at"] = datetime.now(timezone.utc).isoformat()
