@@ -401,6 +401,10 @@
   .tree-title small{display:block;font-size:8px;letter-spacing:2px;color:#5f6a85;margin-top:4px;font-weight:500}
   .tl-solid{stroke-width:.22;opacity:.5}
   .tl-dash{stroke-width:.2;opacity:.4;stroke-dasharray:.8 2}
+  /* nodos de SERVICIO/MCP (fila superior del árbol, ref: círculos carmesí con pictograma) */
+  .tree-svc{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;width:104px;pointer-events:none;font-family:var(--mono);animation:nodeIn .6s ease both}
+  .ts-circ{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#ff7186;border:1px solid rgba(255,92,110,.65);background:radial-gradient(circle at 45% 40%,#151019,#0a070c);box-shadow:0 0 8px -4px #ff5c6e}
+  .ts-name{font-size:7.5px;letter-spacing:1px;text-transform:uppercase;color:#8b93ab;text-align:center;line-height:1.4}
   .tree-agent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;width:130px;background:none;border:none;cursor:pointer;pointer-events:auto;font-family:var(--mono);animation:nodeIn .6s ease both}
   .ta-circ{position:relative;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--dept,#ff8a3d);border:1px solid color-mix(in srgb,var(--dept,#ff8a3d) 75%,#1a2030);background:radial-gradient(circle at 45% 40%,#10141f,#07080e);box-shadow:0 0 9px -5px var(--dept,#ff8a3d);transition:transform .35s cubic-bezier(.32,.72,0,1),box-shadow .35s}
   .tree-agent:hover .ta-circ{transform:scale(1.08);box-shadow:0 0 14px -4px var(--dept,#ff8a3d)}
@@ -1861,15 +1865,26 @@ function renderDeptTree(dep){
   const nodes=el('neoNodes'), links=el('neoLinks');
   const ags=dep.agents||[], n=ags.length||1, col=dep.color||'#ff8a3d';
   const xs=i=>n===1?50:(16+i*(68/(n-1)));
-  const AY=30, BX=50, BY=72;
-  links.innerHTML = ags.map((a,i)=>{const x=xs(i);
-    return `<line x1="${x}" y1="${AY+6}" x2="${x}" y2="${AY+12}" stroke="#aebbdc" class="tl-solid"/>`+
-           `<line x1="${x}" y1="${AY+12.5}" x2="${BX}" y2="${BY-9}" stroke="#aebbdc" class="tl-dash"/>`;}).join('')
-    + `<ellipse cx="${BX}" cy="${BY}" rx="6.5" ry="8.5" fill="none" stroke="${esc(col)}" stroke-width=".22" opacity=".45"/>`;
+  // fila superior: conexiones ÚNICAS del depto (feeds/servicios/MCPs de sus agentes)
+  const svcs=[]; ags.forEach(a=>(a.connections||[]).forEach(c=>{ if(!svcs.includes(c)) svcs.push(c); }));
+  const m=svcs.length, sx=i=>m===1?50:(12+i*(76/(Math.max(m-1,1))));
+  const SY=13, AY=44, BX=50, BY=79;
+  let L='';
+  // servicio → agente (hairline sólida tenue)
+  ags.forEach((a,i)=>{(a.connections||[]).forEach(c=>{const si=svcs.indexOf(c);
+    if(si>=0) L+=`<line x1="${sx(si).toFixed(1)}" y1="${SY+5}" x2="${xs(i).toFixed(1)}" y2="${AY-7}" stroke="#aebbdc" class="tl-solid" style="opacity:.28"/>`;});});
+  // agente → cerebro del sector (dashed convergente)
+  L+=ags.map((a,i)=>{const x=xs(i);
+    return `<line x1="${x}" y1="${AY+6}" x2="${x}" y2="${AY+10}" stroke="#aebbdc" class="tl-solid"/>`+
+           `<line x1="${x}" y1="${AY+10.5}" x2="${BX}" y2="${BY-8}" stroke="#aebbdc" class="tl-dash"/>`;}).join('');
+  L+=`<ellipse cx="${BX}" cy="${BY}" rx="6.5" ry="8.5" fill="none" stroke="${esc(col)}" stroke-width=".22" opacity=".45"/>`;
+  links.innerHTML=L;
   nodes.innerHTML =
     `<div class="tree-title">${esc((dep.label||'').toUpperCase())}<small>${esc(dep.desc||'')}</small></div>`
+    + svcs.map((s,i)=>`<div class="tree-svc" style="left:${sx(i).toFixed(1)}%;top:${SY}%;animation-delay:${(i*0.05).toFixed(2)}s">
+        <span class="ts-circ">${esc(s[0]||'·')}</span><span class="ts-name">${esc(s)}</span></div>`).join('')
     + ags.map((a,i)=>{const x=xs(i); const on=a.has_output&&a.today;
-      return `<button class="tree-agent" style="left:${x.toFixed(1)}%;top:${AY}%;--dept:${esc(col)};animation-delay:${(i*0.06).toFixed(2)}s" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}">
+      return `<button class="tree-agent" style="left:${x.toFixed(1)}%;top:${AY}%;--dept:${esc(col)};animation-delay:${(0.15+i*0.06).toFixed(2)}s" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}">
         <span class="ta-circ">A${on?'<i class="ta-on"></i>':''}</span>
         <span class="ta-name">${esc((a.name||'').replace(/_/g,' '))}</span>
         <span class="ta-desc">${esc((a.description||'').slice(0,48))}${(a.description||'').length>48?'…':''}</span>
@@ -1984,6 +1999,8 @@ function agentDetail(name){
       <div class="ad-sec"><div class="ad-h">▸ CADENCE</div><div class="ad-mono">${A.schedule?esc(A.schedule):'on-demand'}</div></div>
       <div class="ad-sec"><div class="ad-h">▸ MAX OUTPUT</div><div class="ad-mono">${(A.max_tokens||0).toLocaleString()} tokens</div></div>
     </div>
+    <div class="ad-sec"><div class="ad-h">▸ TOOLS AT THE END OF THE CHAIN (${(A.connections||[]).length})</div>
+      <div class="ad-pills">${(A.connections||[]).length?A.connections.map(c=>`<span class="ad-pill" style="border-color:rgba(255,92,110,.4);background:rgba(255,92,110,.08)">[[ ${esc(c)} ]]</span>`).join(''):'<span class="ad-dim">— sin conexiones externas —</span>'}</div></div>
     <div class="ad-actions">
       <button class="btn-ghost btn-sm" onclick="viewLast('${A.name}')">VER OUTPUT</button>
       <button class="btn btn-sm" onclick="runAgent('${A.name}',this)">▸ CORRER AHORA</button>

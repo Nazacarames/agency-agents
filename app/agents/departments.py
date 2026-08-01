@@ -84,6 +84,31 @@ DEPARTMENTS: Dict[str, dict] = {
 }
 
 
+# Conexiones REALES de cada agente (feeds/servicios/MCPs que usa en sus corridas).
+# Para el panel OS: fila superior del árbol del depto + sección TOOLS del detalle.
+AGENT_CONNECTIONS: Dict[str, List[str]] = {
+    "leadhunter": ["WebFetch", "Discovery AR"],
+    "outbound": ["Gmail Ventas@", "Leads Store"],
+    "inbox_assistant": ["Gmail Ventas@", "Google Calendar"],
+    "meeting_prep": ["Memoria Supabase", "Google Calendar"],
+    "content_creator": ["Vertex Imagen", "Meta IG/FB"],
+    "social_media": ["Publish Queue", "Meta IG/FB"],
+    "tiktok_creator": ["Veo 3.1 Vertex", "Montage Svc", "YouTube", "TikTok"],
+    "creative_strategist": ["Vertex Imagen", "Playbooks"],
+    "media_auditor": ["Benchmarks Ads"],
+    "community_manager": ["Meta Comments", "Auto-DM Gate"],
+    "growth_hacker": ["Metrics Store"],
+    "seo_specialist": ["Landing Astro"],
+    "web_optimizer": ["Search Console", "Vercel"],
+    "web_auditor": ["WebFetch"],
+    "chief_of_staff": ["Reportes data/", "Misiones", "Buzón Agentes"],
+    "data_analyst": ["Metrics Store", "Finanzas Store"],
+    "finance_officer": ["Finanzas Store", "Clientes Store"],
+    "customer_success": ["Clientes Store", "Memoria Clientes"],
+    "delivery_pm": ["Clientes Store", "Misiones"],
+}
+
+
 # Nivel de autonomía POR departamento (defaults; el dueño los ajusta).
 # Honra los ejemplos dados: Marketing publica, Comercial sugiere, Finanzas nunca acciona.
 DEPT_AUTONOMY: Dict[str, str] = {

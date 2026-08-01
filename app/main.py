@@ -788,15 +788,17 @@ async def api_departments(request: Request):
     from .agents.departments import DEPARTMENTS, DEPT_AUTONOMY
 
     from .agents.registry import get_agent
+    from .agents.departments import AGENT_CONNECTIONS
 
     def _agent_meta(name):
         try:
             a = get_agent(name)
             skills = [s.strip() for s in (getattr(a, "claude_code_skill", "") or "").split(",") if s.strip()]
             return {"skills": skills, "backend": getattr(a, "llm_provider", "") or "minimax",
-                    "max_tokens": getattr(a, "max_tokens", 0)}
+                    "max_tokens": getattr(a, "max_tokens", 0),
+                    "connections": AGENT_CONNECTIONS.get(name, [])}
         except Exception:
-            return {"skills": [], "backend": "", "max_tokens": 0}
+            return {"skills": [], "backend": "", "max_tokens": 0, "connections": []}
 
     def _build():
         out = []
