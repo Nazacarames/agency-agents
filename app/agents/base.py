@@ -332,11 +332,17 @@ class BaseAgent(ABC):
                 except Exception:
                     pass
                 for prov in providers:
+                    # El tier gratis de NVIDIA (deepseek/glm) puede COLGARSE bajo carga:
+                    # medido en prod, Hermes esperaba los 600s COMPLETOS antes de caer a
+                    # MiniMax (cada agente deepseek perdía ~10min/corrida). Fail-fast en el
+                    # intento NVIDIA (180s) → cae a MiniMax en ~3min. MiniMax (prov="")
+                    # conserva el timeout largo (self.claude_code_timeout).
+                    p_timeout = 180 if prov else self.claude_code_timeout
                     try:
                         h_text = run_hermes(
                             self._skills_preamble() + user_msg,
                             settings=ctx.settings, llm_provider=prov,
-                            system_append=local_system, timeout=self.claude_code_timeout,
+                            system_append=local_system, timeout=p_timeout,
                             max_turns=self.hermes_max_turns, agente=self.name)
                         response = MiniMaxResponse(
                             text=h_text, model=f"hermes:{prov or 'minimax'}",
