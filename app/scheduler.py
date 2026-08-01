@@ -58,6 +58,8 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
     "finance_officer": "0 7 * * mon",      # lun 07:00 — revisión financiera semanal
     "delivery_pm": "15 7 * * mon",         # lun 07:15 — estado de proyectos de clientes
     "customer_success": "30 7 * * mon,thu",  # lun+jue 07:30 — retención/seguimiento 2x/semana
+    "community_manager": "30 15 * * mon-fri",  # hábiles 15:30 — engagement, después de social
+    "data_analyst": "30 20 * * mon-fri",   # hábiles 20:30 — tendencias, antes del cierre del Chief (21:00)
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 

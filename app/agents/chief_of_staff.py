@@ -127,6 +127,15 @@ Por CADA una emití UNA línea, exactamente en este formato (agente real, en sna
 Reglas: máx 6; solo agentes del roster; nada de tareas del humano (esas van en "Tus 3
 acciones"); si no hay nada que delegar, omití el bloque. Cada agente recibe su orden
 en su próxima corrida (no gasta una corrida extra).
+
+## ⚡ ACCIÓN DIRECTA (bloque para el sistema — usá con criterio)
+Cuando el avance lo justifica, además de delegar podés RE-DISPARAR un agente para que
+corra YA (no en su próximo turno). Úsalo para decisiones de BAJO RIESGO basadas en el
+avance: un agente que HOY no entregó y hace falta, o algo urgente que no puede esperar.
+Formato: `DISPARAR(<agente>)` (una línea por agente).
+Reglas DURAS: máx 2 por cierre; NUNCA el de video (tiktok_creator) ni los de
+contenido/creatividad pesados (cuestan cuota); solo si de verdad mueve la aguja hoy.
+Si con delegar alcanza, delegá — disparar es la excepción, no la norma.
 """.strip()
 
 WEEKLY_ADDON = """
@@ -333,20 +342,56 @@ class ChiefOfStaffAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        return f"{get_context_block()}\n\n{COS_INSTRUCTIONS}"
+        from .departments import autonomy_note
+        return f"{get_context_block()}\n\n{autonomy_note(self.name)}\n\n{COS_INSTRUCTIONS}"
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
-        """Además de persistir el brief, EJECUTA la delegación: convierte las líneas
-        `DELEGAR(<agente>): <tarea>` en órdenes reales que cada agente recibe en su
-        próxima corrida (agent_inbox) y registra la tanda como misión para trackearla.
-        NO dispara corridas nuevas a propósito: cada run de agente es pesado en cuota,
-        así que la orden viaja sobre la corrida que el agente ya tiene programada."""
-        delegated = self._delegate(response_text or "", ctx)
+        """Además de persistir el brief, el Chief EJECUTA sus decisiones:
+        - `DELEGAR(<agente>): <tarea>` → orden en el buzón del agente (la recibe en su
+          próxima corrida programada) + misión de tracking.
+        - `DISPARAR(<agente>)` → RE-CORRE ese agente YA (acción sobre el avance: p.ej.
+          un agente que no entregó hoy). Tope 2, en background, blocklist del costoso
+          (video). Es la autonomía de bajo riesgo que pidió el dueño."""
         text = response_text or ""
+        delegated = self._delegate(text, ctx)
         if delegated:
             lines = "\n".join(f"- 🤖 **{a}** ← {t}" for a, t in delegated)
             text = f"{text.rstrip()}\n\n## 🔁 Delegado (lo recibe cada agente en su próxima corrida)\n{lines}\n"
+        fired = self._fire_agents(text, ctx)
+        if fired:
+            text = f"{text.rstrip()}\n\n## ⚡ Disparado por el Chief (corriendo ahora)\n" + \
+                   "\n".join(f"- 🚀 **{a}**" for a in fired) + "\n"
         return super().post_process(text, ctx)
+
+    def _fire_agents(self, text: str, ctx: AgentContext):
+        """Parsea `DISPARAR(<agente>)` y re-corre ese agente YA, en un thread daemon
+        (el server sigue vivo → la corrida completa). Acción de bajo riesgo sobre el
+        avance. Tope 2 + blocklist del costoso (video = Veo) para no gastar de más."""
+        import re, threading, asyncio
+        BLOCK = {"tiktok_creator", "content_creator", "creative_strategist", "media_auditor"}
+        try:
+            from .registry import list_agents as _all
+            valid = {a.name for a in _all()}
+            fired = []
+            for m in re.finditer(r"^[\s>*`\-]*DISPARAR\(([a-z_]+)\)", text, re.IGNORECASE | re.MULTILINE):
+                name = m.group(1).lower()
+                if (name in valid and name != self.name and name not in BLOCK
+                        and name not in fired and len(fired) < 2):
+                    fired.append(name)
+            for name in fired:
+                def _run(n=name):
+                    try:
+                        from ..container import get_container
+                        asyncio.run(get_container().run_agent(
+                            n, triggered_by="chief_of_staff", args={"force_global": True}))
+                    except Exception as e:
+                        log.warning("cos_fire_failed", agent=n, error=str(e)[:150])
+                threading.Thread(target=_run, daemon=True).start()
+                log.info("cos_fired_agent", agent=name, run_id=ctx.run_id)
+            return fired
+        except Exception as e:
+            log.warning("cos_fire_parse_failed", error=str(e)[:150])
+            return []
 
     def _delegate(self, text: str, ctx: AgentContext):
         """Parsea DELEGAR(agente): tarea, deja la orden en el buzón del agente y crea

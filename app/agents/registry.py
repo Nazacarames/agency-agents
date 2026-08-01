@@ -43,3 +43,5 @@ from . import chief_of_staff   # noqa: F401, E402
 from . import finance_officer  # noqa: F401, E402
 from . import customer_success  # noqa: F401, E402
 from . import delivery_pm      # noqa: F401, E402
+from . import community_manager  # noqa: F401, E402
+from . import data_analyst     # noqa: F401, E402

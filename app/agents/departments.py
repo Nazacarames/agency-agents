@@ -36,7 +36,7 @@ DEPARTMENTS: Dict[str, dict] = {
         "icon": "🎯",
         "color": "#2563eb",
         "desc": "Coordina el equipo, cierra el día y convierte datos en decisiones.",
-        "agents": ["chief_of_staff"],
+        "agents": ["chief_of_staff", "data_analyst"],
     },
     "comercial": {
         "label": "Comercial / Ventas",
@@ -51,7 +51,7 @@ DEPARTMENTS: Dict[str, dict] = {
         "color": "#6366f1",
         "desc": "Marca y contenido: piezas, redes, shorts, dirección creativa y QA.",
         "agents": ["content_creator", "social_media", "tiktok_creator",
-                   "creative_strategist", "media_auditor"],
+                   "creative_strategist", "media_auditor", "community_manager"],
     },
     "growth": {
         "label": "Growth / Web",

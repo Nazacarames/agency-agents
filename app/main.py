@@ -731,6 +731,8 @@ _AGENT_DESCRIPTIONS = {
     "finance_officer": "CFO: brief financiero (gastos, MRR, cobranzas, decisiones de plata)",
     "customer_success": "Postventa/retención: plan de seguimiento por cliente + riesgos de churn",
     "delivery_pm": "Project manager de entrega: etapas, bloqueos e hitos por proyecto de cliente",
+    "community_manager": "Engagement: responde comentarios/DMs y detecta oportunidades",
+    "data_analyst": "Analista: tendencias y alertas de las métricas del negocio",
 }
 
 
