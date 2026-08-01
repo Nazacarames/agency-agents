@@ -651,6 +651,38 @@
   .bx-top-r b{color:#ffd9b8;font-weight:600}
   /* labels de dominios del vault alrededor del cerebro */
   .brain-dom{position:absolute;transform:translate(-50%,-50%);font-family:var(--mono);font-size:7px;letter-spacing:1.4px;text-transform:uppercase;color:#c9a37b;opacity:.75;pointer-events:none;text-shadow:0 1px 5px #000;animation:nodeIn 1s ease both}
+  /* ═══ SIDEBAR ref video: íconos finos + activo = caja con borde ═══ */
+  .nav-item svg{display:block;width:14px;height:14px;flex:none;stroke-width:1.5;opacity:.62}
+  .nav-item{gap:9px;padding:6px 10px;border-radius:7px}
+  .nav-item.active{background:rgba(59,130,246,.09);box-shadow:inset 0 0 0 1px rgba(91,140,247,.45);color:#fff}
+  .nav-item.active svg{opacity:1;color:var(--blue-bright)}
+  .nav-item:hover svg{opacity:.9}
+  /* sub-tabs de secciones unificadas */
+  .subtabs{display:flex;gap:5px;padding:0 24px 10px;border-bottom:1px solid var(--line);margin-bottom:2px;flex-wrap:wrap}
+  .stab{font-family:var(--mono);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;padding:5px 12px;border:1px solid var(--eng-grid);border-radius:20px;background:transparent;color:#6b7690;cursor:pointer;transition:.22s}
+  .stab:hover{color:#c3cde4;border-color:rgba(255,255,255,.16)}
+  .stab.act{color:#cfe3ff;border-color:rgba(91,140,247,.5);background:rgba(59,130,246,.1)}
+  /* ═══ LENS · LEGEND · DIRECTORY (panel derecho del video) ═══ */
+  .neo-rail{position:absolute;right:12px;top:52px;width:186px;z-index:5;display:flex;flex-direction:column;gap:10px;font-family:var(--mono);pointer-events:auto;animation:nodeIn .6s ease both}
+  .nr-box{border:1px solid var(--eng-grid);border-radius:10px;background:rgba(8,12,19,.72);backdrop-filter:blur(14px);padding:10px 11px}
+  .nr-h{font-size:7.5px;letter-spacing:2.2px;color:#5f6a85;margin-bottom:7px;text-transform:uppercase}
+  .nr-lens{display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#aeb8d0;padding:3px 0;cursor:pointer;transition:.2s}
+  .nr-lens:hover{color:#fff}
+  .nr-lens b{color:#7ea4c9;font-weight:500}
+  .nr-lg{display:flex;align-items:center;gap:7px;font-size:8.5px;color:#8b93ab;padding:2.5px 0;cursor:pointer;transition:.2s}
+  .nr-lg:hover{color:#dfe6f7}
+  .nr-lg i{width:9px;height:9px;border-radius:50%;border:1px solid currentColor;flex:none;font-style:normal}
+  .nr-lg.off{opacity:.34}
+  .nr-dir{max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+  .nr-dir::-webkit-scrollbar{width:3px}.nr-dir::-webkit-scrollbar-thumb{background:rgba(255,138,61,.3)}
+  .nr-d{font-size:8.5px;color:#8b93ab;padding:3px 4px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+  .nr-d:hover{background:rgba(255,255,255,.05);color:#fff}
+  .neo-stage.tree-mode .neo-rail{display:none}
+  .neo-stage.hide-sat .neo-sat,.neo-stage.hide-sat .orb-a{display:none}
+  .neo-stage.hide-dom .brain-dom{display:none}
+  .neo-stage.hide-dept .neo-node{opacity:.18;pointer-events:none}
+  .neo-stage.hide-core .neo-core{opacity:.12}
+  @media(max-width:1400px){.neo-rail{display:none}}
   /* ═══ ORGANIGRAMA ═══ */
   .org{font-family:var(--sans);max-width:1500px}
   .org-top{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:8px}
@@ -779,6 +811,7 @@
       </div>
       <button class="btn-ghost btn-sm" id="refreshBtn">↻ Actualizar</button>
     </div>
+    <div class="subtabs hidden" id="subTabs"></div>
     <div class="content">
 
       <!-- RESUMEN / COCKPIT -->
@@ -800,6 +833,7 @@
               <div class="neo-core-label">WHOLE BRAIN<span>Obsidian · Graphify</span><span class="neo-core-hint">▸ CLICK PARA ENTRAR</span></div>
             </div>
             <div class="neo-nodes" id="neoNodes"></div>
+            <div class="neo-rail" id="neoRail"></div>
           </div>
           <div class="neo-drawer" id="neoDrawer" aria-hidden="true"></div>
         </div>
@@ -1277,6 +1311,10 @@ function fmtDate(s){ return s ? String(s).replace('T',' ').slice(0,16) : '—'; 
 function ico(p){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; }
 
 const ICONS = {
+  _dot: ico('<circle cx="12" cy="12" r="3.2"/>'),
+  comms: ico('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
+  social: ico('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>'),
+  org: ico('<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="2" y="16" width="6" height="5" rx="1"/><rect x="16" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M5 16v-2h14v2"/>'),
   departamentos: ico('<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-2h12v2"/>'),
   resumen: ico('<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>'),
   agentes: ico('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'),
@@ -1298,27 +1336,24 @@ const ICONS = {
   tendencias: ico('<path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/>'),
 };
 const NAV = [
-  {g:'OS', id:'departamentos', label:'Departamentos', sub:'La empresa por sectores: cada departamento con sus agentes. Corrélos y mirá su último output.'},
-  {g:'OS', id:'resumen', label:'Resumen', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
-  {g:'VENTAS', id:'pipeline', label:'Pipeline', sub:'Leads vivos del motor de outbound. Convertí a cliente.'},
-  {g:'VENTAS', id:'clientes', label:'Clientes', sub:'Facturación, servicios, estado y memoria de cada cliente.'},
-  {g:'VENTAS', id:'agenda', label:'Reuniones', sub:'Preparación de reuniones con todo el contexto del cliente. Abajo, tu agenda.'},
-  {g:'VENTAS', id:'calendario', label:'Calendario', sub:'Tu Google Calendar: mirá y agendá reuniones desde acá. Sincronizado en vivo.'},
-  {g:'CONTENIDO', id:'publicaciones', label:'Publicaciones', sub:'Posts en IG/FB + Shorts en YouTube/TikTok: publicados, cola del día y resultados.'},
-  {g:'CONTENIDO', id:'contenido', label:'Estudio', sub:'Generación y publicación de contenido para nuestras redes.'},
-  {g:'CONTENIDO', id:'cm', label:'Community Mgr', sub:'Un clic y el reel sale a Instagram, TikTok y YouTube Shorts con descripción auto-generada.'},
-  {g:'CONTENIDO', id:'baul', label:'Baúl de Ganchos', sub:'Cada gancho guardado queda como plantilla lista para reusar. Buscá por nicho, tipo y likes.'},
-  {g:'CONTENIDO', id:'espia', label:'Espía', sub:'Los reels más gustados de la competencia, con el gancho transcripto. Se refresca solo los domingos.'},
-  {g:'CONTENIDO', id:'tendencias', label:'Tendencias', sub:'Novedades del nicho etiquetadas por potencial de gancho. Resumen por Discord a las 7 AM.'},
-  {g:'CONTENIDO', id:'ads', label:'Ads', sub:'Campañas de ads por cliente: gasto, resultados y ROAS.'},
-  {g:'EMPRESA', id:'finanzas', label:'Finanzas', sub:'Ingresos, gastos y ganancia. Tipos de cambio y facturación por cliente.'},
-  {g:'EMPRESA', id:'growth', label:'Growth', sub:'Objetivos y tareas de crecimiento de la empresa.'},
-  {g:'EMPRESA', id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
-  {g:'SISTEMA', id:'org', label:'Organigrama', sub:'La jerarquía de la empresa: vos, el Conductor y los crews de cada sector. Hablá con el Conductor desde acá.'},
-  {g:'SISTEMA', id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
-  {g:'SISTEMA', id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
-  {g:'SISTEMA', id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
-  {g:'PERSONAS', id:'personas', label:'Personas', sub:'Quién opera el OS: pilares por sector, agentes que lo sostienen y las métricas que importan.'},
+  {g:'OPERAR', id:'resumen', label:'Inicio', sub:'Cockpit de crecimiento: finanzas, pipeline y el motor de la agencia.'},
+  {g:'OPERAR', id:'comms', label:'Comms', sub:'Reuniones, agenda y calendario — todo el contacto humano en un lugar.',
+   parts:[{id:'agenda',label:'Reuniones'},{id:'calendario',label:'Calendario'}]},
+  {g:'OPERAR', id:'pipeline', label:'Funnel', sub:'Leads vivos del motor de outbound. Convertí a cliente.'},
+  {g:'OPERAR', id:'clientes', label:'Clientes', sub:'Facturación, servicios, estado y memoria de cada cliente.'},
+  {g:'OPERAR', id:'social', label:'Social', sub:'Lo que sale a las redes: publicado, en cola y resultados.',
+   parts:[{id:'publicaciones',label:'Publicaciones'},{id:'cm',label:'Community Mgr'},{id:'ads',label:'Ads'}]},
+  {g:'OPERAR', id:'contenido', label:'Contenido', sub:'El estudio creativo: generación, ganchos, espionaje y tendencias.',
+   parts:[{id:'contenido',label:'Estudio'},{id:'baul',label:'Baúl de Ganchos'},{id:'espia',label:'Espía'},{id:'tendencias',label:'Tendencias'}]},
+  {g:'OPERAR', id:'finanzas', label:'Finanzas', sub:'Ingresos, gastos y ganancia. Tipos de cambio y facturación por cliente.'},
+  {g:'AGENTES', id:'agentes', label:'Agentes', sub:'Dispará una corrida on-demand o mirá el último output.'},
+  {g:'AGENTES', id:'tareas', label:'Tareas', sub:'Mandale a un agente una tarea puntual.'},
+  {g:'AGENTES', id:'org', label:'Org Chart', sub:'La jerarquía de la empresa: vos, el Conductor y los crews de cada sector.'},
+  {g:'INTELIGENCIA', id:'departamentos', label:'Optimal Engine', sub:'El cerebro: sectores, agentes y el conocimiento vivo de la agencia.'},
+  {g:'INTELIGENCIA', id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
+  {g:'SISTEMA', id:'growth', label:'Growth', sub:'Objetivos y tareas de crecimiento de la empresa.'},
+  {g:'SISTEMA', id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
+  {g:'SISTEMA', id:'personas', label:'Personas', sub:'Quién opera el OS: pilares por sector, agentes y métricas.'},
 ];
 
 async function api(path, opts={}){
@@ -1349,21 +1384,36 @@ function buildNav(){
     const h = n.g && n.g!==g ? `<div class="nav-group">${n.g}</div>` : '';
     g = n.g||g;
     return h+`<button class="nav-item${n.id===CURRENT?' active':''}" data-tab="${n.id}">
-    ${ICONS[n.id]||''}<span>${n.label}</span><span class="count hidden" id="navc-${n.id}"></span></button>`;
+    ${ICONS[n.id]||ICONS._dot}<span>${n.label}</span><span class="count hidden" id="navc-${n.id}"></span></button>`;
   }).join('');
   document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
 }
 function go(tab){
   CURRENT=tab;
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
-  NAV.forEach(n=>el('tab-'+n.id).classList.add('hidden'));
-  const sec=el('tab-'+tab); sec.classList.remove('hidden');
-  sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter');
-  const meta = NAV.find(n=>n.id===tab);
+  document.querySelectorAll('.tabsec').forEach(x=>x.classList.add('hidden'));
+  const meta = NAV.find(n=>n.id===tab) || {label:tab,sub:'',id:tab};
   el('pageTitle').textContent = meta.label; el('pageSub').textContent = meta.sub;
   try{ el('crumbSec').textContent = meta.id||tab; }catch(e){}
   el('sidebar').classList.remove('open');
-  loadTab(tab);
+  // sub-tabs de las secciones unificadas (Comms / Social / Contenido)
+  const st=el('subTabs');
+  if(meta.parts&&meta.parts.length>1){
+    st.innerHTML=meta.parts.map((p,i)=>`<button class="stab${i?'':' act'}" data-p="${p.id}">${esc(p.label)}</button>`).join('');
+    st.classList.remove('hidden');
+    st.querySelectorAll('.stab').forEach(b=>b.addEventListener('click',()=>{
+      st.querySelectorAll('.stab').forEach(x=>x.classList.toggle('act',x===b));
+      showPart(b.dataset.p);
+    }));
+  } else { st.innerHTML=''; st.classList.add('hidden'); }
+  showPart(meta.parts?meta.parts[0].id:tab);
+}
+function showPart(id){
+  document.querySelectorAll('.tabsec').forEach(x=>x.classList.add('hidden'));
+  const sec=el('tab-'+id); if(!sec) return;
+  sec.classList.remove('hidden');
+  sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter');
+  loadTab(id);
 }
 function loadTab(tab){
   if(tab==='resumen') loadOverview();
@@ -2099,8 +2149,11 @@ function partLoop(){
       const t=performance.now()/1000;
       document.querySelectorAll('.neo-part').forEach(c=>{
         const k=((t*(+c.dataset.sp||0.1)+(+c.dataset.ph||0))%1);
-        c.setAttribute('cx',(+c.dataset.x1+(+c.dataset.x2-+c.dataset.x1)*k).toFixed(2));
-        c.setAttribute('cy',(+c.dataset.y1+(+c.dataset.y2-+c.dataset.y1)*k).toFixed(2));
+        const x1=+c.dataset.x1,y1=+c.dataset.y1,x2=+c.dataset.x2,y2=+c.dataset.y2;
+        const qx=c.dataset.qx!==undefined?+c.dataset.qx:(x1+x2)/2, qy=c.dataset.qy!==undefined?+c.dataset.qy:(y1+y2)/2;
+        const u=1-k;
+        c.setAttribute('cx',(u*u*x1+2*u*k*qx+k*k*x2).toFixed(2));
+        c.setAttribute('cy',(u*u*y1+2*u*k*qy+k*k*y2).toFixed(2));
         c.setAttribute('opacity',(k<0.05||k>0.95)?'0':'0.9');
       });
     }
@@ -2131,6 +2184,31 @@ function setNeoView(v){
   document.querySelectorAll('.vt').forEach(b=>b.classList.toggle('act',b.dataset.v===v));
   renderNeo(NEO_DEPS);
 }
+/* LENS · LEGEND · DIRECTORY — panel derecho (ref video) */
+const NR_LEG=[['core','Cerebro (Obsidian)','#ff8a3d'],['dept','Sectores','#5b8cf7'],['sat','Agentes IA','#dde4f4'],['dom','Dominios del vault','#c9a37b']];
+function renderRail(deps){
+  const r=el('neoRail'); if(!r) return;
+  const st=el('neoStage');
+  const nag=deps.reduce((a,d)=>a+(d.agents||[]).length,0);
+  const svcs=[...new Set(deps.flatMap(d=>(d.agents||[]).flatMap(a=>a.connections||[])))];
+  r.innerHTML=`
+    <div class="nr-box"><div class="nr-h">LENS</div>
+      <div class="nr-lens" onclick="setNeoView(NEO_VIEW==='radial'?'orbital':'radial')">Vista <b>${NEO_VIEW==='radial'?'radial':'orbital'}</b></div>
+      <div class="nr-lens">Sectores <b>${deps.length}</b></div>
+      <div class="nr-lens">Agentes <b>${nag}</b></div>
+      <div class="nr-lens">Servicios <b>${svcs.length}</b></div>
+    </div>
+    <div class="nr-box"><div class="nr-h">LEGEND</div>
+      ${NR_LEG.map(([k,l,c])=>`<div class="nr-lg${st.classList.contains('hide-'+k)?' off':''}" data-k="${k}" style="color:${c}"><i></i><span style="color:inherit">${l}</span></div>`).join('')}
+    </div>
+    <div class="nr-box"><div class="nr-h">DIRECTORY</div>
+      <div class="nr-dir">${deps.flatMap(d=>(d.agents||[]).map(a=>
+        `<button class="nr-d" style="color:${esc(d.color)}" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}">▸ ${esc((a.name||'').replace(/_/g,' '))}</button>`)).join('')}</div>
+    </div>`;
+  r.querySelectorAll('.nr-lg').forEach(b=>b.addEventListener('click',()=>{
+    st.classList.toggle('hide-'+b.dataset.k); b.classList.toggle('off');
+  }));
+}
 /* labels de los dominios REALES del vault alrededor del cerebro (ref video) */
 function renderVaultDomLabels(){
   if(!BRAIN_DOMS||NEO_VIEW!=='radial') return;
@@ -2152,7 +2230,9 @@ function renderOrbital(deps){
   const N=flat.length||1, cx=50, cy=48, Rx=39, Ry=41;
   links.innerHTML=`<ellipse cx="${cx}" cy="${cy}" rx="${Rx}" ry="${Ry}" fill="none" stroke="rgba(200,214,240,.1)" stroke-width=".15"/>`
     + flat.map((f,i)=>{const a=(-90+i*(360/N))*Math.PI/180;
-      return `<line x1="${(cx+13*Math.cos(a)).toFixed(1)}" y1="${(cy+14*Math.sin(a)).toFixed(1)}" x2="${(cx+(Rx-2.5)*Math.cos(a)).toFixed(1)}" y2="${(cy+(Ry-2.5)*Math.sin(a)).toFixed(1)}" stroke="${esc(f.d.color)}" stroke-width=".1" opacity=".22"/>`;}).join('');
+      const X1=cx+13*Math.cos(a), Y1=cy+14*Math.sin(a), X2=cx+(Rx-2.5)*Math.cos(a), Y2=cy+(Ry-2.5)*Math.sin(a);
+      const a2=a+0.10, QX=cx+((13+Rx-2.5)/2)*Math.cos(a2), QY=cy+((14+Ry-2.5)/2)*Math.sin(a2);
+      return `<path d="M${X1.toFixed(1)},${Y1.toFixed(1)} Q${QX.toFixed(1)},${QY.toFixed(1)} ${X2.toFixed(1)},${Y2.toFixed(1)}" fill="none" stroke="${esc(f.d.color)}" stroke-width=".1" opacity=".22"/>`;}).join('');
   let h='', di=0;
   deps.forEach(d=>{
     const k=(d.agents||[]).length; if(!k) return;
@@ -2164,7 +2244,7 @@ function renderOrbital(deps){
     return `<button class="orb-a" style="left:${(cx+Rx*Math.cos(a)).toFixed(1)}%;top:${(cy+Ry*Math.sin(a)).toFixed(1)}%;--dept:${esc(f.d.color)};animation-delay:${(i*0.03).toFixed(2)}s" onclick="agentDetail('${f.a.name}')" title="${esc(f.a.description||'')}">
       <span class="orb-c">${SVG_PERSON}</span><span class="orb-l">${esc((f.a.name||'').replace(/_/g,' '))}</span></button>`;}).join('');
   nodes.innerHTML=h;
-  renderVaultDomLabels();
+  renderVaultDomLabels(); renderRail(deps);
 }
 function renderNeo(deps){
   if(NEO_VIEW==='orbital'){ renderOrbital(deps); return; }
@@ -2186,10 +2266,13 @@ function renderNeo(deps){
   });
   links.innerHTML = deps.map((dep,i)=>{
     const a=(-90+i*(360/n))*Math.PI/180, x=cx+Rx*Math.cos(a), y=cy+Ry*Math.sin(a);
-    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(2)}" y2="${y.toFixed(2)}" stroke="${esc(dep.color||'#ff8a3d')}" class="neo-link" style="--d:${(i*0.4).toFixed(2)}s"/>`
-      +[0,0.5].map(ph=>`<circle class="neo-part" r=".38" fill="${esc(dep.color||'#ff8a3d')}" data-x1="${cx}" data-y1="${cy}" data-x2="${x.toFixed(2)}" data-y2="${y.toFixed(2)}" data-ph="${(ph+i*0.13).toFixed(2)}" data-sp="0.09"/>`).join('');
+    const mx=(cx+x)/2, my=(cy+y)/2, nx=-(y-cy), ny=(x-cx), nl=Math.hypot(nx,ny)||1, bow=7;
+    const qx=(mx+nx/nl*bow).toFixed(2), qy=(my+ny/nl*bow).toFixed(2);
+    return `<path d="M${cx},${cy} Q${qx},${qy} ${x.toFixed(2)},${y.toFixed(2)}" fill="none" stroke="${esc(dep.color||'#ff8a3d')}" class="neo-link" style="--d:${(i*0.4).toFixed(2)}s"/>`
+      +[0,0.5].map(ph=>`<circle class="neo-part" r=".38" fill="${esc(dep.color||'#ff8a3d')}" data-x1="${cx}" data-y1="${cy}" data-qx="${qx}" data-qy="${qy}" data-x2="${x.toFixed(2)}" data-y2="${y.toFixed(2)}" data-ph="${(ph+i*0.13).toFixed(2)}" data-sp="0.09"/>`).join('');
   }).join('')
-  + sats.map(s=>`<line x1="${s.dx.toFixed(1)}" y1="${s.dy.toFixed(1)}" x2="${s.x.toFixed(1)}" y2="${s.y.toFixed(1)}" stroke="#aebbdc" stroke-width=".12" opacity=".14"/>`).join('');
+  + sats.map(s=>{const qx=((s.dx+s.x)/2+ (s.y-s.dy)*0.12).toFixed(1), qy=((s.dy+s.y)/2 - (s.x-s.dx)*0.12).toFixed(1);
+      return `<path d="M${s.dx.toFixed(1)},${s.dy.toFixed(1)} Q${qx},${qy} ${s.x.toFixed(1)},${s.y.toFixed(1)}" fill="none" stroke="#aebbdc" stroke-width=".12" opacity=".16"/>`;}).join('');
   partLoop();
   // anillos fantasma decorativos entre los deptos + puntos sueltos (ref img#3)
   let ghosts='';
@@ -2214,7 +2297,7 @@ function renderNeo(deps){
     </button>`;
   }).join('');
   nodes.querySelectorAll('.neo-node').forEach(b=>b.addEventListener('click',()=>openDept(NEO_DEPS[+b.dataset.i])));
-  renderVaultDomLabels();
+  renderVaultDomLabels(); renderRail(deps);
 }
 function openDept(dep){
   if(!dep) return;
@@ -2259,14 +2342,15 @@ function renderDeptTree(dep){
   let L='';
   // malla servicio → agente (líneas BLANCAS sólidas que se cruzan, como la ref)
   ags.forEach((a,i)=>{(a.connections||[]).forEach(c=>{const si=svcs.indexOf(c);
-    if(si>=0) L+=`<line x1="${sx(si).toFixed(1)}" y1="${SY+4.5}" x2="${xs(i).toFixed(1)}" y2="${AY-4.5}" stroke="#dde4f4" class="tl-solid"/>`;});});
+    if(si>=0){ const X1=sx(si), Y1=SY+4.5, X2=xs(i), Y2=AY-4.5;
+      L+=`<path d="M${X1.toFixed(1)},${Y1} C${X1.toFixed(1)},${(Y1+(Y2-Y1)*0.55).toFixed(1)} ${X2.toFixed(1)},${(Y1+(Y2-Y1)*0.45).toFixed(1)} ${X2.toFixed(1)},${Y2}" fill="none" stroke="#dde4f4" class="tl-solid"/>`; }});});
   // chip de tarea → nodo del sector: dashed convergente CON puntitos en el camino
   ags.forEach((a,i)=>{const x=xs(i);
-    L+=`<line x1="${x.toFixed(1)}" y1="${CY+3}" x2="${BX}" y2="${BY-5}" stroke="#dde4f4" class="tl-dash"/>`;
-    L+=`<circle class="neo-part" r=".34" fill="${esc(col)}" data-x1="${x.toFixed(1)}" data-y1="${CY+3}" data-x2="${BX}" data-y2="${BY-5}" data-ph="${(i*0.23).toFixed(2)}" data-sp="0.14"/>`;
-    for(const t of [0.3,0.55,0.8]){
-      const px=x+(BX-x)*t, py=(CY+3)+((BY-5)-(CY+3))*t;
-      L+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r=".28" fill="#dde4f4" class="tl-dot"/>`;
+    const Y1=CY+3, Y2=BY-5, qx=((x+BX)/2).toFixed(1), qy=(Y1+(Y2-Y1)*0.72).toFixed(1);
+    L+=`<path d="M${x.toFixed(1)},${Y1} Q${qx},${qy} ${BX},${Y2}" fill="none" stroke="#dde4f4" class="tl-dash"/>`;
+    L+=`<circle class="neo-part" r=".34" fill="${esc(col)}" data-x1="${x.toFixed(1)}" data-y1="${Y1}" data-qx="${qx}" data-qy="${qy}" data-x2="${BX}" data-y2="${Y2}" data-ph="${(i*0.23).toFixed(2)}" data-sp="0.14"/>`;
+    for(const t of [0.34,0.62,0.85]){ const u=1-t;
+      L+=`<circle cx="${(u*u*x+2*u*t*(+qx)+t*t*BX).toFixed(1)}" cy="${(u*u*Y1+2*u*t*(+qy)+t*t*Y2).toFixed(1)}" r=".28" fill="#dde4f4" class="tl-dot"/>`;
     }});
   setTimeout(partLoop,0);
   links.innerHTML=L;
