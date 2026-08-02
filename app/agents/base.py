@@ -393,6 +393,11 @@ class BaseAgent(ABC):
                     # MiniMax (cada agente deepseek perdía ~10min/corrida). Fail-fast en el
                     # intento NVIDIA (180s) → cae a MiniMax en ~3min. MiniMax (prov="")
                     # conserva el timeout largo (self.claude_code_timeout).
+                    # 2026-08-02: 5 agentes seguidos cortaron en 180s y quedó la duda de si
+                    # el corte era corto. Medido con la sonda (`llm_provider` + el prompt
+                    # EXACTO de creative_strategist, 30k chars, 15 turnos): deepseek sano
+                    # termina en 90s. O sea 180s es 2x el camino feliz — cuando no llega,
+                    # está colgado, no lento. No subir el corte sin volver a medir.
                     p_timeout = 180 if prov else self.claude_code_timeout
                     try:
                         h_text = run_hermes(
