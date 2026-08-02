@@ -61,10 +61,15 @@ def leave(from_agent: str, to_agent: str, note: str) -> bool:
                if n["to"] == to_agent and not n.get("delivered") and _fresh(n)]
     if any(n["note"] == note for n in pending):
         return False
-    if len(pending) >= MAX_PER_RECIPIENT:
-        log.warning("agent_inbox_full", to=to_agent, dropped_from=from_agent)
-        return False
     data["notes"] = [n for n in data["notes"] if _fresh(n)]   # poda TTL de paso
+    if len(pending) >= MAX_PER_RECIPIENT:
+        # Desalojo FIFO en vez de rechazar: el buzón de un agente que corre poco
+        # (web_optimizer: días 1 y 15) nunca se drena, así que descartar lo NUEVO
+        # significaba perder siempre lo más fresco. Cae la nota más vieja.
+        viejo = min(pending, key=lambda n: n.get("created_at", ""))
+        data["notes"] = [n for n in data["notes"] if n is not viejo]
+        log.info("agent_inbox_evicted", to=to_agent, evicted_from=viejo.get("from", ""),
+                 src=from_agent)
     data["notes"].append({"from": from_agent, "to": to_agent, "note": note[:500],
                           "created_at": _now(), "delivered": False})
     _save(data)

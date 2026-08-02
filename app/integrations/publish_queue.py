@@ -7,7 +7,7 @@ Los agentes ENCOLAN cada pieza con un `kind` y un job diario drena:
   - hasta MAX_STORIES_PER_DAY historias por día (kind story) — no cuentan para el feed
 
 Persistencia: JSON en el volume (data/publish-queue.json), igual que tasks_store.
-Estados: pending → published | failed.
+Estados: pending → published | failed | expired (venció esperando, ver PENDING_TTL_DIAS).
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ import json
 import os
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -23,6 +23,7 @@ import pytz
 
 MAX_ITEMS = 500          # historial total que se conserva
 MAX_PENDING = 30         # tope de cola pendiente (evita backlog infinito)
+PENDING_TTL_DIAS = 14    # una pieza que no salió en dos semanas ya no es noticia
 MAX_STORIES_PER_DAY = 2  # historias diarias (aparte del post/carrusel/reel del feed)
 FEED_KINDS = ("post", "carousel", "reel")
 # Serializa leer→modificar→guardar (agentes encolan mientras el job drena).
@@ -81,6 +82,36 @@ def save_store(store: Dict[str, Any]) -> None:
 def pending_count(store: Optional[Dict[str, Any]] = None) -> int:
     store = store or load_store()
     return sum(1 for it in store["items"] if it.get("status") == "pending")
+
+
+def expire_stale() -> int:
+    """Vence los pendientes viejos; devuelve cuántos. Sin esto la cola se fosiliza:
+    contra 1 pieza de feed por día se encolaban 3, así que el 2026-08-02 lo más viejo
+    llevaba 24 días esperando y ocupaba el tope con contenido que ya no aplicaba.
+    No se borra nada — queda `expired` en el historial, solo deja de ser publicable."""
+    corte = datetime.now(timezone.utc) - timedelta(days=PENDING_TTL_DIAS)
+    n = 0
+    with _LOCK:
+        store = load_store()
+        for it in store["items"]:
+            if it.get("status") != "pending":
+                continue
+            try:
+                if datetime.fromisoformat(it["created_at"]) < corte:
+                    it["status"] = "expired"
+                    n += 1
+            except Exception:
+                pass   # sin fecha usable no se vence: mejor publicarlo que perderlo
+        if n:
+            save_store(store)
+    return n
+
+
+def free_slots() -> int:
+    """Lugares libres en la cola. Los agentes lo miran ANTES de generar imágenes:
+    generarlas para descartarlas al encolar quema cuota de Vertex al pedo (el
+    2026-08-02 se generaron 18, entró 1, y de paso nos comimos varios 429)."""
+    return max(0, MAX_PENDING - pending_count())
 
 
 def _clean_caption(caption: str) -> str:
@@ -243,6 +274,11 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
     y hasta MAX_STORIES_PER_DAY historias. Pensado para correr 1x/día. SÍNCRONO
     (llamarlo con asyncio.to_thread desde el scheduler para no bloquear el event
     loop: la Graph API hace self-fetch de /media). Devuelve un dict con el resultado."""
+    vencidos = expire_stale()   # antes de elegir: no publicar lo que ya caducó
+    if vencidos:
+        from ..log import get_logger
+        get_logger("publish_queue").info("publish_queue_expired", n=vencidos,
+                                         ttl_dias=PENDING_TTL_DIAS)
     store = load_store()
     from . import social_publish as sp
     if not sp.enabled():

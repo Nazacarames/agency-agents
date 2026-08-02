@@ -16,6 +16,7 @@ import hashlib
 import hmac
 import json
 import re
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -2164,17 +2165,22 @@ async def api_diag_hermes_probe(request: Request):
                         "los 3 primeros títulos con su URL. Usá tu tool de búsqueda.")
     from .clients.hermes import run_hermes, HermesError
     antes = _contar_shim()
+    # `llm_provider` + `segundos`: sin poder elegir backend y medir cuánto tarda, la
+    # pregunta "¿el tier gratis de NVIDIA llega o hay que subirle el timeout?" solo se
+    # podía responder mirando corridas reales de 10 min.
+    t0 = time.monotonic()
     try:
         texto = await run_in_threadpool(
             run_hermes, pregunta, settings=get_settings(),
+            llm_provider=body.get("llm_provider", ""),
             system_append=body.get("system_append") or None,
             timeout=int(body.get("timeout", 180)), max_turns=int(body.get("max_turns", 5)),
             toolsets=toolsets, agente="probe")
-        return {"ok": True, "toolsets": toolsets, "busquedas_al_shim": _contar_shim() - antes,
-                "salida": texto[:2000]}
+        return {"ok": True, "toolsets": toolsets, "segundos": round(time.monotonic() - t0, 1),
+                "busquedas_al_shim": _contar_shim() - antes, "salida": texto[:2000]}
     except HermesError as e:
-        return {"ok": False, "toolsets": toolsets, "busquedas_al_shim": _contar_shim() - antes,
-                "error": str(e)[:1500]}
+        return {"ok": False, "toolsets": toolsets, "segundos": round(time.monotonic() - t0, 1),
+                "busquedas_al_shim": _contar_shim() - antes, "error": str(e)[:1500]}
 
 
 _SHIM_CALLS = {"n": 0}

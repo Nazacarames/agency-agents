@@ -30,16 +30,32 @@ _FIELDS = ("page_name,ad_creative_bodies,ad_creative_link_titles,"
            "ad_creative_link_descriptions,ad_snapshot_url")
 
 
+# El token de usuario se invalida solo (logout / cambio de contraseña / 60 días).
+# Cuando pasa, TODAS las consultas de la corrida fallan igual: se corta al primer
+# 190 en vez de gastar 8 llamadas y ~10 s (medido 2026-08-02).
+_TOKEN_MUERTO = False
+
+
 def enabled() -> bool:
     return bool(getattr(get_settings(), "meta_ad_library_token", ""))
+
+
+def token_vivo() -> bool:
+    """¿El token sigue sirviendo? Una consulta mínima. True si no está configurado
+    (no es una regresión que alertar). Lo usa el watchdog."""
+    if not enabled():
+        return True
+    search_ads("meta", limit=1)   # marca _TOKEN_MUERTO si viene el 190
+    return not _TOKEN_MUERTO
 
 
 def search_ads(terms: str, countries=("ES",), limit: int = 8) -> List[Dict[str, Any]]:
     """Devuelve anuncios reales [{page_name, body, title, desc, snapshot_url}] para un
     término. countries: ISO-2 (ES=UE→todos los ads; AR→solo sociales/políticos)."""
+    global _TOKEN_MUERTO
     s = get_settings()
     tok = getattr(s, "meta_ad_library_token", "")
-    if not tok or not (terms or "").strip():
+    if not tok or _TOKEN_MUERTO or not (terms or "").strip():
         return []
     params = {
         "search_terms": terms,
@@ -54,7 +70,11 @@ def search_ads(terms: str, countries=("ES",), limit: int = 8) -> List[Dict[str, 
         with httpx.Client(timeout=40) as c:
             r = c.get(_GRAPH, params=params)
             if r.status_code >= 400:
-                log.warning("ad_library_error", status=r.status_code, body=r.text[:200])
+                if '"code":190' in r.text.replace(" ", ""):
+                    _TOKEN_MUERTO = True
+                    log.error("ad_library_token_dead", body=r.text[:200])
+                else:
+                    log.warning("ad_library_error", status=r.status_code, body=r.text[:200])
                 return []
             out = []
             for a in (r.json().get("data") or []):

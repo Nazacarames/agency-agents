@@ -199,8 +199,27 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
         )
         fresh_keys.append("brain")
 
+    # 5) Token de la Biblioteca de Anuncios (es de USUARIO: se cae solo cada ~60 días
+    #    o con un logout). Cuando muere, el estudio de competencia sigue "corriendo"
+    #    pero con 0 avisos reales — otra falla silenciosa (pasó el 2026-08-02).
+    adlib_ok = True
+    try:
+        from . import meta_ad_library
+        adlib_ok = meta_ad_library.token_vivo()
+    except Exception as e:
+        log.warning("watchdog_adlib_check_failed", error=str(e)[:120])
+    if not adlib_ok and "adlib" not in already:
+        problems.append(
+            "📢 **Token de la Biblioteca de Anuncios caído** — Meta devuelve `code 190` "
+            "(sesión inválida). El estudio de competencia está corriendo con **0 anuncios "
+            "reales**, solo con búsquedas web.\n"
+            "→ Re-generá el token de usuario en developers.facebook.com y actualizá "
+            "`META_AD_LIBRARY_TOKEN` en Railway."
+        )
+        fresh_keys.append("adlib")
+
     result = {"gmail": g_status, "gmail_detail": g_detail,
-              "brain_stale_h": round(stale, 1),
+              "adlib": adlib_ok, "brain_stale_h": round(stale, 1),
               "missed": [m[0] for m in missed],
               "degraded": [d[0] for d in degraded], "alerted": len(problems)}
 
