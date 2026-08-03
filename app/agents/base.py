@@ -390,15 +390,18 @@ class BaseAgent(ABC):
                 for prov in providers:
                     # El tier gratis de NVIDIA (deepseek/glm) puede COLGARSE bajo carga:
                     # medido en prod, Hermes esperaba los 600s COMPLETOS antes de caer a
-                    # MiniMax (cada agente deepseek perdía ~10min/corrida). Fail-fast en el
-                    # intento NVIDIA (180s) → cae a MiniMax en ~3min. MiniMax (prov="")
-                    # conserva el timeout largo (self.claude_code_timeout).
-                    # 2026-08-02: 5 agentes seguidos cortaron en 180s y quedó la duda de si
-                    # el corte era corto. Medido con la sonda (`llm_provider` + el prompt
-                    # EXACTO de creative_strategist, 30k chars, 15 turnos): deepseek sano
-                    # termina en 90s. O sea 180s es 2x el camino feliz — cuando no llega,
-                    # está colgado, no lento. No subir el corte sin volver a medir.
-                    p_timeout = 180 if prov else self.claude_code_timeout
+                    # MiniMax (cada agente deepseek perdía ~10min/corrida). De ahí este
+                    # corte más corto que el de MiniMax (prov="" → claude_code_timeout).
+                    # 2026-08-02: el run sano (sonda con el prompt EXACTO de
+                    # creative_strategist, 30k chars, 15 turnos) tarda 90s, así que 180s
+                    # parecía de sobra. NO lo era: el cuelgue lo detecta Hermes solo
+                    # (timeout de lectura + 2 reintentos, ver run_hermes) y un reintento
+                    # arranca recién a los ~120s → los 180s caían EN MEDIO y mataban
+                    # también los turnos ya terminados. Ahora el intento colgado muere a
+                    # los 60s y este corte es sólo el respaldo: 420s = 3 intentos del peor
+                    # turno (180s) + una corrida sana entera, y sigue siendo fail-fast
+                    # contra los 600s de MiniMax. Bajarlo vuelve a cortar reintentos.
+                    p_timeout = 420 if prov else self.claude_code_timeout
                     try:
                         h_text = run_hermes(
                             self._skills_preamble() + user_msg,
