@@ -191,17 +191,16 @@ def run_hermes(
 
     _wire_search_backend(env, settings, agente)
 
-    # Corte por LLAMADA para el tier gratis de NVIDIA. Los defaults de Hermes son
-    # 1800s de timeout total (HERMES_API_TIMEOUT) y 120s de lectura del stream
-    # (HERMES_STREAM_READ_TIMEOUT). Cuando el endpoint se cuelga, Hermes SÍ lo
-    # nota y reintenta (hasta 3 intentos) conservando los turnos ya hechos —
-    # pero nuestro corte de proceso lo mataba a los 180s, justo en medio del
-    # reintento, y se perdía la corrida entera. Bajar a 60s hace que el intento
-    # colgado muera antes y el reintento entre completo.
-    # 60s es holgado: el run sano ENTERO (15 turnos, 30k chars) tarda 90s.
-    # MiniMax NO se toca: es más lento por llamada y nunca mostró este cuelgue.
+    # Detección del cuelgue del tier gratis de NVIDIA. Hermes YA lo detecta y
+    # reintenta (2 reintentos) conservando los turnos hechos, pero con su default
+    # de 120s el reintento arrancaba recién pasada la mitad de nuestro corte de
+    # proceso (180s) → lo matábamos en el medio y se perdía la corrida entera.
+    # OJO: httpx lo usa como `read`, que es tiempo SIN RECIBIR BYTES, no total —
+    # bajarlo NO estrangula una respuesta larga sana, solo detecta antes el
+    # silencio. Y 60s de silencio es inequívoco: los turnos sanos tardan ~6s
+    # (el run ENTERO, 15 turnos y 30k chars, son 90s medidos).
+    # MiniMax no se toca: más lento por llamada y nunca mostró este cuelgue.
     if provider == "nvidia":
-        env["HERMES_API_TIMEOUT"] = "60"
         env["HERMES_STREAM_READ_TIMEOUT"] = "60"
 
     # El stdout/stderr van SIEMPRE a un temp propio: si `cwd` es un proyecto real,

@@ -25,21 +25,16 @@ def _fake_killtree(cmd, *, cwd, env, stdout_file, stderr_file, timeout):
 hermes.run_cli_killtree = _fake_killtree
 hermes.hermes_available = lambda: True
 
-# 1. NVIDIA (deepseek/glm): corte por llamada de 60s en AMBAS variables.
-#    El total (1800s por default) es el que dejaba el request colgado media hora;
-#    el de lectura (120s por default) hacía arrancar el reintento recién a los
-#    ~120s, o sea DESPUÉS de la mitad del presupuesto viejo de 180s.
+# 1. NVIDIA (deepseek/glm): silencio máximo de 60s por llamada. Con el default
+#    de 120s el reintento arrancaba pasada la mitad del presupuesto viejo (180s).
 for prov in ("deepseek", "glm"):
     hermes.run_hermes("hola", settings=s, llm_provider=prov, timeout=420)
     env = capturado["env"]
-    assert env["HERMES_API_TIMEOUT"] == "60", (prov, env.get("HERMES_API_TIMEOUT"))
-    assert env["HERMES_STREAM_READ_TIMEOUT"] == "60", prov
+    assert env["HERMES_STREAM_READ_TIMEOUT"] == "60", (prov, env.get("HERMES_STREAM_READ_TIMEOUT"))
 
 # 2. MiniMax: NO se toca (es más lento por llamada y nunca mostró el cuelgue).
 hermes.run_hermes("hola", settings=s, llm_provider="", timeout=600)
-env = capturado["env"]
-assert "HERMES_API_TIMEOUT" not in env, env.get("HERMES_API_TIMEOUT")
-assert "HERMES_STREAM_READ_TIMEOUT" not in env
+assert "HERMES_STREAM_READ_TIMEOUT" not in capturado["env"]
 
 # 3. El respaldo de proceso tiene que dejar entrar los 3 intentos (3x60=180s)
 #    del peor turno MÁS una corrida sana (90s). Si alguien lo vuelve a bajar,
