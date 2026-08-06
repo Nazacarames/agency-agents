@@ -66,7 +66,7 @@
   .err{color:var(--red);font-size:13px;margin-top:10px;min-height:18px}
 
   /* App shell */
-  #app{display:grid;grid-template-columns:240px 1fr;min-height:100dvh}
+  #app{display:grid;grid-template-columns:240px 1fr;min-height:100dvh;transition:grid-template-columns .22s cubic-bezier(.32,.72,0,1)}
   aside{position:sticky;top:0;height:100dvh;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px}
   .side-brand{padding:6px 8px 18px;display:flex;align-items:center;gap:11px}
   .side-brand .sub{font-size:10.5px;color:var(--faint);font-weight:700;font-family:var(--sans);letter-spacing:1.2px;margin-top:2px}
@@ -99,7 +99,9 @@
   .nav-group{font-family:var(--mono);font-size:7.5px;letter-spacing:2.5px;text-transform:uppercase;color:#465068;margin:12px 11px 3px;user-select:none}
   .nav-group:first-child{margin-top:0}
   /* topbar slim */
-  .topbar{padding:12px 24px}
+  .topbar{padding:8px 20px;align-items:center;gap:12px}
+  .topbar .eyebrow{margin:0;flex:1}
+  .topbar .btn-ghost{flex:none}
   .topbar h1{font-size:15px}
   .topbar .sub{font-size:11px;margin-top:2px}
   .content{padding:16px 24px 60px}
@@ -233,7 +235,12 @@
   .money{font-variant-numeric:tabular-nums;font-weight:700}
 
   /* el sidebar móvil ya se traslada fuera de pantalla, pero no había con qué volver a abrirlo */
-  .menu-btn{display:none;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--navy);width:36px;height:36px;border-radius:9px;font-size:16px;cursor:pointer;flex:none}
+  .menu-btn{display:block;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--navy);width:34px;height:34px;border-radius:9px;font-size:15px;cursor:pointer;flex:none;transition:.18s}
+  .menu-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(91,140,247,.5)}
+  /* plegable también en escritorio: colapsar la columna da ~240px más de grafo */
+  #app.side-off{grid-template-columns:0 1fr}
+  #app.side-off aside{opacity:0;pointer-events:none;overflow:hidden}
+  #app aside{transition:opacity .2s}
   #sideScrim{display:none;position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.55)}
   #sideScrim.on{display:block}
   @media(max-width:760px){
@@ -241,7 +248,9 @@
     aside{position:fixed;z-index:30;width:240px;transform:translateX(-110%);transition:.2s;box-shadow:var(--shadow-lg)}
     aside.open{transform:none}
     .content,.topbar{padding-left:18px;padding-right:18px}
-    .menu-btn{display:block}
+    /* en móvil la sidebar es overlay: el colapso de columna no aplica */
+    #app.side-off{grid-template-columns:1fr}
+    #app.side-off aside{opacity:1}
   }
 
   /* ── Calendario (estilo Google Calendar) ── */
@@ -355,7 +364,7 @@
   .neo-prompt-in::placeholder{color:#5b6784}
   .neo-prompt-sub{font-size:9.5px;color:#5b6784;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
   /* stage: casi negro + grilla + viñeta */
-  .neo-stage{position:relative;width:100%;height:max(560px,calc(100dvh - 205px));margin:2px auto 0;border:1px solid var(--eng-grid);border-radius:14px;overflow:hidden;
+  .neo-stage{position:relative;width:100%;height:max(560px,calc(100dvh - 148px));margin:2px auto 0;border:1px solid var(--eng-grid);border-radius:14px;overflow:hidden;
     background:
       radial-gradient(circle at 50% 40%,var(--amb,rgba(255,138,61,.09)),transparent 62%),
       linear-gradient(var(--eng-grid) 1px,transparent 1px) 0 0/34px 34px,
@@ -408,7 +417,7 @@
     border:1.5px solid var(--dept);box-shadow:0 0 14px -6px var(--dept);transition:transform .35s cubic-bezier(.32,.72,0,1),box-shadow .35s,border-color .35s}
   .ic-team{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
   .neo-node:hover .neo-orb{transform:scale(1.06);box-shadow:0 0 20px -4px var(--dept)}
-  .neo-orb-badge{position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;border-radius:14px;background:#0a0c14;color:var(--dept);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;border:1px solid color-mix(in srgb,var(--dept) 70%,transparent)}
+  .neo-orb-badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;border-radius:17px;background:#0a0c14;color:var(--dept);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;border:1px solid color-mix(in srgb,var(--dept) 70%,transparent)}
   .neo-node-l{font-size:11.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.45;color:#eaf0ff;text-shadow:0 1px 5px #000}
   .neo-node-s{font-size:11px;letter-spacing:.8px;color:#8b93ab;display:flex;align-items:center;gap:5px;text-transform:uppercase}
   .neo-dotmini{width:6px;height:6px;border-radius:50%;box-shadow:0 0 6px currentColor}
@@ -649,7 +658,9 @@
   .ta-b.on i{background:var(--emerald);box-shadow:0 0 6px var(--emerald);animation:led 1.6s ease-in-out infinite}
   @keyframes led{50%{opacity:.35}}
   /* barra de estado sci-fi (server console) */
-  .side-foot .who{font-family:var(--mono);font-size:9.5px;letter-spacing:.8px;color:#6b7690;display:flex;align-items:center;gap:6px;text-transform:uppercase}
+  /* el host de Railway es largo y partía el pie en 3 renglones */
+  .side-foot .who{font-family:var(--mono);font-size:9.5px;letter-spacing:.8px;color:#6b7690;display:flex;align-items:center;gap:6px;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+  .side-foot .who b{overflow:hidden;text-overflow:ellipsis}
   .who .led{width:6px;height:6px;border-radius:50%;background:var(--emerald);box-shadow:0 0 8px var(--emerald);animation:led 1.6s ease-in-out infinite;flex:none}
   .who b{color:#9fe8cd;font-weight:600}
   /* funnel bars fluorescentes */
@@ -715,7 +726,7 @@
   .stab:hover{color:#c3cde4;border-color:rgba(255,255,255,.16)}
   .stab.act{color:#cfe3ff;border-color:rgba(91,140,247,.5);background:rgba(59,130,246,.1)}
   /* ═══ LENS · LEGEND · DIRECTORY (panel derecho del video) ═══ */
-  .neo-rail{min-height:0;display:flex;flex-direction:column;gap:10px;font-family:var(--mono);animation:nodeIn .6s ease both}
+  .neo-rail{min-height:0;align-self:start;display:flex;flex-direction:column;gap:10px;font-family:var(--mono);animation:nodeIn .6s ease both}
   .nr-box{border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(6,9,15,.94);backdrop-filter:blur(18px);padding:11px 12px;overflow:hidden;flex:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
   .nr-h{display:flex;align-items:center;justify-content:space-between;font-size:11px;letter-spacing:2.2px;color:#7f8aa6;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07);text-transform:uppercase}
   .nr-h em{font-style:normal;letter-spacing:0;color:#5f6a85}
@@ -728,8 +739,10 @@
   .nr-lg:hover{color:#fff}
   .nr-lg i{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor;flex:none;font-style:normal}
   .nr-lg.off{opacity:.34}
-  .nr-dir{flex:1;min-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:3px}
-  .neo-rail>.nr-box:last-child{flex:1;min-height:0;display:flex;flex-direction:column}
+  /* el directorio scrollea dentro de su caja: estirado a todo el alto del stage el rail
+     quedaba desproporcionadamente largo para lo que muestra */
+  .nr-dir{max-height:290px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:3px}
+  .neo-rail>.nr-box:last-child{min-height:0}
   .nr-dir::-webkit-scrollbar{width:3px}.nr-dir::-webkit-scrollbar-thumb{background:rgba(255,138,61,.3)}
   /* flex:none — dentro del .nr-dir de alto fijo los items se comprimían y el texto se encimaba */
   .nr-d{display:flex;flex:none;align-items:center;gap:7px;font-size:11px;line-height:1.75;color:#c3cde4;padding:2px 5px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;font-family:var(--mono);text-transform:capitalize;width:100%}
@@ -889,13 +902,14 @@
   </aside>
 
   <main>
+    <!-- Barra compacta: el bloque título+subtítulo comía ~90px de alto de pantalla y
+         repetía lo que ya dice la sidebar. El breadcrumb queda como identidad de sección;
+         pageTitle/pageSub siguen en el DOM (ocultos) porque go() los escribe. -->
     <div class="topbar">
-      <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
-      <div>
-        <div class="eyebrow">// AUTOMIQ-OS · <span id="crumbSec">departamentos</span></div>
-        <h1 id="pageTitle">Resumen</h1>
-        <div class="sub" id="pageSub">Estado general de la agencia.</div>
-      </div>
+      <button class="menu-btn" id="menuBtn" aria-label="Mostrar u ocultar el menú">☰</button>
+      <div class="eyebrow">// AUTOMIQ-OS · <span id="crumbSec">departamentos</span></div>
+      <h1 id="pageTitle" class="hidden">Resumen</h1>
+      <span id="pageSub" class="hidden">Estado general de la agencia.</span>
       <button class="btn-ghost btn-sm" id="refreshBtn">↻ Actualizar</button>
     </div>
     <div class="subtabs hidden" id="subTabs"></div>
@@ -2363,18 +2377,24 @@ function renderNeo(deps){
   el('neoStage').classList.remove('tree-mode');
   el('neoStage').style.removeProperty('--amb');
   const n=deps.length||1, cx=50, cy=50, Rx=25, Ry=27;
-  // Anillo EXTERNO de agentes, repartido parejo (ref: anillos concéntricos). Antes los
-  // satélites se abrían en abanico alrededor de su depto: los sectores con 4-6 agentes
-  // (Marketing, Comercial) los amontonaban y se pisaban entre sí de un solo lado.
-  const sats=[]; let si=0;
-  const TOT=deps.reduce((s,d)=>s+(d.agents||[]).length,0)||1;
-  const SRx=Rx+16, SRy=Ry+15;
+  // Anillo EXTERNO de agentes. El reparto es proporcional: a cada depto le toca un ARCO
+  // del anillo del tamaño de su plantilla, centrado en su propio ángulo. Así los agentes
+  // quedan siempre justo afuera de su sector (conector corto y radial, sin cruces) y a la
+  // vez sin amontonarse — repartirlos "parejo" ignorando el depto tiraba líneas de lado a
+  // lado del grafo, y abrirlos en abanico fijo pisaba los sectores de 4-6 agentes.
+  const sats=[];
+  const SRx=Rx+16, SRy=Ry+15, SECTOR=360/n;
   deps.forEach((dep,i)=>{
-    const base=(-90+i*(360/n))*Math.PI/180;
-    (dep.agents||[]).forEach(ag=>{
-      const a=(-90+(si++)*(360/TOT))*Math.PI/180;
+    const bdeg=-90+i*SECTOR, base=bdeg*Math.PI/180;
+    const ags=dep.agents||[], k=ags.length;
+    // el paso se reparte DENTRO del arco del sector (86% para dejar aire entre deptos):
+    // con un paso global fijo, Marketing (6) invadía el arco de sus vecinos.
+    const step=k>1?(SECTOR*0.86)/(k-1):0;
+    ags.forEach((ag,j)=>{
+      const a=(bdeg+(j-(k-1)/2)*step)*Math.PI/180;
       sats.push({x:cx+SRx*Math.cos(a), y:cy+SRy*Math.sin(a),
-                 dx:cx+Rx*Math.cos(base), dy:cy+Ry*Math.sin(base), ag});
+                 dx:cx+Rx*Math.cos(base), dy:cy+Ry*Math.sin(base),
+                 col:dep.color||'#ff8a3d', ag});
     });
   });
   links.innerHTML = deps.map((dep,i)=>{
@@ -2384,8 +2404,10 @@ function renderNeo(deps){
     return `<path d="M${cx},${cy} Q${qx},${qy} ${x.toFixed(2)},${y.toFixed(2)}" fill="none" stroke="${esc(dep.color||'#ff8a3d')}" class="neo-link" style="--d:${(i*0.4).toFixed(2)}s"/>`
       +[0,0.5].map(ph=>`<line class="neo-part" stroke="${esc(dep.color||'#ff8a3d')}" data-x1="${cx}" data-y1="${cy}" data-qx="${qx}" data-qy="${qy}" data-x2="${x.toFixed(2)}" data-y2="${y.toFixed(2)}" data-ph="${(ph+i*0.13).toFixed(2)}" data-sp="0.09"/>`).join('');
   }).join('')
-  + sats.map(s=>{const qx=((s.dx+s.x)/2+ (s.y-s.dy)*0.12).toFixed(1), qy=((s.dy+s.y)/2 - (s.x-s.dx)*0.12).toFixed(1);
-      return `<path d="M${s.dx.toFixed(1)},${s.dy.toFixed(1)} Q${qx},${qy} ${s.x.toFixed(1)},${s.y.toFixed(1)}" fill="none" stroke="#aebbdc" stroke-width=".8" opacity=".26"/>`;}).join('');
+  // Conector depto→agente: curva MÍNIMA (bow .04 vs .12) y del color del sector. Con la
+  // curva grande y gris genérico las 19 líneas se leían como maraña suelta.
+  + sats.map(s=>{const qx=((s.dx+s.x)/2+ (s.y-s.dy)*0.04).toFixed(1), qy=((s.dy+s.y)/2 - (s.x-s.dx)*0.04).toFixed(1);
+      return `<path d="M${s.dx.toFixed(1)},${s.dy.toFixed(1)} Q${qx},${qy} ${s.x.toFixed(1)},${s.y.toFixed(1)}" fill="none" stroke="${esc(s.col)}" stroke-width=".9" opacity=".34"/>`;}).join('');
   partLoop();
   // anillos fantasma decorativos entre los deptos + puntos sueltos (ref img#3)
   let ghosts='';
@@ -3940,10 +3962,20 @@ el('loginBtn').addEventListener('click', doLogin);
 el('key').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 el('logoutBtn').addEventListener('click', logout);
 el('refreshBtn').addEventListener('click', ()=>{ loadTab(CURRENT); toast('Actualizado'); });
-el('menuBtn').addEventListener('click', ()=>{
-  const abierto=el('sidebar').classList.toggle('open');
-  el('sideScrim').classList.toggle('on',abierto);
-});
+const SIDE_LS='automiq_side_off';
+/* Escritorio: pliega la columna (más ancho para el grafo) y recuerda la preferencia.
+   Móvil (<=760px): la sidebar es overlay, así que se abre/cierra con scrim. */
+function sideToggle(){
+  if(matchMedia('(max-width:760px)').matches){
+    const abierto=el('sidebar').classList.toggle('open');
+    el('sideScrim').classList.toggle('on',abierto);
+    return;
+  }
+  const off=el('app').classList.toggle('side-off');
+  try{ off?localStorage.setItem(SIDE_LS,'1'):localStorage.removeItem(SIDE_LS); }catch(e){}
+}
+el('menuBtn').addEventListener('click', sideToggle);
+if(localStorage.getItem(SIDE_LS)==='1') el('app').classList.add('side-off');
 el('sideScrim').addEventListener('click', ()=>{ el('sidebar').classList.remove('open'); el('sideScrim').classList.remove('on'); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); el('sidebar').classList.remove('open'); el('sideScrim').classList.remove('on'); } });
 
