@@ -9,6 +9,7 @@ Cubren:
 - FastAPI expone los endpoints esperados
 - El healthz responde con status=ok
 """
+import re
 import sys
 from pathlib import Path
 
@@ -161,3 +162,27 @@ def test_get_nonexistent_agent():
     with TestClient(app) as client:
         resp = client.get("/agents/does_not_exist")
         assert resp.status_code == 404
+
+
+def test_dashboard_pantalla_departamentos():
+    """La pantalla de Departamentos sirve y conserva sus piezas estructurales.
+
+    El HTML es un archivo único de ~3.8k líneas sin build ni tests de UI: si alguien
+    renombra o borra un contenedor del OS (stage, rail, drawer, vistas), esto avisa acá
+    en vez de descubrirse mirando la pantalla en prod.
+    """
+    from app.main import app
+    with TestClient(app) as client:
+        resp = client.get("/dashboard")
+        assert resp.status_code == 200
+        html = resp.text
+        for marca in ("neoStage", "neoRail", "neoDrawer", "neoCore",
+                      "setNeoView('radial')", "setNeoView('orbital')"):
+            assert marca in html, f"falta {marca} en el dashboard"
+        # el texto del stage tiene que quedar legible: nada por debajo de 11px
+        stage_css = re.findall(r"\.(?:orb-l|ns-l|ta-task|ta-b|ta-name|ts-name|nr-d|nr-h|"
+                               r"nr-lens|nr-lg|brain-dom|neo-node-l|neo-node-s)"
+                               r"(?![\w-]|::)\s*\{[^}]*?font-size:([\d.]+)px", html)
+        assert stage_css, "no se encontraron tamaños de fuente del stage"
+        chicos = [t for t in stage_css if float(t) < 11]
+        assert not chicos, f"texto del stage por debajo de 11px: {chicos}"

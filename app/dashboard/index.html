@@ -25,7 +25,7 @@
     --radius:14px;
     --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
     /* Engine / cerebro (estética BENNETT OS) */
-    --eng-bg:#07080e; --eng-bg2:#0a0c14; --eng-grid:rgba(120,150,220,.055); --eng-amber:#ff8a3d;
+    --eng-bg:#07080e; --eng-bg2:#0a0c14; --eng-grid:rgba(120,150,220,.1); --eng-amber:#ff8a3d;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:var(--sans),system-ui,sans-serif;background:var(--bg);color:var(--navy);-webkit-font-smoothing:antialiased;font-size:14px;
@@ -105,7 +105,7 @@
   .content{padding:16px 24px 60px}
   /* tabs del árbol: ◀ back · ◁ ▷ · DEPTO ✕ (ref img#1) */
   .tree-tabs{position:absolute;top:12px;left:14px;z-index:6;display:flex;align-items:center;gap:5px;font-family:var(--mono);pointer-events:auto;animation:nodeIn .4s ease both}
-  .tree-tabs button,.tree-tabs .tt-name{background:rgba(255,255,255,.025);border:1px solid var(--eng-grid);border-radius:6px;color:#aeb8d0;font-family:var(--mono);font-size:10px;letter-spacing:.8px;padding:5px 9px;cursor:pointer;transition:.2s;text-transform:uppercase}
+  .tree-tabs button,.tree-tabs .tt-name{background:rgba(255,255,255,.025);border:1px solid var(--eng-grid);border-radius:6px;color:#c3cde4;font-family:var(--mono);font-size:11.5px;letter-spacing:.8px;padding:6px 11px;cursor:pointer;transition:.2s;text-transform:uppercase}
   .tree-tabs button:hover{border-color:rgba(255,138,61,.5);color:#ffd9b8}
   .tree-tabs .tt-name{display:flex;align-items:center;gap:7px;color:#e8edf9;border-color:color-mix(in srgb,var(--dept,#ff8a3d) 45%,var(--eng-grid))}
   .tree-tabs .tt-name i{font-style:normal;color:#5f6a85;cursor:pointer}
@@ -232,11 +232,16 @@
   .chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:rgba(91,140,247,.14);color:var(--blue-bright);margin:2px 3px 0 0}
   .money{font-variant-numeric:tabular-nums;font-weight:700}
 
+  /* el sidebar móvil ya se traslada fuera de pantalla, pero no había con qué volver a abrirlo */
+  .menu-btn{display:none;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--navy);width:36px;height:36px;border-radius:9px;font-size:16px;cursor:pointer;flex:none}
+  #sideScrim{display:none;position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.55)}
+  #sideScrim.on{display:block}
   @media(max-width:760px){
     #app{grid-template-columns:1fr}
     aside{position:fixed;z-index:30;width:240px;transform:translateX(-110%);transition:.2s;box-shadow:var(--shadow-lg)}
     aside.open{transform:none}
     .content,.topbar{padding-left:18px;padding-right:18px}
+    .menu-btn{display:block}
   }
 
   /* ── Calendario (estilo Google Calendar) ── */
@@ -358,36 +363,54 @@
       radial-gradient(circle at 50% 46%,var(--eng-bg2),var(--eng-bg) 78%);
     transition:background .6s}
   .neo-stage::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 20px rgba(0,0,0,.6)}
+  /* Stage + rail = dos columnas del mismo workspace. Antes el rail flotaba sobre el stage
+     y había que correr el centro del grafo a mano (cx=44) para que no quedara tapado —
+     de ahí que todo se viera descentrado. Ahora el stage ocupa SU caja y 50% es 50%. */
+  /* width:100% obligatorio: .neo es flex con align-items:center → sin esto la fila se
+     encoge al contenido y el stage colapsa a ancho cero. */
+  .neo-work{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 242px;gap:10px;align-items:stretch}
+  .neo-work>.neo-stage{min-width:0;margin:0}
   .neo-links{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:2}
+  /* El viewBox 100x100 se estira al stage sin preservar proporción (los nodos se posicionan
+     en %, así que tiene que ser así): sin esto el mismo stroke-width sale ~3px en horizontal
+     y ~2px en vertical, y los puntos redondos salen ovalados. non-scaling-stroke fija el
+     grosor en px de pantalla → trazo parejo en cualquier ángulo y viewport. */
+  .neo-links path,.neo-links ellipse,.neo-links line{vector-effect:non-scaling-stroke}
+  /* Los puntos eran <circle>: con el viewBox estirado salían ovalados. Un segmento de largo
+     cero con cap redondo dibuja un círculo perfecto de diámetro = stroke-width en pantalla. */
+  .neo-part,.tl-dot{stroke-linecap:round;fill:none}
+  .neo-part{stroke-width:4}
+  .tl-dot{stroke-width:2.6;stroke:#dde4f4}
   /* líneas HAIRLINE, calmas (ref: casi estáticas, finísimas) */
-  .neo-link{stroke-width:.22;opacity:.42;stroke-linecap:round;stroke-dasharray:.8 2.4;animation:neoFlow 14s linear infinite;animation-delay:var(--d)}
+  .neo-link{stroke-width:1;opacity:.42;stroke-linecap:round;stroke-dasharray:.8 2.4;animation:neoFlow 14s linear infinite;animation-delay:var(--d)}
   @keyframes neoFlow{to{stroke-dashoffset:-16}}
   /* anillos fantasma decorativos (ref img#3: círculos dashed vacíos orbitando) */
   .neo-ghost{position:absolute;transform:translate(-50%,-50%);border:1px dashed rgba(160,178,215,.18);border-radius:50%;pointer-events:none}
   .neo-ghost i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:3px;height:3px;border-radius:50%;background:rgba(170,188,225,.25)}
   .neo-gdot{position:absolute;transform:translate(-50%,-50%);width:2.5px;height:2.5px;border-radius:50%;background:rgba(160,178,215,.3);pointer-events:none}
   /* núcleo: cerebro de partículas (canvas) */
-  .neo-core{position:absolute;left:44%;top:47%;transform:translate(-50%,-50%);z-index:3;width:clamp(200px,26vw,320px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
+  .neo-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:clamp(170px,21vw,320px);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
   /* anillo fino alrededor del cerebro (ref img#3) */
   .neo-core::before{content:'';position:absolute;inset:-8%;border:1px solid rgba(200,214,240,.13);border-radius:50%;pointer-events:none}
   .neo-core::after{content:'';position:absolute;inset:-20%;border:1px dashed rgba(180,196,228,.06);border-radius:50%;pointer-events:none}
   .neo-brain{width:100%;height:100%;filter:drop-shadow(0 0 26px rgba(255,120,50,.4))}
-  .neo-core-label{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);text-align:center;font-size:11px;font-weight:800;letter-spacing:2.5px;color:#ffd9b8;text-shadow:0 0 14px rgba(255,138,61,.8);pointer-events:none}
-  .neo-core-label span{display:block;font-weight:500;font-size:8.5px;letter-spacing:1.5px;color:#8a94ac;margin-top:2px}
+  .neo-core-label{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);text-align:center;font-size:14px;font-weight:800;letter-spacing:2.5px;color:#ffd9b8;text-shadow:0 0 14px rgba(255,138,61,.8);pointer-events:none}
+  .neo-core-label span{display:block;font-weight:500;font-size:11px;letter-spacing:1.2px;color:#a3adc4;margin-top:3px}
   /* nodos: orbe circular con ícono + label debajo */
   .neo-nodes{position:absolute;inset:0;z-index:4;pointer-events:none}
   .neo-node{pointer-events:auto}
   .neo-links{pointer-events:none}
   /* nodos PRECISOS (ref: círculos chicos, anillo fino 1px, glow mínimo, sin rebote) */
-  .neo-node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;width:112px;background:none;border:none;cursor:pointer;color:var(--navy);animation:nodeIn .6s ease both;animation-delay:var(--in)}
+  .neo-node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;width:128px;background:none;border:none;cursor:pointer;color:var(--navy);animation:nodeIn .6s ease both;animation-delay:var(--in)}
   @keyframes nodeIn{from{opacity:0}to{opacity:1}}
-  .neo-orb{position:relative;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;
+  .neo-orb{position:relative;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--dept);
     background:radial-gradient(circle at 45% 40%,#10141f,#07080e);
-    border:1px solid color-mix(in srgb,var(--dept) 80%,#1a2030);box-shadow:0 0 10px -5px var(--dept);transition:transform .35s cubic-bezier(.32,.72,0,1),box-shadow .35s,border-color .35s}
-  .neo-node:hover .neo-orb{transform:scale(1.06);box-shadow:0 0 15px -4px var(--dept);border-color:var(--dept)}
+    border:1.5px solid var(--dept);box-shadow:0 0 14px -6px var(--dept);transition:transform .35s cubic-bezier(.32,.72,0,1),box-shadow .35s,border-color .35s}
+  .ic-team{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .neo-node:hover .neo-orb{transform:scale(1.06);box-shadow:0 0 20px -4px var(--dept)}
   .neo-orb-badge{position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;border-radius:14px;background:#0a0c14;color:var(--dept);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;border:1px solid color-mix(in srgb,var(--dept) 70%,transparent)}
-  .neo-node-l{font-size:8.5px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;text-align:center;line-height:1.5;color:#c3cde4}
-  .neo-node-s{font-size:7.5px;letter-spacing:1px;color:#5f6a85;display:flex;align-items:center;gap:4px;text-transform:uppercase}
+  .neo-node-l{font-size:11.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.45;color:#eaf0ff;text-shadow:0 1px 5px #000}
+  .neo-node-s{font-size:11px;letter-spacing:.8px;color:#8b93ab;display:flex;align-items:center;gap:5px;text-transform:uppercase}
   .neo-dotmini{width:6px;height:6px;border-radius:50%;box-shadow:0 0 6px currentColor}
   .neo-dotmini.auto-sugiere{background:#64748b;color:#64748b}.neo-dotmini.auto-reversible{background:#ffb020;color:#ffb020}.neo-dotmini.auto-publica{background:#21d07a;color:#21d07a}
   .neo-live{color:#21d07a}
@@ -402,7 +425,7 @@
   .neo-drawer-a{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:10px}
   .neo-drawer-a .dept-agent{background:linear-gradient(160deg,rgba(255,255,255,.025),transparent);border-color:var(--eng-grid)}
   .neo-drawer-a .da-name{font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;font-size:12px}
-  @media(max-width:640px){.neo-node{width:88px}.neo-orb{width:44px;height:44px;font-size:17px}.neo-node-l{font-size:9px}}
+  @media(max-width:640px){.neo-node{width:96px}.neo-orb{width:44px;height:44px;font-size:17px}.neo-node-l{font-size:11px}}
   /* Agent detail — panel de agente (estética engine, mapea al de la referencia) */
   .ad{font-family:var(--mono);color:var(--navy)}
   .ad-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
@@ -425,29 +448,31 @@
   .dept-agent:hover .da-open{color:var(--dept,#ff8a3d)}
   @media(max-width:560px){.ad-grid{grid-template-columns:1fr}}
   /* ── VISTA ÁRBOL de departamento (ref img#4: agentes arriba → convergen al cerebro del sector) ── */
-  .tree-title{position:absolute;left:50%;top:7%;transform:translateX(-50%);font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:5px;color:#e8edf9;text-align:center;pointer-events:none;animation:nodeIn .5s ease both}
-  .tree-title small{display:block;font-size:8px;letter-spacing:2px;color:#5f6a85;margin-top:4px;font-weight:500}
-  .tl-solid{stroke-width:.18;opacity:.62}
-  .tl-dash{stroke-width:.16;opacity:.5;stroke-dasharray:.5 1.6}
-  .tl-dot{opacity:.75}
+  /* el título vive en su propia banda arriba del stage; el árbol arranca debajo */
+  .tree-title{position:absolute;left:50%;top:52px;transform:translateX(-50%);width:max-content;max-width:74%;font-family:var(--mono);font-size:clamp(17px,1.7vw,26px);font-weight:800;letter-spacing:6px;color:#f2f6ff;text-align:center;pointer-events:none;animation:nodeIn .5s ease both;text-shadow:0 2px 18px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tree-title small{display:block;font-size:11.5px;color:#a3adc4;margin-top:6px;font-weight:500;letter-spacing:1.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tl-solid{stroke-width:1;opacity:.62}
+  .tl-dash{stroke-width:1;opacity:.5;stroke-dasharray:2 5}
+  .tl-dot{opacity:.7}
   /* nodos de SERVICIO/MCP (fila superior del árbol, ref: círculos carmesí con pictograma) */
   .tree-svc{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;width:104px;pointer-events:none;font-family:var(--mono);animation:nodeIn .6s ease both}
-  .ts-circ{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#ff7186;border:1px solid rgba(255,92,110,.65);background:radial-gradient(circle at 45% 40%,#151019,#0a070c);box-shadow:0 0 8px -4px #ff5c6e}
-  .ts-name{font-size:7.5px;letter-spacing:1px;text-transform:uppercase;color:#8b93ab;text-align:center;line-height:1.4}
-  .tree-agent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:0;width:126px;background:none;border:none;cursor:pointer;pointer-events:auto;font-family:var(--mono);animation:nodeIn .6s ease both}
+  .ic-plug{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round}
+  .ts-circ{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ff7186;border:1px solid rgba(255,92,110,.65);background:radial-gradient(circle at 45% 40%,#151019,#0a070c);box-shadow:0 0 10px -4px #ff5c6e}
+  .ts-name{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:#ff9fae;text-align:center;line-height:1.4;text-shadow:0 1px 4px #000}
+  .tree-agent{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:0;width:150px;background:none;border:none;cursor:pointer;pointer-events:auto;font-family:var(--mono);animation:nodeIn .6s ease both}
   .ta-circ{position:relative;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#e8edf9;border:1px solid rgba(226,233,248,.85);background:radial-gradient(circle at 45% 40%,#141019,#0a070c);box-shadow:0 0 10px -5px #fff;transition:transform .35s cubic-bezier(.32,.72,0,1),box-shadow .35s,border-color .35s}
   .ta-circ svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round}
   .tree-agent:hover .ta-circ{transform:scale(1.08);border-color:var(--dept,#ff8a3d);color:var(--dept,#ff8a3d);box-shadow:0 0 14px -4px var(--dept,#ff8a3d)}
   .ta-on{position:absolute;top:-2px;right:-2px;width:6px;height:6px;border-radius:50%;background:#39d98a;box-shadow:0 0 6px #39d98a}
-  .ta-name{font-size:8px;letter-spacing:1.3px;text-transform:uppercase;color:#dbe3f5;line-height:1.4;text-align:center;margin-top:6px}
+  .ta-name{font-size:11px;font-weight:600;letter-spacing:1.1px;text-transform:uppercase;color:#f0f4ff;line-height:1.4;text-align:center;margin-top:7px;text-shadow:0 1px 5px #000}
   .ta-stub{width:1px;height:24px;background:linear-gradient(rgba(220,228,245,.55),rgba(220,228,245,.2));margin-top:5px}
-  .ta-task{max-width:122px;border:1px solid rgba(220,228,245,.22);border-radius:2px;background:rgba(255,255,255,.02);padding:3px 6px;font-size:6.8px;letter-spacing:.4px;color:#8b93ab;line-height:1.45;text-align:center;display:flex;align-items:flex-start;gap:4px}
-  .ta-task::before{content:'▫';color:#c3cde4;font-size:7px;line-height:1.4}
+  .ta-task{max-width:146px;border:1px solid rgba(220,228,245,.24);border-radius:3px;background:rgba(6,9,16,.72);padding:5px 8px;font-size:11px;letter-spacing:.1px;color:#b6c0d8;line-height:1.45;text-align:left;display:flex;align-items:flex-start;gap:4px}
+  .ta-task::before{content:'▫';color:#c3cde4;font-size:9px;line-height:1.5}
   .tree-brain{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;pointer-events:auto;font-family:var(--mono);animation:nodeIn .7s ease both}
   .tb-circ{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--dept,#ff8a3d);border:1.5px solid var(--dept,#ff8a3d);background:radial-gradient(circle at 45% 40%,color-mix(in srgb,var(--dept,#ff8a3d) 18%,#0a070c),#07060a);box-shadow:0 0 22px -4px var(--dept,#ff8a3d)}
   .tb-circ svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round}
   .tree-brain:hover .tb-circ{box-shadow:0 0 30px -2px var(--dept,#ff8a3d)}
-  .tb-l{font-size:8.5px;letter-spacing:2px;text-transform:uppercase;color:#dbe3f5}
+  .tb-l{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#eef2ff;text-shadow:0 1px 5px #000}
   .tree-back{position:absolute;left:50%;bottom:4.5%;transform:translateX(-50%);pointer-events:auto;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#dfe6f7;background:rgba(255,255,255,.03);border:1px solid var(--eng-grid);border-radius:20px;padding:8px 18px;cursor:pointer;transition:.3s}
   .tree-back:hover{border-color:rgba(255,138,61,.5);color:#ffd9b8}
   /* ── Cerebro CLICKEABLE + hover physics ── */
@@ -455,7 +480,7 @@
   .neo-core:hover{transform:translate(-50%,-50%) scale(1.06)}
   .neo-core:hover .neo-brain{filter:drop-shadow(0 0 44px rgba(255,130,50,.7))}
   .neo-brain{transition:filter .7s cubic-bezier(.32,.72,0,1)}
-  .neo-core-hint{display:block;margin-top:5px;font-size:8px;letter-spacing:2px;color:#ffb37a;opacity:0;transform:translateY(4px);transition:.5s cubic-bezier(.32,.72,0,1)}
+  .neo-core-hint{display:block;margin-top:5px;font-size:11px;letter-spacing:2px;color:#ffb37a;opacity:0;transform:translateY(4px);transition:.5s cubic-bezier(.32,.72,0,1)}
   .neo-core:hover .neo-core-hint{opacity:1;transform:none}
   /* ── BRAIN EXPLORER (directory de anotaciones, ref img#3) ── */
   .bx{font-family:var(--mono)}
@@ -618,8 +643,8 @@
   .neo-orb{box-shadow:0 0 14px -4px var(--dept),inset -3px -5px 12px rgba(0,0,0,.7),inset 2px 3px 6px rgba(255,255,255,.08)}
   .tb-circ{box-shadow:0 0 25px color-mix(in srgb,var(--dept,#ff8a3d) 40%,transparent),inset -3px -5px 12px rgba(0,0,0,.7)}
   /* badges de estado con LED palpitante */
-  .ta-b{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:6.5px;letter-spacing:1.2px;margin-top:3px;color:#5f6a85}
-  .ta-b i{width:4px;height:4px;border-radius:50%;background:#5f6a85;font-style:normal}
+  .ta-b{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:11px;letter-spacing:1px;margin-top:4px;color:#7f8aa6}
+  .ta-b i{width:5px;height:5px;border-radius:50%;background:#7f8aa6;font-style:normal}
   .ta-b.on{color:var(--emerald)}
   .ta-b.on i{background:var(--emerald);box-shadow:0 0 6px var(--emerald);animation:led 1.6s ease-in-out infinite}
   @keyframes led{50%{opacity:.35}}
@@ -638,27 +663,28 @@
   .eyebrow{font-family:var(--mono);font-size:8.5px;letter-spacing:2px;color:#4f6b8a;text-transform:uppercase;margin-bottom:2px}
   .eyebrow span{color:#7ea4c9}
   .view-tog{position:absolute;top:12px;right:14px;z-index:6;display:flex;gap:4px;background:rgba(8,11,18,.7);border:1px solid var(--eng-grid);border-radius:8px;padding:3px}
-  .vt{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;padding:4px 10px;border:none;border-radius:6px;background:transparent;color:#6b7690;cursor:pointer;transition:.25s}
+  .vt{font-family:var(--mono);font-size:11px;letter-spacing:1.2px;padding:5px 12px;border:none;border-radius:6px;background:transparent;color:#6b7690;cursor:pointer;transition:.25s}
   .vt.act{background:rgba(59,130,246,.18);color:#cfe3ff;box-shadow:inset 0 0 0 1px rgba(91,140,247,.35)}
   .neo-stage.tree-mode .view-tog{display:none}
   /* vista ORBITAL: todos los agentes en anillo alrededor del cerebro */
   .orb-a{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;pointer-events:auto;font-family:var(--mono);animation:nodeIn .5s ease both}
-  .orb-c{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--dept,#ff8a3d);border:1px solid var(--dept,#ff8a3d);background:radial-gradient(circle at 40% 32%,rgba(255,255,255,.18),#0a0d15 60%,#05070c);box-shadow:0 0 9px -4px var(--dept,#ff8a3d);transition:transform .3s,box-shadow .3s}
-  .orb-c svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+  .orb-c{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--dept,#ff8a3d);border:1px solid var(--dept,#ff8a3d);background:radial-gradient(circle at 40% 32%,rgba(255,255,255,.18),#0a0d15 60%,#05070c);box-shadow:0 0 9px -4px var(--dept,#ff8a3d);transition:transform .3s,box-shadow .3s}
+  .orb-c svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
   .orb-a:hover .orb-c{transform:scale(1.25);box-shadow:0 0 16px -3px var(--dept,#ff8a3d)}
-  .orb-l{font-size:6px;letter-spacing:.6px;color:#5f6a85;text-transform:uppercase;max-width:70px;text-align:center;line-height:1.3;opacity:0;transition:.25s}
-  .orb-a:hover .orb-l{opacity:1;color:#c3cde4}
-  .orb-dl{position:absolute;transform:translate(-50%,-50%);font-family:var(--mono);font-size:7.5px;letter-spacing:1.5px;text-transform:uppercase;pointer-events:none;text-shadow:0 1px 4px #000}
+  .orb-l{font-size:11px;letter-spacing:.4px;color:#9aa6c2;text-transform:uppercase;max-width:84px;text-align:center;line-height:1.35;opacity:.72;transition:.25s;text-shadow:0 1px 4px #000}
+  .orb-a:hover .orb-l{opacity:1;color:#eaf0ff}
+  .orb-dl{position:absolute;transform:translate(-50%,-50%);font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;pointer-events:none;text-shadow:0 1px 5px #000,0 0 12px currentColor}
   /* pill inferior ◀ DEPTO ▶ + vecinos fantasma */
-  .tree-pill{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);display:flex;gap:0;pointer-events:auto;font-family:var(--mono);border:1px solid var(--eng-grid);border-radius:20px;background:rgba(8,11,18,.75);overflow:hidden;animation:nodeIn .5s ease both}
-  .tree-pill button{background:transparent;border:none;color:#aeb8d0;font-family:var(--mono);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;padding:8px 13px;cursor:pointer;transition:.2s}
+  .tree-pill{position:absolute;left:50%;bottom:1.5%;transform:translateX(-50%);display:flex;gap:0;pointer-events:auto;font-family:var(--mono);border:1px solid var(--eng-grid);border-radius:20px;background:rgba(8,11,18,.75);overflow:hidden;animation:nodeIn .5s ease both}
+  .tree-pill button{background:transparent;border:none;color:#c3cde4;font-family:var(--mono);font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase;padding:9px 15px;cursor:pointer;transition:.2s}
   .tree-pill button:hover{color:#ffd9b8;background:rgba(255,138,61,.06)}
   .tree-pill .tp-name{border-left:1px solid var(--eng-grid);border-right:1px solid var(--eng-grid);color:#e8edf9}
-  .tree-ngh{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;pointer-events:auto;opacity:.32;transition:opacity .25s;font-family:var(--mono);animation:nodeIn .6s ease both}
-  .tree-ngh:hover{opacity:.8}
-  .tree-ngh .tb-circ{width:34px;height:34px;animation:none}
+  .tree-ngh{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;pointer-events:auto;transition:.25s;font-family:var(--mono);animation:nodeIn .6s ease both}
+  .tree-ngh .tb-circ{width:34px;height:34px;animation:none;opacity:.45;transition:.25s}
+  .tree-ngh:hover .tb-circ{opacity:1}
   .tree-ngh .tb-circ svg{width:15px;height:15px}
-  .tree-ngh span.nl{font-size:7px;letter-spacing:1.2px;text-transform:uppercase;color:#8b93ab;max-width:90px;text-align:center;line-height:1.4}
+  .tree-ngh span.nl{font-size:11px;letter-spacing:1.1px;text-transform:uppercase;color:#98a3bf;max-width:96px;text-align:center;line-height:1.4;text-shadow:0 1px 4px #000;transition:.25s}
+  .tree-ngh:hover span.nl{color:#eaf0ff}
   /* DIRECTORY = panel FLOTANTE sobre el stage (ref video) */
   .neo-drawer{position:absolute;left:14px;top:52px;bottom:14px;width:min(440px,44%);margin:0;z-index:8;overflow-y:auto;max-height:none;opacity:0;transform:translateX(-14px);pointer-events:none;transition:opacity .3s,transform .35s cubic-bezier(.32,.72,0,1);background:rgba(8,12,19,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:12px}
   .neo-drawer.open{opacity:1;transform:none;pointer-events:auto;max-height:none;padding:16px}
@@ -669,12 +695,14 @@
   .bx-stats2{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
   .bx-st{border:1px solid var(--eng-grid);border-radius:8px;padding:7px 9px;text-align:center}
   .bx-st b{display:block;font-size:15px;color:#ffd9b8;font-family:var(--mono)}
-  .bx-st span{font-size:7.5px;letter-spacing:1.2px;color:#6b7690;text-transform:uppercase}
+  .bx-st span{font-size:9px;letter-spacing:1.1px;color:#8b93ab;text-transform:uppercase}
+  /* el drawer flotante a 44% del stage es ilegible en pantallas chicas */
+  @media(max-width:860px){.neo-drawer{left:8px;right:8px;width:auto;top:46px;bottom:8px}}
   .bx-top{margin-bottom:12px}
   .bx-top-r{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:10px;color:#aeb8d0;padding:4px 2px;border-bottom:1px solid rgba(255,255,255,.045)}
   .bx-top-r b{color:#ffd9b8;font-weight:600}
   /* labels de dominios del vault alrededor del cerebro */
-  .brain-dom{position:absolute;transform:translate(-50%,-50%);font-family:var(--mono);font-size:7px;letter-spacing:1.4px;text-transform:uppercase;color:#c9a37b;opacity:.75;pointer-events:none;text-shadow:0 1px 5px #000;animation:nodeIn 1s ease both}
+  .brain-dom{position:absolute;transform:translate(-50%,-50%);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#e0b98f;pointer-events:none;text-shadow:0 1px 6px #000,0 0 3px #000;animation:nodeIn 1s ease both}
   /* ═══ SIDEBAR ref video: íconos finos + activo = caja con borde ═══ */
   .nav-item svg{display:block;width:14px;height:14px;flex:none;stroke-width:1.5;opacity:.62}
   .nav-item{gap:9px;padding:6px 10px;border-radius:7px}
@@ -687,29 +715,44 @@
   .stab:hover{color:#c3cde4;border-color:rgba(255,255,255,.16)}
   .stab.act{color:#cfe3ff;border-color:rgba(91,140,247,.5);background:rgba(59,130,246,.1)}
   /* ═══ LENS · LEGEND · DIRECTORY (panel derecho del video) ═══ */
-  .neo-rail{position:absolute;right:12px;top:52px;width:186px;z-index:5;display:flex;flex-direction:column;gap:10px;font-family:var(--mono);pointer-events:auto;animation:nodeIn .6s ease both}
-  .nr-box{border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(5,8,13,.96);backdrop-filter:blur(18px);padding:10px 11px;overflow:hidden;flex:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
-  .nr-h{font-size:7.5px;letter-spacing:2.2px;color:#5f6a85;margin-bottom:7px;text-transform:uppercase}
-  .nr-lens{display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#aeb8d0;padding:3px 0;cursor:pointer;transition:.2s}
-  .nr-lens:hover{color:#fff}
-  .nr-lens b{color:#7ea4c9;font-weight:500}
-  .nr-lg{display:flex;align-items:center;gap:7px;font-size:8.5px;color:#8b93ab;padding:2.5px 0;cursor:pointer;transition:.2s}
-  .nr-lg:hover{color:#dfe6f7}
-  .nr-lg i{width:9px;height:9px;border-radius:50%;border:1px solid currentColor;flex:none;font-style:normal}
+  .neo-rail{min-height:0;display:flex;flex-direction:column;gap:10px;font-family:var(--mono);animation:nodeIn .6s ease both}
+  .nr-box{border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(6,9,15,.94);backdrop-filter:blur(18px);padding:11px 12px;overflow:hidden;flex:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .nr-h{display:flex;align-items:center;justify-content:space-between;font-size:11px;letter-spacing:2.2px;color:#7f8aa6;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07);text-transform:uppercase}
+  .nr-h em{font-style:normal;letter-spacing:0;color:#5f6a85}
+  .nr-lens{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#aeb8d0;padding:4.5px 0;transition:.2s}
+  .nr-lens b{color:#e8edf9;font-weight:600;font-variant-numeric:tabular-nums}
+  .nr-lens[onclick]{cursor:pointer}
+  .nr-lens[onclick]:hover{color:#fff}
+  .nr-lens[onclick] b{color:#8fb3ff}
+  .nr-lg{display:flex;flex:none;align-items:center;gap:7px;font-size:11px;color:#aeb8d0;padding:3px 0;cursor:pointer;transition:.2s}
+  .nr-lg:hover{color:#fff}
+  .nr-lg i{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor;flex:none;font-style:normal}
   .nr-lg.off{opacity:.34}
-  .nr-dir{height:250px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:3px}
+  .nr-dir{flex:1;min-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:3px}
+  .neo-rail>.nr-box:last-child{flex:1;min-height:0;display:flex;flex-direction:column}
   .nr-dir::-webkit-scrollbar{width:3px}.nr-dir::-webkit-scrollbar-thumb{background:rgba(255,138,61,.3)}
-  .nr-d{display:flex;align-items:center;gap:6px;font-size:9.5px;line-height:1.75;color:#aeb8d0;padding:1px 5px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);text-transform:capitalize;width:100%}
+  /* flex:none — dentro del .nr-dir de alto fijo los items se comprimían y el texto se encimaba */
+  .nr-d{display:flex;flex:none;align-items:center;gap:7px;font-size:11px;line-height:1.75;color:#c3cde4;padding:2px 5px;border-radius:4px;text-align:left;background:none;border:none;cursor:pointer;transition:.18s;font-family:var(--mono);text-transform:capitalize;width:100%}
   .nr-d i{width:5px;height:5px;border-radius:50%;flex:none;font-style:normal}
-  .nr-dh{font-size:7px;letter-spacing:1.6px;text-transform:uppercase;margin:7px 0 3px;opacity:.85}
-  .nr-dh:first-child{margin-top:0}
+  /* nombre a la izquierda, sector en gris a la derecha (ref video) */
+  .nr-d b{flex:1;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nr-d em{flex:none;font-style:normal;font-size:11px;color:#5b6784;max-width:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .nr-d:hover{background:rgba(255,255,255,.05);color:#fff}
-  .neo-stage.tree-mode .neo-rail{display:none}
+  .nr-d:hover em{color:#8b93ab}
   .neo-stage.hide-sat .neo-sat,.neo-stage.hide-sat .orb-a{display:none}
   .neo-stage.hide-dom .brain-dom{display:none}
   .neo-stage.hide-dept .neo-node{opacity:.18;pointer-events:none}
   .neo-stage.hide-core .neo-core{opacity:.12}
-  @media(max-width:1400px){.neo-rail{display:none}}
+  /* rail: se angosta antes de desaparecer — la info del panel derecho es parte de la lectura */
+  /* en stages chicos los dominios del vault caen encima de nodos y del label del cerebro */
+  @media(max-width:1300px){.brain-dom{display:none}}
+  @media(max-width:1400px){.neo-work{grid-template-columns:minmax(0,1fr) 200px}}
+  @media(max-width:1100px){.neo-work{grid-template-columns:minmax(0,1fr) 182px}}
+  /* bajo 860 el rail pasa DEBAJO del stage — antes desaparecía y se perdía el directorio */
+  @media(max-width:860px){.neo-work{grid-template-columns:1fr}.neo-rail{flex-direction:row;flex-wrap:wrap}
+    .neo-rail>.nr-box{flex:1 1 220px}}
+  /* el sub del prompt es nowrap y empujaba scroll horizontal en el celular */
+  @media(max-width:640px){.neo-prompt-sub{display:none}}
   /* ═══ CONEXIONES ═══ */
   .cnx-head{font-family:var(--mono);font-size:9.5px;letter-spacing:2px;color:#6b7690;margin-bottom:14px}
   .cnx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:11px}
@@ -773,10 +816,13 @@
   #tab-memoria .inp{border-color:rgba(0,245,160,.18);color:#bdf7de}
   #tab-memoria .inp:focus{border-color:rgba(0,245,160,.5);box-shadow:0 0 18px -8px var(--emerald)}
   /* satélites de agentes en el radial (tenues, ref img#3) */
-  .neo-sat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;pointer-events:auto;opacity:.55;transition:opacity .25s;animation:nodeIn .8s ease both;font-family:var(--mono)}
-  .neo-sat:hover{opacity:1;z-index:6}
-  .ns-c{width:17px;height:17px;border-radius:50%;border:1px solid rgba(190,205,235,.45);display:flex;align-items:center;justify-content:center;font-size:7.5px;color:#aeb8d0;background:rgba(10,12,20,.8)}
-  .ns-l{font-size:6.5px;letter-spacing:.8px;color:#6b7690;text-transform:uppercase;max-width:76px;text-align:center;line-height:1.3}
+  .neo-sat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;pointer-events:auto;transition:.25s;animation:nodeIn .8s ease both;font-family:var(--mono)}
+  .neo-sat:hover{z-index:6}
+  .ns-c{width:24px;height:24px;border-radius:50%;border:1px solid rgba(190,205,235,.42);display:flex;align-items:center;justify-content:center;color:#c3cde4;background:rgba(10,12,20,.85);transition:.25s}
+  .ns-c svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round}
+  .neo-sat:hover .ns-c{border-color:rgba(200,216,245,.9);color:#fff;transform:scale(1.1)}
+  .ns-l{font-size:11px;letter-spacing:.4px;color:#98a3bf;text-transform:uppercase;max-width:96px;text-align:center;line-height:1.35;text-shadow:0 1px 4px #000;transition:.25s}
+  .neo-sat:hover .ns-l{color:#eaf0ff}
 
   /* Botón primario con barrido al hover */
   .btn:not(.btn-ghost){position:relative;overflow:hidden}
@@ -829,6 +875,7 @@
 
 <!-- APP -->
 <div id="app" class="hidden">
+  <div id="sideScrim"></div>
   <aside id="sidebar">
     <div class="side-brand">
       <span class="mark"><svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="32" fill="#0D1426"/><path d="M21 46 L32 16 L43 46" stroke="#fff" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="20,42 28,36 36,38 45,28" stroke="#2B5BE8" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="42" r="3.4" fill="#2B5BE8"/><circle cx="28" cy="36" r="3.4" fill="#2B5BE8"/><circle cx="36" cy="38" r="3.4" fill="#2B5BE8"/><circle cx="45" cy="28" r="3.4" fill="#2B5BE8"/></svg></span>
@@ -843,6 +890,7 @@
 
   <main>
     <div class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
       <div>
         <div class="eyebrow">// AUTOMIQ-OS · <span id="crumbSec">departamentos</span></div>
         <h1 id="pageTitle">Resumen</h1>
@@ -861,17 +909,21 @@
             <input class="neo-prompt-in" id="neoPrompt" placeholder="dump into the brain… o soltá documentos" autocomplete="off" />
             <span class="neo-prompt-sub">text · voice · drag or upload</span>
           </div>
-          <div class="neo-stage" id="neoStage">
-            <div class="view-tog" id="viewTog">
-              <button class="vt act" data-v="radial" onclick="setNeoView('radial')">RADIAL</button>
-              <button class="vt" data-v="orbital" onclick="setNeoView('orbital')">ORBITAL</button>
+          <!-- stage y rail son COLUMNAS HERMANAS: con el rail flotando encima había que
+               correr el centro del grafo a mano y todo quedaba descentrado. -->
+          <div class="neo-work">
+            <div class="neo-stage" id="neoStage">
+              <div class="view-tog" id="viewTog">
+                <button class="vt act" data-v="radial" onclick="setNeoView('radial')">RADIAL</button>
+                <button class="vt" data-v="orbital" onclick="setNeoView('orbital')">ORBITAL</button>
+              </div>
+              <svg class="neo-links" id="neoLinks" preserveAspectRatio="none" viewBox="0 0 100 100"></svg>
+              <div class="neo-core" id="neoCore" onclick="openBrain()" title="Abrir el cerebro — anotaciones, lecciones y memoria">
+                <canvas class="neo-brain" id="neoBrain" width="340" height="340"></canvas>
+                <div class="neo-core-label">WHOLE BRAIN<span>Obsidian · Graphify</span><span class="neo-core-hint">▸ CLICK PARA ENTRAR</span></div>
+              </div>
+              <div class="neo-nodes" id="neoNodes"></div>
             </div>
-            <svg class="neo-links" id="neoLinks" preserveAspectRatio="none" viewBox="0 0 100 100"></svg>
-            <div class="neo-core" id="neoCore" onclick="openBrain()" title="Abrir el cerebro — anotaciones, lecciones y memoria">
-              <canvas class="neo-brain" id="neoBrain" width="340" height="340"></canvas>
-              <div class="neo-core-label">WHOLE BRAIN<span>Obsidian · Graphify</span><span class="neo-core-hint">▸ CLICK PARA ENTRAR</span></div>
-            </div>
-            <div class="neo-nodes" id="neoNodes"></div>
             <div class="neo-rail" id="neoRail"></div>
           </div>
           <div class="neo-drawer" id="neoDrawer" aria-hidden="true"></div>
@@ -1439,7 +1491,7 @@ function go(tab){
   const meta = NAV.find(n=>n.id===tab) || {label:tab,sub:'',id:tab};
   el('pageTitle').textContent = meta.label; el('pageSub').textContent = meta.sub;
   try{ el('crumbSec').textContent = meta.id||tab; }catch(e){}
-  el('sidebar').classList.remove('open');
+  el('sidebar').classList.remove('open'); el('sideScrim').classList.remove('on');
   // sub-tabs de las secciones unificadas (Comms / Social / Contenido)
   const st=el('subTabs');
   if(meta.parts&&meta.parts.length>1){
@@ -2170,16 +2222,19 @@ function neoBrain(nReal){
   const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=W*0.36, LINK=W*0.135;
   const P=Array.from({length:N},()=>{const a=Math.random()*6.283,r=Math.pow(Math.random(),.5)*R;return{x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,vx:(Math.random()-.5)*.16,vy:(Math.random()-.5)*.16,r:Math.random()*1.6+.6};});
   cancelAnimationFrame(NEO_RAF);
+  // reduced motion: se dibuja UNA vez y no se programa más RAF (el loop seguía corriendo
+  // incluso con la pestaña oculta, quemando CPU sin que nadie lo viera).
+  const still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   function frame(){
     const sec=el('tab-departamentos');
-    if(sec&&sec.classList.contains('hidden')){ NEO_RAF=requestAnimationFrame(frame); return; }
+    if(sec&&sec.classList.contains('hidden')&&!still){ NEO_RAF=requestAnimationFrame(frame); return; }
     ctx.clearRect(0,0,W,H);
     for(const p of P){p.x+=p.vx;p.y+=p.vy;const dx=p.x-cx,dy=p.y-cy,dd=Math.hypot(dx,dy)||1;if(dd>R){p.vx-=dx/dd*.03;p.vy-=dy/dd*.03;}}
     for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const dx=P[i].x-P[j].x,dy=P[i].y-P[j].y,d=Math.hypot(dx,dy);if(d<LINK){ctx.strokeStyle='rgba(255,120,60,'+(.16*(1-d/LINK)).toFixed(3)+')';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(P[i].x,P[i].y);ctx.lineTo(P[j].x,P[j].y);ctx.stroke();}}
     ctx.shadowColor='#ff7a2f';ctx.shadowBlur=7;
     for(const p of P){const t=Math.max(0,1-Math.hypot(p.x-cx,p.y-cy)/R);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fillStyle='rgba(255,'+(110+(t*100|0))+','+(30+(t*40|0))+',.92)';ctx.fill();}
     ctx.shadowBlur=0;
-    NEO_RAF=requestAnimationFrame(frame);
+    if(!still) NEO_RAF=requestAnimationFrame(frame);
   }
   frame();
 }
@@ -2197,8 +2252,11 @@ function partLoop(){
         const x1=+c.dataset.x1,y1=+c.dataset.y1,x2=+c.dataset.x2,y2=+c.dataset.y2;
         const qx=c.dataset.qx!==undefined?+c.dataset.qx:(x1+x2)/2, qy=c.dataset.qy!==undefined?+c.dataset.qy:(y1+y2)/2;
         const u=1-k;
-        c.setAttribute('cx',(u*u*x1+2*u*k*qx+k*k*x2).toFixed(2));
-        c.setAttribute('cy',(u*u*y1+2*u*k*qy+k*k*y2).toFixed(2));
+        // <line> de largo cero con cap redondo: el punto queda circular aunque el viewBox
+        // esté estirado (con <circle> salía ovalado).
+        const px=(u*u*x1+2*u*k*qx+k*k*x2).toFixed(2), py=(u*u*y1+2*u*k*qy+k*k*y2).toFixed(2);
+        c.setAttribute('x1',px); c.setAttribute('x2',px);
+        c.setAttribute('y1',py); c.setAttribute('y2',py);
         c.setAttribute('opacity',(k<0.05||k>0.95)?'0':'0.9');
       });
     }
@@ -2246,11 +2304,14 @@ function renderRail(deps){
     <div class="nr-box"><div class="nr-h">LEGEND</div>
       ${NR_LEG.map(([k,l,c])=>`<div class="nr-lg${st.classList.contains('hide-'+k)?' off':''}" data-k="${k}" style="color:${c}"><i></i><span style="color:inherit">${l}</span></div>`).join('')}
     </div>
-    <div class="nr-box"><div class="nr-h">DIRECTORY</div>
-      <div class="nr-dir">${deps.map(d=>
-        `<div class="nr-dh" style="color:${esc(d.color)}">${esc((d.label||'').split(' / ')[0])}</div>`
-        +(d.agents||[]).map(a=>`<button class="nr-d" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}"><i style="background:${esc(d.color)}"></i>${esc((a.name||'').replace(/_/g,' '))}</button>`).join('')
-      ).join('')}</div>
+    <div class="nr-box"><div class="nr-h">DIRECTORY <em>${nag}</em></div>
+      <div class="nr-dir">${
+        // ref video: lista PLANA alfabética, nombre a la izquierda y sector en gris a la
+        // derecha. Los headers de sector partían la lista en 7 bloques y no entraba nada.
+        deps.flatMap(d=>(d.agents||[]).map(a=>({a,d})))
+          .sort((p,q)=>p.a.name.localeCompare(q.a.name))
+          .map(({a,d})=>`<button class="nr-d" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}"><i style="background:${esc(d.color)}"></i><b>${esc((a.name||'').replace(/_/g,' '))}</b><em>${esc((d.label||'').split(' / ')[0])}</em></button>`).join('')
+      }</div>
     </div>`;
   r.querySelectorAll('.nr-lg').forEach(b=>b.addEventListener('click',()=>{
     st.classList.toggle('hide-'+b.dataset.k); b.classList.toggle('off');
@@ -2259,11 +2320,13 @@ function renderRail(deps){
 /* labels de los dominios REALES del vault alrededor del cerebro (ref video) */
 function renderVaultDomLabels(){
   if(!BRAIN_DOMS||NEO_VIEW!=='radial') return;
-  const angs=[-64,-18,28,76,142,208], nodes=el('neoNodes');
+  // Ref video: los dominios van DENTRO de la nube del cerebro, no en el anillo — afuera
+  // chocaban con los nodos de sector. Radio chico y ángulos que esquivan el label de abajo.
+  const angs=[-125,-55,-8,8,-172,172], nodes=el('neoNodes');
   let h='';
   BRAIN_DOMS.slice(0,6).forEach((d,i)=>{
     const a=angs[i%angs.length]*Math.PI/180;
-    h+=`<span class="brain-dom" style="left:${(44+13*Math.cos(a)).toFixed(1)}%;top:${(47+16*Math.sin(a)).toFixed(1)}%;animation-delay:${(0.5+i*0.1).toFixed(1)}s">${esc(d[0])} · ${d[1]}</span>`;
+    h+=`<span class="brain-dom" style="left:${(50+11*Math.cos(a)).toFixed(1)}%;top:${(50+11*Math.sin(a)).toFixed(1)}%;animation-delay:${(0.5+i*0.1).toFixed(1)}s">${esc(d[0])} · ${d[1]}</span>`;
   });
   nodes.insertAdjacentHTML('beforeend',h);
 }
@@ -2274,12 +2337,12 @@ function renderOrbital(deps){
   el('neoStage').style.removeProperty('--amb');
   el('neoStage').classList.remove('tree-mode');
   const flat=[]; deps.forEach(d=>(d.agents||[]).forEach(a=>flat.push({a,d})));
-  const N=flat.length||1, cx=44, cy=48, Rx=32, Ry=41;
-  links.innerHTML=`<ellipse cx="${cx}" cy="${cy}" rx="${Rx}" ry="${Ry}" fill="none" stroke="rgba(200,214,240,.1)" stroke-width=".15"/>`
+  const N=flat.length||1, cx=50, cy=50, Rx=33, Ry=37;
+  links.innerHTML=`<ellipse cx="${cx}" cy="${cy}" rx="${Rx}" ry="${Ry}" fill="none" stroke="rgba(200,214,240,.16)" stroke-width="1"/>`
     + flat.map((f,i)=>{const a=(-90+i*(360/N))*Math.PI/180;
       const X1=cx+13*Math.cos(a), Y1=cy+14*Math.sin(a), X2=cx+(Rx-2.5)*Math.cos(a), Y2=cy+(Ry-2.5)*Math.sin(a);
       const a2=a+0.10, QX=cx+((13+Rx-2.5)/2)*Math.cos(a2), QY=cy+((14+Ry-2.5)/2)*Math.sin(a2);
-      return `<path d="M${X1.toFixed(1)},${Y1.toFixed(1)} Q${QX.toFixed(1)},${QY.toFixed(1)} ${X2.toFixed(1)},${Y2.toFixed(1)}" fill="none" stroke="${esc(f.d.color)}" stroke-width=".1" opacity=".22"/>`;}).join('');
+      return `<path d="M${X1.toFixed(1)},${Y1.toFixed(1)} Q${QX.toFixed(1)},${QY.toFixed(1)} ${X2.toFixed(1)},${Y2.toFixed(1)}" fill="none" stroke="${esc(f.d.color)}" stroke-width=".7" opacity=".3"/>`;}).join('');
   let h='', di=0;
   deps.forEach(d=>{
     const k=(d.agents||[]).length; if(!k) return;
@@ -2299,16 +2362,19 @@ function renderNeo(deps){
   el('neoCore').style.display='';
   el('neoStage').classList.remove('tree-mode');
   el('neoStage').style.removeProperty('--amb');
-  const n=deps.length||1, cx=44, cy=48, Rx=31, Ry=39;
-  // posición de cada agente-satélite (tenue, alrededor de su depto — ref img#3)
-  const sats=[];
+  const n=deps.length||1, cx=50, cy=50, Rx=25, Ry=27;
+  // Anillo EXTERNO de agentes, repartido parejo (ref: anillos concéntricos). Antes los
+  // satélites se abrían en abanico alrededor de su depto: los sectores con 4-6 agentes
+  // (Marketing, Comercial) los amontonaban y se pisaban entre sí de un solo lado.
+  const sats=[]; let si=0;
+  const TOT=deps.reduce((s,d)=>s+(d.agents||[]).length,0)||1;
+  const SRx=Rx+16, SRy=Ry+15;
   deps.forEach((dep,i)=>{
-    const base=-90+i*(360/n), ags=dep.agents||[], k=ags.length;
-    ags.forEach((ag,j)=>{
-      const off=(j-(k-1)/2)*Math.min(11, 40/Math.max(k,1));
-      const a=(base+off)*Math.PI/180;
-      sats.push({x:cx+(Rx+7)*Math.cos(a), y:cy+(Ry+7.5)*Math.sin(a),
-                 dx:cx+Rx*Math.cos(base*Math.PI/180), dy:cy+Ry*Math.sin(base*Math.PI/180), ag});
+    const base=(-90+i*(360/n))*Math.PI/180;
+    (dep.agents||[]).forEach(ag=>{
+      const a=(-90+(si++)*(360/TOT))*Math.PI/180;
+      sats.push({x:cx+SRx*Math.cos(a), y:cy+SRy*Math.sin(a),
+                 dx:cx+Rx*Math.cos(base), dy:cy+Ry*Math.sin(base), ag});
     });
   });
   links.innerHTML = deps.map((dep,i)=>{
@@ -2316,16 +2382,16 @@ function renderNeo(deps){
     const mx=(cx+x)/2, my=(cy+y)/2, nx=-(y-cy), ny=(x-cx), nl=Math.hypot(nx,ny)||1, bow=7;
     const qx=(mx+nx/nl*bow).toFixed(2), qy=(my+ny/nl*bow).toFixed(2);
     return `<path d="M${cx},${cy} Q${qx},${qy} ${x.toFixed(2)},${y.toFixed(2)}" fill="none" stroke="${esc(dep.color||'#ff8a3d')}" class="neo-link" style="--d:${(i*0.4).toFixed(2)}s"/>`
-      +[0,0.5].map(ph=>`<circle class="neo-part" r=".38" fill="${esc(dep.color||'#ff8a3d')}" data-x1="${cx}" data-y1="${cy}" data-qx="${qx}" data-qy="${qy}" data-x2="${x.toFixed(2)}" data-y2="${y.toFixed(2)}" data-ph="${(ph+i*0.13).toFixed(2)}" data-sp="0.09"/>`).join('');
+      +[0,0.5].map(ph=>`<line class="neo-part" stroke="${esc(dep.color||'#ff8a3d')}" data-x1="${cx}" data-y1="${cy}" data-qx="${qx}" data-qy="${qy}" data-x2="${x.toFixed(2)}" data-y2="${y.toFixed(2)}" data-ph="${(ph+i*0.13).toFixed(2)}" data-sp="0.09"/>`).join('');
   }).join('')
   + sats.map(s=>{const qx=((s.dx+s.x)/2+ (s.y-s.dy)*0.12).toFixed(1), qy=((s.dy+s.y)/2 - (s.x-s.dx)*0.12).toFixed(1);
-      return `<path d="M${s.dx.toFixed(1)},${s.dy.toFixed(1)} Q${qx},${qy} ${s.x.toFixed(1)},${s.y.toFixed(1)}" fill="none" stroke="#aebbdc" stroke-width=".12" opacity=".16"/>`;}).join('');
+      return `<path d="M${s.dx.toFixed(1)},${s.dy.toFixed(1)} Q${qx},${qy} ${s.x.toFixed(1)},${s.y.toFixed(1)}" fill="none" stroke="#aebbdc" stroke-width=".8" opacity=".26"/>`;}).join('');
   partLoop();
   // anillos fantasma decorativos entre los deptos + puntos sueltos (ref img#3)
   let ghosts='';
   for(let i=0;i<n;i++){
     const a=(-90+(i+0.5)*(360/n))*Math.PI/180;
-    const gx=cx+(Rx+6)*Math.cos(a), gy=cy+(Ry+6)*Math.sin(a);
+    const gx=cx+(Rx+22)*Math.cos(a), gy=cy+(Ry+22)*Math.sin(a);
     const s=16+((i*7)%9);
     ghosts+=`<span class="neo-ghost" style="left:${gx.toFixed(1)}%;top:${gy.toFixed(1)}%;width:${s}px;height:${s}px"><i></i></span>`;
     const a2=(-70+i*(360/n))*Math.PI/180;
@@ -2333,12 +2399,12 @@ function renderNeo(deps){
   }
   nodes.innerHTML = ghosts
   + sats.map((s,i)=>`<button class="neo-sat" style="left:${s.x.toFixed(1)}%;top:${s.y.toFixed(1)}%;animation-delay:${(0.3+i*0.02).toFixed(2)}s" onclick="agentDetail('${s.ag.name}')" title="${esc(s.ag.description||'')}">
-      <span class="ns-c">${esc((s.ag.name||'?')[0].toUpperCase())}</span><span class="ns-l">${esc((s.ag.name||'').replace(/_/g,' '))}</span></button>`).join('')
+      <span class="ns-c">${SVG_PERSON}</span><span class="ns-l">${esc((s.ag.name||'').replace(/_/g,' '))}</span></button>`).join('')
   + deps.map((dep,i)=>{
     const a=(-90+i*(360/n))*Math.PI/180, x=cx+Rx*Math.cos(a), y=cy+Ry*Math.sin(a);
     const live=(dep.agents||[]).filter(z=>z.has_output&&z.today).length;
     return `<button class="neo-node" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--dept:${esc(dep.color||'#ff8a3d')};--in:${(i*0.07).toFixed(2)}s" data-i="${i}" title="${esc(dep.label)}">
-      <span class="neo-orb">${dep.icon||'🏢'}<span class="neo-orb-badge">${(dep.agents||[]).length}</span></span>
+      <span class="neo-orb">${SVG_TEAM}<span class="neo-orb-badge">${(dep.agents||[]).length}</span></span>
       <span class="neo-node-l">${esc(dep.label||'')}</span>
       <span class="neo-node-s"><span class="neo-dotmini auto-${esc(dep.autonomy||'sugiere')}"></span>${live?`<span class="neo-live">${live} activos</span>`:esc(dep.autonomy||'')}</span>
     </button>`;
@@ -2352,11 +2418,23 @@ function openDept(dep){
 }
 /* ── ÁRBOL del depto (ref img#8): servicios → agentes → chips de tarea → nodo del sector ── */
 const SVG_PERSON='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 19.5c1.9-3.6 4.3-5.2 7-5.2s5.1 1.6 7 5.2"/></svg>';
+/* Los deptos usaban emoji: cada uno con su propio color, peso y grilla → el anillo se veía
+   sucio. En la referencia TODOS los sectores llevan el mismo pictograma de equipo, fino y
+   monocromo, y el color lo pone el nodo. Un solo ícono, hereda currentColor. */
+const SVG_TEAM='<svg viewBox="0 0 24 24" class="ic-team"><circle cx="12" cy="7.2" r="2.9"/>'
+  +'<path d="M6.6 17.6c1.4-2.7 3.2-3.9 5.4-3.9s4 1.2 5.4 3.9"/>'
+  +'<circle cx="4.6" cy="10.4" r="2.1"/><path d="M1.4 18.2c.8-1.9 1.9-2.8 3.2-2.8"/>'
+  +'<circle cx="19.4" cy="10.4" r="2.1"/><path d="M22.6 18.2c-.8-1.9-1.9-2.8-3.2-2.8"/></svg>';
+/* Servicios/MCP: en la referencia son un pictograma igual para todos (nodo enchufado), no
+   la inicial del nombre — con inicial cada círculo tenía un ancho de glifo distinto. */
+const SVG_PLUG='<svg viewBox="0 0 24 24" class="ic-plug"><circle cx="12" cy="12" r="3.2"/>'
+  +'<path d="M12 2.6v5.4M12 16v5.4M2.6 12h5.4M16 12h5.4"/></svg>';
 let NEO_CUR=-1;
 /* cambio de depto con flechas — el árbol DESLIZA animado (ref: tabs ◁ ▷ del video) */
 function deptNav(d){
   const n=NEO_DEPS.length; if(!n||NEO_CUR<0) return;
   const i=((NEO_CUR+d)%n+n)%n;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){ renderDeptTree(NEO_DEPS[i]); return; }
   const layers=[el('neoNodes'),el('neoLinks')];
   layers.forEach(x=>{x.style.transition='transform .24s ease,opacity .24s';x.style.transform=`translateX(${-d*52}px)`;x.style.opacity='0';});
   setTimeout(()=>{
@@ -2374,7 +2452,7 @@ document.addEventListener('keydown',e=>{
 });
 function renderDeptTree(dep){
   NEO_CUR=NEO_DEPS.indexOf(dep);
-  el('neoDrawer').classList.remove('open');
+  el('neoDrawer').classList.remove('open'); el('neoDrawer').setAttribute('aria-hidden','true');
   el('neoCore').style.display='none';
   const st=el('neoStage'), nodes=el('neoNodes'), links=el('neoLinks');
   const ags=dep.agents||[], n=ags.length||1, col=dep.color||'#ff8a3d';
@@ -2382,22 +2460,32 @@ function renderDeptTree(dep){
   st.style.setProperty('--amb', `color-mix(in srgb, ${col} 13%, transparent)`);
   st.classList.add('tree-mode');
   // spread COMPACTO según cantidad (deptos chicos no se desparraman)
-  const aw=Math.min(64, n*13), xs=i=>n===1?50:(50-aw/2 + i*(aw/(n-1)));
+  const aw=Math.min(70, n*14), xs=i=>n===1?50:(50-aw/2 + i*(aw/(n-1)));
   const svcs=[]; ags.forEach(a=>(a.connections||[]).forEach(c=>{ if(!svcs.includes(c)) svcs.push(c); }));
-  const m=svcs.length, sw=Math.min(74, Math.max(m*11,20)), sx=i=>m===1?50:(50-sw/2 + i*(sw/(Math.max(m-1,1))));
-  const SY=14, AY=40, CY=AY+11.5, BX=50, BY=78;
+  // Servicios en VARIAS filas: 12 en una sola fila se pisaban entre sí a 1440px.
+  const m=svcs.length, SROW=Math.min(m,8), SFILAS=Math.ceil(m/SROW);
+  const scol=i=>i%SROW, sfila=i=>Math.floor(i/SROW);
+  const slen=f=>Math.min(SROW, m-f*SROW);
+  const sw=Math.min(84, Math.max(SROW*12,20));
+  const sx=i=>{const k=slen(sfila(i)); return k===1?50:(50-sw/2 + scol(i)*(sw/(k-1)));};
+  const SY0=19, SGAP=8.5, sy=i=>SY0+sfila(i)*SGAP;
+  const AY=SY0+(SFILAS-1)*SGAP+24, BX=50, BY=84;
+  // Con 5+ agentes las cajas de tarea se pisan entre sí: escalonar impares hacia abajo
+  // deja el mismo layout de una fila pero con aire real (deptos chicos no cambian).
+  const stag=n>=5?7:0, ay=i=>AY+(i%2)*stag;
   let L='';
   // malla servicio → agente (líneas BLANCAS sólidas que se cruzan, como la ref)
   ags.forEach((a,i)=>{(a.connections||[]).forEach(c=>{const si=svcs.indexOf(c);
-    if(si>=0){ const X1=sx(si), Y1=SY+4.5, X2=xs(i), Y2=AY-4.5;
+    if(si>=0){ const X1=sx(si), Y1=sy(si)+4.5, X2=xs(i), Y2=ay(i)-4.5;
       L+=`<path d="M${X1.toFixed(1)},${Y1} C${X1.toFixed(1)},${(Y1+(Y2-Y1)*0.55).toFixed(1)} ${X2.toFixed(1)},${(Y1+(Y2-Y1)*0.45).toFixed(1)} ${X2.toFixed(1)},${Y2}" fill="none" stroke="#dde4f4" class="tl-solid"/>`; }});});
   // chip de tarea → nodo del sector: dashed convergente CON puntitos en el camino
   ags.forEach((a,i)=>{const x=xs(i);
-    const Y1=CY+3, Y2=BY-5, qx=((x+BX)/2).toFixed(1), qy=(Y1+(Y2-Y1)*0.72).toFixed(1);
+    const Y1=ay(i)+11.5+3, Y2=BY-5, qx=((x+BX)/2).toFixed(1), qy=(Y1+(Y2-Y1)*0.72).toFixed(1);
     L+=`<path d="M${x.toFixed(1)},${Y1} Q${qx},${qy} ${BX},${Y2}" fill="none" stroke="#dde4f4" class="tl-dash"/>`;
-    L+=`<circle class="neo-part" r=".34" fill="${esc(col)}" data-x1="${x.toFixed(1)}" data-y1="${Y1}" data-qx="${qx}" data-qy="${qy}" data-x2="${BX}" data-y2="${Y2}" data-ph="${(i*0.23).toFixed(2)}" data-sp="0.14"/>`;
+    L+=`<line class="neo-part" stroke="${esc(col)}" data-x1="${x.toFixed(1)}" data-y1="${Y1}" data-qx="${qx}" data-qy="${qy}" data-x2="${BX}" data-y2="${Y2}" data-ph="${(i*0.23).toFixed(2)}" data-sp="0.14"/>`;
     for(const t of [0.34,0.62,0.85]){ const u=1-t;
-      L+=`<circle cx="${(u*u*x+2*u*t*(+qx)+t*t*BX).toFixed(1)}" cy="${(u*u*Y1+2*u*t*(+qy)+t*t*Y2).toFixed(1)}" r=".28" fill="#dde4f4" class="tl-dot"/>`;
+      const dx=(u*u*x+2*u*t*(+qx)+t*t*BX).toFixed(1), dy=(u*u*Y1+2*u*t*(+qy)+t*t*Y2).toFixed(1);
+      L+=`<line class="tl-dot" x1="${dx}" y1="${dy}" x2="${dx}" y2="${dy}"/>`;
     }});
   setTimeout(partLoop,0);
   links.innerHTML=L;
@@ -2409,10 +2497,10 @@ function renderDeptTree(dep){
        <span class="tt-name">${esc(dep.label||'')} <i onclick="backToRadial()" title="Cerrar">✕</i></span>
      </div>`
     + `<div class="tree-title">${esc((dep.label||'').toUpperCase())}<small>${esc(dep.desc||'')}</small></div>`
-    + svcs.map((s,i)=>`<div class="tree-svc" style="left:${sx(i).toFixed(1)}%;top:${SY}%;animation-delay:${(i*0.05).toFixed(2)}s">
-        <span class="ts-circ">${esc(s[0]||'·')}</span><span class="ts-name">${esc(s)}</span></div>`).join('')
+    + svcs.map((s,i)=>`<div class="tree-svc" style="left:${sx(i).toFixed(1)}%;top:${sy(i)}%;animation-delay:${(i*0.05).toFixed(2)}s">
+        <span class="ts-circ">${SVG_PLUG}</span><span class="ts-name">${esc(s)}</span></div>`).join('')
     + ags.map((a,i)=>{const x=xs(i); const on=a.has_output&&a.today;
-      return `<button class="tree-agent" style="left:${x.toFixed(1)}%;top:${AY+6}%;--dept:${esc(col)};animation-delay:${(0.12+i*0.05).toFixed(2)}s" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}">
+      return `<button class="tree-agent" style="left:${x.toFixed(1)}%;top:${ay(i)+6}%;--dept:${esc(col)};animation-delay:${(0.12+i*0.05).toFixed(2)}s" onclick="agentDetail('${a.name}')" title="${esc(a.description||'')}">
         <span class="ta-circ">${SVG_PERSON}${on?'<i class="ta-on"></i>':''}</span>
         <span class="ta-name">${esc((a.name||'').replace(/_/g,' '))}</span>
         <span class="ta-b ${on?'on':''}"><i></i>${on?'ONLINE':'STANDBY'}</span>
@@ -2420,14 +2508,16 @@ function renderDeptTree(dep){
         <span class="ta-task">${esc((a.description||'').slice(0,40))}${(a.description||'').length>40?'…':''}</span>
       </button>`;}).join('')
     + `<button class="tree-brain" style="left:${BX}%;top:${BY}%;--dept:${esc(col)}" onclick="openBrain()" title="Abrir el cerebro">
-         <span class="tb-circ">${SVG_PERSON}</span><span class="tb-l">${esc(dep.label)}</span></button>`
+         <span class="tb-circ">${SVG_TEAM}</span><span class="tb-l">${esc(dep.label)}</span></button>`
     + (()=>{ // vecinos fantasma a los costados (continuidad espacial, ref video)
         const nd=NEO_DEPS.length; if(nd<2) return '';
         const prev=NEO_DEPS[((NEO_CUR-1)%nd+nd)%nd], next=NEO_DEPS[(NEO_CUR+1)%nd];
-        return `<button class="tree-ngh" style="left:3.5%;top:52%;--dept:${esc(prev.color)}" onclick="deptNav(-1)" title="${esc(prev.label)}">
-            <span class="tb-circ">${SVG_PERSON}</span><span class="nl">${esc(prev.label)}</span></button>
-          <button class="tree-ngh" style="left:96.5%;top:52%;--dept:${esc(next.color)}" onclick="deptNav(1)" title="${esc(next.label)}">
-            <span class="tb-circ">${SVG_PERSON}</span><span class="nl">${esc(next.label)}</span></button>`; })()
+        // abajo, al lado del pager: arriba pisaban a los agentes de los extremos
+        const NY=Math.min(90, BY+9);
+        return `<button class="tree-ngh" style="left:16%;top:${NY}%;--dept:${esc(prev.color)}" onclick="deptNav(-1)" title="${esc(prev.label)}">
+            <span class="tb-circ">${SVG_TEAM}</span><span class="nl">${esc(prev.label)}</span></button>
+          <button class="tree-ngh" style="left:84%;top:${NY}%;--dept:${esc(next.color)}" onclick="deptNav(1)" title="${esc(next.label)}">
+            <span class="tb-circ">${SVG_TEAM}</span><span class="nl">${esc(next.label)}</span></button>`; })()
     + `<div class="tree-pill">
          <button onclick="deptNav(-1)" title="Anterior (←)">◀</button>
          <button class="tp-name" onclick="backToRadial()" title="Volver al cerebro">${esc(dep.label)}</button>
@@ -2697,7 +2787,7 @@ async function openBrain(){
   const dr=el('neoDrawer');
   dr.style.setProperty('--dept','#ff8a3d');
   dr.innerHTML='<div class="bx"><div class="bx-empty">▸ cargando el cerebro…</div></div>';
-  dr.classList.add('open');
+  dr.classList.add('open'); dr.setAttribute('aria-hidden','false');
   try{
     const [m,l,n,g]=await Promise.all([
       api('/api/memory'), api('/api/lessons'), api('/api/agent-notes').catch(()=>({notes:[]})),
@@ -2736,7 +2826,7 @@ function renderBrain(){
       <span class="bx-title">WHOLE BRAIN</span>
       <span class="bx-stats" id="bxStats"></span>
       <input class="bx-search" id="bxQ" placeholder="buscar en el cerebro…" value="${esc(BRAIN_F.q)}" autocomplete="off">
-      <button class="neo-close" onclick="el('neoDrawer').classList.remove('open')" title="Cerrar">✕</button>
+      <button class="neo-close" onclick="el('neoDrawer').classList.remove('open');el('neoDrawer').setAttribute('aria-hidden','true')" title="Cerrar">✕</button>
     </div>
     ${BRAIN.vault?`<div class="bx-stats2">
       <div class="bx-st"><b>${BRAIN.vault.stats.notes}</b><span>notas</span></div>
@@ -3850,7 +3940,12 @@ el('loginBtn').addEventListener('click', doLogin);
 el('key').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 el('logoutBtn').addEventListener('click', logout);
 el('refreshBtn').addEventListener('click', ()=>{ loadTab(CURRENT); toast('Actualizado'); });
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+el('menuBtn').addEventListener('click', ()=>{
+  const abierto=el('sidebar').classList.toggle('open');
+  el('sideScrim').classList.toggle('on',abierto);
+});
+el('sideScrim').addEventListener('click', ()=>{ el('sidebar').classList.remove('open'); el('sideScrim').classList.remove('on'); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); el('sidebar').classList.remove('open'); el('sideScrim').classList.remove('on'); } });
 
 if(KEY){
   fetch('/api/agents',{headers:{'X-Webhook-Secret':KEY}}).then(r=>{
