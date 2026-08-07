@@ -2089,6 +2089,25 @@ async def api_admin_disk(request: Request, top: int = 12):
     }
 
 
+@app.post("/api/admin/hermes-sessions")
+async def api_admin_hermes_sessions(request: Request, accion: str = "stats",
+                                    dias: int = 30):
+    """Poda el store de sesiones de Hermes, que es lo que llena el volumen.
+
+    `stats` mide, `optimize` hace VACUUM sin borrar nada (probar SIEMPRE esto
+    primero) y `prune` borra sesiones de más de `dias`. state.db está en la lista
+    de archivos secretos de Hermes (guarda auth), así que se poda con su propio
+    CLI: nunca borrar el archivo a mano.
+    """
+    _verify_webhook_secret(request)
+    from .clients.hermes import sessions_cmd
+    if accion not in ("stats", "optimize", "prune"):
+        raise HTTPException(status_code=400, detail="accion: stats | optimize | prune")
+    args = {"stats": ["stats"], "optimize": ["optimize"],
+            "prune": ["prune", "--older-than", str(dias), "--yes"]}[accion]
+    return {"accion": accion, **await run_in_threadpool(sessions_cmd, *args)}
+
+
 @app.post("/api/admin/housekeeping")
 async def api_admin_housekeeping(request: Request,
                                  days_images: Optional[int] = None,

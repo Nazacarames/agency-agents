@@ -120,6 +120,31 @@ def _wire_search_backend(env: dict, settings: Settings, agente: str = "") -> Non
         env.pop(k, None)
 
 
+def sessions_cmd(*args: str, timeout: int = 300) -> dict:
+    """Corre `hermes sessions <args>` contra NUESTRO HERMES_HOME (el del volumen).
+
+    Existe porque `state.db` crece sin techo: el 2026-08-07 pesaba 263 MB de los
+    330 usados del volumen, mientras que la media —lo único que mira el
+    housekeeping— eran 8 MB. Hermes trae la poda (`sessions optimize`, que hace
+    VACUUM sin tocar datos, y `sessions prune --older-than`), pero el volumen no
+    tiene shell, así que hay que poder dispararla desde acá.
+    """
+    if not hermes_available():
+        return {"ok": False, "error": "CLI `hermes` no encontrado en PATH"}
+    env = dict(os.environ)
+    _HERMES_HOME.mkdir(parents=True, exist_ok=True)
+    env["HERMES_HOME"] = str(_HERMES_HOME)
+    try:
+        r = subprocess.run([shutil.which("hermes"), "sessions", *args],
+                           capture_output=True, text=True, timeout=timeout, env=env)
+        return {"ok": r.returncode == 0, "returncode": r.returncode,
+                "stdout": (r.stdout or "")[-4000:], "stderr": (r.stderr or "")[-2000:]}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": f"timeout {timeout}s"}
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+
+
 def fijar_backend_busqueda() -> dict:
     """Fija `web.backend: searxng` en el config.yaml de Hermes. Llamar al arranque.
 
