@@ -477,7 +477,10 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
         # el resultado (2026-08-02: 18 generadas, 1 encolada, y 429 de Vertex).
         if pq:
             pq.expire_stale()      # el cupo real es después de vencer lo caduco
-        cupo = pq.free_slots() if pq else 10**6
+        # Cupo POR CARRIL: el feed y las historias drenan a ritmos distintos, así que
+        # con el feed lleno igual se pueden (y conviene) generar historias.
+        cupos = ({"feed": pq.free_slots("feed"), "story": pq.free_slots("story")}
+                 if pq else {"feed": 10**6, "story": 10**6})
         from ..integrations import image_prompt
         # Rotación de ESTILO anti-monotonía: si el agente no marcó ESTILO, se asigna
         # de un mazo mezclado (foto pesa doble: sigue siendo la base de autenticidad).
@@ -491,11 +494,14 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
             # FORMATO explícito del agente; si falta, 1 post cada 3 imágenes (1:2 con
             # historias = el ritmo del drain diario: 1 pieza de feed + 2 historias).
             kind = formato or ("post" if i % 3 == 1 else "story")
-            if cupo <= 0:
+            carril = "story" if kind == "story" else "feed"
+            if cupos[carril] <= 0:
+                tope = pq.LANE_CAP[carril]
+                ritmo = "2 historias por día" if carril == "story" else "1 pieza de feed por día"
                 blocks.append(
-                    f"**Imagen {i}** — _no se generó_: la cola de publicación está llena "
-                    f"({pq.MAX_PENDING} pendientes). Se publica 1 pieza de feed por día; "
-                    "vaciá cola en el panel y vuelve a generarse sola.")
+                    f"**Imagen {i}** — _no se generó_: el carril **{carril}** de la cola está "
+                    f"lleno ({tope} pendientes). Se publica {ritmo}; vaciá cola en el panel y "
+                    "vuelve a generarse sola.")
                 continue
             estilo = estilo or deck[(i - 1) % len(deck)]
             # TIPOGRÁFICO/EDITORIAL sin titular no son nada → caen a banner;
@@ -538,14 +544,15 @@ def augment_with_images(text: str, max_images: int = 2, publish: bool = False) -
                 try:
                     item = pq.enqueue(urls[0], post_caption, targets, source="content", kind=kind)
                     if item:
-                        cupo -= 1
+                        cupos[carril] -= 1
                         block += f"\n\n> 🗓️ Encolado como **{klabel}** (feed: 1/día · historias: 2/día)."
                     else:
                         block += "\n\n> ⚠️ Cola de publicación llena: no se encoló (revisá el panel)."
                 except Exception as e:
                     block += f"\n\n> ⚠️ No se pudo encolar: {str(e)[:140]}"
             blocks.append(block)
-        if carousel and cupo > 0:   # mismo criterio que las sueltas: sin lugar, no se gasta
+        # el carrusel es pieza de feed: va contra ese carril, no contra el total
+        if carousel and cupos["feed"] > 0:   # sin lugar, no se gasta cuota de imagen
             prompts, car_caption, car_estilo = carousel
             car_urls = []
             for p in prompts:

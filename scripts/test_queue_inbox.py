@@ -21,25 +21,38 @@ def _hace(dias: int) -> str:
 
 
 # ── 1. La cola vence lo viejo y libera cupo ──────────────────────────────────
-for i in range(pq.MAX_PENDING):
+FEED = pq.MAX_PENDING_FEED
+for i in range(FEED):
     assert pq.enqueue(f"/media/{i}.jpg", f"pieza {i}", kind="post"), i
-assert pq.pending_count() == pq.MAX_PENDING
-assert pq.free_slots() == 0
-# Con la cola llena NO entra nada: es el estado real medido en prod (30/30).
+assert pq.pending_count(lane="feed") == FEED
+assert pq.free_slots("feed") == 0
+# Carril de feed lleno: no entra otra pieza de feed…
 assert pq.enqueue("/media/nueva.jpg", "no entra") is None
+# …pero las historias drenan aparte (2/día), así que su carril sigue abierto. Con el
+# tope único compartido esto NO pasaba: el feed se comía la cola y las historias
+# quedaban afuera (2026-08-07 en prod: 27 de feed contra 3 historias, 30/30).
+assert pq.free_slots("story") == pq.MAX_PENDING_STORY
+assert pq.enqueue("/media/h.jpg", "historia", kind="story") is not None
 
-# Envejecemos la mitad más allá del TTL (así estaba: lo más viejo, de hace 24 días).
+# Envejecemos parte del feed más allá del TTL (así estaba: lo más viejo, 24 días).
 store = pq.load_store()
-for it in store["items"][15:]:
+viejos = [it for it in store["items"] if it["kind"] == "post"][5:]
+for it in viejos:
     it["created_at"] = _hace(pq.PENDING_TTL_DIAS + 10)
 pq.save_store(store)
 
-assert pq.expire_stale() == 15
-assert pq.pending_count() == 15 and pq.free_slots() == 15
+assert pq.expire_stale() == len(viejos)
+assert pq.pending_count(lane="feed") == FEED - len(viejos)
+assert pq.free_slots("feed") == len(viejos)
 # Vencer NO borra: el historial queda para el panel.
-assert sum(1 for it in pq.load_store()["items"] if it["status"] == "expired") == 15
+assert sum(1 for it in pq.load_store()["items"] if it["status"] == "expired") == len(viejos)
 assert pq.expire_stale() == 0            # idempotente
 assert pq.enqueue("/media/nueva.jpg", "ahora sí") is not None
+
+# Ningún carril puede aceptar más de lo que alcanza a drenar antes de vencer: si acepta
+# más, esas piezas vencen sin publicarse y la cuota de imagen que costaron se tira.
+assert pq.MAX_PENDING_FEED <= 1 * pq.PENDING_TTL_DIAS
+assert pq.MAX_PENDING_STORY <= pq.MAX_STORIES_PER_DAY * pq.PENDING_TTL_DIAS
 
 # Un item sin fecha usable no se vence (mejor publicarlo que perderlo en silencio).
 store = pq.load_store()

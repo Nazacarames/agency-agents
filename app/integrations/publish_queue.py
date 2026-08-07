@@ -22,10 +22,24 @@ from typing import Any, Dict, List, Optional
 import pytz
 
 MAX_ITEMS = 500          # historial total que se conserva
-MAX_PENDING = 30         # tope de cola pendiente (evita backlog infinito)
 PENDING_TTL_DIAS = 14    # una pieza que no salió en dos semanas ya no es noticia
 MAX_STORIES_PER_DAY = 2  # historias diarias (aparte del post/carrusel/reel del feed)
 FEED_KINDS = ("post", "carousel", "reel")
+
+# Tope por CARRIL, no uno solo compartido. El feed drena 1/día y las historias 2/día:
+# con un tope único el feed se lo comía entero (2026-08-07: 27 de feed contra 3
+# historias, cola 30/30) y encima aceptaba mucho más de lo que puede salir antes de
+# vencer. Un carril no puede tener más pendientes que lo que drena en PENDING_TTL_DIAS
+# — lo que sobra vence sin publicarse y la cuota de Vertex que costó generarlo se tira.
+MAX_PENDING_FEED = 14    # 1/día × 14 días de TTL
+MAX_PENDING_STORY = 6    # 2/día × 3 días: una historia de la semana pasada ya no es historia
+LANE_CAP = {"feed": MAX_PENDING_FEED, "story": MAX_PENDING_STORY}
+MAX_PENDING = MAX_PENDING_FEED + MAX_PENDING_STORY   # total, para mostrar en el panel
+
+
+def _lane(kind: str) -> str:
+    """Carril de drenado de una pieza. Lo que no es historia va al feed."""
+    return "story" if (kind or "post").lower() == "story" else "feed"
 # Serializa leer→modificar→guardar (agentes encolan mientras el job drena).
 _LOCK = threading.Lock()
 _TZ = pytz.timezone("America/Buenos_Aires")
@@ -79,9 +93,13 @@ def save_store(store: Dict[str, Any]) -> None:
     os.replace(tmp, p)
 
 
-def pending_count(store: Optional[Dict[str, Any]] = None) -> int:
+def pending_count(store: Optional[Dict[str, Any]] = None,
+                  lane: Optional[str] = None) -> int:
+    """Pendientes en la cola; con `lane` ("feed" | "story"), sólo los de ese carril."""
     store = store or load_store()
-    return sum(1 for it in store["items"] if it.get("status") == "pending")
+    return sum(1 for it in store["items"]
+               if it.get("status") == "pending"
+               and (lane is None or _lane(it.get("kind")) == lane))
 
 
 def expire_stale() -> int:
@@ -107,11 +125,17 @@ def expire_stale() -> int:
     return n
 
 
-def free_slots() -> int:
-    """Lugares libres en la cola. Los agentes lo miran ANTES de generar imágenes:
-    generarlas para descartarlas al encolar quema cuota de Vertex al pedo (el
-    2026-08-02 se generaron 18, entró 1, y de paso nos comimos varios 429)."""
-    return max(0, MAX_PENDING - pending_count())
+def free_slots(lane: Optional[str] = None) -> int:
+    """Lugares libres. Los agentes lo miran ANTES de generar imágenes: generarlas para
+    descartarlas al encolar quema cuota de Vertex al pedo (el 2026-08-02 se generaron
+    18, entró 1, y de paso nos comimos varios 429).
+
+    Hay que pedirlo POR CARRIL: el total no sirve para decidir si generar una historia
+    cuando lo que está lleno es el feed."""
+    store = load_store()
+    if lane:
+        return max(0, LANE_CAP.get(lane, 0) - pending_count(store, lane))
+    return sum(max(0, cap - pending_count(store, ln)) for ln, cap in LANE_CAP.items())
 
 
 def _clean_caption(caption: str) -> str:
@@ -177,7 +201,8 @@ def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
     }
     with _LOCK:
         store = load_store()
-        if pending_count(store) >= MAX_PENDING:
+        lane = _lane(kind)
+        if pending_count(store, lane) >= LANE_CAP[lane]:
             return None
         store["items"].insert(0, item)
         store["items"] = store["items"][:MAX_ITEMS]
@@ -410,5 +435,10 @@ def summary() -> Dict[str, Any]:
         "stories_today": stories_published_today(store),
         "max_stories_per_day": MAX_STORIES_PER_DAY,
         "max_pending": MAX_PENDING,
+        # por carril: con el total solo no se ve CUÁL está lleno, y son topes distintos
+        "pending_feed": pending_count(store, "feed"),
+        "pending_story": pending_count(store, "story"),
+        "max_pending_feed": MAX_PENDING_FEED,
+        "max_pending_story": MAX_PENDING_STORY,
         "items": store["items"][:50],
     }
