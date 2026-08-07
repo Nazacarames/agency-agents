@@ -2436,7 +2436,11 @@ async def api_create_meeting(body: MeetingBody, request: Request):
 async def api_update_meeting(meeting_id: str, body: MeetingBody, request: Request):
     _verify_webhook_secret(request)
     from .integrations import meetings_store as mt
-    m = mt.update_meeting(meeting_id, body.model_dump(exclude_none=True))
+    # exclude_unset, NO exclude_none: los defaults de MeetingBody no son None
+    # (title="Reunión", location="", notes=""), así que con exclude_none un update
+    # parcial —marcar una reunión como realizada— pisaba el título y borraba
+    # ubicación y notas. Mismo criterio que /api/growth.
+    m = mt.update_meeting(meeting_id, body.model_dump(exclude_unset=True))
     if not m:
         raise HTTPException(status_code=404, detail="reunión no encontrada")
     return {"ok": True, "meeting": m}

@@ -216,3 +216,25 @@ def test_daily_batch_no_mata_a_los_leads_nuevos():
     # Menos leads que cupo → van todos; cupo cero → no se manda nada.
     assert len(ls.daily_batch(due[:3], 10)) == 3
     assert ls.daily_batch(due, 0) == []
+
+
+def test_meeting_update_parcial_no_borra_campos():
+    """Marcar una reunión como realizada no puede borrarle título, lugar ni notas.
+
+    `MeetingBody` tiene defaults que NO son None (title="Reunión", location="", notes=""),
+    así que `exclude_none` los dejaba pasar y el update parcial los escribía encima.
+    `update_meeting` aplica todo lo que llegue, así que el filtro tiene que ser acá.
+    """
+    from app.main import MeetingBody
+
+    parcial = MeetingBody(**{"status": "realizada"}).model_dump(exclude_unset=True)
+    assert parcial == {"status": "realizada"}, f"se colaron campos no pedidos: {parcial}"
+
+    # exclude_none —lo que había antes— arrastra los defaults y pisa datos reales.
+    viejo = MeetingBody(**{"status": "realizada"}).model_dump(exclude_none=True)
+    assert viejo.get("title") == "Reunión" and viejo.get("notes") == "", (
+        "si esto cambia, el comentario del endpoint quedó desactualizado")
+
+    # Lo que sí se manda explícito tiene que llegar, aunque coincida con el default.
+    explicito = MeetingBody(**{"title": "Reunión"}).model_dump(exclude_unset=True)
+    assert explicito == {"title": "Reunión"}
