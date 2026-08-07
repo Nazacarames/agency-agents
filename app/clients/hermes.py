@@ -145,6 +145,35 @@ def sessions_cmd(*args: str, timeout: int = 300) -> dict:
         return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
 
 
+def sessions_vacuum() -> dict:
+    """VACUUM sobre state.db con el sqlite3 de Python. No cambia datos.
+
+    Borrar sesiones NO achica el archivo: SQLite deja las páginas en la free-list
+    y el .db sigue ocupando lo mismo en el volumen. Hermes trae `sessions
+    optimize` para esto, pero la versión del contenedor no lo tiene (sus acciones
+    son list/export/delete/prune/stats/rename/browse), así que lo hacemos acá:
+    VACUUM es SQL estándar y no depende de la versión del CLI.
+    """
+    db = _HERMES_HOME / "state.db"
+    if not db.is_file():
+        return {"ok": False, "error": f"no existe {db}"}
+    import sqlite3
+    antes = db.stat().st_size
+    try:
+        con = sqlite3.connect(str(db), timeout=60)
+        try:
+            con.execute("VACUUM")
+            con.commit()
+        finally:
+            con.close()
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+    despues = db.stat().st_size
+    mb = lambda b: round(b / 1_048_576, 1)  # noqa: E731
+    return {"ok": True, "mb_antes": mb(antes), "mb_despues": mb(despues),
+            "liberado_mb": mb(antes - despues)}
+
+
 def fijar_backend_busqueda() -> dict:
     """Fija `web.backend: searxng` en el config.yaml de Hermes. Llamar al arranque.
 
