@@ -2048,6 +2048,47 @@ async def api_diag_gsc(request: Request):
     return out
 
 
+@app.get("/api/admin/disk")
+async def api_admin_disk(request: Request, top: int = 12):
+    """Qué ocupa el volumen, por carpeta y por archivo. SOLO LECTURA.
+
+    El playbook de disco lleno asume que lo que sobra es media vieja, y corre
+    housekeeping. El 2026-08-07 el volumen estaba al 76% y housekeeping liberó 0:
+    no había una sola imagen de más de 30 días. Sin un desglose había que adivinar
+    (o pedir SSH al volumen) para saber dónde estaban los MB.
+    """
+    _verify_webhook_secret(request)
+    import shutil
+    raiz = _data_dir()
+
+    def _tam(p: Path) -> int:
+        if p.is_file():
+            return p.stat().st_size
+        return sum(f.stat().st_size for f in p.rglob("*") if f.is_file())
+
+    mb = lambda b: round(b / 1_048_576, 2)  # noqa: E731
+    entradas, archivos = [], []
+    for p in sorted(raiz.iterdir()):
+        try:
+            entradas.append({"nombre": p.name, "tipo": "dir" if p.is_dir() else "file",
+                             "mb": mb(_tam(p))})
+        except Exception:
+            continue
+    for f in raiz.rglob("*"):
+        try:
+            if f.is_file():
+                archivos.append({"path": str(f.relative_to(raiz)), "mb": mb(f.stat().st_size)})
+        except Exception:
+            continue
+    du = shutil.disk_usage(str(raiz))
+    return {
+        "disco_mb": {"total": mb(du.total), "usado": mb(du.used), "libre": mb(du.free)},
+        "por_entrada": sorted(entradas, key=lambda e: e["mb"], reverse=True)[:top],
+        "archivos_mas_grandes": sorted(archivos, key=lambda a: a["mb"], reverse=True)[:top],
+        "archivos_totales": len(archivos),
+    }
+
+
 @app.post("/api/admin/housekeeping")
 async def api_admin_housekeeping(request: Request,
                                  days_images: Optional[int] = None,
