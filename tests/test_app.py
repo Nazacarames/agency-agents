@@ -12,6 +12,7 @@ Cubren:
 import re
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -238,3 +239,34 @@ def test_meeting_update_parcial_no_borra_campos():
     # Lo que sí se manda explícito tiene que llegar, aunque coincida con el default.
     explicito = MeetingBody(**{"title": "Reunión"}).model_dump(exclude_unset=True)
     assert explicito == {"title": "Reunión"}
+
+
+def test_hermes_extract_backend_no_cae_en_searxng(tmp_path, monkeypatch):
+    """`web_extract` necesita un backend propio: searxng no sabe extraer.
+
+    Sin `web.extract_backend`, Hermes resuelve el extract cayendo a `web.backend`
+    —que fijamos en searxng para la búsqueda— y searxng es search-only: devolvía
+    "search-only backend and cannot extract URL content" en cada intento. Los
+    agentes lo reportaban como "web_extract caído" desde 2026-07-21.
+    """
+    import yaml
+    from app.clients import hermes as h
+
+    monkeypatch.setattr(h, "_HERMES_HOME", tmp_path / ".hermes")
+    monkeypatch.setenv("TAVILY_API_KEY", "x" * 8)
+
+    r = h.fijar_backend_busqueda()
+    assert r["ok"] and r["cambio"]
+    web = yaml.safe_load((tmp_path / ".hermes" / "config.yaml").read_text("utf-8"))["web"]
+    assert web["search_backend"] == "searxng", "la búsqueda tiene que ir por el shim"
+    assert web["extract_backend"] == "tavily", "sin esto el extract cae en searxng"
+    assert h.fijar_backend_busqueda()["cambio"] is False, "tiene que ser idempotente"
+
+    # La key de Tavily NO puede borrarse del entorno del hijo: Hermes chequea que
+    # esté para considerar el backend usable, y sin ella el extract vuelve a caer.
+    assert "TAVILY_API_KEY" not in h._HERMES_SEARCH_KEYS
+    env = {"TAVILY_API_KEY": "x" * 8, "EXA_API_KEY": "y" * 8}
+    h._wire_search_backend(env, SimpleNamespace(webhook_secret="s" * 10), "leadhunter")
+    assert env.get("TAVILY_API_KEY"), "se borró la única key que sabe extraer"
+    assert "EXA_API_KEY" not in env, "las demás sí se sacan: le ganarían al shim"
+    assert "/api/searx/" in env["SEARXNG_URL"]

@@ -70,7 +70,14 @@ def _provider_model(llm_provider: str, s: Settings) -> tuple[str, str]:
 # Vars con las que Hermes elige su backend de búsqueda. Las sacamos del entorno
 # del hijo para que no gane ninguna: queremos que caiga SIEMPRE en nuestro shim.
 # Nuestra cascada igual usa estas keys — las lee del entorno del PADRE.
-_HERMES_SEARCH_KEYS = ("TAVILY_API_KEY", "EXA_API_KEY", "PARALLEL_API_KEY",
+#
+# TAVILY_API_KEY quedó FUERA de esta lista a propósito: es la única que tenemos
+# que sabe EXTRAER (searxng es search-only) y `_is_backend_available("tavily")`
+# la busca en el entorno del hijo — sacándola, `web.extract_backend: tavily` no
+# se aplicaba y el extract volvía a caer en searxng. Para la BÚSQUEDA no gana
+# igual: `web.search_backend: searxng` del config.yaml se resuelve antes que
+# cualquier variable de entorno (ver fijar_backend_busqueda).
+_HERMES_SEARCH_KEYS = ("EXA_API_KEY", "PARALLEL_API_KEY",
                        "FIRECRAWL_API_KEY", "FIRECRAWL_API_URL",
                        "BRAVE_SEARCH_API_KEY")
 
@@ -132,17 +139,27 @@ def fijar_backend_busqueda() -> dict:
         if path.is_file():
             cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         web = cfg.get("web") or {}
-        if web.get("backend") == "searxng" and web.get("search_backend") == "searxng":
-            return {"ok": True, "cambio": False, "backend": "searxng"}
+        # extract_backend EXPLÍCITO. Antes se dejaba sin setear "para no romper el
+        # extract", pero era justo al revés: `_get_capability_backend("extract")`
+        # cae a `web.backend` cuando no hay override, o sea a searxng, que es
+        # search-only → `web_extract` devolvía "search-only backend" SIEMPRE. Los
+        # agentes lo venían reportando como "web_extract caído" desde el 21/07.
+        extract = "tavily" if os.environ.get("TAVILY_API_KEY") else ""
+        if (web.get("backend") == "searxng" and web.get("search_backend") == "searxng"
+                and (web.get("extract_backend") or "") == extract):
+            return {"ok": True, "cambio": False, "backend": "searxng",
+                    "extract_backend": extract}
         web["backend"] = "searxng"
         web["search_backend"] = "searxng"
-        # extract_backend NO se toca: searxng no sabe extraer (supports_extract()
-        # es False) y pisarlo dejaría a los agentes sin poder leer páginas.
+        if extract:
+            web["extract_backend"] = extract
         cfg["web"] = web
         path.write_text(yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False),
                         encoding="utf-8")
-        log.info("hermes_backend_fijado", backend="searxng", path=str(path))
-        return {"ok": True, "cambio": True, "backend": "searxng"}
+        log.info("hermes_backend_fijado", backend="searxng",
+                 extract_backend=extract or "(ninguno)", path=str(path))
+        return {"ok": True, "cambio": True, "backend": "searxng",
+                "extract_backend": extract}
     except Exception as e:
         log.warning("hermes_backend_fijar_failed", error=str(e)[:200])
         return {"ok": False, "error": str(e)[:200]}
