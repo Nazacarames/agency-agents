@@ -490,6 +490,30 @@ def due_for_touch(
     return out
 
 
+def daily_batch(due: List[Dict[str, Any]], cap: int) -> List[Dict[str, Any]]:
+    """Reparte el cupo diario entre primer-toque y follow-ups para que ninguno mate al otro.
+
+    `due_for_touch` ordena por vencimiento, y ahí está la trampa: un lead nuevo vence HOY
+    mientras los follow-ups arrastran semanas de atraso. Con un corte plano `due[:cap]` los
+    nuevos quedaban SIEMPRE debajo de la línea — al 2026-08-07 había 165 leads sin un solo
+    contacto mientras el leadhunter sumaba 10 por día.
+
+    Se reparte el MISMO cupo, no uno nuevo por carril: dos topes independientes duplican los
+    envíos del día y queman la reputación del dominio (ya se unificaron por eso una vez).
+    El carril que no llena su parte le cede el margen al otro, así no se desperdicia cupo.
+    """
+    if cap <= 0:
+        return []
+    nuevos = [l for l in due if not l.get("next_step")]
+    followups = [l for l in due if l.get("next_step")]
+    piso = max(1, cap // 2)
+    lote = nuevos[:piso] + followups[:cap - piso]
+    if len(lote) < cap:
+        elegidos = {l.get("key") for l in lote}
+        lote += [l for l in due if l.get("key") not in elegidos][:cap - len(lote)]
+    return lote
+
+
 def due_for_reengage(
     store: Dict[str, Any], today: Optional[str] = None
 ) -> List[Dict[str, Any]]:

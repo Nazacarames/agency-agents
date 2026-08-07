@@ -17600,7 +17600,7 @@
       "label": "settings_empty()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L24",
+      "source_location": "L23",
       "_origin": "ast"
     },
     {
@@ -17608,7 +17608,7 @@
       "label": "test_settings_defaults()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L34",
+      "source_location": "L33",
       "_origin": "ast"
     },
     {
@@ -17616,7 +17616,7 @@
       "label": "test_settings_empty_string_sanitization()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L43",
+      "source_location": "L42",
       "_origin": "ast"
     },
     {
@@ -17624,7 +17624,7 @@
       "label": "test_all_agents_registered()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L52",
+      "source_location": "L51",
       "_origin": "ast"
     },
     {
@@ -17632,7 +17632,7 @@
       "label": "test_agents_have_valid_metadata()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L71",
+      "source_location": "L70",
       "_origin": "ast"
     },
     {
@@ -17640,7 +17640,7 @@
       "label": "test_agent_schedules_parse()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L80",
+      "source_location": "L79",
       "_origin": "ast"
     },
     {
@@ -17648,7 +17648,7 @@
       "label": "test_agent_names_unique()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L93",
+      "source_location": "L92",
       "_origin": "ast"
     },
     {
@@ -17656,7 +17656,7 @@
       "label": "test_fastapi_endpoints_present()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L99",
+      "source_location": "L98",
       "_origin": "ast"
     },
     {
@@ -17664,7 +17664,7 @@
       "label": "test_healthz_endpoint()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L115",
+      "source_location": "L114",
       "_origin": "ast"
     },
     {
@@ -17672,7 +17672,7 @@
       "label": "test_agents_list_endpoint()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L141",
+      "source_location": "L140",
       "_origin": "ast"
     },
     {
@@ -17680,7 +17680,7 @@
       "label": "test_run_endpoint_requires_secret()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L153",
+      "source_location": "L152",
       "_origin": "ast"
     },
     {
@@ -17688,15 +17688,7 @@
       "label": "test_get_nonexistent_agent()",
       "file_type": "code",
       "source_file": "tests/test_app.py",
-      "source_location": "L160",
-      "_origin": "ast"
-    },
-    {
-      "id": "tests_test_app_test_dashboard_pantalla_departamentos",
-      "label": "test_dashboard_pantalla_departamentos()",
-      "file_type": "code",
-      "source_file": "tests/test_app.py",
-      "source_location": "L167",
+      "source_location": "L159",
       "_origin": "ast"
     },
     {
@@ -17708,27 +17700,19 @@
       "_origin": "ast"
     },
     {
-      "id": "tests_test_app_rationale_81",
+      "id": "tests_test_app_rationale_80",
       "label": "Todos los schedules deben parsear como cron expressions válidas.",
       "file_type": "rationale",
       "source_file": "tests/test_app.py",
-      "source_location": "L81",
+      "source_location": "L80",
       "_origin": "ast"
     },
     {
-      "id": "tests_test_app_rationale_116",
+      "id": "tests_test_app_rationale_115",
       "label": "El healthz responde 200 con status=ok y la config cargada.",
       "file_type": "rationale",
       "source_file": "tests/test_app.py",
-      "source_location": "L116",
-      "_origin": "ast"
-    },
-    {
-      "id": "tests_test_app_rationale_168",
-      "label": "La pantalla de Departamentos sirve y conserva sus piezas estructurales. El HTML…",
-      "file_type": "rationale",
-      "source_file": "tests/test_app.py",
-      "source_location": "L168",
+      "source_location": "L115",
       "_origin": "ast"
     },
     {
@@ -97855,7 +97839,7 @@
     },
     {
       "source": "tests_test_app",
-      "target": "re",
+      "target": "sys",
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -97866,23 +97850,12 @@
     },
     {
       "source": "tests_test_app",
-      "target": "sys",
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_app.py",
-      "source_location": "L13",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "tests_test_app",
       "target": "pathlib",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L14",
+      "source_location": "L13",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97893,7 +97866,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L16",
+      "source_location": "L15",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97904,7 +97877,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L17",
+      "source_location": "L16",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97914,7 +97887,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L23",
+      "source_location": "L22",
       "weight": 1.0,
       "context": "decorator",
       "_origin": "ast"
@@ -97925,7 +97898,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L24",
+      "source_location": "L23",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97935,7 +97908,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L34",
+      "source_location": "L33",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97945,7 +97918,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L43",
+      "source_location": "L42",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97955,7 +97928,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L52",
+      "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97965,7 +97938,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L71",
+      "source_location": "L70",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97975,7 +97948,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L80",
+      "source_location": "L79",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97985,7 +97958,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L93",
+      "source_location": "L92",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -97995,7 +97968,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L99",
+      "source_location": "L98",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -98005,7 +97978,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L115",
+      "source_location": "L114",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -98015,7 +97988,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L141",
+      "source_location": "L140",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -98025,7 +97998,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L153",
+      "source_location": "L152",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -98035,17 +98008,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L160",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "tests_test_app",
-      "target": "tests_test_app_test_dashboard_pantalla_departamentos",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_app.py",
-      "source_location": "L167",
+      "source_location": "L159",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -98060,32 +98023,22 @@
       "_origin": "ast"
     },
     {
-      "source": "tests_test_app_rationale_81",
+      "source": "tests_test_app_rationale_80",
       "target": "tests_test_app_test_agent_schedules_parse",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L81",
+      "source_location": "L80",
       "weight": 1.0,
       "_origin": "ast"
     },
     {
-      "source": "tests_test_app_rationale_116",
+      "source": "tests_test_app_rationale_115",
       "target": "tests_test_app_test_healthz_endpoint",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L116",
-      "weight": 1.0,
-      "_origin": "ast"
-    },
-    {
-      "source": "tests_test_app_rationale_168",
-      "target": "tests_test_app_test_dashboard_pantalla_departamentos",
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_app.py",
-      "source_location": "L168",
+      "source_location": "L115",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -138573,7 +138526,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -138584,7 +138537,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L53",
+      "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -138595,7 +138548,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L119",
+      "source_location": "L118",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -141180,7 +141133,7 @@
       "context": "submodule_import",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L118",
+      "source_location": "L117",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -143094,7 +143047,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L36",
+      "source_location": "L35",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -143105,7 +143058,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L46",
+      "source_location": "L45",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -143116,7 +143069,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L54",
+      "source_location": "L53",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -143127,7 +143080,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L73",
+      "source_location": "L72",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -143138,7 +143091,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L86",
+      "source_location": "L85",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -143149,7 +143102,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_app.py",
-      "source_location": "L95",
+      "source_location": "L94",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -146165,7 +146118,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/test_app.py",
-      "source_location": "L26",
+      "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast"
     },

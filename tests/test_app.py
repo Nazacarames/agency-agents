@@ -186,3 +186,33 @@ def test_dashboard_pantalla_departamentos():
         assert stage_css, "no se encontraron tamaños de fuente del stage"
         chicos = [t for t in stage_css if float(t) < 11]
         assert not chicos, f"texto del stage por debajo de 11px: {chicos}"
+
+
+def test_daily_batch_no_mata_a_los_leads_nuevos():
+    """El lote diario tiene que incluir primer-toque aunque haya follow-ups vencidos.
+
+    Reproduce el estado real del 2026-08-07: 165 leads nuevos (vencen hoy) contra 140
+    follow-ups atrasados semanas. `due_for_touch` ordena por vencimiento, así que un corte
+    plano `due[:cap]` se llevaba SOLO follow-ups y los nuevos no se contactaban nunca.
+    """
+    from app.integrations import leads_store as ls
+
+    viejos = [{"key": f"fu{i}", "next_step": 2, "next_touch_at": "2026-07-13"}
+              for i in range(140)]
+    nuevos = [{"key": f"nv{i}", "next_step": 0, "next_touch_at": "2026-08-07"}
+              for i in range(165)]
+    due = sorted(viejos + nuevos,
+                 key=lambda l: (l["next_touch_at"], -l["next_step"]))
+
+    lote = ls.daily_batch(due, 10)
+    assert len(lote) == 10, "el lote tiene que llenar el cupo"
+    day0 = [l for l in lote if not l["next_step"]]
+    assert day0, "sin este reparto los leads nuevos nunca se contactan"
+    assert len(day0) == 5 and len(lote) - len(day0) == 5, "cupo repartido mitad y mitad"
+
+    # Un solo carril con demanda se lleva todo el cupo: no se desperdician envíos.
+    assert len(ls.daily_batch(viejos, 10)) == 10
+    assert len(ls.daily_batch(nuevos, 10)) == 10
+    # Menos leads que cupo → van todos; cupo cero → no se manda nada.
+    assert len(ls.daily_batch(due[:3], 10)) == 3
+    assert ls.daily_batch(due, 0) == []

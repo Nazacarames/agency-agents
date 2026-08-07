@@ -230,7 +230,9 @@ class OutboundAgent(BaseAgent):
             reserved = 0
         first_cap = max(1, cap - reserved)
         due = ls.due_for_touch(store, today=today)
-        due_today = due[:first_cap]
+        # Repartido entre primer-toque y follow-ups: con el corte plano los leads nuevos
+        # nunca entraban al lote (ver ls.daily_batch).
+        due_today = ls.daily_batch(due, first_cap)
         over_cap = len(due) - len(due_today)
 
         # Guardamos el store ya ingestado y el contexto para post_process.
