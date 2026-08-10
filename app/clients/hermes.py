@@ -259,6 +259,23 @@ def sessions_drop_trigram() -> dict:
             # existe y reventaría CADA insert de mensaje.
             for t in _TRIGRAM_TRIGGERS:
                 con.execute(f"DROP TRIGGER IF EXISTS {t}")
+            con.commit()
+            # Vaciar las shadow tables EN LOTES antes de soltar la virtual.
+            # `DROP TABLE` sobre una FTS5 dispara xDestroy, que borra todas las
+            # filas en UNA transacción y journalea el borrado entero: con el
+            # volumen al 88% eso muere con "database or disk is full" — para
+            # liberar espacio hacía falta espacio. En lotes con commit, el
+            # journal nunca crece y las páginas van pasando a la free-list.
+            for shadow in ("messages_fts_trigram_data", "messages_fts_trigram_content",
+                           "messages_fts_trigram_docsize", "messages_fts_trigram_idx"):
+                if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                                   "AND name=?", (shadow,)).fetchone():
+                    continue
+                while con.execute(f"SELECT 1 FROM {shadow} LIMIT 1").fetchone():
+                    con.execute(f"DELETE FROM {shadow} WHERE rowid IN "
+                                f"(SELECT rowid FROM {shadow} LIMIT 200)")
+                    con.commit()
+            # Ahora las shadow están vacías → el xDestroy es barato.
             con.execute("DROP TABLE IF EXISTS messages_fts_trigram")
             con.commit()
             msgs = con.execute("SELECT count(*) FROM messages").fetchone()[0]
