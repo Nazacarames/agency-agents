@@ -145,6 +145,42 @@ def sessions_cmd(*args: str, timeout: int = 300) -> dict:
         return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
 
 
+def sessions_sizes() -> dict:
+    """Qué tabla ocupa el espacio DENTRO de state.db. SOLO LECTURA.
+
+    Importa para decidir la retención: si el peso está en el índice FTS se
+    recupera SIN borrar nada (mergeando segmentos), pero si está en el texto de
+    los mensajes la única palanca es podar sesiones. A ojo no se distingue.
+    """
+    db = _HERMES_HOME / "state.db"
+    if not db.is_file():
+        return {"ok": False, "error": f"no existe {db}"}
+    import sqlite3
+    mb = lambda b: round((b or 0) / 1_048_576, 1)  # noqa: E731
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=60)
+        try:
+            try:
+                # dbstat da el tamaño REAL en páginas por tabla/índice.
+                filas = con.execute(
+                    "SELECT name, SUM(pgsize) FROM dbstat GROUP BY name "
+                    "ORDER BY 2 DESC LIMIT 12").fetchall()
+                por_tabla = [{"nombre": n, "mb": mb(b)} for n, b in filas]
+            except sqlite3.OperationalError:
+                # sin dbstat compilado: aproximar por largo del texto guardado
+                por_tabla = [{"nombre": "(dbstat no disponible)", "mb": None}]
+            libres = con.execute("PRAGMA freelist_count").fetchone()[0]
+            psize = con.execute("PRAGMA page_size").fetchone()[0]
+        finally:
+            con.close()
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+    return {"ok": True, "archivo_mb": mb(db.stat().st_size),
+            # espacio ya borrado que VACUUM devolvería al disco
+            "reclamable_por_vacuum_mb": mb(libres * psize),
+            "por_tabla": por_tabla}
+
+
 def sessions_vacuum() -> dict:
     """VACUUM sobre state.db con el sqlite3 de Python. No cambia datos.
 

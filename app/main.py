@@ -2100,9 +2100,12 @@ async def api_admin_hermes_sessions(request: Request, accion: str = "stats",
     CLI: nunca borrar el archivo a mano.
     """
     _verify_webhook_secret(request)
-    from .clients.hermes import sessions_cmd, sessions_vacuum
-    if accion not in ("stats", "vacuum", "prune"):
-        raise HTTPException(status_code=400, detail="accion: stats | vacuum | prune")
+    from .clients.hermes import sessions_cmd, sessions_vacuum, sessions_sizes
+    if accion not in ("stats", "sizes", "vacuum", "prune"):
+        raise HTTPException(status_code=400,
+                            detail="accion: stats | sizes | vacuum | prune")
+    if accion == "sizes":
+        return {"accion": accion, **await run_in_threadpool(sessions_sizes)}
     if accion == "vacuum":
         return {"accion": accion, **await run_in_threadpool(sessions_vacuum)}
     args = {"stats": ["stats"],
