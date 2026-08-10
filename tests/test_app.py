@@ -388,3 +388,57 @@ def test_lead_con_email_sin_agenda_se_rescata():
     # sin email no hay nada que agendar: ese va por WhatsApp
     assert store["leads"]["sin_mail"]["next_touch_at"] is None
     assert ls.reprogramar_sin_agenda(store, today="2026-08-10") == 0, "idempotente"
+
+
+def test_extract_field_toma_el_valor_de_su_propia_label():
+    """`Web:` a mitad de línea tiene que dar la URL, no el resto del renglón.
+
+    El 2026-08-10, 0 de 343 leads tenían `web` guardado, así que
+    `enrich_missing_emails` —que lo exige— nunca pudo correr. Dos causas: el
+    formato pedía Empleados y Web en la MISMA línea, y el parser partía en el
+    primer `:` de la línea (el de Empleados).
+    """
+    from app.integrations.leads_store import _extract_field
+
+    # el caso que rompía: dos campos en una línea
+    b = "- Empleados: 25-50   Web: https://maderzu.com.ar\n- Decisor: Ana Pérez"
+    assert _extract_field(b, "web") == "https://maderzu.com.ar"
+    assert _extract_field(b, "empleados") == "25-50"
+    assert _extract_field(b, "decisor") == "Ana Pérez"
+
+    # "web" en prosa NO es el sitio: antes devolvía la frase entera
+    assert _extract_field("- Discovery signals: (1) web con App Google Play", "web") == ""
+
+    # formato nuevo (una label por línea) y markdown alrededor
+    assert _extract_field("- Web: https://x.com.ar", "web") == "https://x.com.ar"
+    assert _extract_field("**Empresa:** Bolsaplast S.R.L.", "empresa") == "Bolsaplast S.R.L."
+    assert _extract_field("- Industria | distribución", "industria") == "distribución"
+    assert _extract_field("- Empleados: 10", "web") == ""
+
+
+def test_reporte_resumen_no_aporta_leads():
+    """Un resumen de leadhunter no debe pasar por un reporte con 0 leads del día.
+
+    El 2026-08-10 leadhunter entregó "Listo. El reporte completo de 10 leads está
+    impreso en la respuesta" — sin un solo contacto. `ingest_report` devuelve todo
+    en cero y antes eso se leía igual que un día flojo: la caída de captura se
+    venía atribuyendo a un token vencido inexistente.
+    """
+    from app.integrations import leads_store as ls
+
+    resumen = ("Listo. El reporte completo de 10 leads está impreso en la respuesta.\n\n"
+               "10 leads generados, todos con contacto verificado.\n"
+               "Top 5 para outreach inmediato: Racer · Mosto Bebidas · Corblock.\n")
+    store = {"leads": {}}
+    st = ls.ingest_report(store, resumen, today="2026-08-10")
+    assert not any(st.get(k) for k in ("nuevos", "existentes", "sin_identidad")), st
+    assert store["leads"] == {}, "un resumen no puede crear leads fantasma"
+
+    # un reporte de verdad sí entra
+    real = ("### Lead 1: Bolsaplast S.R.L.\n"
+            "- Industria: plásticos\n"
+            "- Web: https://bolsaplastsrl.com.ar\n"
+            "- email: consultas@bolsaplastsrl.com.ar\n"
+            "- Teléfono: +54 341 555 1234\n")
+    st2 = ls.ingest_report({"leads": {}}, real, today="2026-08-10")
+    assert any(st2.get(k) for k in ("nuevos", "existentes", "sin_identidad")), st2

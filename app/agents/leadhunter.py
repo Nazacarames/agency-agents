@@ -152,7 +152,8 @@ genéricos ni "personalización media". Para cada lead, incluir:
 ```
 ### Lead N: [Empresa]
 - Industria: [sub-rubro]   Ubicación: [ciudad, provincia]
-- Empleados: [rango]   Web: [URL]
+- Empleados: [rango]
+- Web: [URL del sitio oficial, sola, sin texto alrededor]
 - Fit score: [4-6]/6  →  [1-line justification]
 - Decisor: [Nombre + Cargo]   LinkedIn: [URL]
 - Dolor específico detectado: [1 frase concreta]

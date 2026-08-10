@@ -210,6 +210,15 @@ class OutboundAgent(BaseAgent):
         ingest_stats = {"nuevos": 0, "existentes": 0}
         if report:
             ingest_stats = ls.ingest_report(store, report, today=today, sent_log_emails=sent_emails)
+            # Un reporte que no aporta NI UN lead identificable no es "un día flojo":
+            # es leadhunter entregando un resumen en vez del reporte. Pasaba mudo — el
+            # 2026-08-10 el reporte era "Listo. El reporte completo de 10 leads está
+            # impreso en la respuesta" y de ahí no sale ningún contacto. La caída de
+            # captura se venía atribuyendo a un token vencido que no existe.
+            if not any(ingest_stats.get(k) for k in ("nuevos", "existentes", "sin_identidad")):
+                ctx.args["_ob_reporte_vacio"] = len(report)
+                log.error("outbound_reporte_sin_leads", chars=len(report),
+                          muestra=report[:200])
 
         # 1b) Enriquecer emails: leads con web pero sin email → buscar uno PUBLICADO en su
         #     sitio (técnica de Scout, pero sin SMTP-guessing: solo emails reales + MX-check).
@@ -671,6 +680,11 @@ class OutboundAgent(BaseAgent):
         parts = [
             f"# 📤 Outbound — secuencia de cold-email ({mode})",
             "",
+            *([f"> ⛔ **El reporte de leadhunter no traía ni un lead identificable** "
+               f"({ctx.args['_ob_reporte_vacio']} chars). Suele ser el agente entregando "
+               f"un resumen en vez del reporte (techo de turnos). Sin esto no entra "
+               f"NINGÚN lead nuevo al pipeline — revisá `/last/leadhunter`.", ""]
+              if ctx.args.get("_ob_reporte_vacio") else []),
             f"Nuevos del reporte: **{ing.get('nuevos', 0)}** · "
             + (f"**Enviados:** {len(sent)} · " if live else f"**A enviar:** {len(preview)} · ")
             + f"**Errores:** {len(errors)}"

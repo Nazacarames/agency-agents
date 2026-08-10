@@ -771,15 +771,27 @@ def _parse_contact_rows(report_md: str) -> List[Tuple[str, str, str, str]]:
 
 
 def _extract_field(block: str, *labels: str) -> str:
-    """Primera línea del bloque que arranca con alguna de las labels → su valor."""
+    """Valor de `Label:` dentro del bloque, esté al principio de la línea o no.
+
+    Antes alcanzaba con que la label apareciera en CUALQUIER parte de la línea y
+    después se partía en el primer `:`. Dos formas de fallar, las dos vistas en
+    reportes reales:
+      - `- Empleados: 25-50   Web: https://x` con label "web" devolvía
+        "25-50   Web: https://x" (partía por el `:` de Empleados, no por el suyo).
+      - `- Discovery signals: (1) web con App Google Play` matcheaba "web" en
+        prosa y devolvía la frase entera como si fuera el sitio.
+    Ahora se exige la label seguida de `:` o `|`, y el valor se corta si en la
+    misma línea arranca otro campo etiquetado.
+    """
     for line in block.splitlines():
-        low = line.lower()
         for lab in labels:
-            if lab in low:
-                # tomar lo que viene después de los dos puntos o el guion
-                val = re.split(r"[:|]", line, maxsplit=1)
-                if len(val) > 1:
-                    return re.sub(r"[*`>\-]", "", val[1]).strip()
+            m = re.search(rf"(?i)(?:^|[\s*`>|-]){re.escape(lab)}\s*[:|]\s*(.+)", line)
+            if not m:
+                continue
+            val = re.split(r"\s{2,}[A-Za-zÁÉÍÓÚÑáéíóúñ ]{3,20}\s*:", m.group(1))[0]
+            val = re.sub(r"[*`>]", "", val).strip()
+            if val:
+                return val
     return ""
 
 
