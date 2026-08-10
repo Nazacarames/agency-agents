@@ -236,6 +236,37 @@ def upsert_lead(
     return key
 
 
+def marcar_email_muerto(store: Dict[str, Any], key: str, motivo: str,
+                        today: Optional[str] = None) -> Optional[str]:
+    """Saca de la secuencia por email a un lead cuya casilla rebota seguro.
+
+    La barrera de entregabilidad frenaba el envío y seguía de largo sin tocar el
+    lead: quedaba `nuevo` con `next_touch_at` vencido, así que volvía a entrar al
+    lote AL DÍA SIGUIENTE, volvía a fallar, y así para siempre. El 2026-08-10
+    `Cuyana Repuestos` seguía en step 0 con fecha del 21/07 — un dominio sin MX
+    ocupando un cupo de primer-toque todos los días.
+
+    Si hay teléfono el lead NO se pierde: se le limpia el mail y cae en la cola de
+    WhatsApp para contacto a mano. Sin teléfono no queda canal, así que se cierra.
+    Devuelve a dónde fue a parar ("whatsapp" | "cerrado"), o None si no existe.
+    """
+    lead = store.get("leads", {}).get(key)
+    if not lead:
+        return None
+    today = _today_str(today)
+    lead["email"] = ""
+    lead["next_touch_at"] = None          # fuera de due_for_touch
+    lead.setdefault("notes", []).append(
+        {"date": today, "note": f"email dado de baja: {motivo}"})
+    if lead.get("phone"):
+        lead["channel"] = "whatsapp"
+        lead["state"] = "nuevo"           # whatsapp_queue pide estado 'nuevo'
+        lead["next_step"] = 0
+        return "whatsapp"
+    lead["state"] = "sin_respuesta"
+    return "cerrado"
+
+
 def record_touch(
     store: Dict[str, Any],
     key: str,

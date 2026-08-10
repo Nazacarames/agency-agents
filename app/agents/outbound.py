@@ -488,9 +488,14 @@ class OutboundAgent(BaseAgent):
             # es lo que más rápido quema la reputación del dominio de envío.
             enviable, motivo = _eg.es_enviable(email)
             if not enviable:
-                errors.append(f"• {company} <{email}> → NO enviado: {motivo}")
+                # Marcar, no solo frenar: sin esto el lead quedaba due para siempre
+                # y volvía a gastar un cupo de primer-toque todos los días.
+                destino = ls.marcar_email_muerto(store, key, motivo, today=today)
+                cola = ("→ pasa a la cola de WhatsApp" if destino == "whatsapp"
+                        else "→ sin otro canal, cerrado")
+                errors.append(f"• {company} <{email}> → NO enviado: {motivo} {cola}")
                 log.warning("outbound_email_frenado", company=company,
-                            email=email[:60], motivo=motivo)
+                            email=email[:60], motivo=motivo, destino=destino)
                 continue
             if not live:
                 preview.append(f"• **{company}** <{email}> — _{label}_: {subject}")

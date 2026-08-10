@@ -323,3 +323,37 @@ def test_drop_trigram_conserva_los_mensajes(tmp_path, monkeypatch):
         con.close()
 
     assert h.sessions_drop_trigram()["cambio"] is False, "tiene que ser idempotente"
+
+
+def test_email_muerto_no_vuelve_a_gastar_cupo():
+    """Un mail que rebota seguro tiene que salir de la secuencia, no solo frenarse.
+
+    La barrera de entregabilidad hacía `continue` sin tocar el lead: quedaba `nuevo`
+    con `next_touch_at` vencido, así que volvía a entrar al lote al día siguiente y
+    fallaba igual. El 2026-08-10 `Cuyana Repuestos` seguía en step 0 con fecha del
+    21/07, ocupando un cupo de primer-toque todos los días.
+    """
+    from app.integrations import leads_store as ls
+
+    store = {"leads": {
+        "con-tel": {"key": "con-tel", "company": "Con teléfono", "state": "nuevo",
+                    "email": "ventas@dominio-muerto.com.ar", "phone": "+5493410000000",
+                    "next_step": 0, "next_touch_at": "2026-07-21", "touches": []},
+        "sin-tel": {"key": "sin-tel", "company": "Sin teléfono", "state": "nuevo",
+                    "email": "info@otro-muerto.com.ar", "phone": "",
+                    "next_step": 0, "next_touch_at": "2026-07-21", "touches": []},
+    }}
+    # antes: los dos entran al lote de hoy
+    assert len(ls.due_for_touch(store, today="2026-08-10")) == 2
+
+    assert ls.marcar_email_muerto(store, "con-tel", "sin MX", today="2026-08-10") == "whatsapp"
+    assert ls.marcar_email_muerto(store, "sin-tel", "sin MX", today="2026-08-10") == "cerrado"
+
+    # después: ninguno vuelve a gastar cupo
+    assert ls.due_for_touch(store, today="2026-08-10") == []
+    # el que tiene teléfono NO se pierde: queda para contacto a mano
+    assert [l["key"] for l in ls.whatsapp_queue(store)] == ["con-tel"]
+    assert store["leads"]["sin-tel"]["state"] == "sin_respuesta"
+    # queda por qué se lo dio de baja
+    assert "sin MX" in store["leads"]["con-tel"]["notes"][0]["note"]
+    assert ls.marcar_email_muerto(store, "no-existe", "x") is None
