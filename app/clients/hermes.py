@@ -288,6 +288,12 @@ def sessions_drop_trigram() -> dict:
         # timeout largo: puede haber un agente corriendo y escribiendo.
         con = sqlite3.connect(str(db), timeout=180)
         try:
+            # state.db está en WAL: commitear NO devuelve las páginas al archivo
+            # principal, se apilan en el `-wal` hasta que corre un checkpoint. Sin
+            # forzarlo, borrar 162 MB en lotes hacía crecer el -wal hasta llenar el
+            # volumen y morir con SQLITE_FULL — con espacio libre de sobra.
+            con.execute("PRAGMA temp_store = MEMORY")   # y sin temporales en disco
+            con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
             hay = con.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' "
                 "AND name='messages_fts_trigram'").fetchone()
@@ -317,6 +323,9 @@ def sessions_drop_trigram() -> dict:
                         con.execute(f"DELETE FROM {shadow} WHERE rowid IN "
                                     f"(SELECT rowid FROM {shadow} LIMIT 200)")
                         con.commit()
+                        # devuelve el -wal a cero en cada vuelta: es lo que evita
+                        # que el borrado se coma el disco mientras libera espacio
+                        con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
                 except sqlite3.OperationalError as e:
                     # `_idx` es WITHOUT ROWID → no se puede paginar por rowid.
                     # Es la shadow chica (0,2 MB de 162), así que va entera: su
