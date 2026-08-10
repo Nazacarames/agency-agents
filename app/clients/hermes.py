@@ -181,6 +181,67 @@ def sessions_sizes() -> dict:
             "por_tabla": por_tabla}
 
 
+_TRIGRAM_TRIGGERS = ("messages_fts_trigram_insert", "messages_fts_trigram_delete",
+                     "messages_fts_trigram_update")
+
+
+def sessions_drop_trigram() -> dict:
+    """Borra el índice FTS `trigram` de state.db. NO toca un solo mensaje.
+
+    Medido el 2026-08-07: de 296 MB, los mensajes son 53 y las sesiones 10 — el
+    79% son índices de búsqueda, y el texto está guardado TRES veces (en
+    `messages` y una copia completa dentro de cada FTS). El trigram solo son
+    162 MB: sirve para buscar por substring en el navegador de sesiones de
+    Hermes, una UI que nosotros no usamos (leemos los reportes de nuestro store).
+
+    Se puede borrar sin miedo porque `hermes_state.py` lo crea con
+    `CREATE VIRTUAL TABLE IF NOT EXISTS` en cada arranque: si alguna vez hace
+    falta, vuelve solo. Queda el FTS normal, así que la búsqueda por palabra
+    sigue andando.
+
+    Ojo: esto NO achica el archivo — deja las páginas en la free-list, que es
+    espacio que las escrituras nuevas reusan. El efecto buscado es doble: frena
+    el crecimiento (cada mensaje nuevo deja de pagar el índice más caro) y deja
+    runway interno. Para devolverle los MB al volumen hace falta VACUUM.
+    """
+    db = _HERMES_HOME / "state.db"
+    if not db.is_file():
+        return {"ok": False, "error": f"no existe {db}"}
+    import sqlite3
+    mb = lambda b: round((b or 0) / 1_048_576, 1)  # noqa: E731
+    antes = db.stat().st_size
+    try:
+        # timeout largo: puede haber un agente corriendo y escribiendo.
+        con = sqlite3.connect(str(db), timeout=180)
+        try:
+            hay = con.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' "
+                "AND name='messages_fts_trigram'").fetchone()
+            if not hay:
+                return {"ok": True, "cambio": False,
+                        "detalle": "el índice trigram ya no estaba"}
+            msgs_antes = con.execute("SELECT count(*) FROM messages").fetchone()[0]
+            # Primero los triggers: si se cayera el proceso justo después de
+            # borrar la tabla, un trigger vivo escribiría contra algo que no
+            # existe y reventaría CADA insert de mensaje.
+            for t in _TRIGRAM_TRIGGERS:
+                con.execute(f"DROP TRIGGER IF EXISTS {t}")
+            con.execute("DROP TABLE IF EXISTS messages_fts_trigram")
+            con.commit()
+            msgs = con.execute("SELECT count(*) FROM messages").fetchone()[0]
+            integridad = con.execute("PRAGMA quick_check").fetchone()[0]
+            libres = con.execute("PRAGMA freelist_count").fetchone()[0]
+            psize = con.execute("PRAGMA page_size").fetchone()[0]
+        finally:
+            con.close()
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+    return {"ok": True, "cambio": True, "integridad": integridad,
+            "mensajes_antes": msgs_antes, "mensajes_ahora": msgs,
+            "archivo_mb": mb(antes),
+            "liberado_interno_mb": mb(libres * psize)}
+
+
 def sessions_vacuum() -> dict:
     """VACUUM sobre state.db con el sqlite3 de Python. No cambia datos.
 

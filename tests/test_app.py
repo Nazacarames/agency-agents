@@ -270,3 +270,56 @@ def test_hermes_extract_backend_no_cae_en_searxng(tmp_path, monkeypatch):
     assert env.get("TAVILY_API_KEY"), "se borró la única key que sabe extraer"
     assert "EXA_API_KEY" not in env, "las demás sí se sacan: le ganarían al shim"
     assert "/api/searx/" in env["SEARXNG_URL"]
+
+
+def test_drop_trigram_conserva_los_mensajes(tmp_path, monkeypatch):
+    """Borrar el índice trigram no puede perder un solo mensaje.
+
+    El 2026-08-07 el trigram eran 162 MB de los 296 de state.db (el texto queda
+    guardado 3 veces: en `messages` y una copia entera dentro de cada FTS). Se
+    borra el índice, nunca los datos — y los triggers van ANTES que la tabla: un
+    trigger vivo apuntando a una tabla borrada rompe cada insert de mensaje.
+    """
+    import sqlite3
+    from app.clients import hermes as h
+
+    home = tmp_path / ".hermes"
+    home.mkdir()
+    monkeypatch.setattr(h, "_HERMES_HOME", home)
+    con = sqlite3.connect(str(home / "state.db"))
+    try:
+        con.execute("CREATE TABLE messages (id INTEGER PRIMARY KEY, content TEXT)")
+        con.execute("CREATE VIRTUAL TABLE messages_fts_trigram "
+                    "USING fts5(content, tokenize='trigram')")
+        for t, cuerpo in (("insert", "INSERT INTO messages_fts_trigram(rowid, content) "
+                                     "VALUES (new.id, new.content);"),
+                          ("delete", "DELETE FROM messages_fts_trigram WHERE rowid = old.id;"),
+                          ("update", "DELETE FROM messages_fts_trigram WHERE rowid = old.id;")):
+            con.execute(f"CREATE TRIGGER messages_fts_trigram_{t} AFTER {t.upper()} "
+                        f"ON messages BEGIN {cuerpo} END")
+        con.executemany("INSERT INTO messages (content) VALUES (?)",
+                        [(f"mensaje {i}",) for i in range(50)])
+        con.commit()
+    finally:
+        con.close()
+
+    r = h.sessions_drop_trigram()
+    assert r["ok"] and r["cambio"], r
+    assert r["mensajes_ahora"] == r["mensajes_antes"] == 50, "se perdieron mensajes"
+    assert r["integridad"] == "ok"
+
+    con = sqlite3.connect(str(home / "state.db"))
+    try:
+        assert not con.execute("SELECT 1 FROM sqlite_master WHERE "
+                               "name='messages_fts_trigram'").fetchone()
+        assert not con.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' "
+                               "AND name LIKE 'messages_fts_trigram%'").fetchone(), \
+            "quedó un trigger apuntando a la tabla borrada"
+        # con los triggers vivos, esto reventaría — es el caso que protege el orden
+        con.execute("INSERT INTO messages (content) VALUES ('despues')")
+        con.commit()
+        assert con.execute("SELECT count(*) FROM messages").fetchone()[0] == 51
+    finally:
+        con.close()
+
+    assert h.sessions_drop_trigram()["cambio"] is False, "tiene que ser idempotente"
