@@ -478,6 +478,59 @@ async def admin_leads_list(request: Request):
     }
 
 
+@app.post("/admin/leads/{key}/reply")
+async def admin_lead_reply(key: str, request: Request):
+    """Responde A MANO dentro del hilo de Gmail de un lead.
+
+    Para leads calientes: cuando alguien contesta, la secuencia automática se
+    corta (estado `respondió`) pero la respuesta humana igual tiene que caer en
+    la MISMA conversación — un mail suelto con "Re:" fabricado se lee como spam
+    y rompe el hilo que el prospecto ya venía leyendo.
+
+    NO registra un toque a propósito: `record_touch` avanza la secuencia y
+    devolvería el lead a `contactado`, volviendo a agendarle follow-ups fríos
+    encima de una charla en curso.
+    """
+    _verify_webhook_secret(request)
+    body = await request.json()
+    texto = (body.get("body") or "").strip()
+    if not texto:
+        raise HTTPException(status_code=400, detail="falta body")
+    from .integrations import leads_store as ls
+    from .integrations.gmail_client import get_gmail_client, GmailError
+
+    store = ls.load_store()
+    lead = store.get("leads", {}).get(key)
+    if not lead:
+        raise HTTPException(status_code=404, detail="lead no encontrado")
+    to = (body.get("to") or lead.get("email") or "").strip()
+    if not to:
+        raise HTTPException(status_code=400, detail="el lead no tiene email y no se pasó `to`")
+    # Hilo del último toque: ahí es donde el prospecto viene leyendo.
+    thread_id = ""
+    for t in reversed(lead.get("touches") or []):
+        if t.get("thread_id"):
+            thread_id = t["thread_id"]
+            break
+    s = get_settings()
+    try:
+        client = get_gmail_client(s)
+        msg_id = await run_in_threadpool(
+            client.send_message, to, (body.get("subject") or "").strip() or "Re:",
+            texto, s.outbound_from_name, thread_id or None)
+    except GmailError as e:
+        raise HTTPException(status_code=502, detail=f"Gmail: {e}")
+    hoy = datetime.now(timezone.utc).date().isoformat()
+    lead.setdefault("notes", []).append(
+        {"date": hoy, "note": f"respuesta manual enviada a {to} (msg {msg_id[:12]})"})
+    if body.get("marcar_respondio"):
+        lead["state"] = "respondió"
+        lead["last_reply_at"] = hoy
+    ls.save_store(store)
+    log.info("lead_reply_manual", key=key, to=to, thread=bool(thread_id), msg_id=msg_id)
+    return {"ok": True, "msg_id": msg_id, "en_hilo": bool(thread_id), "to": to}
+
+
 @app.post("/admin/leads/purge")
 async def admin_leads_purge(body: PurgeRequest, request: Request):
     """Purga leads del store. SEGURO POR DEFECTO: con dry_run=true (default) sólo
