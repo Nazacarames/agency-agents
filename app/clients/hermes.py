@@ -351,6 +351,69 @@ def sessions_drop_trigram() -> dict:
             "liberado_interno_mb": mb(libres * psize)}
 
 
+_TRIGRAM_SHADOWS = ("messages_fts_trigram_data", "messages_fts_trigram_idx",
+                    "messages_fts_trigram_content", "messages_fts_trigram_docsize",
+                    "messages_fts_trigram_config")
+
+
+def sessions_purge_trigram_orphan() -> dict:
+    """Saca del schema la tabla virtual `messages_fts_trigram` ya inservible.
+
+    Vaciar las shadow en lotes esquivó el SQLITE_FULL, pero dejó la FTS5 sin su
+    fila de estructura: desde ahí el constructor de la vtable falla, y como
+    SQLite lo invoca al abrir la base, `DROP TABLE` tampoco entra. Hermes quedó
+    con "Could not open session database".
+
+    Único camino: borrar la entrada de `sqlite_master` con `writable_schema` y
+    después soltar las shadow, que sin la vtable encima son tablas comunes (y
+    están vacías, así que salen baratas). Se sube `schema_version` para que las
+    otras conexiones recarguen el schema en vez de seguir con el roto en caché.
+    """
+    db = _HERMES_HOME / "state.db"
+    if not db.is_file():
+        return {"ok": False, "error": f"no existe {db}"}
+    import sqlite3
+    pasos: list[str] = []
+    try:
+        con = sqlite3.connect(str(db), timeout=180)
+        try:
+            con.execute("PRAGMA temp_store = MEMORY")
+            ver = con.execute("PRAGMA schema_version").fetchone()[0]
+            con.execute("PRAGMA writable_schema = ON")
+            n = con.execute("DELETE FROM sqlite_master WHERE type='table' "
+                            "AND name='messages_fts_trigram'").rowcount
+            con.execute(f"PRAGMA schema_version = {ver + 1}")
+            con.execute("PRAGMA writable_schema = OFF")
+            con.commit()
+            pasos.append(f"entrada de sqlite_master borrada ({n})")
+        finally:
+            con.close()
+        # Reconectar: recién con el schema recargado las shadow son tablas comunes.
+        con = sqlite3.connect(str(db), timeout=180)
+        try:
+            con.execute("PRAGMA temp_store = MEMORY")
+            for shadow in _TRIGRAM_SHADOWS:
+                if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                               "AND name=?", (shadow,)).fetchone():
+                    con.execute(f"DROP TABLE IF EXISTS {shadow}")
+                    con.commit()
+                    con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    pasos.append(f"{shadow} borrada")
+            integridad = con.execute("PRAGMA quick_check").fetchone()[0]
+            msgs = con.execute("SELECT count(*) FROM messages").fetchone()[0]
+            sesiones = con.execute("SELECT count(*) FROM sessions").fetchone()[0]
+            libres = con.execute("PRAGMA freelist_count").fetchone()[0]
+            psize = con.execute("PRAGMA page_size").fetchone()[0]
+        finally:
+            con.close()
+    except Exception as e:
+        return {"ok": False, "pasos": pasos, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+    return {"ok": True, "pasos": pasos, "integridad": integridad,
+            "mensajes": msgs, "sesiones": sesiones,
+            "archivo_mb": round(db.stat().st_size / 1_048_576, 1),
+            "free_list_mb": round(libres * psize / 1_048_576, 1)}
+
+
 def sessions_vacuum() -> dict:
     """VACUUM sobre state.db con el sqlite3 de Python. No cambia datos.
 

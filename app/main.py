@@ -2103,10 +2103,14 @@ async def api_admin_hermes_sessions(request: Request, accion: str = "stats",
     from .clients.hermes import (sessions_cmd, sessions_vacuum, sessions_sizes,
                                  sessions_drop_trigram, hermes_gc, sessions_probe)
     if accion not in ("stats", "sizes", "probe", "gc", "drop-trigram",
-                      "vacuum", "prune"):
+                      "purge-trigram-orphan", "vacuum", "prune"):
         raise HTTPException(
             status_code=400,
-            detail="accion: stats | sizes | probe | gc | drop-trigram | vacuum | prune")
+            detail="accion: stats | sizes | probe | gc | drop-trigram | "
+                   "purge-trigram-orphan | vacuum | prune")
+    if accion == "purge-trigram-orphan":
+        from .clients.hermes import sessions_purge_trigram_orphan as _purge
+        return {"accion": accion, **await run_in_threadpool(_purge)}
     if accion == "gc":
         return {"accion": accion, **await run_in_threadpool(hermes_gc)}
     if accion == "probe":
