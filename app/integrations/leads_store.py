@@ -236,6 +236,30 @@ def upsert_lead(
     return key
 
 
+def reprogramar_sin_agenda(store: Dict[str, Any], today: Optional[str] = None) -> int:
+    """Agenda para hoy los leads que tienen email pero quedaron sin fecha de toque.
+
+    `add_lead` solo agenda si el lead nace CON email; si nace sin uno,
+    `next_touch_at` queda en None. Cuando después aparece un email —el
+    enriquecimiento busca uno publicado en el sitio y lo setea— nadie vuelve a
+    agendarlo, y como `_is_due(None)` es False el lead nunca entra al lote: queda
+    invisible para siempre. El 2026-08-10 había 13 así, con email verificado.
+
+    Se repara acá y no en el enriquecimiento a propósito: sirve para un email que
+    llegue por cualquier vía (scraping, edición a mano, re-ingesta del reporte).
+    Solo toca los `nuevo` sin tocar: un `sin_respuesta` agotó su secuencia y
+    reprogramarlo sería volver a empezar sin que nadie lo pida.
+    """
+    today = _today_str(today)
+    n = 0
+    for lead in store.get("leads", {}).values():
+        if (lead.get("email") and lead.get("state") == "nuevo"
+                and not lead.get("next_touch_at") and not lead.get("touches")):
+            lead["next_touch_at"] = today
+            n += 1
+    return n
+
+
 def marcar_email_muerto(store: Dict[str, Any], key: str, motivo: str,
                         today: Optional[str] = None) -> Optional[str]:
     """Saca de la secuencia por email a un lead cuya casilla rebota seguro.

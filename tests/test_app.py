@@ -357,3 +357,34 @@ def test_email_muerto_no_vuelve_a_gastar_cupo():
     # queda por qué se lo dio de baja
     assert "sin MX" in store["leads"]["con-tel"]["notes"][0]["note"]
     assert ls.marcar_email_muerto(store, "no-existe", "x") is None
+
+
+def test_lead_con_email_sin_agenda_se_rescata():
+    """Un lead que consigue email después de nacer tiene que volver a la cola.
+
+    `add_lead` solo agenda si nace CON email. El enriquecimiento busca uno publicado
+    en el sitio y lo setea, pero no agenda — y como `_is_due(None)` es False, el lead
+    queda invisible para siempre. El 2026-08-10 había 13 así, con email verificado.
+    """
+    from app.integrations import leads_store as ls
+
+    store = {"leads": {
+        "enriquecido": {"key": "enriquecido", "company": "Enriquecido", "state": "nuevo",
+                        "email": "info@real.com.ar", "next_step": 0,
+                        "next_touch_at": None, "touches": []},
+        "agotado": {"key": "agotado", "company": "Agotado", "state": "sin_respuesta",
+                    "email": "info@agotado.com.ar", "next_step": 4,
+                    "next_touch_at": None, "touches": [{"step": 3}]},
+        "sin_mail": {"key": "sin_mail", "company": "Solo WhatsApp", "state": "nuevo",
+                     "email": "", "phone": "+5493410000000", "next_step": 0,
+                     "next_touch_at": None, "touches": []},
+    }}
+    assert ls.due_for_touch(store, today="2026-08-10") == [], "arranca invisible"
+
+    assert ls.reprogramar_sin_agenda(store, today="2026-08-10") == 1
+    assert [l["key"] for l in ls.due_for_touch(store, today="2026-08-10")] == ["enriquecido"]
+    # el que agotó la secuencia NO se reprograma: sería reiniciarla sin que nadie lo pida
+    assert store["leads"]["agotado"]["next_touch_at"] is None
+    # sin email no hay nada que agendar: ese va por WhatsApp
+    assert store["leads"]["sin_mail"]["next_touch_at"] is None
+    assert ls.reprogramar_sin_agenda(store, today="2026-08-10") == 0, "idempotente"

@@ -220,6 +220,10 @@ class OutboundAgent(BaseAgent):
         except Exception as e:
             log.warning("outbound_enrich_failed", error=str(e)[:120])
 
+        # 1c) Rescatar los que tienen email pero quedaron sin agendar (el
+        #     enriquecimiento setea el mail y no la fecha → nunca entraban al lote).
+        ctx.args["_ob_reagendados"] = ls.reprogramar_sin_agenda(store, today=today)
+
         # 2) ¿Qué leads toca contactar hoy? (primer toque + follow-ups vencidos)
         cap = int(ctx.settings.outbound_daily_cap)
         # Si hay leads que respondieron y esperan reenganche, RESERVAMOS slots del cupo
