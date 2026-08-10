@@ -271,9 +271,18 @@ def sessions_drop_trigram() -> dict:
                 if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
                                    "AND name=?", (shadow,)).fetchone():
                     continue
-                while con.execute(f"SELECT 1 FROM {shadow} LIMIT 1").fetchone():
-                    con.execute(f"DELETE FROM {shadow} WHERE rowid IN "
-                                f"(SELECT rowid FROM {shadow} LIMIT 200)")
+                try:
+                    while con.execute(f"SELECT 1 FROM {shadow} LIMIT 1").fetchone():
+                        con.execute(f"DELETE FROM {shadow} WHERE rowid IN "
+                                    f"(SELECT rowid FROM {shadow} LIMIT 200)")
+                        con.commit()
+                except sqlite3.OperationalError as e:
+                    # `_idx` es WITHOUT ROWID → no se puede paginar por rowid.
+                    # Es la shadow chica (0,2 MB de 162), así que va entera: su
+                    # journal no es el que hace fallar el drop.
+                    if "no such column: rowid" not in str(e):
+                        raise
+                    con.execute(f"DELETE FROM {shadow}")
                     con.commit()
             # Ahora las shadow están vacías → el xDestroy es barato.
             con.execute("DROP TABLE IF EXISTS messages_fts_trigram")
