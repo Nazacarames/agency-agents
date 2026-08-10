@@ -2101,13 +2101,16 @@ async def api_admin_hermes_sessions(request: Request, accion: str = "stats",
     """
     _verify_webhook_secret(request)
     from .clients.hermes import (sessions_cmd, sessions_vacuum, sessions_sizes,
-                                 sessions_drop_trigram, hermes_gc)
-    if accion not in ("stats", "sizes", "gc", "drop-trigram", "vacuum", "prune"):
+                                 sessions_drop_trigram, hermes_gc, sessions_probe)
+    if accion not in ("stats", "sizes", "probe", "gc", "drop-trigram",
+                      "vacuum", "prune"):
         raise HTTPException(
             status_code=400,
-            detail="accion: stats | sizes | gc | drop-trigram | vacuum | prune")
+            detail="accion: stats | sizes | probe | gc | drop-trigram | vacuum | prune")
     if accion == "gc":
         return {"accion": accion, **await run_in_threadpool(hermes_gc)}
+    if accion == "probe":
+        return {"accion": accion, **await run_in_threadpool(sessions_probe)}
     if accion == "sizes":
         return {"accion": accion, **await run_in_threadpool(sessions_sizes)}
     if accion == "drop-trigram":

@@ -181,6 +181,47 @@ def sessions_sizes() -> dict:
             "por_tabla": por_tabla}
 
 
+def sessions_probe() -> dict:
+    """Por qué state.db dice "disk full" con el volumen a medio llenar. SOLO LECTURA.
+
+    SQLITE_FULL sale tanto por disco lleno como por tocar `max_page_count`, y el
+    mensaje es el mismo. Con 65 MB libres el borrado en lotes seguía muriendo, así
+    que hay que separar las dos causas en vez de seguir probando.
+    """
+    db = _HERMES_HOME / "state.db"
+    if not db.is_file():
+        return {"ok": False, "error": f"no existe {db}"}
+    import sqlite3
+    out: dict = {}
+    try:
+        con = sqlite3.connect(str(db), timeout=60)
+        try:
+            for p in ("journal_mode", "page_size", "page_count", "max_page_count",
+                      "freelist_count", "temp_store", "locking_mode"):
+                try:
+                    out[p] = con.execute(f"PRAGMA {p}").fetchone()[0]
+                except Exception as e:
+                    out[p] = f"err: {str(e)[:60]}"
+            out["tamanio_maximo_mb"] = round(
+                (out.get("max_page_count", 0) or 0) * (out.get("page_size", 0) or 0)
+                / 1_048_576, 1) if isinstance(out.get("max_page_count"), int) else None
+            # ¿se puede escribir? una tabla mínima que se borra enseguida
+            try:
+                con.execute("CREATE TABLE IF NOT EXISTS _probe_espacio (x INTEGER)")
+                con.execute("INSERT INTO _probe_espacio VALUES (1)")
+                con.commit()
+                con.execute("DROP TABLE _probe_espacio")
+                con.commit()
+                out["escritura_minima"] = "ok"
+            except Exception as e:
+                out["escritura_minima"] = f"{type(e).__name__}: {str(e)[:120]}"
+        finally:
+            con.close()
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+    return {"ok": True, **out}
+
+
 def hermes_gc() -> dict:
     """Borra basura de HERMES_HOME: .tmp huérfanos y logs. No toca state.db.
 
