@@ -181,6 +181,39 @@ def sessions_sizes() -> dict:
             "por_tabla": por_tabla}
 
 
+def hermes_gc() -> dict:
+    """Borra basura de HERMES_HOME: .tmp huérfanos y logs. No toca state.db.
+
+    Los `.models_dev_cache_*.tmp` son escrituras de caché que quedaron a medias
+    (había 3, 5,7 MB). Los logs crecen sin rotar. Nada de esto se recupera ni
+    hace falta: el caché se rebaja solo y los logs son de corridas viejas.
+    """
+    borrados, liberado = [], 0
+    try:
+        for p in _HERMES_HOME.glob("*.tmp"):
+            try:
+                n = p.stat().st_size
+                p.unlink()
+                borrados.append(p.name)
+                liberado += n
+            except Exception:
+                continue
+        for log_p in (_HERMES_HOME / "logs").glob("*.log"):
+            try:
+                n = log_p.stat().st_size
+                # truncar, no borrar: Hermes puede tenerlo abierto
+                with log_p.open("w"):
+                    pass
+                borrados.append(log_p.name + " (truncado)")
+                liberado += n
+            except Exception:
+                continue
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+    return {"ok": True, "borrados": borrados,
+            "liberado_mb": round(liberado / 1_048_576, 1)}
+
+
 _TRIGRAM_TRIGGERS = ("messages_fts_trigram_insert", "messages_fts_trigram_delete",
                      "messages_fts_trigram_update")
 
