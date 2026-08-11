@@ -9,6 +9,7 @@ Cubren:
 - FastAPI expone los endpoints esperados
 - El healthz responde con status=ok
 """
+import base64
 import re
 import sys
 from pathlib import Path
@@ -537,3 +538,83 @@ def test_facturado_del_anio_suma_unico_y_mensualidades():
     assert r["total_usd"] == 5000, r
     assert [d["name"] for d in r["por_cliente"]] == ["Activo"], "sólo el que factura"
     assert r["hasta"] == "2026-06", "el año en curso se corta en el mes actual"
+
+
+# ── DMARC ──────────────────────────────────────────────────────────────────
+
+_DMARC_XML = b"""<?xml version="1.0"?>
+<feedback>
+  <report_metadata>
+    <org_name>google.com</org_name>
+    <date_range><begin>1786060800</begin><end>1786147200</end></date_range>
+  </report_metadata>
+  <policy_published><domain>automiq.agency</domain><p>none</p></policy_published>
+  <record>
+    <row><source_ip>209.85.220.69</source_ip><count>8</count>
+      <policy_evaluated><disposition>none</disposition><dkim>fail</dkim><spf>fail</spf></policy_evaluated>
+    </row>
+    <identifiers><header_from>automiq.agency</header_from></identifiers>
+    <auth_results>
+      <dkim><domain>otrodominio.com.ar</domain><selector>google</selector><result>pass</result></dkim>
+      <spf><domain>otrodominio.com.ar</domain><result>pass</result></spf>
+    </auth_results>
+  </record>
+  <record>
+    <row><source_ip>1.2.3.4</source_ip><count>5</count>
+      <policy_evaluated><disposition>none</disposition><dkim>pass</dkim><spf>fail</spf></policy_evaluated>
+    </row>
+    <identifiers><header_from>automiq.agency</header_from></identifiers>
+    <auth_results>
+      <dkim><domain>automiq.agency</domain><selector>google</selector><result>pass</result></dkim>
+      <spf><domain>relay-ajeno.net</domain><result>none</result></spf>
+    </auth_results>
+  </record>
+</feedback>
+"""
+
+
+def test_dmarc_solo_marca_falla_lo_que_no_alinea_por_ningun_lado(monkeypatch):
+    """Un reenvío alinea por DKIM aunque el SPF sea de otro dominio: NO es una
+    falla. Si lo contáramos, cada mail reenviado dispararía una alerta de
+    suplantación y el aviso dejaría de significar nada."""
+    import gzip
+    from app.integrations import dmarc_reports as dr
+
+    class _FakeSvc:
+        def users(self): return self
+        def messages(self): return self
+        def attachments(self): return self
+
+        def list(self, **kw):
+            return SimpleNamespace(execute=lambda: {"messages": [{"id": "m1"}]})
+
+        def get(self, **kw):
+            if "messageId" in kw:      # descarga del adjunto
+                data = base64.urlsafe_b64encode(gzip.compress(_DMARC_XML)).decode()
+                return SimpleNamespace(execute=lambda: {"data": data})
+            return SimpleNamespace(execute=lambda: {
+                "id": "m1",
+                "payload": {"parts": [{"filename": "informe.xml.gz",
+                                       "body": {"attachmentId": "a1"}}]},
+            })
+
+    monkeypatch.setattr(dr, "_service", lambda s: _FakeSvc())
+    s = SimpleNamespace(gmail_configured=True, gmail_user_id="me",
+                        gmail_client_id="x", gmail_client_secret="x",
+                        gmail_refresh_token="x")
+    out = dr.resumen(s)
+
+    assert out["ok"] is True
+    assert out["mensajes"] == 13          # 8 + 5, todo lo reportado
+    assert out["fallan"] == 8             # sólo el que no alinea por ningún lado
+    assert len(out["fallas"]) == 1
+    assert out["fallas"][0]["dkim"] == "otrodominio.com.ar"
+    assert out["fallas"][0]["ip"] == "209.85.220.69"
+
+
+def test_dmarc_sin_credenciales_no_revienta():
+    """El watchdog lo llama en cada pasada: si Gmail no está configurado tiene que
+    devolver ok=False, no tirar la corrida entera."""
+    from app.integrations import dmarc_reports as dr
+    out = dr.resumen(SimpleNamespace(gmail_configured=False))
+    assert out["ok"] is False and out["fallan"] == 0

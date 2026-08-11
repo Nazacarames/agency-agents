@@ -218,10 +218,38 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
         )
         fresh_keys.append("adlib")
 
+    # 6) DMARC: quién manda mail diciendo ser automiq.agency y NO alinea. Con
+    #    `p=none` esos mensajes hoy se entregan igual; el día que endurezcamos la
+    #    política se caen. Los informes llegan una vez por día, así que chequeamos
+    #    una sola vez por día (la marca `dmarc:visto`) y no en cada pasada.
+    dmarc: Dict[str, Any] = {}
+    if "dmarc:visto" not in already:
+        try:
+            from . import dmarc_reports
+            dmarc = dmarc_reports.resumen(settings)
+        except Exception as e:
+            log.warning("watchdog_dmarc_check_failed", error=str(e)[:120])
+        if dmarc.get("ok"):
+            fresh_keys.append("dmarc:visto")
+            for f in dmarc.get("fallas", []):
+                key = f"dmarc:{f['ip']}:{f['dkim']}"
+                if key in already:
+                    continue
+                problems.append(
+                    f"📨 **Mail no autorizado como automiq.agency** — {f['mensajes']} "
+                    f"mensajes desde `{f['ip']}` firmados por `{f['dkim']}` "
+                    f"(SPF: `{f['spf']}`) no alinean ni por DKIM ni por SPF.\n"
+                    "→ Si es un remitente nuestro, hay que hacerlo firmar como "
+                    "automiq.agency; si no lo conocemos, alguien está usando el dominio."
+                )
+                fresh_keys.append(key)
+
     result = {"gmail": g_status, "gmail_detail": g_detail,
               "adlib": adlib_ok, "brain_stale_h": round(stale, 1),
               "missed": [m[0] for m in missed],
-              "degraded": [d[0] for d in degraded], "alerted": len(problems)}
+              "degraded": [d[0] for d in degraded],
+              "dmarc_fallan": dmarc.get("fallan", 0) if dmarc else None,
+              "alerted": len(problems)}
 
     if problems and discord is not None:
         try:

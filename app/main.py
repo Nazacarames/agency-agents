@@ -2198,6 +2198,19 @@ async def api_diag_gsc(request: Request):
     return out
 
 
+@app.get("/api/admin/dmarc")
+async def api_admin_dmarc(request: Request, dias: int = 7):
+    """Quién mandó mail diciendo ser automiq.agency, según los informes DMARC.
+
+    El watchdog ya avisa a Discord cuando aparece un remitente que no alinea; esto
+    es para mirar el detalle a mano (y para decidir cuándo se puede endurecer la
+    política de `p=none` a `p=reject` sin cortar mail legítimo)."""
+    _verify_webhook_secret(request)
+    from .integrations import dmarc_reports
+    return await run_in_threadpool(
+        dmarc_reports.resumen, get_settings(), max(1, min(int(dias), 30)))
+
+
 @app.get("/api/admin/disk")
 async def api_admin_disk(request: Request, top: int = 12):
     """Qué ocupa el volumen, por carpeta y por archivo. SOLO LECTURA.
