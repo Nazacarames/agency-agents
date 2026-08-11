@@ -866,16 +866,48 @@ async def api_brain_graph_upload(request: Request):
             "edges": len(body.get("edges") or [])}
 
 
+_BRAIN_CACHE: Dict[str, Any] = {"mtime": 0.0, "graph": None}
+
+
+def _brain_graph() -> Dict[str, Any]:
+    """El grafo del cerebro, cacheado por mtime del archivo.
+
+    Son 3,5 MB de JSON: parsearlo en cada request costaba ~1 s de CPU y lo pedían
+    dos pantallas distintas. El archivo sólo cambia cuando corre `brain_sync`
+    (una vez por día), así que se relee sólo si cambió el mtime.
+    """
+    p = _data_dir() / "brain-graph.json"
+    vacio = {"ok": False, "nodes": [], "edges": [], "domains": {}}
+    if not p.exists():
+        return vacio
+    try:
+        mt = p.stat().st_mtime
+        if _BRAIN_CACHE["graph"] is None or _BRAIN_CACHE["mtime"] != mt:
+            _BRAIN_CACHE["graph"] = json.loads(p.read_text(encoding="utf-8"))
+            _BRAIN_CACHE["mtime"] = mt
+        return _BRAIN_CACHE["graph"]
+    except Exception:
+        return vacio
+
+
+@app.get("/api/brain/stats")
+async def api_brain_stats(request: Request):
+    """Sólo el resumen del cerebro: conteos y dominios, SIN nodos ni aristas.
+
+    La pantalla de Departamentos se bajaba el grafo entero (3,5 MB / ~1 MB
+    comprimido, 2-8 s) para leer el conteo de notas y las etiquetas de dominio.
+    Los nodos ni los miraba: los usa sólo el drawer del cerebro.
+    """
+    _verify_webhook_secret(request)
+    g = await run_in_threadpool(_brain_graph)
+    return {"ok": bool(g.get("ok", True)) and bool(g.get("nodes")),
+            "stats": g.get("stats") or {}, "domains": g.get("domains") or {}}
+
+
 @app.get("/api/brain/graph")
 async def api_brain_graph(request: Request):
     _verify_webhook_secret(request)
-    p = _data_dir() / "brain-graph.json"
-    if not p.exists():
-        return {"ok": False, "nodes": [], "edges": [], "domains": {}}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {"ok": False, "nodes": [], "edges": [], "domains": {}}
+    return await run_in_threadpool(_brain_graph)
 
 
 @app.get("/api/brain/search")

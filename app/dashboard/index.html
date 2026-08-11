@@ -1547,7 +1547,16 @@ function showPart(id){
   sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter');
   loadTab(id);
 }
-function loadTab(tab){
+/* Cada `showPart` disparaba la carga completa de la pantalla, así que ir y volver
+   entre dos secciones re-descargaba todo y dejaba el contenido en blanco mientras
+   tanto. Con este TTL, volver a una pantalla recién vista es instantáneo.
+   Las mutaciones (guardar/borrar) llaman a su loadX() directo y NO pasan por acá,
+   así que nunca muestran datos viejos; y "↻ Actualizar" fuerza el refresco. */
+const TAB_TTL=20000, TAB_LAST={};
+function loadTab(tab, force){
+  const ahora=Date.now();
+  if(!force && TAB_LAST[tab] && (ahora-TAB_LAST[tab])<TAB_TTL) return;
+  TAB_LAST[tab]=ahora;
   if(tab==='resumen') loadOverview();
   if(tab==='departamentos') loadDepartamentos();
   if(tab==='personas') loadPersonas();
@@ -2308,7 +2317,9 @@ async function loadDepartamentos(){
     renderNeo(NEO_DEPS);
   }catch(e){ nodes.innerHTML='<div class="card err" style="position:relative">'+esc(e.message)+'</div>'; }
   // el cerebro refleja el VAULT real (Fase 3): densidad = notas, label con el conteo
-  api('/api/brain/graph').then(g=>{
+  // /stats en vez de /graph: acá sólo se usan el conteo y los dominios, y el
+  // grafo entero son ~1 MB comprimidos que trababan la entrada a la pantalla.
+  api('/api/brain/stats').then(g=>{
     if(g&&g.ok&&g.stats&&g.stats.notes){
       neoBrain(g.stats.notes);
       const s=document.querySelector('.neo-core-label span:first-of-type');
@@ -4051,7 +4062,7 @@ function bootApp(){
 el('loginBtn').addEventListener('click', doLogin);
 el('key').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 el('logoutBtn').addEventListener('click', logout);
-el('refreshBtn').addEventListener('click', ()=>{ loadTab(CURRENT); toast('Actualizado'); });
+el('refreshBtn').addEventListener('click', ()=>{ loadTab(CURRENT, true); toast('Actualizado'); });
 const SIDE_LS='automiq_side_off';
 /* Escritorio: pliega la columna (más ancho para el grafo) y recuerda la preferencia.
    Móvil (<=760px): la sidebar es overlay, así que se abre/cierra con scrim. */
