@@ -1804,6 +1804,10 @@ async def api_finance_summary(request: Request):
     summary = fs.finance_summary()
     summary["billing"] = cs.summary_billing()
     summary["by_client"] = cs.revenue_by_client()
+    # Facturado del año: el MRR sólo dice el mes; el pago único no entra ahí
+    # y sin esto quedaba fuera de toda métrica (ver clients_store.billed_year).
+    anio = request.query_params.get("anio")
+    summary["facturado_anio"] = cs.billed_year(int(anio) if (anio or "").isdigit() else None)
     return summary
 
 

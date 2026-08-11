@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "app/integrations/clients_store.py": {
-    "mtime": 1786411614.9409637,
-    "ast_hash": "6336b82c384e03c2467d873dfdd2b9f8",
+    "mtime": 1782953487.9289384,
+    "ast_hash": "32dd646ecee0a26c757f53b4d1ea904c",
     "semantic_hash": ""
   },
   "app/integrations/comment_gate.py": {
@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "app/main.py": {
-    "mtime": 1786411724.222489,
-    "ast_hash": "fbba998d19e1748daf3218909ef4e462",
+    "mtime": 1786397191.166833,
+    "ast_hash": "ddaf6dae78fd526943954ddcfee3c27c",
     "semantic_hash": ""
   },
   "app/scheduler.py": {
@@ -770,8 +770,8 @@
     "semantic_hash": ""
   },
   "tests/test_app.py": {
-    "mtime": 1786411683.9342484,
-    "ast_hash": "34a5040015b6962c3af3e8dd3b34cb4f",
+    "mtime": 1786394034.414942,
+    "ast_hash": "ad67cb614d7e34bd5b183d1999c1c949",
     "semantic_hash": ""
   },
   "tests/test_clients.py": {
@@ -1560,8 +1560,8 @@
     "semantic_hash": ""
   },
   "app/dashboard/index.html": {
-    "mtime": 1786411717.185594,
-    "ast_hash": "8b884850b61c35a4ab38b13a39497d82",
+    "mtime": 1786050727.2645335,
+    "ast_hash": "0454f2279f49bdc5f9abd223ec23f76c",
     "semantic_hash": ""
   },
   "data/trends-block.md": {
@@ -1892,11 +1892,6 @@
   "scripts/test_hermes_timeout.py": {
     "mtime": 1785724834.4975,
     "ast_hash": "814c4b25f54d4e22fe24776b908ffa86",
-    "semantic_hash": ""
-  },
-  "scripts/sql/006_client_setup_fee.sql": {
-    "mtime": 1786411583.7362487,
-    "ast_hash": "fb1107df36880972ec6548166daf4279",
     "semantic_hash": ""
   }
 }

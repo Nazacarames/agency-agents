@@ -373,6 +373,73 @@ def mrr_usd_for_month(month: str) -> float:
     return round(total, 2)
 
 
+def _meses_entre(desde: str, hasta: str) -> int:
+    """Meses inclusive entre dos `YYYY-MM`. 0 si el rango está invertido."""
+    try:
+        a, b = desde.split("-"), hasta.split("-")
+        n = (int(b[0]) - int(a[0])) * 12 + (int(b[1]) - int(a[1])) + 1
+    except (ValueError, IndexError):
+        return 0
+    return max(0, n)
+
+
+def billed_year(year: Optional[int] = None, hoy: Optional[str] = None) -> Dict[str, Any]:
+    """Facturado del año: pago único + mensualidades devengadas, en USD.
+
+    OJO con qué es este número: **no hay registro de pagos**, así que esto se
+    DEVENGA de la ficha del cliente (alta + fee), no de plata efectivamente
+    cobrada. Sirve para "cuánto generó el año", no para conciliar con el banco.
+
+    Sólo cuenta clientes en `activo`: `onboarding` es el default de un registro
+    nuevo y significa que todavía NO paga (por eso CLAMEVET, con el anticipo sin
+    entrar, suma 0 hasta que se marque activo).
+
+    Limitación conocida: sin historial de cambios de estado, un cliente que se da
+    de baja deja de sumar retroactivamente. Con churn real hace falta un libro de
+    pagos de verdad; hoy no hay ninguno, así que el número es exacto.
+    """
+    from . import fx_store
+    # `hoy` (YYYY-MM) inyectable: el corte depende del mes en curso y sin esto la
+    # única forma de probarlo era parchear el reloj del módulo.
+    ahora = datetime.now(timezone.utc)
+    mes_hoy = hoy or f"{ahora.year}-{ahora.month:02d}"
+    y = int(year or mes_hoy[:4])
+    ini_anio, fin_anio = f"{y}-01", f"{y}-12"
+    # el año en curso se corta en el mes actual: facturar meses futuros infla
+    tope = min(fin_anio, mes_hoy) if y >= int(mes_hoy[:4]) else fin_anio
+
+    setup = recurrente = 0.0
+    detalle: List[Dict[str, Any]] = []
+    for c in list_clients():
+        if c.get("status") != "activo":
+            continue
+        alta = _start_month(c)
+        if not alta or alta > tope:
+            continue
+        mensual = fx_store.to_usd(c.get("monthly_fee", 0), c.get("currency", "USD"))
+        meses = _meses_entre(max(alta, ini_anio), tope)
+        rec = round(mensual * meses, 2)
+        # el pago único se imputa al año del alta, una sola vez
+        uni = fx_store.to_usd(c.get("setup_fee", 0), c.get("currency", "USD")) \
+            if alta[:4] == str(y) else 0.0
+        if not (rec or uni):
+            continue
+        setup += uni
+        recurrente += rec
+        detalle.append({"id": c.get("id"), "name": c.get("name"), "meses": meses,
+                        "unico_usd": round(uni, 2), "recurrente_usd": rec,
+                        "total_usd": round(uni + rec, 2)})
+    detalle.sort(key=lambda d: d["total_usd"], reverse=True)
+    return {
+        "anio": y,
+        "hasta": tope,
+        "unico_usd": round(setup, 2),
+        "recurrente_usd": round(recurrente, 2),
+        "total_usd": round(setup + recurrente, 2),
+        "por_cliente": detalle,
+    }
+
+
 def revenue_by_client() -> List[Dict[str, Any]]:
     """Lista de clientes con su aporte: fee nativo + USD. Ordenada por USD desc."""
     from . import fx_store

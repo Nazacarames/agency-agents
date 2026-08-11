@@ -502,3 +502,38 @@ def test_insert_de_clientes_tiene_los_placeholders_justos():
         assert len(cols) == slots, (
             f"INSERT desbalanceado: {len(cols)} columnas contra {slots} valores\n"
             f"columnas: {cols}\nvalores: {vals_raw}")
+
+
+def test_facturado_del_anio_suma_unico_y_mensualidades():
+    """El facturado del año = pago único + mensualidades devengadas, y NO cuenta
+    lo que todavía no se cobra.
+
+    El MRR sólo describe el mes en curso y el pago único no entra ahí, así que sin
+    esto un contrato como CLAMEVET (US$3.000 único + 500/mes) no aparecía en
+    ninguna métrica.
+    """
+    from app.integrations import clients_store as cs
+
+    clientes = [
+        # activo desde marzo: 500/mes × (mar..jun = 4) + 3.000 de alta
+        {"id": "a", "name": "Activo", "status": "activo", "currency": "USD",
+         "monthly_fee": 500, "setup_fee": 3000, "start_date": "2026-03-10"},
+        # onboarding = todavía NO paga: no suma nada aunque tenga fees cargados
+        {"id": "b", "name": "Onboarding", "status": "onboarding", "currency": "USD",
+         "monthly_fee": 900, "setup_fee": 5000, "start_date": "2026-02-01"},
+        # alta futura: no se factura por adelantado
+        {"id": "c", "name": "Futuro", "status": "activo", "currency": "USD",
+         "monthly_fee": 400, "setup_fee": 100, "start_date": "2026-11-01"},
+    ]
+    orig = cs.list_clients
+    cs.list_clients = lambda: clientes
+    try:
+        r = cs.billed_year(2026, hoy="2026-06")     # el mes se inyecta, no se parchea
+    finally:
+        cs.list_clients = orig
+
+    assert r["unico_usd"] == 3000, r
+    assert r["recurrente_usd"] == 2000, r   # 500 × 4 meses (mar,abr,may,jun)
+    assert r["total_usd"] == 5000, r
+    assert [d["name"] for d in r["por_cliente"]] == ["Activo"], "sólo el que factura"
+    assert r["hasta"] == "2026-06", "el año en curso se corta en el mes actual"

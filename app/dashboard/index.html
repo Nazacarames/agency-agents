@@ -1865,8 +1865,14 @@ async function loadFinanzas(){
     const [s, fx, exp] = await Promise.all([ api('/api/finance/summary'), api('/api/fx'), api('/api/finance') ]);
     FX_RATES=fx.rates||{}; CACHE.finance=s;
     const profitCls=s.profit_month_usd>=0?'up':'down';
+    const fa=s.facturado_anio||{};
     el('finKpis').innerHTML =
       kpiBig('Ingresos (MRR)', fmtUsd(s.mrr_usd), 'recurrente / mes', ICONS.finanzas,'accent') +
+      // El MRR sólo describe el mes; el pago único no entra ahí. Sin esta tarjeta
+      // un anticipo cobrado no aparecía en ninguna métrica del panel.
+      kpiBig('Facturado ' + (fa.anio||''), fmtUsd(fa.total_usd||0),
+             'único ' + fmtUsd(fa.unico_usd||0) + ' + recurrente ' + fmtUsd(fa.recurrente_usd||0),
+             ICONS.finanzas, '') +
       kpiBig('Gastos del mes', fmtUsd(s.expenses_month_usd), 'cargados este mes', ICONS.finanzas,'') +
       kpiBig('Ganancia (mes)', fmtUsd(s.profit_month_usd), 'ingresos − gastos', ICONS.growth,'', '', profitCls) +
       kpiBig('Clientes activos', s.billing.active, 'ARPU '+fmtUsd(s.billing.arpu_usd), ICONS.clientes,'');
