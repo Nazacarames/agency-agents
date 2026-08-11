@@ -1001,6 +1001,27 @@
           <tr><th>Cliente</th><th>País</th><th>Servicios</th><th>Estado</th><th style="text-align:right">Paga</th><th style="text-align:right">USD/mes</th></tr>
         </thead><tbody id="finByClient"></tbody></table></div>
 
+        <div class="sec-head"><h2>Libro de pagos</h2><span class="faint" style="font-size:12px">Plata que entró de verdad. Es lo que concilia con el banco.</span></div>
+        <div class="panel" style="margin-bottom:14px">
+          <div class="row">
+            <div style="flex:2;min-width:170px"><label>Cliente</label><select id="pyClient" class="inp"></select></div>
+            <div style="flex:1;min-width:130px"><label>Concepto</label><select id="pyConcepto" class="inp"><option value="mensual">Mensual</option><option value="unico">Pago único</option><option value="otro">Otro</option></select></div>
+            <div style="flex:1;min-width:120px"><label>Importe</label><input id="pyAmount" class="inp" type="number" step="0.01" placeholder="0"/></div>
+            <div style="flex:1;min-width:100px"><label>Moneda</label><select id="pyCurrency" class="inp"></select></div>
+          </div>
+          <div class="row" style="margin-top:4px">
+            <div style="flex:1;min-width:140px"><label>Fecha de cobro</label><input id="pyFecha" class="inp" type="date"/></div>
+            <div style="flex:1;min-width:120px" id="pyPeriodoWrap"><label>Período <span class="faint">(mes que cubre)</span></label><input id="pyPeriodo" class="inp" type="month"/></div>
+            <div style="flex:1;min-width:130px"><label>Método</label><input id="pyMetodo" class="inp" placeholder="transferencia, USDT…"/></div>
+            <div style="flex:2;min-width:160px"><label>Nota</label><input id="pyNotes" class="inp" placeholder="opcional"/></div>
+          </div>
+          <div style="margin-top:8px"><button class="btn" onclick="savePayment()">Registrar cobro</button>
+            <span class="faint" style="font-size:12px;margin-left:8px">El valor en USD se congela con el tipo de cambio del día del cobro.</span></div>
+        </div>
+        <div class="tbl-wrap" style="margin-bottom:24px"><table><thead>
+          <tr><th>Fecha</th><th>Cliente</th><th>Concepto</th><th>Período</th><th style="text-align:right">Importe</th><th style="text-align:right">USD</th><th>Método</th><th></th></tr>
+        </thead><tbody id="pyList"></tbody></table></div>
+
         <div class="grid-2">
           <div class="panel">
             <h3>Cargar gasto</h3><div class="ph-sub">Para calcular la ganancia.</div>
@@ -1865,14 +1886,16 @@ async function loadFinanzas(){
     const [s, fx, exp] = await Promise.all([ api('/api/finance/summary'), api('/api/fx'), api('/api/finance') ]);
     FX_RATES=fx.rates||{}; CACHE.finance=s;
     const profitCls=s.profit_month_usd>=0?'up':'down';
-    const fa=s.facturado_anio||{};
+    const fa=s.facturado_anio||{}; const co=s.cobrado_anio||{};
     el('finKpis').innerHTML =
       kpiBig('Ingresos (MRR)', fmtUsd(s.mrr_usd), 'recurrente / mes', ICONS.finanzas,'accent') +
       // El MRR sólo describe el mes; el pago único no entra ahí. Sin esta tarjeta
       // un anticipo cobrado no aparecía en ninguna métrica del panel.
-      kpiBig('Facturado ' + (fa.anio||''), fmtUsd(fa.total_usd||0),
-             'único ' + fmtUsd(fa.unico_usd||0) + ' + recurrente ' + fmtUsd(fa.recurrente_usd||0),
-             ICONS.finanzas, '') +
+      kpiBig('Cobrado ' + (co.anio||fa.anio||''), fmtUsd(co.total_usd||0),
+             (co.pagos||0) + ' pago(s) · devengado ' + fmtUsd(fa.total_usd||0), ICONS.finanzas, 'accent') +
+      // la brecha es exactamente lo facturado que todavía no entró
+      kpiBig('Por cobrar', fmtUsd(Math.max(0,(fa.total_usd||0)-(co.total_usd||0))),
+             'devengado − cobrado', ICONS.finanzas, '') +
       kpiBig('Gastos del mes', fmtUsd(s.expenses_month_usd), 'cargados este mes', ICONS.finanzas,'') +
       kpiBig('Ganancia (mes)', fmtUsd(s.profit_month_usd), 'ingresos − gastos', ICONS.growth,'', '', profitCls) +
       kpiBig('Clientes activos', s.billing.active, 'ARPU '+fmtUsd(s.billing.arpu_usd), ICONS.clientes,'');
@@ -1916,6 +1939,11 @@ async function loadFinanzas(){
     // form selects
     if(!el('exCat').options.length) el('exCat').innerHTML=(exp.categories||[]).map(c=>'<option value="'+c+'">'+(CAT_LABELS[c]||c)+'</option>').join('');
     if(!el('exCur').options.length) el('exCur').innerHTML=Object.keys(FX_RATES).map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+    if(el('pyCurrency') && !el('pyCurrency').options.length){
+      el('pyCurrency').innerHTML=Object.keys(FX_RATES).map(c=>'<option value="'+c+'"'+(c==='USD'?' selected':'')+'>'+c+'</option>').join('');
+      const hoy=new Date().toISOString().slice(0,10);
+      el('pyFecha').value=hoy; el('pyPeriodo').value=hoy.slice(0,7);
+    }
     if(!el('exDate').value) el('exDate').value=new Date().toISOString().slice(0,10);
     // FX editor
     el('fxEditor').innerHTML='<div class="row" style="gap:8px">'+Object.entries(FX_RATES).map(([c,r])=>
@@ -1930,6 +1958,7 @@ async function loadFinanzas(){
       <td style="text-align:right" class="money">${fmtUsd((FX_RATES[x.currency]||1)*x.amount)}</td>
       <td style="white-space:nowrap"><button class="btn-ghost btn-xs" onclick="editExpense('${x.id}')">✎</button><button class="btn-ghost btn-xs" onclick="delExpense('${x.id}')">🗑</button></td></tr>`).join('')
       : '<tr><td colspan="6" class="empty">Sin gastos cargados.</td></tr>';
+    loadPayments();
   }catch(e){ el('finKpis').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
 }
 let exEditId=null;
@@ -1949,6 +1978,58 @@ el('exBtn').addEventListener('click', async ()=>{
   }catch(e){ toast('Error: '+e.message); } finally{ el('exBtn').disabled=false; }
 });
 async function delExpense(id){ if(!confirm('¿Borrar este gasto?'))return; try{ await api('/api/finance/'+id,{method:'DELETE'}); loadFinanzas(); }catch(e){ toast('Error: '+e.message); } }
+
+/* ── Libro de pagos ── */
+async function loadPayments(){
+  const tb=el('pyList'); if(!tb) return;
+  try{
+    const r=await api('/api/payments');
+    if(r.enabled===false){
+      tb.innerHTML='<tr><td colspan="8" class="empty">'+esc(r.detail||'no disponible')+'</td></tr>'; return;
+    }
+    // el select de cliente sale de la cartera ya cargada: un pago sin cliente no existe
+    const sel=el('pyClient'), prev=sel.value;
+    const cls=(CACHE.clients||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    sel.innerHTML=cls.length?cls.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('')
+                            :'<option value="">(cargá un cliente primero)</option>';
+    if(prev) sel.value=prev;
+    const ps=r.payments||[];
+    tb.innerHTML = ps.length ? ps.map(p=>`<tr>
+      <td style="white-space:nowrap">${esc((p.fecha||'').slice(0,10))}</td>
+      <td><b>${esc(p.client_name||'—')}</b></td>
+      <td><span class="badge ${p.concepto==='unico'?'blue':'grey'}">${esc(p.concepto)}</span></td>
+      <td class="faint">${esc(p.periodo||'—')}</td>
+      <td style="text-align:right" class="money">${(+p.amount||0).toLocaleString('es-AR')} ${esc(p.currency||'')}</td>
+      <td style="text-align:right" class="money">${fmtUsd(p.amount_usd||0)}</td>
+      <td class="faint">${esc(p.metodo||'—')}</td>
+      <td><button class="btn-ghost btn-xs" onclick="delPayment('${p.id}')">Borrar</button></td></tr>`).join('')
+      : '<tr><td colspan="8" class="empty">Sin cobros registrados.</td></tr>';
+  }catch(e){ tb.innerHTML='<tr><td colspan="8" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+async function savePayment(){
+  const body={client_id:el('pyClient').value, concepto:el('pyConcepto').value,
+    amount:parseFloat(el('pyAmount').value||'0'), currency:el('pyCurrency').value,
+    fecha:el('pyFecha').value||new Date().toISOString().slice(0,10),
+    periodo:el('pyPeriodo').value||null, metodo:el('pyMetodo').value.trim(),
+    notes:el('pyNotes').value.trim()};
+  if(!body.client_id){ toast('Elegí un cliente'); return; }
+  if(!body.amount){ toast('Poné un importe'); return; }
+  try{
+    await api('/api/payments',{method:'POST',body:JSON.stringify(body)});
+    toast('✅ Cobro registrado');
+    el('pyAmount').value=''; el('pyNotes').value='';
+    loadFinanzas();
+  }catch(e){ toast('Error: '+e.message); }
+}
+async function delPayment(id){
+  if(!confirm('¿Borrar este cobro del libro?'))return;
+  try{ await api('/api/payments/'+id,{method:'DELETE'}); loadFinanzas(); }
+  catch(e){ toast('Error: '+e.message); }
+}
+/* el período sólo aplica a los mensuales */
+el('pyConcepto').addEventListener('change', ()=>{
+  el('pyPeriodoWrap').style.display = el('pyConcepto').value==='mensual' ? '' : 'none';
+});
 el('fxBtn').addEventListener('click', async ()=>{
   const rates={}; document.querySelectorAll('.fxinp').forEach(i=>{ rates[i.dataset.cur]=parseFloat(i.value||'0'); });
   try{ await api('/api/fx',{method:'PUT',body:JSON.stringify({rates})}); toast('✅ Tasas guardadas'); loadFinanzas(); }

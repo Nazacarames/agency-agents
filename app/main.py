@@ -667,6 +667,17 @@ class GrowthBody(BaseModel):
     notes: Optional[str] = ""
 
 
+class PaymentBody(BaseModel):
+    client_id: Optional[str] = None
+    fecha: Optional[str] = None          # YYYY-MM-DD; default hoy
+    concepto: Optional[str] = "mensual"  # unico | mensual | otro
+    amount: Optional[float] = 0
+    currency: Optional[str] = "USD"
+    periodo: Optional[str] = None        # YYYY-MM que cubre (solo mensual)
+    metodo: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
 class LessonBody(BaseModel):
     agent: str
     lesson: str
@@ -1807,8 +1818,57 @@ async def api_finance_summary(request: Request):
     # Facturado del año: el MRR sólo dice el mes; el pago único no entra ahí
     # y sin esto quedaba fuera de toda métrica (ver clients_store.billed_year).
     anio = request.query_params.get("anio")
-    summary["facturado_anio"] = cs.billed_year(int(anio) if (anio or "").isdigit() else None)
+    y = int(anio) if (anio or "").isdigit() else None
+    summary["facturado_anio"] = cs.billed_year(y)
+    # Cobrado REAL del libro de pagos. Va al lado del devengado a propósito: la
+    # diferencia entre los dos es exactamente lo facturado que todavía no entró.
+    from .integrations import payments_store as ps
+    summary["cobrado_anio"] = (await run_in_threadpool(ps.collected_year, y)
+                               if ps.enabled() else None)
     return summary
+
+
+@app.get("/api/payments")
+async def api_payments_list(request: Request, client_id: Optional[str] = None,
+                            anio: Optional[int] = None):
+    """Libro de pagos: plata efectivamente cobrada."""
+    _verify_webhook_secret(request)
+    from .integrations import payments_store as ps
+    if not ps.enabled():
+        return {"enabled": False, "payments": [], "conceptos": ps.CONCEPTOS,
+                "detail": "el libro de pagos necesita DB (sin fallback a JSON a propósito)"}
+    return {"enabled": True, "conceptos": ps.CONCEPTOS,
+            "payments": await run_in_threadpool(ps.list_payments, client_id, anio)}
+
+
+@app.post("/api/payments")
+async def api_payments_add(body: PaymentBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import payments_store as ps, clients_store as cs
+    if not ps.enabled():
+        raise HTTPException(status_code=503, detail="el libro de pagos necesita DB")
+    if not body.client_id or not cs.get_client(body.client_id):
+        raise HTTPException(status_code=404, detail="cliente no encontrado")
+    if not body.amount or body.amount <= 0:
+        raise HTTPException(status_code=400, detail="el importe tiene que ser > 0")
+    try:
+        pago = await run_in_threadpool(ps.add_payment, body.model_dump())
+    except Exception as e:
+        # el índice único parcial frena cargar dos veces el mismo mes del mismo cliente
+        if "payments_mes_unico" in str(e):
+            raise HTTPException(status_code=409,
+                                detail="ya hay un pago mensual cargado para ese cliente y período")
+        raise
+    return {"ok": True, "payment": pago}
+
+
+@app.delete("/api/payments/{pid}")
+async def api_payments_delete(pid: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import payments_store as ps
+    if not await run_in_threadpool(ps.delete_payment, pid):
+        raise HTTPException(status_code=404, detail="pago no encontrado")
+    return {"ok": True}
 
 
 @app.get("/api/fx")
