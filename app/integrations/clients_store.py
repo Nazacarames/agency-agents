@@ -30,7 +30,7 @@ DEFAULT_STAGE = "oferta"
 
 _COLS = ["id", "name", "vertical", "country", "contact_name", "contact_phone",
          "contact_email", "stage", "notes",
-         "currency", "monthly_fee", "services", "status", "start_date",
+         "currency", "monthly_fee", "setup_fee", "services", "status", "start_date",
          "created_at", "updated_at"]
 
 # Estado de la RELACIÓN comercial / facturación (distinto del `stage` del funnel).
@@ -85,6 +85,10 @@ def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
         "notes": (data.get("notes") or "").strip(),
         "currency": _currency_for(country, data.get("currency")),
         "monthly_fee": _num(data.get("monthly_fee")),
+        # Pago único (anticipo/setup). Separado de la mensualidad porque NO es
+        # recurrente: si entrara a `monthly_fee` inflaría el MRR con plata que
+        # se cobra una sola vez.
+        "setup_fee": _num(data.get("setup_fee")),
         "services": (data.get("services") or "").strip(),
         "status": status if status in BILLING_STATUSES else DEFAULT_BILLING_STATUS,
         "start_date": (str(data.get("start_date") or "")[:10]) or None,
@@ -97,8 +101,9 @@ def _row_to_dict(row: Dict[str, Any]) -> Dict[str, Any]:
         v = out.get(k)
         if v is not None and not isinstance(v, str):
             out[k] = v.isoformat()
-    if out.get("monthly_fee") is not None:
-        out["monthly_fee"] = float(out["monthly_fee"])
+    for k in ("monthly_fee", "setup_fee"):
+        if out.get(k) is not None:
+            out[k] = float(out[k])
     return out
 
 
@@ -176,12 +181,12 @@ def _migrate_json_if_needed() -> None:
             n = _normalize(c)
             db.execute(
                 "INSERT INTO clients (id,name,vertical,country,contact_name,contact_phone,"
-                "contact_email,stage,notes,currency,monthly_fee,services,status,start_date,"
+                "contact_email,stage,notes,currency,monthly_fee,setup_fee,services,status,start_date,"
                 "created_at,updated_at) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(%s,now()),now()) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(%s,now()),now()) "
                 "ON CONFLICT (id) DO NOTHING",
                 (cid, n["name"], n["vertical"], n["country"], n["contact_name"], n["contact_phone"],
-                 n["contact_email"], n["stage"], n["notes"], n["currency"], n["monthly_fee"],
+                 n["contact_email"], n["stage"], n["notes"], n["currency"], n["monthly_fee"], n["setup_fee"],
                  n["services"], n["status"], n["start_date"], c.get("created_at")),
             )
             _seed_profile(cid, n)
@@ -216,10 +221,10 @@ def create_client(data: Dict[str, Any]) -> Dict[str, Any]:
         _migrate_json_if_needed()
         db.execute(
             "INSERT INTO clients (id,name,vertical,country,contact_name,contact_phone,"
-            "contact_email,stage,notes,currency,monthly_fee,services,status,start_date) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "contact_email,stage,notes,currency,monthly_fee,setup_fee,services,status,start_date) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (cid, n["name"], n["vertical"], n["country"], n["contact_name"], n["contact_phone"],
-             n["contact_email"], n["stage"], n["notes"], n["currency"], n["monthly_fee"],
+             n["contact_email"], n["stage"], n["notes"], n["currency"], n["monthly_fee"], n["setup_fee"],
              n["services"], n["status"], n["start_date"]),
         )
         client = get_client(cid) or {"id": cid, **n}
@@ -245,8 +250,9 @@ def update_client(client_id: str, data: Dict[str, Any]) -> Optional[Dict[str, An
         fields["stage"] = data["stage"]
     if data.get("currency"):
         fields["currency"] = str(data["currency"]).upper().strip()
-    if "monthly_fee" in data and data["monthly_fee"] is not None and data["monthly_fee"] != "":
-        fields["monthly_fee"] = _num(data["monthly_fee"])
+    for _f in ("monthly_fee", "setup_fee"):
+        if _f in data and data[_f] is not None and data[_f] != "":
+            fields[_f] = _num(data[_f])
     if (data.get("status") or "").lower().strip() in BILLING_STATUSES:
         fields["status"] = data["status"].lower().strip()
     if data.get("start_date"):

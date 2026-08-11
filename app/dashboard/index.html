@@ -1140,6 +1140,7 @@
           </div>
           <div class="row" style="margin-top:4px">
             <div style="flex:1;min-width:120px"><label>Estado</label><select id="cStatus" class="inp"><option value="activo">Activo</option><option value="onboarding">Onboarding</option><option value="pausado">Pausado</option><option value="baja">Baja</option></select></div>
+            <div style="flex:1;min-width:120px"><label>Paga <span class="faint">(único)</span></label><input id="cSetup" class="inp" type="number" step="0.01" placeholder="0" title="Anticipo / setup / implementación. NO entra al MRR."/></div>
             <div style="flex:1;min-width:120px"><label>Paga / mes</label><input id="cFee" class="inp" type="number" step="0.01" placeholder="0"/></div>
             <div style="flex:1;min-width:100px"><label>Moneda</label><select id="cCurrency" class="inp"></select></div>
             <div style="flex:1;min-width:140px"><label>Alta</label><input id="cStart" class="inp" type="date"/></div>
@@ -3080,7 +3081,8 @@ async function loadClients(){
       <td><span class="hdot ${h.c}" title="${esc(h.t)}"></span><b>${esc(c.name)}</b>${c.vertical?' <span class="faint" style="font-size:12px">· '+esc(c.vertical)+'</span>':''}${isFrozen(c.stage)?' <span class="badge grey" title="Memoria congelada">❄</span>':''}</td>
       <td style="font-size:13px">${esc(countryName(c.country))}</td>
       <td>${svcs}</td>
-      <td style="text-align:right"><span class="money">${(+c.monthly_fee||0).toLocaleString('es-AR')} ${esc(c.currency||'')}</span>${usd?'<br><span class="faint" style="font-size:11px">'+fmtUsd(usd)+'</span>':''}</td>
+      <td style="text-align:right"><span class="money">${(+c.monthly_fee||0).toLocaleString('es-AR')} ${esc(c.currency||'')}</span>${usd?'<br><span class="faint" style="font-size:11px">'+fmtUsd(usd)+'</span>':''}${
+        (+c.setup_fee||0)>0?'<br><span class="faint" style="font-size:11px" title="Pago único (no entra al MRR)">único '+(+c.setup_fee).toLocaleString('es-AR')+' '+esc(c.currency||'')+'</span>':''}</td>
       <td>${shareCell}</td>
       <td>${ageCell(c, usd)}</td>
       <td><span class="badge ${STATUS_CLS[st]||'grey'}">${esc(st)}</span></td>
@@ -3124,11 +3126,12 @@ function clientHealth(c, usd){
 function clientPayload(){
   return { name:el('cName').value, vertical:el('cVertical').value, country:el('cCountry').value, stage:el('cStage').value,
     contact_name:el('cContact').value, contact_phone:el('cPhone').value, contact_email:el('cEmail').value, notes:el('cNotes').value,
-    currency:el('cCurrency').value, monthly_fee:parseFloat(el('cFee').value||'0'), services:el('cServices').value,
+    currency:el('cCurrency').value, monthly_fee:parseFloat(el('cFee').value||'0'),
+    setup_fee:parseFloat(el('cSetup').value||'0'), services:el('cServices').value,
     status:el('cStatus').value, start_date:el('cStart').value||null };
 }
 function clearClientForm(){
-  ['cName','cVertical','cContact','cPhone','cEmail','cNotes','cEditId','cFee','cServices','cStart'].forEach(i=>el(i).value='');
+  ['cName','cVertical','cContact','cPhone','cEmail','cNotes','cEditId','cFee','cSetup','cServices','cStart'].forEach(i=>el(i).value='');
   if(el('cCountry').options.length) el('cCountry').value='AR';
   if(el('cCurrency').options.length) el('cCurrency').value='ARS';
   el('cStatus').value='activo';
@@ -3140,7 +3143,7 @@ function editClient(id){
   el('cCountry').value=c.country||'AR';
   el('cStage').value=c.stage||STAGES[0]; el('cContact').value=c.contact_name||'';
   el('cPhone').value=c.contact_phone||''; el('cEmail').value=c.contact_email||''; el('cNotes').value=c.notes||'';
-  el('cCurrency').value=c.currency||'ARS'; el('cFee').value=c.monthly_fee||''; el('cServices').value=c.services||'';
+  el('cCurrency').value=c.currency||'ARS'; el('cFee').value=c.monthly_fee||''; el('cSetup').value=c.setup_fee||''; el('cServices').value=c.services||'';
   el('cStatus').value=c.status||'activo'; el('cStart').value=(c.start_date||'').slice(0,10);
   el('clientBtn').textContent='Guardar cambios'; el('clientCancel').classList.remove('hidden');
   el('clientForm').scrollIntoView({behavior:'smooth',block:'center'});

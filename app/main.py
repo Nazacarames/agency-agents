@@ -594,6 +594,7 @@ class ClientBody(BaseModel):
     notes: Optional[str] = None
     currency: Optional[str] = None
     monthly_fee: Optional[float] = None
+    setup_fee: Optional[float] = None      # pago único (anticipo/setup): NO entra al MRR
     services: Optional[str] = None
     status: Optional[str] = None
     start_date: Optional[str] = None

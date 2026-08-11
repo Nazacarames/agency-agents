@@ -442,3 +442,63 @@ def test_reporte_resumen_no_aporta_leads():
             "- Teléfono: +54 341 555 1234\n")
     st2 = ls.ingest_report({"leads": {}}, real, today="2026-08-10")
     assert any(st2.get(k) for k in ("nuevos", "existentes", "sin_identidad")), st2
+
+
+def test_insert_de_clientes_tiene_los_placeholders_justos():
+    """Cada columna del INSERT necesita su `%s`. Se cuenta acá porque el desajuste
+    NO se ve leyendo: revienta recién al crear un cliente, contra la DB real.
+
+    Pasó al agregar `setup_fee` (2026-08-10): la columna entró en la lista y el
+    placeholder no.
+    """
+    import re
+    from pathlib import Path
+
+    def _slots(expr: str) -> int:
+        """Valores separados por comas de NIVEL SUPERIOR.
+
+        No alcanza con `split(",")`: `COALESCE(%s,now())` es UN valor y la coma de
+        adentro lo partiría en dos.
+        """
+        n, prof = 1, 0
+        for ch in expr:
+            if ch == "(":
+                prof += 1
+            elif ch == ")":
+                prof -= 1
+            elif ch == "," and prof == 0:
+                n += 1
+        return n
+
+    def _entre_parentesis(texto: str, desde: int) -> str:
+        """Contenido del paréntesis que abre en/después de `desde`, balanceado.
+
+        Con regex no alcanza: el VALUES tiene paréntesis anidados (`COALESCE(...)`)
+        y cualquier `\\)` corta antes o después de donde debe.
+        """
+        ini = texto.index("(", desde)
+        prof = 0
+        for i in range(ini, len(texto)):
+            if texto[i] == "(":
+                prof += 1
+            elif texto[i] == ")":
+                prof -= 1
+                if prof == 0:
+                    return texto[ini + 1:i]
+        raise AssertionError("paréntesis sin cerrar")
+
+    src = Path("app/integrations/clients_store.py").read_text(encoding="utf-8")
+    # el SQL viene partido en varios literales concatenados: se unen primero
+    plano = re.sub(r'"\s*\n\s*"', "", src)
+    pares = []
+    for m in re.finditer(r"INSERT INTO clients\s*\(", plano):
+        cols_raw = _entre_parentesis(plano, m.end() - 1)
+        vals_raw = _entre_parentesis(plano, plano.index("VALUES", m.end()))
+        pares.append((cols_raw, vals_raw))
+    assert pares, "no se encontró ningún INSERT de clients"
+    for cols_raw, vals_raw in pares:
+        cols = [c for c in cols_raw.split(",") if c.strip()]
+        slots = _slots(vals_raw)
+        assert len(cols) == slots, (
+            f"INSERT desbalanceado: {len(cols)} columnas contra {slots} valores\n"
+            f"columnas: {cols}\nvalores: {vals_raw}")
