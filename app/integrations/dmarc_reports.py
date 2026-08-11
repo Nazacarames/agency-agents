@@ -81,6 +81,40 @@ def _auth(rec: ET.Element, tag: str) -> str:
     return ",".join(sorted({(e.findtext("domain") or "?") for e in ar.findall(tag)}))
 
 
+def _dominios_conocidos() -> set:
+    """Dominios a los que NOSOTROS les mandamos mail (leads + clientes).
+
+    Existe por un falso positivo real: el 2026-08-06 mandamos un mail a
+    info@tmlogistica.com.ar y su servidor lo repartió a 8 buzones internos,
+    re-firmando cada copia con SU dominio y dejando nuestro `From:`. DMARC lo
+    reporta como 8 mensajes no alineados. Es nuestro propio mail reenviado, y
+    pasa con cualquier prospecto que tenga una lista de distribución detrás:
+    sin este filtro el watchdog gritaría "suplantación" cada vez que el motor
+    de outbound hace su trabajo, y la alerta dejaría de significar algo.
+    """
+    doms = set()
+    try:
+        from . import leads_store
+        for lead in (leads_store.load_store().get("leads") or {}).values():
+            correo = (lead.get("email") or "").lower()
+            if "@" in correo:
+                doms.add(correo.rsplit("@", 1)[1])
+    except Exception as e:
+        log.warning("dmarc_dominios_leads_failed", error=str(e)[:120])
+    try:
+        from . import clients_store
+        for c in clients_store.list_clients():
+            for campo in ("email", "contact_email", "website"):
+                v = (c.get(campo) or "").lower().strip()
+                if "@" in v:
+                    doms.add(v.rsplit("@", 1)[1])
+                elif v:
+                    doms.add(v.replace("https://", "").replace("http://", "").split("/")[0])
+    except Exception as e:
+        log.warning("dmarc_dominios_clientes_failed", error=str(e)[:120])
+    return {d for d in doms if d and "." in d}
+
+
 def resumen(settings: Settings, dias: int = 7, max_mensajes: int = 40) -> Dict[str, Any]:
     """Agrega los informes de los últimos `dias`. Best-effort: nunca levanta.
 
@@ -88,7 +122,7 @@ def resumen(settings: Settings, dias: int = 7, max_mensajes: int = 40) -> Dict[s
     volumen se pierde de vista si son 3 mensajes sueltos o una campaña entera.
     """
     salida: Dict[str, Any] = {
-        "ok": False, "informes": 0, "mensajes": 0, "fallan": 0,
+        "ok": False, "informes": 0, "mensajes": 0, "fallan": 0, "reenviados": 0,
         "fallas": [], "reporteros": [], "desde": "", "hasta": "", "error": "",
     }
     if not settings.gmail_configured:
@@ -142,20 +176,26 @@ def resumen(settings: Settings, dias: int = 7, max_mensajes: int = 40) -> Dict[s
                         fallas[clave] += n
 
         ventanas = [v for v in ventanas if v > 0]
+        conocidos = _dominios_conocidos()
+        detalle = []
+        for (ip, dk, spf), n in sorted(fallas.items(), key=lambda kv: -kv[1]):
+            # Basta con que el dominio que firmó sea alguien a quien le escribimos:
+            # es nuestro propio mail reenviado por su servidor, no suplantación.
+            nuestro = any(d == dk or dk.endswith("." + d) for d in conocidos)
+            detalle.append({"ip": ip, "dkim": dk, "spf": spf, "mensajes": n,
+                            "reenvio_de_lead": nuestro})
         salida.update({
             "ok": True,
             "mensajes": total,
-            "fallan": sum(fallas.values()),
+            "fallan": sum(f["mensajes"] for f in detalle if not f["reenvio_de_lead"]),
+            "reenviados": sum(f["mensajes"] for f in detalle if f["reenvio_de_lead"]),
             "reporteros": sorted(reporteros),
             "desde": datetime.fromtimestamp(min(ventanas), timezone.utc).date().isoformat() if ventanas else "",
             "hasta": datetime.fromtimestamp(max(ventanas), timezone.utc).date().isoformat() if ventanas else "",
-            "fallas": [
-                {"ip": ip, "dkim": dk, "spf": spf, "mensajes": n}
-                for (ip, dk, spf), n in sorted(fallas.items(), key=lambda kv: -kv[1])
-            ],
+            "fallas": detalle,
         })
-        log.info("dmarc_resumen", informes=salida["informes"],
-                 mensajes=total, fallan=salida["fallan"])
+        log.info("dmarc_resumen", informes=salida["informes"], mensajes=total,
+                 fallan=salida["fallan"], reenviados=salida["reenviados"])
     except Exception as e:
         salida["error"] = str(e)[:200]
         log.warning("dmarc_resumen_failed", error=salida["error"])

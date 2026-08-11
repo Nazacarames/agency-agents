@@ -232,6 +232,8 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
         if dmarc.get("ok"):
             fresh_keys.append("dmarc:visto")
             for f in dmarc.get("fallas", []):
+                if f.get("reenvio_de_lead"):
+                    continue    # nuestro propio mail repartido por el servidor del prospecto
                 key = f"dmarc:{f['ip']}:{f['dkim']}"
                 if key in already:
                     continue

@@ -10,6 +10,7 @@ Cubren:
 - El healthz responde con status=ok
 """
 import base64
+import gzip
 import re
 import sys
 from pathlib import Path
@@ -573,32 +574,33 @@ _DMARC_XML = b"""<?xml version="1.0"?>
 """
 
 
+class _FakeSvc:
+    def users(self): return self
+    def messages(self): return self
+    def attachments(self): return self
+
+    def list(self, **kw):
+        return SimpleNamespace(execute=lambda: {"messages": [{"id": "m1"}]})
+
+    def get(self, **kw):
+        if "messageId" in kw:      # descarga del adjunto
+            data = base64.urlsafe_b64encode(gzip.compress(_DMARC_XML)).decode()
+            return SimpleNamespace(execute=lambda: {"data": data})
+        return SimpleNamespace(execute=lambda: {
+            "id": "m1",
+            "payload": {"parts": [{"filename": "informe.xml.gz",
+                                   "body": {"attachmentId": "a1"}}]},
+        })
+
+
 def test_dmarc_solo_marca_falla_lo_que_no_alinea_por_ningun_lado(monkeypatch):
     """Un reenvío alinea por DKIM aunque el SPF sea de otro dominio: NO es una
     falla. Si lo contáramos, cada mail reenviado dispararía una alerta de
     suplantación y el aviso dejaría de significar nada."""
-    import gzip
     from app.integrations import dmarc_reports as dr
 
-    class _FakeSvc:
-        def users(self): return self
-        def messages(self): return self
-        def attachments(self): return self
-
-        def list(self, **kw):
-            return SimpleNamespace(execute=lambda: {"messages": [{"id": "m1"}]})
-
-        def get(self, **kw):
-            if "messageId" in kw:      # descarga del adjunto
-                data = base64.urlsafe_b64encode(gzip.compress(_DMARC_XML)).decode()
-                return SimpleNamespace(execute=lambda: {"data": data})
-            return SimpleNamespace(execute=lambda: {
-                "id": "m1",
-                "payload": {"parts": [{"filename": "informe.xml.gz",
-                                       "body": {"attachmentId": "a1"}}]},
-            })
-
     monkeypatch.setattr(dr, "_service", lambda s: _FakeSvc())
+    monkeypatch.setattr(dr, "_dominios_conocidos", set)
     s = SimpleNamespace(gmail_configured=True, gmail_user_id="me",
                         gmail_client_id="x", gmail_client_secret="x",
                         gmail_refresh_token="x")
@@ -610,6 +612,25 @@ def test_dmarc_solo_marca_falla_lo_que_no_alinea_por_ningun_lado(monkeypatch):
     assert len(out["fallas"]) == 1
     assert out["fallas"][0]["dkim"] == "otrodominio.com.ar"
     assert out["fallas"][0]["ip"] == "209.85.220.69"
+
+
+def test_dmarc_no_alerta_por_mail_reenviado_por_un_lead(monkeypatch):
+    """Le escribimos a un prospecto, su servidor reparte el mail a N buzones
+    internos y re-firma cada copia con SU dominio: DMARC lo reporta como no
+    alineado. Es nuestro propio mail. Si contara, cada corrida de outbound
+    dispararía una alerta de suplantación."""
+    from app.integrations import dmarc_reports as dr
+
+    monkeypatch.setattr(dr, "_service", lambda s: _FakeSvc())
+    monkeypatch.setattr(dr, "_dominios_conocidos", lambda: {"otrodominio.com.ar"})
+    s = SimpleNamespace(gmail_configured=True, gmail_user_id="me",
+                        gmail_client_id="x", gmail_client_secret="x",
+                        gmail_refresh_token="x")
+    out = dr.resumen(s)
+
+    assert out["fallan"] == 0             # nada que alertar
+    assert out["reenviados"] == 8         # pero no se oculta: queda contado aparte
+    assert out["fallas"][0]["reenvio_de_lead"] is True
 
 
 def test_dmarc_sin_credenciales_no_revienta():
