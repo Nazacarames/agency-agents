@@ -184,3 +184,38 @@ def drenar(max_por_corrida: int = 2) -> Dict[str, Any]:
     if metidas or saltadas:
         log.info("video_bank_drenado", metidas=len(metidas), saltadas=saltadas)
     return {"encoladas": metidas, "cola_llena": bool(saltadas)}
+
+
+# ── identidad: se pega en código, no se le pide al modelo ──
+#
+# El primer lote salió con 0 de 20 prompts conteniendo alguna de las anclas de
+# NAZARENO_IDENTITY, y dos decían "dark brown hair" cuando es castaño CLARO. Pedirle
+# a un LLM que reproduzca 500 caracteres exactos en cada una de 156 piezas es pedirle
+# que no derive, y deriva: saldrían 156 personas distintas. El agente describe la
+# ESCENA; la persona la pone esta función, igual siempre.
+
+# Frases que contradicen el ancla y hay que sacar de la escena antes de pegarla.
+_CONTRADICE = (
+    r"(?:short |straight |wavy )?(?:dark[- ]brown|black|blond[e]?|red)\s+hair",
+    r"a young argentine man[^,.]*",
+    r"young man[^,.]*",
+)
+
+
+def _escena_limpia(texto: str) -> str:
+    """Saca del texto la descripción de la persona: la pone el ancla, no el modelo."""
+    out = texto or ""
+    for pat in _CONTRADICE:
+        out = re.sub(pat, "", out, flags=re.IGNORECASE)
+    return re.sub(r"\s{2,}", " ", re.sub(r"\s+([,.])", r"\1", out)).strip(" ,.")
+
+
+def prompt_final(item: Dict[str, Any]) -> str:
+    """El prompt listo para pegar: identidad exacta + escena + encuadre."""
+    try:
+        from ..agents.tiktok_creator import NAZARENO_IDENTITY
+    except Exception:
+        NAZARENO_IDENTITY = ""
+    escena = _escena_limpia(item.get("prompt", ""))
+    partes = [p for p in (NAZARENO_IDENTITY.strip(), f"SCENE: {escena}") if p.strip(" SCENE:")]
+    return " ".join(partes) + " Vertical 9:16 format, 5 seconds, natural spoken Argentine Spanish."

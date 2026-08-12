@@ -2236,7 +2236,7 @@ async def api_video_bank_hoja(request: Request, desde: int = 1, hasta: int = 0):
     ]
     for i in items:
         out += [f"--- {int(i['n']):03d} --- guardar como {i['archivo']}",
-                f"[gancho] {i.get('gancho') or '-'}", "", i["prompt"], "",
+                f"[gancho] {i.get('gancho') or '-'}", "", vb.prompt_final(i), "",
                 f"[copy del posteo]\n{i.get('copy') or '-'}", "", "-" * 70, ""]
     return "\n".join(out)
 

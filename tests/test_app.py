@@ -1296,3 +1296,26 @@ def test_el_stock_gotea_sin_reventar_la_cola(tmp_path, monkeypatch):
     r = vb.drenar(max_por_corrida=5)
     assert r["encoladas"] == [] and r["cola_llena"] is True      # y no insiste
     assert vb.resumen()["por_estado"]["listo"] == 2              # el resto espera turno
+
+
+def test_la_identidad_de_nazareno_se_pega_en_codigo(monkeypatch):
+    """El primer lote salió con 0 de 20 prompts conteniendo alguna ancla de
+    NAZARENO_IDENTITY, y dos decían "dark brown hair" cuando es castaño CLARO.
+    Pedirle a un LLM que reproduzca 500 caracteres exactos en 156 piezas es pedirle
+    que no derive: saldrían 156 personas distintas."""
+    from app.integrations import video_bank as vb
+    from app.agents.tiktok_creator import NAZARENO_IDENTITY
+
+    item = {"prompt": "Vertical 9:16 video, medium shot of a young Argentine man with short "
+                      "dark brown hair, light olive skin, sitting in a small cafe with warm "
+                      "window light, holding a tablet. Camera slowly pushes in."}
+    p = vb.prompt_final(item)
+
+    assert NAZARENO_IDENTITY.strip() in p            # la identidad EXACTA, no parafraseada
+    assert "dark brown hair" not in p.lower()        # y sin la contradicción del modelo
+    assert "young argentine man" not in p.lower()
+    assert "small cafe" in p and "pushes in" in p    # la escena sobrevive entera
+    assert "9:16" in p
+
+    # Sin escena tampoco se rompe: queda al menos la identidad.
+    assert NAZARENO_IDENTITY.strip() in vb.prompt_final({"prompt": ""})
