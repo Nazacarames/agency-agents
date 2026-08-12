@@ -826,3 +826,30 @@ def test_autopsia_habla_cuando_nada_tracciona(monkeypatch):
     monkeypatch.setattr(ca, "analyze", lambda n=20: con)
     txt = ca.block()
     assert "QUÉ FUNCIONÓ DE LO NUESTRO" in txt and "NO ESTÁ TRACCIONANDO" not in txt
+
+
+def test_chief_conserva_el_final_de_los_reportes_largos():
+    """El Chief cortaba con txt[:2200] sobre reportes de 30-40 KB: leía la portada
+    y tiraba las conclusiones, los quick wins y los pedidos al humano, que viven al
+    final. Por eso repetía hallazgos en vez de accionarlos."""
+    from app.agents.chief_of_staff import _recortar, _PER_REPORT
+
+    largo = "PORTADA Y METODOLOGIA\n" + ("relleno " * 5000) + "\nQUICK WIN: poner el H1 del home"
+    out = _recortar(largo)
+    assert len(out) < len(largo)
+    assert "PORTADA Y METODOLOGIA" in out            # el arranque sigue estando
+    assert "QUICK WIN: poner el H1 del home" in out  # y ahora TAMBIÉN el final
+    assert "recortado el medio" in out
+
+    corto = "un reporte breve que entra entero"
+    assert _recortar(corto) == corto
+
+
+def test_chief_ve_a_todos_los_agentes_del_roster():
+    """Con tope 12 y 18 agentes en el cron, un lunes se caían 4 — y como el orden es
+    por hora de entrega, los que se perdían eran los de la mañana (leadhunter 08:00,
+    cabecera del embudo) del único que lee todo."""
+    from app.agents.chief_of_staff import _MAX_REPORTS
+    from app.scheduler import DEFAULT_SCHEDULES
+    assert _MAX_REPORTS >= len(DEFAULT_SCHEDULES), (
+        f"{len(DEFAULT_SCHEDULES)} agentes con cron pero el Chief lee {_MAX_REPORTS}")

@@ -25,7 +25,11 @@ _DATA = Path(__file__).resolve().parent.parent.parent / "data"
 # Cuánto texto de cada reporte entra al prompt (los reportes largos se truncan;
 # el brief necesita las conclusiones, no el desarrollo).
 _PER_REPORT = 2200
-_MAX_REPORTS = 12
+# 20 y no 12: el roster tiene 18 agentes con cron y un lunes entregan 16. Con tope
+# 12 se caían 4, y como el orden es por hora de entrega (el Chief cierra a las
+# 21:00), los que se perdían eran los de la MAÑANA: leadhunter 08:00, que es la
+# cabecera del embudo, era el primero en quedar afuera del único que lee todo.
+_MAX_REPORTS = 20
 
 COS_INSTRUCTIONS = """
 # Chief of Staff — Automiq
@@ -161,6 +165,21 @@ Cerrá el brief con una sección extra mirando la semana completa:
 """.strip()
 
 
+def _recortar(txt: str, tope: int = _PER_REPORT) -> str:
+    """Recorta un reporte largo conservando el principio Y EL FINAL.
+
+    Cortar con `txt[:2200]` sobre reportes de 30-40 KB le daba al Chief el 6% de
+    arriba: portada, metodología y el arranque del desarrollo. Las conclusiones,
+    los quick wins y los pedidos al humano viven al final, que es justo lo que se
+    tiraba — por eso el brief repetía hallazgos en vez de accionarlos.
+    """
+    if len(txt) <= tope:
+        return txt
+    mitad = tope // 2
+    return (txt[:mitad].rstrip() + f"\n\n…[recortado el medio: {len(txt) - tope} caracteres]…\n\n"
+            + txt[-mitad:].lstrip())
+
+
 def _recent_artifacts() -> str:
     """Junta el artefacto .md más reciente de cada agente (últimas 72h)."""
     try:
@@ -191,8 +210,7 @@ def _recent_artifacts() -> str:
             except Exception:
                 continue
             when = datetime.fromtimestamp(mt).strftime("%Y-%m-%d %H:%M")
-            if len(txt) > _PER_REPORT:
-                txt = txt[:_PER_REPORT] + "\n…[truncado]"
+            txt = _recortar(txt)
             parts.append(f"### {slug} ({when})\n{txt}")
         return "\n\n".join(parts)
     except Exception as e:
