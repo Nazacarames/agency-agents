@@ -1230,3 +1230,69 @@ def test_chief_lleva_su_veredicto_al_registro(tmp_path, monkeypatch):
     m = mis.list_missions()[0]
     assert m["status"] == "parcial"
     assert {p["agent"]: p["hecho"] for p in m["plan"]} == {"outbound": True, "leadhunter": False}
+
+
+def test_video_bank_reparte_el_stock_a_lo_largo_del_ano(tmp_path, monkeypatch):
+    """El bundle de Higgsfield dura 10 días y da para un año de contenido, pero
+    publish_queue tiene tope 14 y vence a los 14 días: meterle 156 videos sería
+    perderlos casi todos. El banco los guarda y los suelta cuando toca."""
+    from app.integrations import video_bank as vb
+    monkeypatch.setattr(vb, "_FILE", tmp_path / "video-bank.json")
+
+    for i in range(6):
+        assert vb.agregar(f"Nazareno mira a camara y dice el gancho numero {i}, plano medio 9:16",
+                          copy=f"copy {i}", origen="tiktok_creator")
+    assert vb.agregar("corto") is None                       # prompt sin sustancia
+
+    assert vb.resumen()["sin_generar"] == 6
+    assert vb.marcar_listo(1, "/media/001.mp4")["archivo"] == "001.mp4"
+    vb.marcar_listo(2, "/media/002.mp4")
+    assert vb.planificar(por_semana=3) == 2
+
+    listos = [i for i in vb.toca_hoy() ]
+    assert len(listos) == 1                                  # el #2 cae a +2 días
+    assert listos[0]["n"] == 1
+    assert vb.marcar_encolado(1) is True
+    assert vb.marcar_encolado(1) is False                    # no se encola dos veces
+    assert vb.toca_hoy() == []
+
+
+def test_video_bank_aparea_por_numero_de_archivo(tmp_path, monkeypatch):
+    """El humano genera en Higgsfield en orden y guarda 001.mp4, 002.mp4… Ese número
+    es lo único que permite saber qué clip corresponde a qué guion."""
+    from app.integrations import video_bank as vb
+    assert vb.numero_de("012.mp4") == 12
+    assert vb.numero_de("007 (1).mp4") == 7
+    assert vb.numero_de("sin-numero.mp4") is None
+
+
+def test_el_stock_gotea_sin_reventar_la_cola(tmp_path, monkeypatch):
+    """El stock NO puede vivir en publish_queue: esa cola tiene tope 14 de feed y
+    vence lo que lleva 14 días. Si el banco empuja más de lo que la cola drena, el
+    año de contenido se vencería adentro en vez de afuera."""
+    from app.integrations import video_bank as vb
+    monkeypatch.setattr(vb, "_FILE", tmp_path / "video-bank.json")
+
+    encoladas = []
+    fake_pq = SimpleNamespace(
+        MAX_PENDING_FEED=2,
+        pending_count=lambda lane=None: len(encoladas),
+        enqueue=lambda image, caption="", source="", kind="post": (
+            encoladas.append(image) or {"id": "x"}),
+    )
+    monkeypatch.setitem(__import__("sys").modules, "app.integrations.publish_queue", fake_pq)
+
+    for i in range(4):
+        vb.agregar(f"Nazareno de frente, plano medio, dice el gancho {i} en 9:16 realista")
+        vb.marcar_listo(i + 1, f"/media/hf-{i+1:03d}.mp4")
+    # Todas con fecha de hoy o antes: la cola es el único freno.
+    d = vb._load()
+    for it in d["items"]:
+        it["publicar_el"] = "2020-01-01"
+    vb._save(d)
+
+    assert vb.drenar(max_por_corrida=5)["encoladas"] == [1, 2]   # frena en el tope
+    assert len(encoladas) == 2
+    r = vb.drenar(max_por_corrida=5)
+    assert r["encoladas"] == [] and r["cola_llena"] is True      # y no insiste
+    assert vb.resumen()["por_estado"]["listo"] == 2              # el resto espera turno

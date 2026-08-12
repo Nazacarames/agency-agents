@@ -2198,6 +2198,84 @@ async def api_diag_gsc(request: Request):
     return out
 
 
+@app.get("/api/video/bank")
+async def api_video_bank(request: Request, estado: str = ""):
+    """El stock de video adelantado: qué falta generar, qué está listo y hasta cuándo
+    alcanza. `estado=prompt` devuelve lo que hay que generar en Higgsfield."""
+    _verify_webhook_secret(request)
+    from .integrations import video_bank as vb
+    items = vb._load()["items"]
+    if estado:
+        items = [i for i in items if i.get("estado") == estado.strip().lower()]
+    return {"resumen": vb.resumen(), "items": items}
+
+
+@app.post("/api/video/bank/prompts")
+async def api_video_bank_prompts(request: Request):
+    """Carga un lote de guiones. Body: {"piezas":[{"prompt","copy","gancho","kind"}]}.
+
+    Cada pieza recibe un número correlativo: el humano genera en Higgsfield en ese
+    orden y guarda 001.mp4, 002.mp4… Ese número es lo único que después permite
+    aparear cada clip con su guion y su copy."""
+    _verify_webhook_secret(request)
+    body = await request.json()
+    piezas = body.get("piezas") or []
+    if not isinstance(piezas, list) or not piezas:
+        raise HTTPException(status_code=400, detail="falta `piezas` (lista)")
+    from .integrations import video_bank as vb
+    creadas = []
+    for p in piezas[:300]:
+        if not isinstance(p, dict):
+            continue
+        it = vb.agregar(str(p.get("prompt") or ""), str(p.get("copy") or ""),
+                        str(p.get("gancho") or ""), str(p.get("kind") or "reel"),
+                        str(body.get("origen") or "operador"))
+        if it:
+            creadas.append(it["n"])
+    return {"ok": True, "creadas": creadas, "resumen": vb.resumen()}
+
+
+@app.post("/api/video/bank/lote")
+async def api_video_bank_lote(request: Request, por_semana: int = 3):
+    """Sube un zip de MP4 generados en Higgsfield. Body = zip crudo.
+
+    El ilimitado de Higgsfield es sólo para uso humano en su web (sus términos
+    excluyen API y MCP), así que el humano genera y sube; de acá en adelante lo hace
+    todo el sistema. Los archivos se aparean por número de nombre (001.mp4 → pieza 1)
+    y quedan con fecha repartida a lo largo del año."""
+    _verify_webhook_secret(request)
+    import io
+    import zipfile
+    body = await request.body()
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(body))
+    except Exception:
+        raise HTTPException(status_code=400, detail="body no es un zip válido")
+    from .integrations import video_bank as vb
+    dest = _data_dir() / "images"          # es lo que sirve /media/
+    dest.mkdir(parents=True, exist_ok=True)
+    apareados, sin_pieza, ignorados = [], [], 0
+    for name in zf.namelist():
+        base = Path(name).name
+        if base != name or Path(base).suffix.lower() != ".mp4":
+            ignorados += 1                  # sólo archivos planos: evita zip-slip
+            continue
+        n = vb.numero_de(base)
+        if n is None:
+            sin_pieza.append(base)
+            continue
+        nombre = f"hf-{n:03d}.mp4"
+        (dest / nombre).write_bytes(zf.read(name))
+        if vb.marcar_listo(n, f"/media/{nombre}"):
+            apareados.append(n)
+        else:
+            sin_pieza.append(base)          # número sin guion, o ya subido antes
+    planificadas = await run_in_threadpool(vb.planificar, max(1, min(int(por_semana), 14)))
+    log.info("video_bank_lote", apareados=len(apareados), sin_pieza=len(sin_pieza))
+    return {"ok": True, "apareados": apareados, "sin_pieza": sin_pieza,
+            "ignorados": ignorados, "planificadas": planificadas, "resumen": vb.resumen()}
+
+
 @app.get("/api/backlog")
 async def api_backlog(request: Request, area: str = ""):
     """Los pendientes abiertos, del más viejo al más nuevo.

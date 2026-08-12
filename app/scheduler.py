@@ -63,6 +63,11 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
 }
 DEFAULT_TIMEZONE = "America/Buenos_Aires"
 
+# Goteo del stock de video adelantado hacia la cola. 10:30, media hora antes del
+# drenado de publicaciones: así lo que le toca hoy ya está en la cola cuando drena.
+# El stock NO vive en publish_queue porque esa cola vence lo que lleva 14 días.
+VIDEO_BANK_CRON = "30 10 * * *"
+
 # Drenado de la cola de publicaciones: 1 sola publicación por día (regla del usuario).
 # Corre a las 11:00 ART, después de que los agentes de contenido del día anterior
 # hayan encolado. drain_one() se autolimita a 1/día aunque el job dispare de más.
@@ -121,6 +126,8 @@ class AgentScheduler:
                               _scheduled_metrics_snapshot)
         self._register_simple("clients:archive", CLIENT_ARCHIVE_CRON, DEFAULT_TIMEZONE,
                               _scheduled_client_archive)
+        self._register_simple("video:bank", VIDEO_BANK_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_video_bank)
         self._register_simple("learning:digest", LEARNING_DIGEST_CRON, DEFAULT_TIMEZONE,
                               _scheduled_learning_digest)
         self._register_simple("competitor:refresh", COMPETITOR_REFRESH_CRON, DEFAULT_TIMEZONE,
@@ -250,6 +257,18 @@ async def _scheduled_metrics_snapshot() -> None:
         log.info("metrics_snapshot_done", point=pt)
     except Exception as e:
         log.error("metrics_snapshot_failed", error=str(e)[:200])
+
+
+async def _scheduled_video_bank() -> None:
+    """Pasa a la cola de publicación el video adelantado al que ya le tocaba."""
+    import asyncio
+    from .integrations import video_bank as vb
+    try:
+        res = await asyncio.to_thread(vb.drenar)
+        if res.get("encoladas"):
+            log.info("video_bank_drain_done", result=res)
+    except Exception as e:
+        log.warning("video_bank_drain_failed", error=str(e)[:150])
 
 
 async def _scheduled_client_archive() -> None:
