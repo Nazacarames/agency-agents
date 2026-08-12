@@ -29,6 +29,30 @@ from .opencode import _extract_text, _has_json_payload
 
 log = get_logger("hermes")
 
+# Debajo de esto, un agente que tenía que entregar un informe entregó un resumen.
+_SALIDA_CORTA = 1500
+
+
+def _inventario(workdir: str, excluir: set, tope: int = 20) -> str:
+    """`nombre:bytes` de lo que el modelo dejó en su workdir, del más grande al más
+    chico. Es la evidencia que faltaba: sin esto no se distingue "no escribió nada"
+    de "lo escribió en un archivo que no leemos"."""
+    try:
+        filas = []
+        for raiz, _dirs, archivos in os.walk(workdir):
+            for fn in archivos:
+                p = os.path.join(raiz, fn)
+                if p in excluir:
+                    continue
+                try:
+                    filas.append((os.path.getsize(p), os.path.relpath(p, workdir)))
+                except OSError:
+                    continue
+        filas.sort(reverse=True)
+        return " · ".join(f"{n}:{s}" for s, n in filas[:tope])
+    except Exception:
+        return ""
+
 # HERMES_HOME en el VOLUMEN persistente (/app/data en Railway): las skills que
 # los agentes crean/mejoran y la memoria de Hermes sobreviven corridas y deploys.
 # Sin esto, el home del Dockerfile es efímero y el aprendizaje se pierde.
@@ -573,6 +597,12 @@ def run_hermes(
         # miles de .md del proyecto traería cualquier cosa.
         artifact = (_largest_text_artifact(workdir, exclude={stdout_path, stderr_path})
                     if own_workdir else None)
+        # Inventario del workdir ANTES de borrarlo. Cuando el modelo entrega un
+        # resumen en vez del entregable (leadhunter, 2026-08-10: 723 bytes contra
+        # 28-42 KB de sus otros días) no queda ni rastro de qué dejó escrito, y sin
+        # eso las hipótesis —no escribió nada / lo escribió con otra extensión / el
+        # rescate lo descartó— no se pueden separar. Cuesta un os.walk sobre un temp.
+        inventario = _inventario(workdir, {stdout_path, stderr_path}) if own_workdir else ""
     except subprocess.TimeoutExpired as e:
         log.error("hermes_timeout", timeout=timeout)
         raise HermesError(f"hermes chat timeout tras {timeout}s") from e
@@ -597,5 +627,12 @@ def run_hermes(
         text = art
     if not text:
         raise HermesError(f"hermes sin output (stderr: {stderr_s[:200]})")
+    # Salida sospechosamente corta: dejamos TODO lo necesario para diagnosticar la
+    # próxima vez, en vez de volver a conjeturar sobre una corrida ya borrada.
+    if own_workdir and len(text) < _SALIDA_CORTA:
+        log.warning("hermes_salida_corta", provider=provider, model=model,
+                    agente=agente or "?", out_chars=len(text),
+                    artefacto_chars=len(art), workdir=inventario or "(vacío)",
+                    json_payload=_has_json_payload(text), cola=text[-300:])
     log.info("hermes_ok", provider=provider, model=model, out_chars=len(text))
     return text

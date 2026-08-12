@@ -947,3 +947,28 @@ def test_web_optimizer_cierra_los_pendientes_que_ejecuta(tmp_path, monkeypatch):
     assert bl.abiertos("web") == []                    # el que ejecutó, se cerró
     humanos = bl.abiertos("humano")
     assert len(humanos) == 1 and "GA4" in humanos[0]["titulo"]
+
+
+def test_inventario_del_workdir_distingue_las_hipotesis(tmp_path):
+    """Cuando un agente entrega un resumen en vez del entregable (leadhunter,
+    2026-08-10: 723 bytes contra 28-42 KB de sus otros días) el workdir ya se borró
+    y no se puede separar 'no escribió nada' de 'lo escribió en un .json que el
+    rescate no mira'. El inventario es esa evidencia."""
+    from app.clients.hermes import _inventario
+
+    (tmp_path / "leads.json").write_bytes(b"x" * 5000)
+    (tmp_path / "notas.md").write_bytes(b"y" * 200)
+    sub = tmp_path / "tmp"
+    sub.mkdir()
+    (sub / "scratch.txt").write_bytes(b"z" * 50)
+    ruido = tmp_path / "_cc_stdout.bin"
+    ruido.write_bytes(b"0" * 9999)
+
+    inv = _inventario(str(tmp_path), {str(ruido)})
+    assert "leads.json:5000" in inv                 # el entregable grande, visible
+    assert "notas.md:200" in inv
+    assert "scratch.txt:50" in inv                  # también lo anidado
+    assert "_cc_stdout" not in inv                  # el stdout no es un artefacto
+    assert inv.index("leads.json") < inv.index("notas.md")   # más grande primero
+
+    assert _inventario(str(tmp_path / "no-existe"), set()) == ""   # nunca revienta
