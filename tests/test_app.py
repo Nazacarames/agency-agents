@@ -1043,3 +1043,62 @@ def test_la_instruccion_de_pendientes_exige_verificar():
     assert "PENDIENTE(<area>)" in bloque
     assert "VERIFICASTE" in bloque
     assert "sospecha" in bloque.lower()
+
+
+def test_backlog_acepta_una_nota_del_dueno_sin_cerrar(tmp_path, monkeypatch):
+    """Faltaba el canal de vuelta: el sistema sabía pedir y no sabía escuchar. Con
+    CLAMEVET el dueño ya estaba en contacto y los agentes se lo seguían pidiendo."""
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+
+    it = bl.abrir("humano", "CLAMEVET: definir quien firma el mail de cierre", dias_atras=19)
+    assert bl.anotar(it["id"], "Ya estoy en contacto directo, de esto me ocupo yo") is not None
+    abiertos = bl.abiertos("humano")
+    assert len(abiertos) == 1                       # la nota NO lo cierra
+    assert abiertos[0]["notas"][0]["por"] == "dueño"
+
+    txt = bl.bloque("humano")
+    assert "de esto me ocupo yo" in txt
+    assert "no lo vuelvas a pedir" in txt           # y manda sobre lo que el agente suponga
+
+    assert bl.anotar("noexiste", "hola") is None
+    assert bl.anotar(it["id"], "x") is None          # nota vacía no entra
+
+
+def test_la_vara_de_humano_exige_agotar_lo_reversible():
+    """El agente escalaba cualquier elección: 'defino si publico con el nombre real
+    del cliente o uno genérico' llegó a #agencia como acción del dueño, teniendo una
+    opción conservadora obvia y reversible."""
+    from app.agents.registry import get_agent
+    bloque = get_agent("content_creator")._collab_block()
+    assert "último recurso" in bloque
+    assert "conservadora" in bloque
+    assert "nombre real del" in bloque              # el caso real, como ejemplo de lo que NO va
+
+
+def test_lead_de_la_web_se_distingue_de_la_prospeccion():
+    """Los formularios sí se guardaban, pero quedaban indistinguibles entre 350
+    leads de prospección: en el panel parecía que no llegaban."""
+    from app.integrations import leads_store as ls
+    v = ls.lead_view({"key": "k", "company": "Corralón X", "origen": "web",
+                      "mensaje": "quiero automatizar los pedidos"})
+    assert v["origen"] == "web" and "automatizar" in v["mensaje"]
+    assert ls.lead_view({"key": "k2"})["origen"] == "prospeccion"
+
+
+def test_dashboard_muestra_lo_del_dueno_y_los_leads_web():
+    """Las dos cosas que el dueño pidió ver en el panel: lo que depende de él (con
+    caja para contestar sin cerrar) y los formularios de la web, que sí se guardaban
+    pero quedaban indistinguibles entre 350 leads de prospección."""
+    from app.main import app
+    with TestClient(app) as client:
+        html = client.get("/dashboard").text
+        for marca in ("overviewBacklog", "overviewInbound",
+                      "backlogHumanoHtml", "inboundWebHtml",
+                      "bklNota", "bklListo",
+                      "/api/backlog?area=humano", "/api/backlog/'+id+'/nota",
+                      "l.origen==='web'"):
+            assert marca in html, f"falta {marca} en el dashboard"
+        # La tarjeta de SEO tiene que explicar el atraso de Google: sin eso se lee
+        # como panel desactualizado y se desconfía de un número que está bien.
+        assert "días de atraso" in html

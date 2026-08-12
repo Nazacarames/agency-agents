@@ -517,6 +517,11 @@ def lead_view(lead: Dict[str, Any]) -> Dict[str, Any]:
         "decisor": lead.get("decisor"),
         "linkedin": lead.get("linkedin"),
         "li_state": lead.get("li_state"),
+        # De dónde salió. Un lead que llenó el formulario de la web vale distinto
+        # que uno que buscamos nosotros: nos escribió él. Sin este campo quedaba
+        # indistinguible entre 350 leads de prospección y el panel no lo mostraba.
+        "origen": lead.get("origen") or "prospeccion",
+        "mensaje": (lead.get("mensaje") or "")[:300],
     }
 
 

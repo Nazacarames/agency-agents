@@ -136,6 +136,28 @@ def abrir(area: str, titulo: str, origen: str = "", dias_atras: int = 0) -> Opti
     return item
 
 
+def anotar(item_id: str, nota: str, por: str = "dueño") -> Optional[Dict[str, Any]]:
+    """Contexto del dueño sobre un pendiente, SIN cerrarlo.
+
+    Faltaba el canal de vuelta: el sistema sabía pedir y no sabía escuchar. Con
+    CLAMEVET el dueño ya estaba en contacto y los agentes se lo seguían pidiendo,
+    porque no había dónde decir "de esto me ocupo yo". La nota se les inyecta con
+    el ítem y manda sobre lo que el agente hubiera supuesto.
+    """
+    nota = " ".join((nota or "").split())[:600]
+    if len(nota) < 3:
+        return None
+    data = _load()
+    for it in data["items"]:
+        if it.get("id") == item_id and it.get("estado") == "abierto":
+            it.setdefault("notas", []).append({"texto": nota, "por": por, "cuando": _now()})
+            it["notas"] = it["notas"][-5:]      # sólo lo último dicho
+            _save(data)
+            log.info("backlog_anotado", id=item_id, por=por)
+            return {**it, "dias": _dias(it.get("abierto", ""))}
+    return None
+
+
 def resolver(item_id: str, evidencia: str, por: str = "") -> bool:
     """Cierra un pendiente. Exige evidencia: sin eso, 'resuelto' es una opinión."""
     evidencia = " ".join((evidencia or "").split())[:500]
@@ -193,8 +215,14 @@ def bloque(area: str = "", limite: int = 12, titulo: str = "") -> str:
         return ""
     cab = titulo or ("## PENDIENTES ABIERTOS" if not area
                      else f"## PENDIENTES ABIERTOS ({area})")
-    filas = [f"- `{i['id']}` [{i['area']}] **{i['titulo']}** — abierto hace "
-             f"{i['dias']} día(s), reportado {i.get('veces', 1)} vez/veces"
-             + (f" (por {', '.join(i.get('origenes') or [])})" if i.get("origenes") else "")
-             for i in ab]
+    filas = []
+    for i in ab:
+        filas.append(
+            f"- `{i['id']}` [{i['area']}] **{i['titulo']}** — abierto hace "
+            f"{i['dias']} día(s), reportado {i.get('veces', 1)} vez/veces"
+            + (f" (por {', '.join(i.get('origenes') or [])})" if i.get("origenes") else ""))
+        # La nota del dueño va debajo del ítem y manda: es lo último que se sabe.
+        for n in (i.get("notas") or []):
+            filas.append(f"    ↳ 💬 **{n.get('por', 'dueño')} dijo:** {n['texto']} "
+                         "(esto MANDA sobre lo que supongas: no lo vuelvas a pedir)")
     return cab + "\n" + "\n".join(filas)

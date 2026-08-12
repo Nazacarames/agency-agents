@@ -958,6 +958,10 @@
 
       <section id="tab-resumen" class="tabsec">
         <div id="overviewAlerts"></div>
+        <div class="grid-2">
+          <div class="panel"><h3>🙋 Lo que depende de vos</h3><div class="ph-sub">Ningún agente puede destrabarlo. Podés contestarles sin cerrarlo: lo que escribas les llega en su próxima corrida y manda sobre lo que hubieran supuesto.</div><div id="overviewBacklog" style="margin-top:8px"></div></div>
+          <div class="panel"><h3>🔥 Te escribieron por la web</h3><div class="ph-sub">Formularios de automiq.agency. Estos nos buscaron ellos: el outbound no los toca.</div><div id="overviewInbound" style="margin-top:8px"></div></div>
+        </div>
         <div class="kpi-row" id="overviewKpis"></div>
         <div class="grid-2">
           <div class="panel"><h3>Crecimiento</h3><div class="ph-sub">MRR y ganancia mensual (USD), últimos 12 meses.</div><div id="chartGrowth"></div></div>
@@ -1735,7 +1739,7 @@ function svgSpark(values, color){
 async function loadOverview(){
   el('overviewKpis').innerHTML=skelKpis(5);
   try{
-    const [stats, ag, tk, pubq, health, bill, gsc, geo] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), api('/api/publish/queue').catch(()=>null), api('/api/system/health').catch(()=>null), api('/api/finance/summary').catch(()=>null), api('/api/diag/gsc').catch(()=>null), api('/api/web/ai-visits').catch(()=>null) ]);
+    const [stats, ag, tk, pubq, health, bill, gsc, geo, bkl, pipe] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), api('/api/publish/queue').catch(()=>null), api('/api/system/health').catch(()=>null), api('/api/finance/summary').catch(()=>null), api('/api/diag/gsc').catch(()=>null), api('/api/web/ai-visits').catch(()=>null), api('/api/backlog?area=humano').catch(()=>null), api('/api/pipeline').catch(()=>null) ]);
     CACHE.agents=ag; CACHE.tasks=tk; CACHE.stats=stats;
     const b=stats.billing, f=stats.finance, m=stats.metrics||{};
     const profitCls = f.profit_month_usd>=0?'up':'down';
@@ -1763,6 +1767,9 @@ async function loadOverview(){
     el('overviewHealth').innerHTML = overviewHealthHtml(health);
     el('overviewSeo').innerHTML = overviewSeoHtml(gsc);
     el('overviewGeo').innerHTML = overviewGeoHtml(geo);
+    el('overviewBacklog').innerHTML = backlogHumanoHtml(bkl);
+    el('overviewInbound').innerHTML = inboundWebHtml(pipe);
+    setNavCount('pipeline', (pipe && pipe.counts && pipe.counts.total) || stats.pipeline.total || null);
     setNavCount('publicaciones', pubq && pubq.pending ? pubq.pending : null);
 
     const today = ag.agents.filter(a=>a.today);
@@ -1771,6 +1778,55 @@ async function loadOverview(){
     el('overviewTasks').innerHTML = tasks.length ? taskTable(tasks) : '<div class="card empty">Sin tareas ad-hoc todavía.</div>';
   }catch(e){ el('overviewKpis').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
 }
+// ── Lo que depende del dueño (backlog `humano`) ──
+// La caja de respuesta existe porque el sistema sabía pedir y no sabía escuchar:
+// con CLAMEVET el dueño ya estaba en contacto y los agentes se lo seguían pidiendo.
+function backlogHumanoHtml(bkl){
+  const items=(bkl&&bkl.items)||[];
+  if(!items.length) return '<div class="card empty">Nada trabado esperándote. 🎉</div>';
+  return items.map(i=>{
+    const notas=(i.notas||[]).map(n=>`<div class="ph-sub" style="margin-top:4px">💬 <b>${esc(n.por||'vos')}:</b> ${esc(n.texto)}</div>`).join('');
+    const edad=i.dias>0?`hace ${i.dias} día${i.dias===1?'':'s'}`:'recién';
+    const alerta=i.dias>=7?' style="color:var(--red,#e74c3c)"':'';
+    return `<div class="card" style="margin-bottom:8px">
+      <div>${esc(i.titulo)}</div>
+      <div class="ph-sub"${alerta}>abierto ${edad} · <code>${esc(i.id)}</code></div>
+      ${notas}
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <input class="bkl-nota" data-id="${esc(i.id)}" placeholder="Contestales sin cerrarlo (ej: de esto me ocupo yo)" style="flex:1;min-width:180px">
+        <button class="btn" onclick="bklNota('${esc(i.id)}')">Responder</button>
+        <button class="btn" onclick="bklListo('${esc(i.id)}')">Ya está</button>
+      </div></div>`;
+  }).join('');
+}
+async function bklNota(id){
+  const inp=document.querySelector('.bkl-nota[data-id="'+id+'"]');
+  const nota=(inp&&inp.value||'').trim();
+  if(nota.length<3){ if(inp) inp.focus(); return; }
+  try{ await api('/api/backlog/'+id+'/nota',{method:'POST',body:JSON.stringify({nota})}); loadOverview(); }
+  catch(e){ alert('No pude guardar la nota: '+e.message); }
+}
+async function bklListo(id){
+  // Cerrar exige evidencia a propósito: sin eso "resuelto" es una opinión y el
+  // pendiente reaparece a los tres días.
+  const ev=prompt('¿Qué pasó? (queda como evidencia del cierre)');
+  if(!ev||ev.trim().length<10){ if(ev!==null) alert('Poné al menos una frase: sin evidencia no se cierra.'); return; }
+  try{ await api('/api/backlog/'+id+'/resolver',{method:'POST',body:JSON.stringify({evidencia:ev.trim(),por:'dueño'})}); loadOverview(); }
+  catch(e){ alert('No pude cerrarlo: '+e.message); }
+}
+
+// ── Leads que llenaron el formulario de la web ──
+function inboundWebHtml(pipe){
+  const leads=((pipe&&pipe.leads)||[]).filter(l=>l.origen==='web');
+  if(!leads.length) return '<div class="card empty">Todavía nadie llenó el formulario de la web.</div>';
+  leads.sort((a,b)=>String(b.first_seen||'').localeCompare(String(a.first_seen||'')));
+  return leads.slice(0,8).map(l=>`<div class="card" style="margin-bottom:8px">
+    <div><b>${esc(l.decisor||l.company||'(sin nombre)')}</b>${l.company&&l.decisor?' · '+esc(l.company):''}</div>
+    <div class="ph-sub">${l.email?'📧 '+esc(l.email):''} ${l.phone?' · 📱 '+esc(l.phone):''} · ${fmtDate(l.first_seen)}</div>
+    ${l.mensaje?`<div class="ph-sub" style="margin-top:4px">“${esc(l.mensaje)}”</div>`:''}
+    <div class="ph-sub">estado: ${esc(l.state||'—')}</div></div>`).join('');
+}
+
 function funnelFromPipeline(counts){
   const order=['nuevo','contactado','respondió','reunión','propuesta','cerrado'];
   const stages=order.filter(k=>counts[k]!=null).map((k,i)=>({label:k,value:counts[k]||0,color:PALETTE[i%PALETTE.length]}));
@@ -1873,7 +1929,10 @@ function overviewSeoHtml(g){
     + healthRow(true,'Clics (28d)', `${t.clicks||0} · ${arr(dClk)} ${dClk>=0?'+':''}${dClk} vs previo`)
     + healthRow((d.consultas_subiendo||0)>0,'Consultas subiendo', (d.consultas_subiendo||0)+' ganando impresiones')
     + healthRow((d.a_tiro_de_pagina1||0)>0,'A tiro de página 1', (d.a_tiro_de_pagina1||0)+' consultas')
-    + `<div class="faint" style="font-size:11px;margin-top:6px">${esc(d.periodo||'')} · sc-domain</div>`;
+    // La ventana termina 3 días atrás y NO es que el panel esté viejo: Google
+    // publica Search Console con ese atraso. Sin decirlo, la tarjeta se lee como
+    // desactualizada y se desconfía de un número que está bien.
+    + `<div class="faint" style="font-size:11px;margin-top:6px">${esc(d.periodo||'')} · sc-domain · Google publica con ~3 días de atraso: ${esc((d.periodo||'').slice(-10))} es el dato más nuevo que existe hoy</div>`;
 }
 function overviewGeoHtml(v){
   if(!v) return '<div class="empty" style="padding:18px">—</div>';

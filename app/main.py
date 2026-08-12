@@ -2229,6 +2229,24 @@ async def api_backlog_abrir(request: Request):
     return {"ok": True, "item": item}
 
 
+@app.post("/api/backlog/{item_id}/nota")
+async def api_backlog_nota(item_id: str, request: Request):
+    """Contexto del dueño sobre un pendiente, SIN cerrarlo. Body: {"nota","por"}.
+
+    Faltaba el canal de vuelta: el sistema sabía pedir y no sabía escuchar. Con
+    CLAMEVET el dueño ya estaba en contacto y los agentes se lo seguían pidiendo
+    porque no había dónde decir "de esto me ocupo yo". La nota se les inyecta junto
+    al ítem y manda sobre lo que hubieran supuesto."""
+    _verify_webhook_secret(request)
+    body = await request.json()
+    from .integrations import backlog
+    item = backlog.anotar(item_id, str(body.get("nota") or ""),
+                          str(body.get("por") or "dueño"))
+    if not item:
+        raise HTTPException(status_code=404, detail="no existe, ya está cerrado, o la nota está vacía")
+    return {"ok": True, "item": item}
+
+
 @app.post("/api/backlog/{item_id}/resolver")
 async def api_backlog_resolver(item_id: str, request: Request):
     """Cierra un pendiente con evidencia. Body: {"evidencia": "...", "por": "..."}.
@@ -2568,6 +2586,13 @@ async def api_web_lead(body: WebLeadBody, request: Request, background: Backgrou
             lead = store["leads"][key]
             lead["state"] = "respondió"          # inbound caliente: el outbound NO lo toca
             lead["next_touch_at"] = None
+            # Marca explícita: un lead que llenó el formulario nos escribió ÉL. Sin
+            # esto quedaba mezclado entre los 350 de prospección y en el panel no se
+            # distinguía — parecía que los formularios no llegaban.
+            lead["origen"] = "web"
+            lead["origen_at"] = _dt.utcnow().isoformat()
+            if message:
+                lead["mensaje"] = message[:600]
             lead.setdefault("notes", []).append(
                 f"[{today}] 🔥 INBOUND desde la landing (formulario): {message or 'pidió que lo contactemos'}")
             ls.save_store(store)
