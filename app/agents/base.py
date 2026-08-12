@@ -173,6 +173,16 @@ class BaseAgent(ABC):
                 brief = team_brief(mates)
                 if brief:
                     parts.append("**Lo último que produjo tu equipo:**\n" + brief)
+            # Cómo le viene yendo con las órdenes de Dirección. Es el bucle de mejora
+            # por resultado: antes el veredicto vivía en la prosa del brief de esa
+            # noche y el agente nunca se enteraba de que no había cumplido.
+            try:
+                from ..integrations import missions_store as _mis
+                track = _mis.bloque_cumplimiento(self.name)
+                if track:
+                    parts.append(track)
+            except Exception as e:
+                log.warning("track_block_failed", agent=self.name, error=str(e)[:120])
             notes = agent_inbox.pop_for(self.name)
             if notes:
                 parts.append("### Notas que te dejaron tus compañeros (usalas HOY si aplican)")

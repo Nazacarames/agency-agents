@@ -1157,3 +1157,76 @@ def test_si_el_dueno_ya_contesto_el_watchdog_no_insiste(tmp_path, monkeypatch):
     texto = "\n".join(enviados)
     assert "Meta Pixel" in texto                 # el que no contestó, sí avisa
     assert "CLAMEVET" not in texto               # el que contestó, no
+
+
+def _mision_deleg(tmp_path, monkeypatch, agentes):
+    from app.integrations import missions_store as mis
+    monkeypatch.setattr(mis, "_json_path", lambda: tmp_path / "missions.json")
+    monkeypatch.setattr(mis.db, "enabled", lambda: False)
+    mis.create_mission(objective="Delegaciones del cierre del 2026-08-12",
+                       agents=list(agentes),
+                       plan=[{"agent": a, "task": f"tarea de {a}"} for a in agentes])
+    return mis
+
+
+def test_la_delegacion_se_cierra_y_la_mision_cambia_de_estado(tmp_path, monkeypatch):
+    """Al 2026-08-12 había 15 misiones de delegación y las 15 seguían en `lanzada`:
+    el Chief juzgaba si se habían cumplido pero lo escribía sólo en prosa, y
+    update_mission no la llamaba nadie. El contador subía 1 por día y no distinguía
+    delegar bien de delegar al vacío."""
+    mis = _mision_deleg(tmp_path, monkeypatch, ["outbound", "social_media"])
+
+    assert mis.list_missions()[0]["status"] == "lanzada"
+    mis.marcar_delegacion("outbound", True, "mando 6 mails day-0, mode_ejecutado=day0")
+    assert mis.list_missions()[0]["status"] == "parcial"      # falta el otro
+    mis.marcar_delegacion("social_media", False, "no separo feed de historias")
+    m = mis.list_missions()[0]
+    assert m["status"] == "parcial"                            # uno sí, uno no
+    hechos = {p["agent"]: p["hecho"] for p in m["plan"]}
+    assert hechos == {"outbound": True, "social_media": False}
+
+    # Sin nada pendiente para ese agente, no inventa un cierre.
+    assert mis.marcar_delegacion("outbound", True, "de nuevo") is None
+
+
+def test_todas_cumplidas_cierra_la_mision(tmp_path, monkeypatch):
+    mis = _mision_deleg(tmp_path, monkeypatch, ["leadhunter"])
+    mis.marcar_delegacion("leadhunter", True, "reporto verification_rate al inicio")
+    assert mis.list_missions()[0]["status"] == "cumplida"
+
+
+def test_el_agente_ve_su_propio_historial(tmp_path, monkeypatch):
+    """El bucle de mejora: un agente que ve 'cumpliste 1 de 2, y esta quedó sin
+    hacer' tiene el dato para corregirse. Antes ese resultado se perdía al día
+    siguiente con el brief."""
+    mis = _mision_deleg(tmp_path, monkeypatch, ["outbound", "social_media"])
+    mis.marcar_delegacion("outbound", True, "mando 6 day-0")
+    mis.marcar_delegacion("social_media", False, "no separo feed de historias")
+
+    txt = mis.bloque_cumplimiento("social_media")
+    assert "0 de 1" in txt
+    assert "no separo feed de historias" in txt
+    assert mis.bloque_cumplimiento("web_optimizer") == ""      # sin historial, no ensucia
+
+    c = mis.cumplimiento("outbound")
+    assert c["cumplidas"] == 1 and c["juzgadas"] == 1
+
+
+def test_chief_lleva_su_veredicto_al_registro(tmp_path, monkeypatch):
+    """El puente que faltaba: el Chief escribía ✅/⏫ en prosa y la misión seguía
+    'lanzada'. Ahora la línea DELEG_OK/DELEG_NO la cierra de verdad."""
+    from app.agents.registry import get_agent
+    mis = _mision_deleg(tmp_path, monkeypatch, ["outbound", "leadhunter"])
+    chief = get_agent("chief_of_staff")
+
+    brief = ("## Seguimiento\n"
+             "- ✅ outbound: salieron los day-0.\n"
+             "`DELEG_OK(outbound)`: mando 6 primeros toques, mode_ejecutado=day0\n"
+             "* **DELEG_NO(leadhunter):** entrego un resumen de 723 bytes, sin leads\n"
+             "DELEG_OK(agente_inventado): no existe, se ignora\n")
+    cerradas = chief._cerrar_delegaciones(brief, SimpleNamespace(run_id="t"))
+
+    assert sorted(cerradas) == [("leadhunter", False), ("outbound", True)]
+    m = mis.list_missions()[0]
+    assert m["status"] == "parcial"
+    assert {p["agent"]: p["hecho"] for p in m["plan"]} == {"outbound": True, "leadhunter": False}

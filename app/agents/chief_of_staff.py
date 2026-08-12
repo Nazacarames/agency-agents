@@ -100,7 +100,13 @@ números. Esto es el diario del día, no un pronóstico.)
 🗑️ la retiro porque <razón>. Si no hay brief anterior, omití la sección.
 **Incluí acá tus DELEGACIONES recientes**: por cada tarea que delegaste a un agente,
 mirá su reporte de hoy y decidí ✅ la cumplió / ⏫ no la hizo → la re-delego (poné la
-línea DELEGAR de nuevo abajo) / 🗑️ ya no aplica. No dejes una delegación colgada sin veredicto.)
+línea DELEGAR de nuevo abajo) / 🗑️ ya no aplica. No dejes una delegación colgada sin veredicto.
+**Y por CADA veredicto emití además su línea, que es la que queda registrada:**
+`DELEG_OK(<agente>): <la evidencia concreta de que la cumplió>`
+`DELEG_NO(<agente>): <qué le faltó, en una línea>`
+Sin esa línea el veredicto vive sólo en este brief y mañana se pierde: la misión queda
+"lanzada" para siempre y el agente nunca se entera de que no cumplió. Al 2026-08-12 había
+15 misiones de delegación y las 15 seguían abiertas por esto.)
 
 ## 🎯 Tus 3 acciones para mañana
 (SOLO cosas que un agente no puede hacer: decisiones, aprobaciones, pagos, grabar
@@ -383,6 +389,10 @@ class ChiefOfStaffAgent(BaseAgent):
           un agente que no entregó hoy). Tope 2, en background, blocklist del costoso
           (video). Es la autonomía de bajo riesgo que pidió el dueño."""
         text = response_text or ""
+        cerradas = self._cerrar_delegaciones(text, ctx)
+        if cerradas:
+            text = f"{text.rstrip()}\n\n## 📒 Delegaciones cerradas en el registro\n" + \
+                   "\n".join(f"- {'✅' if ok else '❌'} **{a}**" for a, ok in cerradas) + "\n"
         delegated = self._delegate(text, ctx)
         if delegated:
             lines = "\n".join(f"- 🤖 **{a}** ← {t}" for a, t in delegated)
@@ -392,6 +402,36 @@ class ChiefOfStaffAgent(BaseAgent):
             text = f"{text.rstrip()}\n\n## ⚡ Disparado por el Chief (corriendo ahora)\n" + \
                    "\n".join(f"- 🚀 **{a}**" for a in fired) + "\n"
         return super().post_process(text, ctx)
+
+    def _cerrar_delegaciones(self, text: str, ctx: AgentContext):
+        """Lleva el veredicto del brief al registro de misiones.
+
+        El Chief ya juzgaba si cada delegación se había cumplido, pero lo escribía
+        sólo en prosa: la misión quedaba en `lanzada` para siempre y el agente nunca
+        se enteraba de que no había cumplido. Con esto la misión se cierra sola y el
+        resultado se le inyecta al agente en su próxima corrida."""
+        import re
+        try:
+            from ..integrations import missions_store as mis
+            from .registry import list_agents as _all
+            valid = {a.name for a in _all()}
+            out, vistos = [], set()
+            for m in re.finditer(r"^[\s>*`\-]*DELEG_(OK|NO)\(([a-z_]+)\)[\s`*]*[:：]\s*(.+)$",
+                                 text, re.IGNORECASE | re.MULTILINE):
+                ok = m.group(1).upper() == "OK"
+                agente = m.group(2).lower()
+                nota = m.group(3).strip().strip("`*")
+                if agente not in valid or agente in vistos or len(nota) < 5:
+                    continue
+                vistos.add(agente)
+                if mis.marcar_delegacion(agente, ok, nota):
+                    out.append((agente, ok))
+            if out:
+                log.info("cos_delegaciones_cerradas", run_id=ctx.run_id, count=len(out))
+            return out
+        except Exception as e:
+            log.warning("cos_cerrar_deleg_failed", error=str(e)[:150])
+            return []
 
     def _fire_agents(self, text: str, ctx: AgentContext):
         """Parsea `DISPARAR(<agente>)` y re-corre ese agente YA, en un thread daemon
