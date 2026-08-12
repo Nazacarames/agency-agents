@@ -923,3 +923,27 @@ def test_landing_facts_sin_red_no_inventa(monkeypatch):
     monkeypatch.setitem(__import__("sys").modules, "httpx", SimpleNamespace(get=_boom))
     txt = lf.bloque("https://automiq.agency")
     assert "No pude bajar" in txt and "NO afirmes nada" in txt
+
+
+def test_web_optimizer_cierra_los_pendientes_que_ejecuta(tmp_path, monkeypatch):
+    """web_optimizer overridea run() entero y por eso se salteaba la cosecha de
+    marcadores de la clase base — siendo el ÚNICO agente que ejecuta trabajo del
+    backlog. El 2026-08-12 creó /gracias, emitió RESUELTO(...) y el ítem quedó
+    abierto igual: el pendiente se leía como no hecho."""
+    from app.agents.base import BaseAgent
+    from app.agents.registry import get_agent
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+    monkeypatch.setattr(BaseAgent, "post_process", lambda self, t, c: t)
+
+    it = bl.abrir("web", "La pagina /precios no tiene formulario de contacto")
+    agente = get_agent("web_optimizer")
+    ctx = SimpleNamespace(run_id="test", discord=None, args={},
+                          settings=SimpleNamespace(discord_webhook_for=lambda n: ""))
+
+    agente._deliver(ctx, f"Listo el preview.\nRESUELTO({it['id']}): cree el form en "
+                         "src/pages/precios.astro y deployo el preview OK\n"
+                         "PENDIENTE(humano): hace falta el ID de GA4 para cablear la medicion")
+    assert bl.abiertos("web") == []                    # el que ejecutó, se cerró
+    humanos = bl.abiertos("humano")
+    assert len(humanos) == 1 and "GA4" in humanos[0]["titulo"]

@@ -411,6 +411,14 @@ class WebOptimizerAgent(BaseAgent):
         return "\n".join(head) + (cc_text or "_(sin resumen de cambios)_")
 
     def _deliver(self, ctx: AgentContext, text: str) -> str:
+        # Este agente overridea run() entero, así que se salteaba la cosecha de
+        # marcadores que hace la clase base — y es el ÚNICO que ejecuta trabajo del
+        # backlog. El 2026-08-12 emitió `RESUELTO(11378124)` después de crear la
+        # página, el ítem quedó abierto igual y el pendiente parecía sin hacer.
+        try:
+            self._harvest_collab(text, ctx)
+        except Exception as e:
+            log.warning("webopt_harvest_failed", error=str(e)[:120])
         if self.deliver_to_discord and ctx.discord:
             try:
                 ctx.discord.send_agent_output(
