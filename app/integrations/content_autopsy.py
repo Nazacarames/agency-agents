@@ -86,12 +86,35 @@ def analyze(n: int = 20) -> List[Dict]:
     return rows
 
 
+# Debajo de esto, "todo en cero" es una cuenta que recién arranca y no hay nada que
+# concluir. Por encima, es el resultado de semanas de publicar.
+_MIN_PIEZAS_SIN_TRACCION = 8
+
+
 def block(n: int = 20) -> str:
     """Bloque para inyectar a los agentes de contenido: nuestro top/bottom real."""
     rows = analyze(n)
-    # Silencio hasta que haya engagement real (cuenta nueva = todo 0 → no aporta señal).
-    if not rows or rows[0]["interactions"] == 0:
+    if not rows:
         return ""
+    if rows[0]["interactions"] == 0:
+        # Con 2 o 3 piezas, todo en cero es una cuenta nueva y no dice nada. Con
+        # muchas ya publicadas, es EL dato: lo que estamos haciendo no llega a
+        # nadie. Callarlo era peor que no medir — los agentes seguían produciendo
+        # más de lo mismo sin enterarse nunca (2026-08-12: 20 piezas, 0 interacciones).
+        if len(rows) < _MIN_PIEZAS_SIN_TRACCION:
+            return ""
+        alcance = sum(r.get("reach") or 0 for r in rows)
+        return (
+            "\n\n=== LO NUESTRO NO ESTÁ TRACCIONANDO (dato real de IG) ===\n"
+            f"Últimas {len(rows)} piezas publicadas: **0 interacciones** en todas "
+            f"(alcance sumado: {alcance}).\n"
+            "Esto NO se arregla escribiendo otra pieza igual. El problema está antes que "
+            "el copy: distribución, hashtags, horario, formato o que todavía no hay "
+            "audiencia a la que llegarle.\n"
+            "Qué hacer HOY: proponé UN cambio de enfoque concreto y decí qué señal lo "
+            "validaría. Si lo que hace falta es una decisión o un acceso que vos no tenés "
+            "(pauta, colaboración, cambio de cuenta), anotalo con `PENDIENTE(humano): …` "
+            "en vez de volver a proponer lo mismo.\n=== fin ===")
     top = [r for r in rows[:3] if r["interactions"] > 0]
     bottom = rows[-2:] if len(rows) > 4 else []
     lines = ["\n\n=== QUÉ FUNCIONÓ DE LO NUESTRO (datos reales de IG — replicá lo de arriba) ==="]

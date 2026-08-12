@@ -737,3 +737,92 @@ def test_watchdog_caza_el_reporte_enano_sin_marcador(tmp_path, monkeypatch):
         (tmp_path / f"inbox-assistant-report-{dia}.md").write_text("ok, 3 hilos", encoding="utf-8")
     (tmp_path / f"inbox-assistant-report-{hoy}.md").write_text("ok, 2 hilos", encoding="utf-8")
     assert "inbox_assistant" not in dict(wd._degraded_reports(SimpleNamespace()))
+
+
+def test_watchdog_avisa_pendientes_del_dueno_a_agencia(tmp_path, monkeypatch):
+    """Los `humano` van a #agencia, no al canal de errores, y con escalones: al
+    aparecer y al cruzar 3/7/14/21/30 días. Avisar todos los días del mismo
+    pendiente es exactamente cómo el trío de la web sobrevivió 22 briefs."""
+    from app.integrations import watchdog as wd, backlog as bl
+    monkeypatch.setattr(wd, "_DATA", tmp_path)
+    monkeypatch.setattr(wd, "_STATE", tmp_path / "watchdog-state.json")
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+    monkeypatch.setattr(wd, "_check_gmail", lambda s: ("skip", "sin credenciales"))
+    monkeypatch.setattr(wd, "_missed_runs", lambda s: [])
+
+    bl.abrir("humano", "Decidir quien firma el cierre de CLAMEVET", dias_atras=19)
+    bl.abrir("dev", "El build de Astro de la landing falla", dias_atras=1)
+
+    enviados = []
+
+    class _Discord:
+        def send(self, _msg, url=None, embed=None):
+            enviados.append((url, embed.title, embed.description))
+
+    s = SimpleNamespace(gmail_configured=False, watchdog_grace_min=30,
+                        discord_agencia_webhook_url="https://discord.test/agencia",
+                        discord_webhook_errors="https://discord.test/errores",
+                        discord_webhook_url="")
+    out = wd.check(s, discord=_Discord())
+
+    agencia = [e for e in enviados if e[0] == "https://discord.test/agencia"]
+    assert len(agencia) == 1, "el pendiente humano tiene que ir a #agencia"
+    assert "19 día(s)" in agencia[0][2]                    # con la edad, que es la presión
+    assert "CLAMEVET" in agencia[0][2]
+    assert "Astro" not in agencia[0][2]                    # el dev NO es tarea del dueño
+    assert out["backlog_humano_avisados"] == 1
+
+    # Segunda pasada del mismo día: ya avisado, no vuelve a molestar.
+    enviados.clear()
+    assert wd.check(s, discord=_Discord())["backlog_humano_avisados"] == 0
+    assert enviados == []
+
+
+def test_watchdog_no_marca_avisado_si_no_hay_canal(tmp_path, monkeypatch):
+    """Sin webhook el pendiente NO puede quedar marcado como avisado: se silenciaría
+    hasta el próximo escalón, que puede caer una semana después."""
+    from app.integrations import watchdog as wd, backlog as bl
+    monkeypatch.setattr(wd, "_DATA", tmp_path)
+    monkeypatch.setattr(wd, "_STATE", tmp_path / "watchdog-state.json")
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+    monkeypatch.setattr(wd, "_check_gmail", lambda s: ("skip", ""))
+    monkeypatch.setattr(wd, "_missed_runs", lambda s: [])
+    bl.abrir("humano", "Dar los 9 numeros reales de los contadores del home")
+
+    class _Discord:
+        def send(self, *a, **k):
+            pass
+
+    s = SimpleNamespace(gmail_configured=False, watchdog_grace_min=30,
+                        discord_agencia_webhook_url="", discord_webhook_errors="",
+                        discord_webhook_url="")
+    wd.check(s, discord=_Discord())
+    # Con el canal ya configurado, el mismo pendiente TIENE que salir.
+    s.discord_agencia_webhook_url = "https://discord.test/agencia"
+    assert wd.check(s, discord=_Discord())["backlog_humano_avisados"] == 1
+
+
+def test_autopsia_habla_cuando_nada_tracciona(monkeypatch):
+    """El feedback de contenido se apagaba justo cuando la noticia era mala: con
+    todo en 0 devolvía '' y los agentes seguían produciendo más de lo mismo sin
+    enterarse nunca. Al 2026-08-12 eran 20 piezas con 0 interacciones."""
+    from app.integrations import content_autopsy as ca
+
+    cero = [{"caption": f"pieza {i}", "type": "FEED", "permalink": "", "reach": 3,
+             "interactions": 0, "saved": 0, "shares": 0} for i in range(20)]
+    monkeypatch.setattr(ca, "analyze", lambda n=20: cero)
+    txt = ca.block()
+    assert "NO ESTÁ TRACCIONANDO" in txt
+    assert "20 piezas" in txt and "alcance sumado: 60" in txt
+    assert "PENDIENTE(humano)" in txt          # la salida no es "escribí otra pieza"
+
+    # Cuenta que recién arranca: 3 piezas en 0 no concluyen nada, sigue en silencio.
+    monkeypatch.setattr(ca, "analyze", lambda n=20: cero[:3])
+    assert ca.block() == ""
+
+    # Con tracción real gana el bloque de siempre (top/bottom), no el de alarma.
+    con = [dict(cero[0], interactions=42, caption="la que funcionó"),
+           *[dict(c, interactions=1) for c in cero[1:6]]]
+    monkeypatch.setattr(ca, "analyze", lambda n=20: con)
+    txt = ca.block()
+    assert "QUÉ FUNCIONÓ DE LO NUESTRO" in txt and "NO ESTÁ TRACCIONANDO" not in txt

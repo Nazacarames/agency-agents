@@ -165,6 +165,11 @@ def _degraded_reports(settings: Settings) -> List[Tuple[str, str]]:
 
 BRAIN_STALE_HORAS = 48
 
+# Escalones de nagging para los pendientes del dueño: se avisa al aparecer y al
+# cruzar cada uno. Sin escalones habría que elegir entre avisar una sola vez (y
+# que se olvide) o todos los días (y que se ignore).
+_HITOS_DIAS = (3, 7, 14, 21, 30)
+
 
 def _brain_stale() -> float:
     """Horas desde la última sync del Cerebro (0 si está al día).
@@ -281,11 +286,49 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
                 )
                 fresh_keys.append(key)
 
+    # 7) Lo que sólo puede destrabar el dueño → canal #agencia.
+    #    No es "algo se rompió", así que no va al embed de errores: es la lista de
+    #    lo que está esperando por él. Avisa cuando el pendiente aparece y después
+    #    sólo al cruzar 3/7/14/21/30 días. Repetirlo todos los días es lo que hace
+    #    que un aviso deje de leerse — y es exactamente cómo el trío de la web
+    #    sobrevivió 22 días apareciendo en todos los briefs.
+    mios: List[str] = []
+    mios_keys: List[str] = []
+    try:
+        from . import backlog
+        for it in backlog.abiertos("humano"):
+            hito = max((h for h in _HITOS_DIAS if it["dias"] >= h), default=0)
+            key = f"humano:{it['id']}:{hito}"
+            if key in already:
+                continue
+            edad = ("recién anotado" if it["dias"] < 1
+                    else f"abierto hace **{it['dias']} día(s)**")
+            mios.append(f"• {it['titulo']}\n  ↳ {edad} · `{it['id']}`")
+            mios_keys.append(key)
+    except Exception as e:
+        log.warning("watchdog_backlog_humano_failed", error=str(e)[:120])
+
+    # Las claves se marcan SÓLO si el aviso salió de verdad: darlas por avisadas
+    # sin webhook (o con el POST fallado) silencia el pendiente hasta el próximo
+    # escalón, que puede ser una semana después.
+    if mios and discord is not None and settings.discord_agencia_webhook_url:
+        try:
+            from ..clients.discord import DiscordEmbed
+            discord.send("", url=settings.discord_agencia_webhook_url, embed=DiscordEmbed(
+                title="🙋 Esto lo tenés que destrabar vos",
+                description=("Ningún agente puede hacerlo: son decisiones, aprobaciones, "
+                             "pagos o credenciales.\n\n" + "\n".join(mios))[:4096],
+                color=0xF1C40F, footer="Automiq · backlog humano"))
+            fresh_keys.extend(mios_keys)
+        except Exception as e:
+            log.error("watchdog_agencia_alert_failed", error=str(e)[:150])
+
     result = {"gmail": g_status, "gmail_detail": g_detail,
               "adlib": adlib_ok, "brain_stale_h": round(stale, 1),
               "missed": [m[0] for m in missed],
               "degraded": [d[0] for d in degraded],
               "dmarc_fallan": dmarc.get("fallan", 0) if dmarc else None,
+              "backlog_humano_avisados": len(mios),
               "alerted": len(problems)}
 
     if problems and discord is not None:
