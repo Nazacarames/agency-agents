@@ -853,3 +853,73 @@ def test_chief_ve_a_todos_los_agentes_del_roster():
     from app.scheduler import DEFAULT_SCHEDULES
     assert _MAX_REPORTS >= len(DEFAULT_SCHEDULES), (
         f"{len(DEFAULT_SCHEDULES)} agentes con cron pero el Chief lee {_MAX_REPORTS}")
+
+
+def test_bitacora_conserva_el_error_del_deploy_fallido(tmp_path, monkeypatch):
+    """La bitácora es lo ÚNICO que la próxima corrida sabe de las anteriores, y la
+    escribe el modelo. El 2026-08-12 el modelo NO emitió su bloque Y el deploy
+    falló: la iteración se perdió entera y la próxima iba a repetir el mismo
+    cambio contra el mismo error, con el temp ya borrado."""
+    from app.integrations import seo_progress as sp
+    monkeypatch.setattr(sp, "_PATH", tmp_path / "seo-progress.md")
+
+    sp.write("# Bitácora SEO/GEO\n## Estado\nlínea de base vieja")
+    assert sp.anotar_fallo("2026-08-12", "vercel deploy falló: Error en precios.astro línea 41")
+
+    txt = sp.read()
+    assert "El último deploy FALLÓ" in txt
+    assert "precios.astro línea 41" in txt
+    assert "línea de base vieja" in txt          # no se pisa lo que ya había
+    assert txt.index("FALLÓ") < txt.index("línea de base vieja")   # el aviso va arriba
+
+    # Un segundo fallo REEMPLAZA al anterior: importa el último, no la pila.
+    sp.anotar_fallo("2026-08-13", "otro error distinto")
+    txt2 = sp.read()
+    assert txt2.count("El último deploy FALLÓ") == 1
+    assert "otro error distinto" in txt2 and "precios.astro" not in txt2
+    assert "línea de base vieja" in txt2
+
+
+def test_landing_facts_mide_el_html_de_verdad(monkeypatch):
+    """El 'H1 del home vacío' se reportó 22 días seguidos en tres auditorías y era
+    falso. Un hallazgo inventado se lleva una de las tres acciones diarias del dueño
+    y, con un backlog que acumula edad, encima gana autoridad."""
+    from app.integrations import landing_facts as lf
+
+    html = ("<html><head><title>Automiq</title>"
+            '<meta name="description" content="Automatizacion con IA">'
+            "<script>gtag('config','AW-18330940659')</script></head><body>"
+            '<h1 class="reveal">Automatizacion con IA a medida que '
+            '<span class="grad-text">potencia tu empresa</span></h1>'
+            + '<div class="stat">0</div>' * 9 + "</body></html>")
+
+    class _R:
+        status_code, text = 200, html
+
+    monkeypatch.setattr(lf, "_CACHE", {"t": 0.0, "url": "", "datos": {}})
+    monkeypatch.setitem(__import__("sys").modules, "httpx",
+                        SimpleNamespace(get=lambda *a, **k: _R()))
+    d = lf.medir("https://automiq.agency")
+    assert d["ok"]
+    assert d["h1"] == "Automatizacion con IA a medida que potencia tu empresa"
+    assert d["h1_cantidad"] == 1
+    assert d["contadores_en_cero"] == 9
+    assert d["google_ads"] is True and d["ga4"] is False and d["meta_pixel"] is False
+
+    txt = lf.bloque("https://automiq.agency")
+    assert "NO HAY H1" not in txt and "potencia tu empresa" in txt
+    assert "Contadores mostrando 0: 9" in txt
+
+
+def test_landing_facts_sin_red_no_inventa(monkeypatch):
+    """Si no se pudo medir, el bloque tiene que PROHIBIR afirmar — ese vacío es
+    justo por donde se colaba el hallazgo inventado."""
+    from app.integrations import landing_facts as lf
+
+    def _boom(*a, **k):
+        raise RuntimeError("sin red")
+
+    monkeypatch.setattr(lf, "_CACHE", {"t": 0.0, "url": "", "datos": {}})
+    monkeypatch.setitem(__import__("sys").modules, "httpx", SimpleNamespace(get=_boom))
+    txt = lf.bloque("https://automiq.agency")
+    assert "No pude bajar" in txt and "NO afirmes nada" in txt

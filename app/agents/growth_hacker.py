@@ -66,6 +66,16 @@ concretas y ejecutables esta semana.
 """.strip()
 
 
+def _hechos_landing() -> str:
+    """Datos medidos del HTML servido: que el análisis arranque de hechos y no de
+    impresiones (el 'H1 vacío' se reportó 22 días seguidos y era falso)."""
+    try:
+        from ..integrations import landing_facts
+        return landing_facts.bloque()
+    except Exception:
+        return ""
+
+
 class GrowthHackerAgent(BaseAgent):
     name = "growth_hacker"
     description = "Analiza métricas y propone quick wins + experimentos (con fallback [BENCHMARK])"
@@ -83,6 +93,7 @@ class GrowthHackerAgent(BaseAgent):
 
     def build_user_message(self, ctx: AgentContext) -> str:
         return (
+            _hechos_landing() +
             "Corré el análisis de growth de hoy. "
             "Revisá data/ por reportes previos, content-output anteriores y secuencias outbound "
             "para tener contexto histórico. "

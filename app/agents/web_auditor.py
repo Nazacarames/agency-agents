@@ -80,8 +80,17 @@ class WebAuditorAgent(BaseAgent):
                     )
         except Exception:
             pass
+        # Sólo cuando audita NUESTRA landing: si eligió un prospecto, los hechos de
+        # automiq.agency no vienen al caso y confundirían el informe.
+        hechos = ""
+        if not leads_handoff and "automiq.agency" in url:
+            try:
+                from ..integrations import landing_facts
+                hechos = landing_facts.bloque(url)
+            except Exception:
+                pass
         return (
-            f"{target_hint}"
+            f"{target_hint}{hechos}"
             f"Auditá la página: {url} (o la del prospecto elegido según la indicación de arriba).\n\n"
             "Descargá con WebFetch la home y hasta 5 páginas internas clave "
             "(precios, producto/features, about, blog, contacto), clasificá el tipo de "

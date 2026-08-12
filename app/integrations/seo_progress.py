@@ -84,6 +84,37 @@ def write(contenido: str) -> bool:
         return False
 
 
+_AVISO = "## ⛔ El último deploy FALLÓ — leé esto antes de tocar nada"
+# El aviso va ARRIBA de todo (es lo primero que tiene que leer la próxima corrida),
+# así que necesita marca de cierre: sin ella, recortarlo por el encabezado se lleva
+# puesta la bitácora entera, que es lo que viene después.
+_AVISO_FIN = "<!-- fin aviso deploy -->"
+_AVISO_RE = re.compile(re.escape(_AVISO) + r".*?" + re.escape(_AVISO_FIN) + r"\s*", re.S)
+
+
+def anotar_fallo(fecha: str, error: str) -> bool:
+    """Deja el error del deploy fallido arriba de todo en la bitácora.
+
+    La bitácora es lo ÚNICO que la próxima corrida sabe de las anteriores, y la
+    escribe el modelo: si el deploy revienta —o si el modelo ni siquiera emitió su
+    bloque, que también pasó— la iteración se pierde entera y la próxima arranca de
+    producción sin enterarse. Repetía el mismo cambio y el mismo error para siempre.
+    Se reemplaza el aviso anterior en vez de apilarlos: importa el último.
+    """
+    try:
+        cuerpo = _AVISO_RE.sub("", read()).strip()
+        aviso = (f"{_AVISO}\n"
+                 f"La iteración del {fecha} editó la landing y el deploy se cayó. NO repitas "
+                 f"el mismo cambio sin resolver esto primero; si no podés, anotalo con "
+                 f"`PENDIENTE(dev)` y dedicá la corrida a otra cosa.\n"
+                 f"```\n{(error or '').strip()[:1500]}\n```\n"
+                 f"{_AVISO_FIN}\n")
+        return write(aviso + "\n" + cuerpo)
+    except Exception as e:
+        log.warning("seo_progress_fallo_no_anotado", error=str(e)[:120])
+        return False
+
+
 def strip_bloque(texto: str) -> str:
     """Saca el bloque ```bitacora``` del texto que se entrega por Discord: ya
     quedó persistido, y en el reporte es ruido."""

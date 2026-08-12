@@ -22,6 +22,7 @@ import shutil
 import tempfile
 from collections import Counter
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block
@@ -322,7 +323,38 @@ class WebOptimizerAgent(BaseAgent):
         try:
             url = vc.deploy(root, prod=prod)
         except (VercelError, Exception) as e:
+            # Un intento de auto-arreglo antes de rendirse. El build corre en Vercel
+            # (el contenedor es Python, sin node), así que la única forma de saber si
+            # una edición compila es deployarla: sin este reintento, cualquier error
+            # de sintaxis tira 12 minutos de trabajo y la próxima corrida repite el
+            # mismo cambio. Mismo patrón evaluator-optimizer que ya usa el outbound.
+            log.warning("webopt_deploy_failed_reintenta", run_id=ctx.run_id, error=str(e)[:300])
+            arreglo = self._reparar_build(ctx, root, str(e))
+            if arreglo:
+                try:
+                    url = vc.deploy(root, prod=prod)
+                    log.info("webopt_deploy_recuperado", run_id=ctx.run_id)
+                    self._cleanup(workdir)
+                    return self._deliver(ctx, self._render(
+                        prod, url, (cc_text or "") + "\n\n> ⚙️ El primer deploy falló y el "
+                        "agente corrigió su propio cambio antes de publicar:\n> "
+                        + arreglo[:600], bool(nueva)))
+                except Exception as e2:
+                    e = e2
             log.error("webopt_deploy_failed", run_id=ctx.run_id, error=str(e))
+            # El error tiene que sobrevivir al temp que se borra en dos segundos: va
+            # a la bitácora (lo único que lee la próxima corrida) y al backlog (para
+            # que acumule días y aparezca en el cierre del Chief). Sin esto la
+            # próxima iteración repite el mismo cambio y el mismo error.
+            from datetime import datetime as _dt
+            fecha = _dt.now(ZoneInfo(self.timezone)).strftime("%Y-%m-%d")
+            seo_progress.anotar_fallo(fecha, str(e))
+            try:
+                backlog.abrir("dev", "El deploy de la landing falla al buildear: "
+                                     "web_optimizer edita bien y pierde todo el trabajo",
+                              origen=self.name)
+            except Exception:
+                pass
             self._cleanup(workdir)
             return self._deliver(ctx, (
                 "⚠️ **Web Optimizer:** mejoré la landing pero falló el deploy — "
@@ -332,6 +364,31 @@ class WebOptimizerAgent(BaseAgent):
         return self._deliver(ctx, self._render(prod, url, cc_text, bool(nueva)))
 
     # ── helpers ──
+    def _reparar_build(self, ctx: AgentContext, root: str, error: str) -> str:
+        """Le devuelve el error del build al agente para que corrija SU cambio.
+
+        Devuelve el texto de lo que dice haber arreglado, o '' si no pudo. Acotado a
+        propósito: un solo intento y sólo para arreglar, no para seguir optimizando —
+        si el segundo deploy también falla, el problema no es un typo."""
+        prompt = (
+            "El deploy de los cambios que acabás de hacer FALLÓ al compilar. Estás en el "
+            "mismo directorio, con tus ediciones puestas.\n\n"
+            f"## Error del build\n```\n{error[:2500]}\n```\n\n"
+            "Encontrá qué archivo tuyo lo rompió y arreglalo. Reglas:\n"
+            "- NO agregues features ni sigas optimizando: sólo que compile.\n"
+            "- Si no encontrás la causa, REVERTÍ tu cambio más riesgoso y dejalo como estaba.\n"
+            "- El sitio es Astro. Revisá sintaxis de .astro, tags sin cerrar, imports rotos.\n"
+            "Respondé en 3 líneas: qué archivo, qué estaba mal, qué hiciste.")
+        try:
+            txt = run_hermes(
+                prompt, settings=ctx.settings, system_append=self.system_prompt,
+                timeout=600, cwd=root, toolsets="file", max_turns=30, agente=self.name)
+            log.info("webopt_reparacion_intentada", run_id=ctx.run_id, chars=len(txt or ""))
+            return (txt or "").strip()
+        except Exception as e:
+            log.warning("webopt_reparacion_fallo", run_id=ctx.run_id, error=str(e)[:150])
+            return ""
+
     def _render(self, prod: bool, url: str, cc_text: str, bitacora_ok: bool) -> str:
         if prod:
             head = [

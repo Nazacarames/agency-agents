@@ -67,6 +67,16 @@ Keywords long-tail en español argentino, priorizando el vertical **distribució
 """.strip()
 
 
+def _hechos_landing() -> str:
+    """Datos medidos del HTML servido: que el análisis arranque de hechos y no de
+    impresiones (el 'H1 vacío' se reportó 22 días seguidos y era falso)."""
+    try:
+        from ..integrations import landing_facts
+        return landing_facts.bloque()
+    except Exception:
+        return ""
+
+
 class SeoSpecialistAgent(BaseAgent):
     name = "seo_specialist"
     description = "Plan SEO semanal (keywords + contenido + on-page + links) alineado al Big Domino"
@@ -83,6 +93,7 @@ class SeoSpecialistAgent(BaseAgent):
 
     def build_user_message(self, ctx: AgentContext) -> str:
         return (
+            _hechos_landing() +
             "Generá el plan SEO completo de esta semana para "
             "automiq.agency (landing oficial de Automiq). "
             "Priorizá el vertical DISTRIBUCIÓN pero incluí también manufacturing, "
