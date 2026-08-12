@@ -1102,3 +1102,29 @@ def test_dashboard_muestra_lo_del_dueno_y_los_leads_web():
         # La tarjeta de SEO tiene que explicar el atraso de Google: sin eso se lee
         # como panel desactualizado y se desconfía de un número que está bien.
         assert "días de atraso" in html
+
+
+def test_citar_un_pendiente_existente_no_crea_otro(tmp_path, monkeypatch):
+    """El 2026-08-12 seo_specialist emitió tres PENDIENTE que decían "(PENDIENTE
+    22dfcb1e, ... sin duplicar — solo referencia)" y entraron igual como ítems
+    nuevos: el dueño terminó con la misma tarea tres veces. El dedup difuso no los
+    agarra — reformulados dan 0.48 de similitud, y bajar el umbral a eso fusionaría
+    cosas distintas."""
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+
+    orig = bl.abrir("humano", "Pasar los IDs reales de Meta Pixel y GA4 para cablear la medicion",
+                    origen="web_optimizer")
+    ref = bl.abrir("humano",
+                   "pasar IDs reales de Meta Pixel y GA4 para cablear la medicion. Sin esto no "
+                   f"se puede medir el sprint. (PENDIENTE {orig['id']}, solo referencia)",
+                   origen="seo_specialist")
+    assert ref["id"] == orig["id"]                  # es el MISMO ítem
+    assert len(bl.abiertos("humano")) == 1          # y no aparece dos veces
+    assert ref["veces"] == 2
+    assert sorted(ref["origenes"]) == ["seo_specialist", "web_optimizer"]
+
+    # Un id que no existe no bloquea un pendiente legítimo.
+    bl.abrir("humano", "Revisar el preview y promoverlo (ver deadbeef, que ya no está)",
+             origen="seo_specialist")
+    assert len(bl.abiertos("humano")) == 2

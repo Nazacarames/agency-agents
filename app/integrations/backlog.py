@@ -97,6 +97,20 @@ def _match(items: List[Dict[str, Any]], area: str, titulo: str) -> Optional[Dict
     return None
 
 
+_ID_RE = re.compile(r"\b([0-9a-f]{8})\b")
+
+
+def _citado(items: List[Dict[str, Any]], titulo: str) -> Optional[Dict[str, Any]]:
+    """El pendiente abierto cuyo id aparece mencionado en el texto, si lo hay."""
+    ids = set(_ID_RE.findall((titulo or "").lower()))
+    if not ids:
+        return None
+    for it in items:
+        if it.get("estado") == "abierto" and it.get("id") in ids:
+            return it
+    return None
+
+
 def abrir(area: str, titulo: str, origen: str = "", dias_atras: int = 0) -> Optional[Dict[str, Any]]:
     """Abre un pendiente (o suma una re-aparición al que ya estaba). Best-effort.
 
@@ -109,6 +123,20 @@ def abrir(area: str, titulo: str, origen: str = "", dias_atras: int = 0) -> Opti
     if area not in AREAS or len(titulo) < 10:
         return None
     data = _load()
+    # Si el texto CITA el id de un pendiente que ya existe, es una referencia, no
+    # uno nuevo. Pasó el 2026-08-12: seo_specialist escribió tres PENDIENTE que
+    # decían "(PENDIENTE 22dfcb1e, ... sin duplicar — solo referencia)" y entraron
+    # igual como ítems nuevos. El dedup difuso no los agarra: reformulados dan 0.48
+    # de similitud, y bajar el umbral a eso fusionaría cosas distintas.
+    citado = _citado(data["items"], titulo)
+    if citado:
+        citado["veces"] = int(citado.get("veces", 1)) + 1
+        citado["visto_ultima"] = _now()
+        if origen and origen not in (citado.get("origenes") or []):
+            citado.setdefault("origenes", []).append(origen)
+        _save(data)
+        log.info("backlog_referencia", id=citado["id"], origen=origen)
+        return citado
     ya = _match(data["items"], area, titulo)
     if ya:
         # No pisamos el título original: la primera redacción es la que el humano
