@@ -218,6 +218,13 @@ class BaseAgent(ABC):
                 "- `humano` → decisión, aprobación, pago o credencial que sólo el dueño destraba.\n"
                 "Máx 3 por corrida y sólo lo que de verdad hay que ejecutar. Si ya está en la "
                 "lista de arriba, NO lo anotes de nuevo.\n"
+                "**Anotá sólo lo que VERIFICASTE.** Un pendiente falso es peor que ninguno: se "
+                "lleva una de las tres acciones del día del dueño y, como el registro acumula "
+                "días, con el tiempo parece más urgente en vez de menos. Ya pasó dos veces "
+                "(un 'H1 vacío' que nunca estuvo vacío, reportado 22 días seguidos; y una "
+                "'casilla inexistente' que era un grupo que funciona). Si es una sospecha y no "
+                "la comprobaste, va en tu reporte como sospecha — NO como PENDIENTE. Y no "
+                "supongas la CAUSA de algo que no miraste: describí el síntoma que sí viste.\n"
                 "Cuando termines algo que estaba anotado: `RESUELTO(<id>): <evidencia concreta "
                 "de que quedó hecho>` (sin evidencia no se cierra)."
             )

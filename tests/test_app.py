@@ -1031,3 +1031,15 @@ def test_watchdog_corre_antes_de_que_salga_el_outbound():
     assert any(lead < h < out for h in horas), (
         f"watchdog corre {sorted(horas)}: ninguna pasada entre leadhunter ({lead}) y outbound ({out})")
     CronTrigger.from_crontab(WATCHDOG_CRON)          # y sigue siendo un cron válido
+
+
+def test_la_instruccion_de_pendientes_exige_verificar():
+    """Dos fantasmas en dos días: un 'H1 vacío' que nunca estuvo vacío (22 días
+    seguidos, 3 auditorías) y una 'casilla inexistente' que era un grupo que
+    funciona. Un pendiente falso se lleva una acción del día del dueño y, como el
+    registro acumula días, con el tiempo parece MÁS urgente en vez de menos."""
+    from app.agents.registry import get_agent
+    bloque = get_agent("inbox_assistant")._collab_block()
+    assert "PENDIENTE(<area>)" in bloque
+    assert "VERIFICASTE" in bloque
+    assert "sospecha" in bloque.lower()
