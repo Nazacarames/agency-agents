@@ -184,7 +184,11 @@ class VercelClient:
             raise VercelError("timeout deployando en Vercel") from e
         out = (proc.stdout or "") + "\n" + (proc.stderr or "")
         if proc.returncode != 0:
-            raise VercelError(f"vercel deploy falló (exit {proc.returncode}): {out[-300:]}")
+            # 2000 y no 300: con 300 entraba el epílogo del build ("Error: Command
+            # 'pnpm run build' exited with 1") y quedaba AFUERA el error de Astro que
+            # dice qué archivo y qué línea rompieron. El reporte llegaba sin lo único
+            # accionable y el agente reintentaba el mismo cambio roto (2026-08-12).
+            raise VercelError(f"vercel deploy falló (exit {proc.returncode}): {out[-2000:]}")
         url = self._extract_url(out)
         if not url:
             raise VercelError(f"no pude extraer la URL del deploy: {out[-200:]}")
