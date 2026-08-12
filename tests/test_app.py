@@ -713,3 +713,27 @@ def test_harvest_saca_pendientes_del_texto_crudo_del_agente(tmp_path, monkeypatc
     agente._harvest_collab(f"RESUELTO({dev['id']}): commit 1234abc, daily_batch ya reserva cupo",
                            SimpleNamespace(run_id="test"))
     assert bl.abiertos("dev") == []
+
+
+def test_watchdog_caza_el_reporte_enano_sin_marcador(tmp_path, monkeypatch):
+    """El 2026-08-10 leadhunter entregó 723 bytes diciendo que el reporte estaba
+    'impreso en la respuesta'. Terminó bien y sin firma de degradación, así que
+    ningún chequeo lo vio: los 10 leads se perdieron y outbound ingestó 0."""
+    from app.integrations import watchdog as wd
+    monkeypatch.setattr(wd, "_DATA", tmp_path)
+    hoy = __import__("datetime").datetime.now(wd._TZ).strftime("%Y-%m-%d")
+
+    for i, dia in enumerate(["2026-08-06", "2026-08-07", "2026-08-08", "2026-08-09"]):
+        (tmp_path / f"leadhunter-report-{dia}.md").write_text("x" * 30000, encoding="utf-8")
+    (tmp_path / f"leadhunter-report-{hoy}.md").write_text(
+        "Listo. El reporte completo de 10 leads está impreso en la respuesta.", encoding="utf-8")
+
+    degradados = dict(wd._degraded_reports(SimpleNamespace()))
+    assert "leadhunter" in degradados
+    assert "bytes" in degradados["leadhunter"]
+
+    # Un agente que SIEMPRE entrega corto no es una falla: se compara contra sí mismo.
+    for dia in ["2026-08-06", "2026-08-07", "2026-08-08"]:
+        (tmp_path / f"inbox-assistant-report-{dia}.md").write_text("ok, 3 hilos", encoding="utf-8")
+    (tmp_path / f"inbox-assistant-report-{hoy}.md").write_text("ok, 2 hilos", encoding="utf-8")
+    assert "inbox_assistant" not in dict(wd._degraded_reports(SimpleNamespace()))

@@ -108,8 +108,40 @@ _DEGRADED_MARKERS = (
 )
 
 
+# Un reporte MUCHO más chico que los del propio agente está roto aunque no traiga
+# ninguna firma. Caso testigo (2026-08-10): leadhunter entregó 723 bytes — "el
+# reporte completo de 10 leads está impreso en la respuesta" — cuando sus otros
+# días son de 28 a 42 KB. Los 10 leads se perdieron, outbound ingestó 0 y nadie se
+# enteró hasta que el Chief lo leyó a la noche. No hay marcador que lo delate: el
+# run terminó bien, lo que falló fue el mensaje final del modelo.
+_ENANO_RATIO = 0.25
+_ENANO_MAX_BYTES = 4000
+
+
+def _reporte_enano(p: Path, agente: str, hoy: str) -> str:
+    """'' si el tamaño es normal; si no, la descripción de lo chico que quedó.
+
+    Se compara contra el propio agente y no contra un piso fijo: hay agentes que
+    entregan tres líneas siempre, y para ésos 700 bytes es su día normal."""
+    try:
+        size = p.stat().st_size
+        if size > _ENANO_MAX_BYTES:
+            return ""
+        previos = sorted(x.stat().st_size for x in
+                         _DATA.glob(f"{agente.replace('_', '-')}-report-*.md")
+                         if hoy not in x.name)[-7:]
+        if len(previos) < 3:
+            return ""       # sin historia suficiente no hay con qué comparar
+        tipico = previos[len(previos) // 2]      # mediana
+        if size < tipico * _ENANO_RATIO:
+            return f"{size} bytes contra {tipico} típicos"
+    except Exception:
+        pass
+    return ""
+
+
 def _degraded_reports(settings: Settings) -> List[Tuple[str, str]]:
-    """Reportes de HOY que existen pero traen una firma de degradación."""
+    """Reportes de HOY que existen pero llegaron rotos: por firma o por tamaño."""
     hoy = datetime.now(_TZ).strftime("%Y-%m-%d")
     out: List[Tuple[str, str]] = []
     try:
@@ -119,9 +151,12 @@ def _degraded_reports(settings: Settings) -> List[Tuple[str, str]]:
             except Exception:
                 continue
             low = txt.lower()
+            agente = p.stem.split("-report-")[0].replace("-", "_")
             hit = next((m for m in _DEGRADED_MARKERS if m in low), "")
+            if not hit:
+                enano = _reporte_enano(p, agente, hoy)
+                hit = f"quedó en {enano} — el entregable no llegó al reporte" if enano else ""
             if hit:
-                agente = p.stem.split("-report-")[0].replace("-", "_")
                 out.append((agente, hit))
     except Exception as e:
         log.warning("watchdog_degraded_scan_failed", error=str(e)[:120])
