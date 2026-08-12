@@ -2210,6 +2210,37 @@ async def api_video_bank(request: Request, estado: str = ""):
     return {"resumen": vb.resumen(), "items": items}
 
 
+@app.get("/api/video/bank/hoja", response_class=PlainTextResponse)
+async def api_video_bank_hoja(request: Request, desde: int = 1, hasta: int = 0):
+    """La hoja de trabajo: los prompts pendientes, numerados y listos para pegar.
+
+    El bundle ilimitado de Higgsfield sólo corre en su web y a mano, así que esto es
+    lo que el humano abre y va copiando en orden. Va como texto plano a propósito:
+    se copia sin arrastrar formato ni comillas tipográficas, que en un prompt de
+    video cambian el resultado."""
+    _verify_webhook_secret(request)
+    from .integrations import video_bank as vb
+    items = [i for i in vb._load()["items"] if i.get("estado") == vb.PENDIENTE]
+    items = [i for i in items if int(i["n"]) >= desde and (not hasta or int(i["n"]) <= hasta)]
+    items.sort(key=lambda i: int(i["n"]))
+    if not items:
+        return "No hay prompts pendientes. Cargalos con POST /api/video/bank/prompts.\n"
+    out = [
+        f"HOJA DE GENERACION — {len(items)} piezas pendientes",
+        "=" * 70,
+        "Modelo: Seedance (el del bundle ilimitado) · 9:16 vertical · 5 segundos · 720p",
+        "Genera EN ORDEN y guarda cada clip con SU numero: 001.mp4, 002.mp4, ...",
+        "Ese numero es lo unico que despues aparea el video con su copy.",
+        "Cuando tengas 20, zipealos y subilos: POST /api/video/bank/lote",
+        "=" * 70, "",
+    ]
+    for i in items:
+        out += [f"--- {int(i['n']):03d} --- guardar como {i['archivo']}",
+                f"[gancho] {i.get('gancho') or '-'}", "", i["prompt"], "",
+                f"[copy del posteo]\n{i.get('copy') or '-'}", "", "-" * 70, ""]
+    return "\n".join(out)
+
+
 @app.post("/api/video/bank/prompts")
 async def api_video_bank_prompts(request: Request):
     """Carga un lote de guiones. Body: {"piezas":[{"prompt","copy","gancho","kind"}]}.
