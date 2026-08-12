@@ -972,3 +972,62 @@ def test_inventario_del_workdir_distingue_las_hipotesis(tmp_path):
     assert inv.index("leads.json") < inv.index("notas.md")   # más grande primero
 
     assert _inventario(str(tmp_path / "no-existe"), set()) == ""   # nunca revienta
+
+
+def test_hermes_avisa_al_canal_de_errores_con_la_evidencia(monkeypatch):
+    """El watchdog caza el reporte enano recién en su próxima pasada; para
+    leadhunter (08:00) eso caía 14:15, DESPUÉS de outbound (12:00). Este aviso salta
+    apenas pasa y lleva la evidencia para decidir si re-correrlo."""
+    from app.clients import hermes as h, discord as dc
+
+    enviados = []
+
+    class _WH:
+        def __init__(self, settings):
+            pass
+
+        def send(self, _c, url=None, embed=None):
+            enviados.append((url, embed.title, embed.description))
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(dc, "DiscordWebhook", _WH)
+    s = SimpleNamespace(discord_webhook_errors="https://discord.test/errores",
+                        discord_webhook_url="https://discord.test/general")
+    h._avisar_errores(s, "leadhunter", 723, 0, "leads.json:5000 · notas.md:200", "…resumen final")
+
+    assert len(enviados) == 1
+    url, titulo, desc = enviados[0]
+    assert url == "https://discord.test/errores"     # errores, no el canal general
+    assert "leadhunter" in desc and "723" in desc
+    assert "leads.json:5000" in desc                 # la evidencia, no sólo el síntoma
+    assert "outbound ingesta 0" in desc              # y qué significa para el día
+
+
+def test_hermes_aviso_no_tira_la_corrida_si_discord_falla(monkeypatch):
+    """El aviso es best-effort: una corrida que SÍ entregó algo no se puede perder
+    porque el webhook esté caído."""
+    from app.clients import hermes as h, discord as dc
+
+    class _Roto:
+        def __init__(self, settings):
+            raise RuntimeError("webhook caido")
+
+    monkeypatch.setattr(dc, "DiscordWebhook", _Roto)
+    h._avisar_errores(SimpleNamespace(discord_webhook_errors="", discord_webhook_url=""),
+                      "leadhunter", 723, 0, "leads.json:5000", "resumen")
+
+
+def test_watchdog_corre_antes_de_que_salga_el_outbound():
+    """Sin una pasada entre leadhunter (08:00) y outbound (12:00), un reporte enano
+    se sabía 14:15 y el día ya estaba perdido."""
+    from apscheduler.triggers.cron import CronTrigger
+    from app.scheduler import WATCHDOG_CRON, DEFAULT_SCHEDULES
+
+    horas = {int(h) for h in WATCHDOG_CRON.split()[1].split(",")}
+    lead = int(DEFAULT_SCHEDULES["leadhunter"].split()[1])
+    out = int(DEFAULT_SCHEDULES["outbound"].split()[1])
+    assert any(lead < h < out for h in horas), (
+        f"watchdog corre {sorted(horas)}: ninguna pasada entre leadhunter ({lead}) y outbound ({out})")
+    CronTrigger.from_crontab(WATCHDOG_CRON)          # y sigue siendo un cron válido

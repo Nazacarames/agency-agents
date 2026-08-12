@@ -33,6 +33,35 @@ log = get_logger("hermes")
 _SALIDA_CORTA = 1500
 
 
+def _avisar_errores(settings, agente: str, chars: int, art_chars: int,
+                    inventario: str, texto: str) -> None:
+    """Avisa al canal de errores en el momento, no varias horas después.
+
+    El watchdog ya caza el reporte enano, pero corre 07:15/14:15/20:15: para
+    leadhunter (08:00) el aviso llegaba 14:15, DESPUÉS de que outbound (12:00) ya
+    hubiera corrido sin leads nuevos. Acá salta apenas pasa. Best-effort: que un
+    webhook caído no tire la corrida que sí entregó algo."""
+    try:
+        from .discord import DiscordWebhook, DiscordEmbed
+        wh = DiscordWebhook(settings)
+        wh.send("", url=(settings.discord_webhook_errors or settings.discord_webhook_url or None),
+                embed=DiscordEmbed(
+                    title="✂️ Entregable perdido — el agente trabajó y no lo imprimió",
+                    description=(
+                        f"**{agente or '?'}** devolvió **{chars} caracteres** pero dejó archivos "
+                        f"en su directorio de trabajo. Lo más probable es que el entregable haya "
+                        f"quedado en un archivo y el mensaje final sea sólo un resumen.\n\n"
+                        f"**Archivos:** `{inventario[:600]}`\n"
+                        f"**Artefacto rescatado:** {art_chars} chars\n"
+                        f"**Cola de lo que devolvió:**\n```\n{texto[-400:]}\n```\n"
+                        "→ Si es leadhunter, ese día outbound ingesta 0 leads: conviene "
+                        "re-correrlo antes de las 12:00."
+                    )[:4096], color=0xE67E22, footer="Automiq · Hermes"))
+        wh.close()
+    except Exception as e:
+        log.warning("hermes_aviso_errores_fallo", error=str(e)[:150])
+
+
 def _inventario(workdir: str, excluir: set, tope: int = 20) -> str:
     """`nombre:bytes` de lo que el modelo dejó en su workdir, del más grande al más
     chico. Es la evidencia que faltaba: sin esto no se distingue "no escribió nada"
@@ -634,5 +663,12 @@ def run_hermes(
                     agente=agente or "?", out_chars=len(text),
                     artefacto_chars=len(art), workdir=inventario or "(vacío)",
                     json_payload=_has_json_payload(text), cola=text[-300:])
+        # Al canal de errores SOLO si el modelo dejó archivos: ahí trabajó y no lo
+        # imprimió, que es la falla que interesa y es rara. Una salida corta con el
+        # workdir vacío suele ser una respuesta legítima (outbound en un día sin
+        # toques pendientes), y alertarla convertiría el canal en ruido. El caso del
+        # workdir vacío igual lo caza el watchdog por el tamaño del reporte.
+        if inventario:
+            _avisar_errores(settings, agente, len(text), len(art), inventario, text)
     log.info("hermes_ok", provider=provider, model=model, out_chars=len(text))
     return text

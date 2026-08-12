@@ -90,9 +90,12 @@ PRACTICE_RESEARCH_CRON = "0 7 1,15 * *"   # día 1 y 15, 07:00 — research web 
 DRIVE_SYNC_CRON = "0 5 * * *"             # diario 05:00 — contenido/reportes/backup de stores a Google Drive
 COMMENT_WATCH_CRON = "15 */2 * * *"       # cada 2h — comentarios nuevos en nuestros posts (comment-gate → Discord)
 REEL_STUDY_CRON = "30 6 * * mon"          # lun 06:30 — Gemini mira reels del competidor → prompts/lecciones
-WATCHDOG_CRON = "15 7,14,20 * * *"        # 07:15/14:15/20:15 — salud del sistema (token Gmail + corridas
-                                          # caídas). 07:15 avisa el token muerto ANTES de que outbound salga;
-                                          # 14:15 y 20:15 barren las caídas de la mañana y la tarde. Sin LLM.
+WATCHDOG_CRON = "15 7,9,14,20 * * *"      # 07:15/09:15/14:15/20:15 — salud del sistema (token Gmail +
+                                          # corridas caídas). 07:15 avisa el token muerto ANTES de que
+                                          # outbound salga; 09:15 mira lo que dejó leadhunter (08:00) a
+                                          # tiempo de re-correrlo antes de outbound (12:00) — sin esa
+                                          # pasada, un reporte enano se sabía 14:15 y el día ya estaba
+                                          # perdido; 14:15 y 20:15 barren tarde y cierre. Sin LLM.
 
 
 class AgentScheduler:
