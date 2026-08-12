@@ -154,7 +154,7 @@ class BaseAgent(ABC):
         y cómo registrar aprendizajes. Es el mecanismo por el que los agentes se
         potencian entre sí y mejoran con el tiempo."""
         try:
-            from ..integrations import agent_inbox
+            from ..integrations import agent_inbox, backlog
             from . import departments as dp
             from ._common import team_brief
             from .registry import list_agents as _all
@@ -195,6 +195,32 @@ class BaseAgent(ABC):
                 "(máx 2; se te inyecta en el futuro y gana peso si se repite). "
                 "No registres obviedades ni cosas de un solo día."
             )
+            # El backlog: un hallazgo se anota UNA vez y acumula edad hasta que
+            # alguien lo ejecuta. Antes de esto, cada agente re-escribía el mismo
+            # hallazgo en su reporte todos los días y nadie sabía hace cuánto
+            # estaba abierto (el trío de la web llevaba ~3 semanas así).
+            pend = backlog.bloque(
+                limite=8,
+                titulo="### Pendientes YA anotados (NO los vuelvas a describir como hallazgo nuevo)")
+            if pend:
+                parts.append(pend + "\n(Si en ESTA corrida cerraste alguno, cerralo vos "
+                                    "con `RESUELTO(<id>): <evidencia>`.)")
+            parts.append(
+                "### Hallazgos que hay que EJECUTAR (no los repitas en prosa: anotalos)\n"
+                "Si encontrás algo que hay que hacer y no podés hacerlo vos, anotalo con "
+                "UNA línea. Se registra con fecha y no se pierde; repetirlo en el reporte "
+                "no lo ejecuta.\n"
+                "  `PENDIENTE(<area>): <qué hay que hacer, concreto y verificable>`\n"
+                "- `web` → cambio en la landing automiq.agency (lo ejecuta web_optimizer).\n"
+                "- `dev` → cambio en el CÓDIGO del sistema de agentes. Ningún agente puede "
+                "tocarlo, ni vos ni yo: va al dueño. Si tu instrucción necesita un flag o "
+                "un modo que no existe todavía, es `dev`, no una tarea para otro agente.\n"
+                "- `humano` → decisión, aprobación, pago o credencial que sólo el dueño destraba.\n"
+                "Máx 3 por corrida y sólo lo que de verdad hay que ejecutar. Si ya está en la "
+                "lista de arriba, NO lo anotes de nuevo.\n"
+                "Cuando termines algo que estaba anotado: `RESUELTO(<id>): <evidencia concreta "
+                "de que quedó hecho>` (sin evidencia no se cierra)."
+            )
             if mates:
                 parts.append(
                     f"- Si lo que descubriste le sirve a TODO tu sector, mandáselo de una "
@@ -212,7 +238,7 @@ class BaseAgent(ABC):
             return
         try:
             import re as _re2
-            from ..integrations import agent_inbox, memory_store as ms
+            from ..integrations import agent_inbox, backlog, memory_store as ms
             from . import departments as dp
             from .registry import list_agents as _all
             valid = {a.name for a in _all()}
@@ -238,9 +264,29 @@ class BaseAgent(ABC):
                 if 15 <= len(lesson) <= 300 and learned < 2:
                     ms.record_outcome(self.name, lesson)
                     learned += 1
-            if sent or learned:
+            # Backlog: los hallazgos van a un registro con fecha, no a la prosa
+            # del reporte (donde se re-escribían todos los días sin ejecutarse).
+            abiertos = 0
+            # El cierre del marcador tolera backticks/negritas DESPUÉS del paréntesis
+            # (`PENDIENTE(web)`: …) porque así es como el LLM lo escribe cuando lo
+            # pone en una viñeta; sin eso el marcador se pierde y no se anota nada.
+            for m in _re2.finditer(r"^[\s>*`\-]*PENDIENTE\(([a-z]+)\)[\s`*]*[:：]\s*(.+)$",
+                                   text, _re2.IGNORECASE | _re2.MULTILINE):
+                if abiertos >= 3:
+                    break
+                if backlog.abrir(m.group(1).lower(), m.group(2).strip().strip("`*"), self.name):
+                    abiertos += 1
+            cerrados = 0
+            for m in _re2.finditer(r"^[\s>*`\-]*RESUELTO\(([a-z0-9]{6,10})\)[\s`*]*[:：]\s*(.+)$",
+                                   text, _re2.IGNORECASE | _re2.MULTILINE):
+                if cerrados >= 3:
+                    break
+                if backlog.resolver(m.group(1).lower(), m.group(2).strip().strip("`*"), self.name):
+                    cerrados += 1
+            if sent or learned or abiertos or cerrados:
                 log.info("collab_harvested", agent=self.name, run_id=ctx.run_id,
-                         notes=sent, lessons=learned)
+                         notes=sent, lessons=learned,
+                         pendientes=abiertos, resueltos=cerrados)
         except Exception as e:
             log.warning("collab_harvest_failed", agent=self.name, error=str(e)[:120])
 

@@ -65,12 +65,17 @@ ya ejecutados. No estás anticipando un día: estás cerrando el que pasó. Ento
    tocó → o lo escalás (con más urgencia y el porqué) o lo descartás
    explícitamente ("retiro X, ya no aplica porque..."). Nunca repitas la misma
    recomendación en el mismo tono dos días seguidos.
-6. **Las mejoras al sistema salen de EVIDENCIA, no de imaginación**: proponé un
+6. **Lo que necesita CÓDIGO no se delega a un agente**: un agente escribe texto, no
+   se modifica a sí mismo. Si la orden pide un flag, un modo o un comportamiento que
+   hoy no existe en el código, delegarla es garantizarte repetirla toda la semana
+   (pasó: la misma orden a outbound se delegó dos veces y ninguna se aplicó). Eso va
+   como `PENDIENTE(dev)`, no como DELEGAR.
+7. **Las mejoras al sistema salen de EVIDENCIA, no de imaginación**: proponé un
    cambio a un agente solo si los datos lo muestran (métrica plana varios días,
    el mismo problema en varios reportes, un hueco que ningún agente cubre, un
    reporte que trae datos que nadie usa). Citá la evidencia. Máximo 3 y solo si
    valen la pena; "sin mejoras esta vez" es una respuesta válida.
-7. Español rioplatense, directo, sin humo.
+8. Español rioplatense, directo, sin humo.
 
 ## Formato OBLIGATORIO del brief (máx ~600 palabras)
 # 📋 Cierre del día — <fecha>
@@ -95,7 +100,11 @@ línea DELEGAR de nuevo abajo) / 🗑️ ya no aplica. No dejes una delegación 
 
 ## 🎯 Tus 3 acciones para mañana
 (SOLO cosas que un agente no puede hacer: decisiones, aprobaciones, pagos, grabar
-algo, contestar a una persona clave, destrabar una credencial.)
+algo, contestar a una persona clave, destrabar una credencial. Elegilas del backlog
+`humano` de arriba, **las más viejas primero**, y poné la edad al lado: "abierto hace
+N días" — un pendiente que ya lleva semanas necesita eso escrito, no otra descripción
+de lo mismo. Si algo que hay que hacer todavía no está en el backlog, anotalo con
+`PENDIENTE(humano): …`.)
 1. <acción concreta> — <por qué importa, 1 línea>
 2. ...
 3. ...
@@ -113,6 +122,9 @@ sin moverse hace 3+ días, o lo escalás o lo matás — no lo repitas igual.)
 · Evidencia: <el dato de los reportes/números que lo justifica>
 · Para implementar, pegale esto a Claude Code: "<instrucción de 1-3 líneas,
   concreta y autosuficiente>"
+Y por CADA una emití además la línea `PENDIENTE(dev): <la misma instrucción, en una
+línea>`. Sin eso la mejora vive sólo en este brief, y el brief de mañana la vuelve a
+escribir desde cero: el backlog es lo único que le cuenta los días.
 Si no hay nada con evidencia sólida: "Sin mejoras esta vez.")
 
 ## 🚀 Misiones sugeridas para los agentes
@@ -454,11 +466,26 @@ class ChiefOfStaffAgent(BaseAgent):
         if hoy:
             extra += ("\n## PARTE DE EJECUCIÓN DE HOY (quién entregó y quién no)\n"
                       + hoy + "\n")
+        # El backlog es la memoria que antes no existía: hasta ahora el brief se
+        # re-derivaba de la prosa del brief de ayer, así que un hallazgo de hace 3
+        # semanas se leía igual que uno de anoche. Con la edad al lado, lo viejo
+        # pesa distinto — que es la única forma de que algo deje de arrastrarse.
+        from ..integrations import backlog as bl
+        pend = bl.bloque(limite=20, titulo="## BACKLOG ABIERTO (con edad — esto NO es prosa, es el registro)")
+        if pend:
+            extra += ("\n" + pend + "\n"
+                      "Reglas: lo de área `web` lo ejecuta web_optimizer (si se está "
+                      "arrastrando, DISPARAR(web_optimizer) lo corre hoy). Lo de `dev` NO "
+                      "lo puede hacer ningún agente — va al dueño. Lo de `humano` son tus "
+                      "acciones. Un ítem con muchos días o muchas re-apariciones ya demostró "
+                      "que la vía por la que iba no funciona: cambiá de vía o decí que lo "
+                      "matás, no lo repitas igual.\n")
         deleg = _open_delegations()
         if deleg:
             extra += ("\n## TUS DELEGACIONES RECIENTES (verificá si se cumplieron: cruzá cada "
                       "una contra los reportes de hoy; si se hizo, celebralo en Avances; si no, "
                       "re-delegala con DELEGAR(...) o escalala como acción)\n" + deleg + "\n")
+        cap_diario = getattr(ctx.settings, "outbound_daily_cap", "?")
         return (
             "Cerrá el día: armá el brief con todo lo que pasó HOY y el plan de "
             "acción para mañana.\n" + weekly + "\n"
@@ -466,7 +493,15 @@ class ChiefOfStaffAgent(BaseAgent):
             "- La cola de publicaciones drena DE A POCO a propósito: 1 post de feed/día "
             "+ hasta 2 historias/día (11:00 ART). Tener pendientes acumuladas es normal; "
             "solo es problema si crece sin techo (tope 30) o si hoy no salió nada.\n"
-            "- Outbound: tope 20 mails/día, solo lun-vie. Secuencia día 0/+2/+4/+7.\n"
+            # El tope estaba escrito a mano acá y decía 20 mientras el real era 5:
+            # el Chief razonó semanas con un número que no existía, y por eso leía
+            # "205 sobre el tope" como una cola normal en vez de como un embudo
+            # tapado. Sale de settings para que no se pueda volver a desincronizar.
+            f"- Outbound: tope {cap_diario} mails/día (TOTAL: primeros toques + "
+            "follow-ups + reenganches se reparten ESE cupo, no uno cada uno), solo "
+            "lun-vie. Secuencia día 0/+2/+4/+7. Si el reporte dice que quedaron muchos "
+            "'sobre el tope', calculá cuántos días de cola son al ritmo actual: si son "
+            "semanas, el tope es el cuello de botella y va a Problemas.\n"
             "- Meta/Google Ads: NO hay cuentas de ads conectadas todavía (decisión "
             "pendiente del dueño) — el media_auditor trabaja con benchmarks; no lo "
             "reportes como bug, como mucho como decisión pendiente.\n"

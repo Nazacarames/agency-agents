@@ -2198,6 +2198,55 @@ async def api_diag_gsc(request: Request):
     return out
 
 
+@app.get("/api/backlog")
+async def api_backlog(request: Request, area: str = ""):
+    """Los pendientes abiertos, del más viejo al más nuevo.
+
+    Es la lista que antes no existía: cada hallazgo se anota una vez y acumula
+    días hasta que alguien lo ejecuta, en vez de re-escribirse en el reporte de
+    cada día. `area=dev` es la cola que ningún agente puede tocar."""
+    _verify_webhook_secret(request)
+    from .integrations import backlog
+    return {"resumen": backlog.resumen(), "items": backlog.abiertos(area.strip().lower())}
+
+
+@app.post("/api/backlog")
+async def api_backlog_abrir(request: Request):
+    """Abre un pendiente a mano. Body: {"area","titulo","origen","dias_atras"}.
+
+    `dias_atras` sirve para cargar lo que ya venía arrastrándose por los reportes
+    antes de que existiera este registro: si entra con edad cero, el ítem que lleva
+    tres semanas se lee igual que el de anoche y no hace ninguna presión."""
+    _verify_webhook_secret(request)
+    body = await request.json()
+    from .integrations import backlog
+    item = backlog.abrir(str(body.get("area") or ""), str(body.get("titulo") or ""),
+                         str(body.get("origen") or "operador"),
+                         int(body.get("dias_atras") or 0))
+    if not item:
+        raise HTTPException(status_code=400,
+                            detail=f"área inválida (usá {'/'.join(backlog.AREAS)}) o título demasiado corto")
+    return {"ok": True, "item": item}
+
+
+@app.post("/api/backlog/{item_id}/resolver")
+async def api_backlog_resolver(item_id: str, request: Request):
+    """Cierra un pendiente con evidencia. Body: {"evidencia": "...", "por": "..."}.
+
+    Los de área `dev` se arreglan fuera del sistema (Claude Code, el dueño), así
+    que necesitan una puerta para cerrarse: sin esto quedarían abiertos para
+    siempre y el backlog dejaría de significar algo."""
+    _verify_webhook_secret(request)
+    body = await request.json()
+    from .integrations import backlog
+    ok = backlog.resolver(item_id, str(body.get("evidencia") or ""),
+                          str(body.get("por") or "operador"))
+    if not ok:
+        raise HTTPException(status_code=400,
+                            detail="no existe, ya estaba cerrado, o falta evidencia (mín. 10 caracteres)")
+    return {"ok": True, "resumen": backlog.resumen()}
+
+
 @app.get("/api/admin/dmarc")
 async def api_admin_dmarc(request: Request, dias: int = 7):
     """Quién mandó mail diciendo ser automiq.agency, según los informes DMARC.

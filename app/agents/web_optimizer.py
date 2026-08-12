@@ -28,7 +28,7 @@ from ._common import get_context_block
 from ..clients.claude_code import run_claude_code, ClaudeCodeError
 from ..clients.hermes import run_hermes
 from ..integrations.vercel_client import get_vercel_client, VercelError
-from ..integrations import search_console, seo_progress
+from ..integrations import backlog, search_console, seo_progress
 from ..log import get_logger
 
 log = get_logger("web_optimizer")
@@ -84,6 +84,14 @@ WEB_OPTIMIZER_TASK = """
 Estás DENTRO del directorio del proyecto de la landing (Astro). Es una iteración
 del ciclo quincenal de SEO/GEO.
 
+0. **Las órdenes de trabajo pendientes van PRIMERO** (si el bloque existe arriba).
+   Son hallazgos que las auditorías vienen marcando hace días y que sólo vos podés
+   ejecutar: sos el único que tiene manos sobre el sitio. Por cada una, cerrá con
+   `RESUELTO(<id>): <qué archivo tocaste y qué quedó>` — o, si no la podés hacer
+   porque falta un dato que no tenés (un ID de medición, un número real de cliente,
+   una decisión), NO la inventes: dejala abierta y anotá qué falta con
+   `PENDIENTE(humano): <exactamente qué dato/decisión hace falta para cerrar <id>>`.
+   Recién después seguí con el ciclo de SEO/GEO normal.
 1. **Leé la bitácora** de arriba: qué se probó, qué funcionó, qué no. No repitas
    lo que ya se descartó.
 2. **Leé los datos** de Search Console y del beacon de IA. Cruzalos con la
@@ -199,13 +207,24 @@ class WebOptimizerAgent(BaseAgent):
                 )
         except Exception:
             pass
+        # Las auditorías (web_auditor, seo_specialist, growth_hacker) encuentran los
+        # fixes pero no tienen manos sobre el sitio; el único que las tiene sos vos.
+        # Sin este bloque los hallazgos morían en el .md de cada auditor y volvían a
+        # aparecer al día siguiente: el trío "H1 vacío + contadores en 0 + falta
+        # Pixel/GA4" sobrevivió así ~3 semanas y 4 cierres del Chief.
+        ordenes = backlog.bloque(
+            "web", limite=10,
+            titulo="## ÓRDENES DE TRABAJO PENDIENTES (ejecutá ESTO antes que el ciclo de SEO)")
+        if ordenes:
+            ordenes += ("\nEstas ya fueron detectadas y anotadas: no las re-describas, "
+                        "ejecutalas y cerralas con `RESUELTO(<id>): <evidencia>`.\n\n")
         bloques = (
             "## BITÁCORA DE LAS ITERACIONES ANTERIORES (leela ANTES de decidir)\n"
             f"{seo_progress.read()}\n\n"
             "## DATOS DE ESTA ITERACIÓN\n"
             f"{_gsc_block()}\n{_geo_block()}\n"
         )
-        return task + bloques + WEB_OPTIMIZER_TASK
+        return task + ordenes + bloques + WEB_OPTIMIZER_TASK
 
     # Override completo: descarga determinística + edición CC + deploy determinístico.
     def run(self, ctx: AgentContext) -> str:

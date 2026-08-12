@@ -639,3 +639,77 @@ def test_dmarc_sin_credenciales_no_revienta():
     from app.integrations import dmarc_reports as dr
     out = dr.resumen(SimpleNamespace(gmail_configured=False))
     assert out["ok"] is False and out["fallan"] == 0
+
+
+def test_backlog_no_duplica_el_mismo_hallazgo_redactado_distinto(tmp_path, monkeypatch):
+    """El valor del backlog es la EDAD, y la edad muere si cada redacción abre un
+    ítem nuevo. El LLM no escribe igual dos días seguidos, así que el dedup tiene
+    que tolerar la reformulación."""
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+
+    a = bl.abrir("web", "El H1 del home está vacío", origen="web_auditor")
+    b = bl.abrir("web", "El H1 de la home esta vacio", origen="seo_specialist")
+    assert a and b and a["id"] == b["id"]          # mismo ítem, no dos
+    assert b["veces"] == 2                          # y queda contado que se repitió
+    assert sorted(b["origenes"]) == ["seo_specialist", "web_auditor"]
+    assert len(bl.abiertos()) == 1
+
+    # Área distinta = ítem distinto: lo que cambia es QUIÉN puede cerrarlo.
+    bl.abrir("dev", "El H1 del home está vacío", origen="chief_of_staff")
+    assert len(bl.abiertos()) == 2
+    assert len(bl.abiertos("web")) == 1
+
+
+def test_backlog_no_cierra_sin_evidencia(tmp_path, monkeypatch):
+    """'Resuelto' sin evidencia es una opinión: así es como un pendiente se cierra
+    solo y reaparece a los tres días."""
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+
+    it = bl.abrir("dev", "outbound: el modo day0 no existe en el código", origen="chief_of_staff")
+    assert bl.resolver(it["id"], "ok") is False              # evidencia vacía → no cierra
+    assert len(bl.abiertos()) == 1
+    assert bl.resolver(it["id"], "commit abc123: daily_batch reserva la mitad del cupo") is True
+    assert bl.abiertos() == []
+    assert bl.resolver(it["id"], "commit abc123: ya estaba cerrado") is False   # no revive
+
+
+def test_backlog_area_invalida_se_ignora(tmp_path, monkeypatch):
+    """Se cosecha de texto libre de un LLM: un área inventada no puede crear una
+    categoría fantasma que después nadie mira."""
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+    assert bl.abrir("marketing", "algo que suena importante") is None
+    assert bl.abrir("web", "corto") is None                  # título sin sustancia
+    assert bl.abiertos() == []
+
+
+def test_harvest_saca_pendientes_del_texto_crudo_del_agente(tmp_path, monkeypatch):
+    """El backlog se llena cosechando marcadores del output del agente, igual que
+    NOTA_PARA/LECCION. Si el regex no engancha con lo que un LLM realmente escribe
+    (viñetas, negritas, backticks), no se registra nada y todo el mecanismo es humo."""
+    from app.agents.registry import get_agent
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+
+    salida = (
+        "# Auditoría\n"
+        "El home sigue sin H1 y sin tracking.\n"
+        "- `PENDIENTE(web)`: el H1 del home está vacío, hay que poner el titular real\n"
+        "* **PENDIENTE(dev):** outbound necesita un modo day0 que hoy no existe\n"
+        "> PENDIENTE(humano): decidir los 9 números reales de los contadores del home\n"
+        "PENDIENTE(inventada): esto no debería entrar\n"
+    )
+    agente = get_agent("web_auditor")
+    agente._harvest_collab(salida, SimpleNamespace(run_id="test"))
+
+    abiertos = bl.abiertos()
+    assert {i["area"] for i in abiertos} == {"web", "dev", "humano"}   # el área falsa no entró
+    assert all(i["origenes"] == ["web_auditor"] for i in abiertos)
+
+    # Y se cierran por id, con la misma cosecha.
+    dev = bl.abiertos("dev")[0]
+    agente._harvest_collab(f"RESUELTO({dev['id']}): commit 1234abc, daily_batch ya reserva cupo",
+                           SimpleNamespace(run_id="test"))
+    assert bl.abiertos("dev") == []
