@@ -297,6 +297,11 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
     try:
         from . import backlog
         for it in backlog.abiertos("humano"):
+            # Si el dueño ya contestó sobre este ítem, dejamos de recordárselo: nos
+            # dijo que se ocupa él. Insistirle sobre algo que ya nos contestó es
+            # exactamente lo que hace que el canal se vuelva ruido y se deje de leer.
+            if it.get("notas"):
+                continue
             hito = max((h for h in _HITOS_DIAS if it["dias"] >= h), default=0)
             key = f"humano:{it['id']}:{hito}"
             if key in already:

@@ -1128,3 +1128,32 @@ def test_citar_un_pendiente_existente_no_crea_otro(tmp_path, monkeypatch):
     bl.abrir("humano", "Revisar el preview y promoverlo (ver deadbeef, que ya no está)",
              origen="seo_specialist")
     assert len(bl.abiertos("humano")) == 2
+
+
+def test_si_el_dueno_ya_contesto_el_watchdog_no_insiste(tmp_path, monkeypatch):
+    """Dijo 'de CLAMEVET me ocupo yo' y el aviso se lo seguía mandando igual.
+    Insistir sobre algo que ya contestó es lo que convierte el canal en ruido."""
+    from app.integrations import watchdog as wd, backlog as bl
+    monkeypatch.setattr(wd, "_DATA", tmp_path)
+    monkeypatch.setattr(wd, "_STATE", tmp_path / "watchdog-state.json")
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+    monkeypatch.setattr(wd, "_check_gmail", lambda s: ("skip", ""))
+    monkeypatch.setattr(wd, "_missed_runs", lambda s: [])
+
+    mio = bl.abrir("humano", "CLAMEVET: definir quien firma el cierre", dias_atras=19)
+    bl.abrir("humano", "Pasar los IDs reales de Meta Pixel y GA4", dias_atras=1)
+    bl.anotar(mio["id"], "De esto me ocupo yo, ya estoy en contacto")
+
+    enviados = []
+
+    class _D:
+        def send(self, _c, url=None, embed=None):
+            enviados.append(embed.description)
+
+    s = SimpleNamespace(gmail_configured=False, watchdog_grace_min=30,
+                        discord_agencia_webhook_url="https://discord.test/agencia",
+                        discord_webhook_errors="", discord_webhook_url="")
+    assert wd.check(s, discord=_D())["backlog_humano_avisados"] == 1
+    texto = "\n".join(enviados)
+    assert "Meta Pixel" in texto                 # el que no contestó, sí avisa
+    assert "CLAMEVET" not in texto               # el que contestó, no
