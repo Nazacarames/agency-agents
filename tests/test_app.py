@@ -715,6 +715,28 @@ def test_harvest_saca_pendientes_del_texto_crudo_del_agente(tmp_path, monkeypatc
     assert bl.abiertos("dev") == []
 
 
+def test_harvest_no_corta_el_pendiente_ni_anota_los_que_no_existen(tmp_path, monkeypatch):
+    """El 2026-08-13 seis de los catorce pendientes abiertos eran ilegibles: cuatro
+    cortados a mitad de frase porque el LLM envolvió el renglón y el regex leía
+    hasta el fin de LÍNEA, y uno que decía 'ninguno en esta corrida'. Un registro
+    con 43% de ruido no le hace presión a nadie."""
+    from app.agents.registry import get_agent
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+
+    salida = (
+        "PENDIENTE(humano): confirmar si tenemos cuenta de TikTok abierta y\n"
+        "si podemos publicar sin pasar por el sandbox\n"
+        "\n"
+        "PENDIENTE(dev): ninguno en esta corrida. Las correcciones son de web\n"
+    )
+    get_agent("seo_specialist")._harvest_collab(salida, SimpleNamespace(run_id="test"))
+
+    abiertos = bl.abiertos()
+    assert [i["area"] for i in abiertos] == ["humano"]          # el "ninguno" no entró
+    assert abiertos[0]["titulo"].endswith("sin pasar por el sandbox")
+
+
 def test_watchdog_caza_el_reporte_enano_sin_marcador(tmp_path, monkeypatch):
     """El 2026-08-10 leadhunter entregó 723 bytes diciendo que el reporte estaba
     'impreso en la respuesta'. Terminó bien y sin firma de degradación, así que

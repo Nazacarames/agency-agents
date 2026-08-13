@@ -99,6 +99,13 @@ def _match(items: List[Dict[str, Any]], area: str, titulo: str) -> Optional[Dict
 
 _ID_RE = re.compile(r"\b([0-9a-f]{8})\b")
 
+# El agente que no tiene nada pendiente igual completa el marcador, y "ninguno en
+# esta corrida" entraba como ítem (pasó el 2026-08-13 con seo_specialist). Un
+# pendiente que no existe ensucia la lista y le saca autoridad a los que sí.
+_NADA_QUE_ANOTAR = re.compile(
+    r"^(ningun[oa]|nada|n/?a|no aplica|no hay|sin (pendientes?|novedades))\b",
+    re.IGNORECASE)
+
 
 def _citado(items: List[Dict[str, Any]], titulo: str) -> Optional[Dict[str, Any]]:
     """El pendiente abierto cuyo id aparece mencionado en el texto, si lo hay."""
@@ -120,7 +127,7 @@ def abrir(area: str, titulo: str, origen: str = "", dias_atras: int = 0) -> Opti
     """
     area = (area or "").strip().lower()
     titulo = " ".join((titulo or "").split())[:300]
-    if area not in AREAS or len(titulo) < 10:
+    if area not in AREAS or len(titulo) < 10 or _NADA_QUE_ANOTAR.match(titulo):
         return None
     data = _load()
     # Si el texto CITA el id de un pendiente que ya existe, es una referencia, no

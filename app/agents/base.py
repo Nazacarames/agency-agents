@@ -31,6 +31,15 @@ from ._common import sanitize_model_text
 
 log = get_logger("agent")
 
+# Dónde termina el texto de un marcador que el LLM escribió envuelto en varios
+# renglones: en el corte de párrafo, en otro marcador, en un título o en la
+# viñeta siguiente. La rama del marcador va primero porque una viñeta que
+# arranca con "- PENDIENTE(...)" es un marcador, no una continuación.
+_FIN_PARRAFO = (r"(?=\n\s*\n"
+                r"|\n[\s>*`\-]*(?:PENDIENTE|RESUELTO|NOTA_PARA|LECCI[OÓ]N)\b"
+                r"|\n\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|={3,}|-{3,})"
+                r"|\Z)")
+
 
 @dataclass
 class AgentContext:
@@ -306,8 +315,12 @@ class BaseAgent(ABC):
             # El cierre del marcador tolera backticks/negritas DESPUÉS del paréntesis
             # (`PENDIENTE(web)`: …) porque así es como el LLM lo escribe cuando lo
             # pone en una viñeta; sin eso el marcador se pierde y no se anota nada.
-            for m in _re2.finditer(r"^[\s>*`\-]*PENDIENTE\(([a-z]+)\)[\s`*]*[:：]\s*(.+)$",
-                                   text, _re2.IGNORECASE | _re2.MULTILINE):
+            # Y el título sigue hasta el corte de PÁRRAFO, no hasta el fin de línea:
+            # el LLM envuelve el renglón y con `(.+)$` el pendiente entraba cortado a
+            # mitad de frase ("confirmar si tenemos cuenta de TikTok abierta y").
+            for m in _re2.finditer(
+                    r"^[\s>*`\-]*PENDIENTE\(([a-z]+)\)[\s`*]*[:：]\s*(.{1,400}?)" + _FIN_PARRAFO,
+                    text, _re2.IGNORECASE | _re2.MULTILINE | _re2.DOTALL):
                 if abiertos >= 3:
                     break
                 if backlog.abrir(m.group(1).lower(), m.group(2).strip().strip("`*"), self.name):
