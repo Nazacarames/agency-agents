@@ -6,7 +6,7 @@ CRM): en qué etapa está cada proyecto, qué está frenado, qué sigue y qué n
 del dueño. On-demand (sin schedule). Lee clientes + misiones + tareas.
 """
 from .base import BaseAgent, AgentContext
-from ._common import get_context_block
+from ._common import get_context_block, upstream_handoff_block
 from ..log import get_logger
 
 log = get_logger("delivery_pm")
@@ -34,10 +34,30 @@ tablero claro de etapas, bloqueos y próximos pasos.
 ## Formato de salida
 Un tablero en markdown:
 - **Proyectos activos**: por cada uno → etapa, % o hito actual, próximo hito +
-  fecha, estado (en curso / frenado / en riesgo).
+  fecha, estado (en curso / frenado / en riesgo), y **Δ vs tablero anterior**.
 - **Bloqueos**: qué frena qué, y quién lo destraba.
 - **Esta semana**: los 2-3 hitos que hay que cerrar.
 - **Acciones del dueño (hoy)**: 1-3 concretas.
+
+## La columna Δ (delta contra el tablero anterior)
+Un tablero que dice lo mismo cada semana no muestra que algo está trabado: lo
+esconde. Si abajo te paso el tablero anterior, cada pendiente activo lleva UNO
+de estos tres estados, comparado contra esa versión:
+- ✅ **avanzó** — cambió de etapa o se cerró un hito (decí cuál).
+- ⏸️ **igual** — misma etapa que la semana pasada. Agregá hace cuántos días.
+- 🔴 **en riesgo** — retrocedió, o su fecha objetivo vence en menos de 48 h, o
+  lleva ⏸️ dos tableros seguidos. El 🔴 por fecha es automático: si la fecha
+  objetivo cae dentro de las próximas 48 h y el hito no está cerrado, es 🔴,
+  aunque el proyecto "venga bien".
+Si no tenés tablero anterior, decilo y poné Δ = "primera medición".
+
+## Onboarding del cliente 0 (cuando CLAMEVET firme)
+Mientras no haya anticipo/firma, esto es una sección corta de una línea: "sin
+firma, no arranca F0". Cuando firme, el proyecto se trackea por fases F0 a F5
+(F0 kickoff · F1 relevamiento · F2 build · F3 ingesta/datos · F4 UAT con la
+Cámara · F5 salida a producción), y cada fase lleva **fecha objetivo, fecha real
+y delta en días**. Es el primer proyecto entregado de la agencia: lo que se
+aprenda ahí es la plantilla de todos los que siguen.
 """
 
 
@@ -76,4 +96,8 @@ class DeliveryPMAgent(BaseAgent):
             parts.append("(Sin proyectos de clientes cargados todavía — decilo y listá "
                          "como proyectos los desarrollos en curso conocidos, ej: la "
                          "plataforma CLAMEVET y el CRM, con su etapa aproximada.)")
+        # Sin el tablero anterior no hay Δ posible: el agente no tiene memoria entre
+        # corridas y el "sigue igual" se vuelve indistinguible de "avanzó".
+        parts.append(upstream_handoff_block(
+            "delivery_pm", titulo="Tu tablero ANTERIOR (para la columna Δ)", max_chars=4000))
         return "\n".join(parts)

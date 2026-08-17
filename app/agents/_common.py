@@ -135,6 +135,13 @@ incluí en el output consideraciones de:
 - Compliance (Ley 25.326 de protección de datos personales en Argentina)
 
 Esto nos separa de las 95% de agencias que no lo tienen.
+
+## Nombres de clientes en material público (regla, 2026-08-12)
+En piezas sociales, ads, casos y cualquier cosa que se publique: **nunca uses el
+nombre real de un cliente o prospecto sin permiso ESCRITO**. Por defecto va
+genérico ("una distribuidora de bebidas de Córdoba"). Los números y el caso se
+cuentan igual; lo que no se puede es identificar a la empresa. Si tenemos el
+permiso por escrito, decilo en el reporte y ahí sí se puede nombrar.
 """.strip()
 
 

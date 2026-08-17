@@ -354,8 +354,33 @@ class InboxAssistantAgent(BaseAgent):
             )
         except Exception as e:
             log.warning("inbox_meeting_log_failed", error=str(e))
+        # Y que meeting_prep la prepare DE VERDAD: no tiene schedule, así que la
+        # reunión quedaba anotada en la agenda esperando que alguien se acordara de
+        # dispararlo a mano. El brief sirve antes de la reunión, no después.
+        self._preparar_reunion({"client_name": company or email or "Prospecto",
+                                "title": title, "scheduled_at": ev.get("start") or dt_iso,
+                                "location": meet_link, "email": email})
         when = (ev.get("start") or dt_iso or "").replace("T", " ")[:16]
         return meet_link, when
+
+    @staticmethod
+    def _preparar_reunion(meeting: Dict[str, Any]) -> None:
+        """Corre meeting_prep para la reunión recién agendada, en un thread daemon
+        (igual que DISPARAR del chief: el server sigue vivo y la corrida completa)."""
+        import asyncio
+        import threading
+
+        def _run():
+            try:
+                from ..container import get_container
+                asyncio.run(get_container().run_agent(
+                    "meeting_prep", triggered_by="inbox_assistant",
+                    args={"meeting": meeting}))
+            except Exception as e:
+                log.warning("inbox_prep_failed", error=str(e)[:150])
+
+        threading.Thread(target=_run, daemon=True).start()
+        log.info("inbox_meeting_prep_fired", cliente=meeting.get("client_name"))
 
     def _reformat_via_minimax(self, ctx: AgentContext, raw: str) -> List[Dict[str, Any]]:
         """Convierte una salida no-parseable al array JSON del contrato (1 intento)."""

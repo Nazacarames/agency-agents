@@ -208,6 +208,13 @@ class OutboundAgent(BaseAgent):
         report = _latest_leadhunter_report()
         sent_emails = _load_sent_log().get("emails", {})
         ingest_stats = {"nuevos": 0, "existentes": 0}
+        if not report:
+            # Que NO haya reporte no es "un día sin leads nuevos": es leadhunter que no
+            # entregó. Los follow-ups siguen (son toques ya agendados, no dependen del
+            # lote de hoy), pero la falta tiene que salir en el reporte y en los logs:
+            # callarla es lo que hizo que semanas de captura caída pasaran inadvertidas.
+            ctx.args["_ob_reporte_faltante"] = True
+            log.error("outbound_sin_reporte_leadhunter", dia=today)
         if report:
             ingest_stats = ls.ingest_report(store, report, today=today, sent_log_emails=sent_emails)
             # Un reporte que no aporta NI UN lead identificable no es "un día flojo":
@@ -685,6 +692,10 @@ class OutboundAgent(BaseAgent):
                f"un resumen en vez del reporte (techo de turnos). Sin esto no entra "
                f"NINGÚN lead nuevo al pipeline — revisá `/last/leadhunter`.", ""]
               if ctx.args.get("_ob_reporte_vacio") else []),
+            *([f"> ⛔ **No hay reporte de leadhunter para ingestar**: hoy no entró ni un "
+               f"lead nuevo al pipeline. Los follow-ups ya agendados sí salen. "
+               f"Revisá `/last/leadhunter`.", ""]
+              if ctx.args.get("_ob_reporte_faltante") else []),
             f"Nuevos del reporte: **{ing.get('nuevos', 0)}** · "
             + (f"**Enviados:** {len(sent)} · " if live else f"**A enviar:** {len(preview)} · ")
             + f"**Errores:** {len(errors)}"

@@ -8,6 +8,25 @@ from ._common import (get_context_block, official_site_directive,
                       competitor_visual_directive_for)
 
 
+def _estilos_del_lote(texto: str) -> set:
+    """Los `ESTILO: x` que pidió el agente en esta corrida."""
+    import re
+    return {m.group(1).lower() for m in
+            re.finditer(r"ESTILO:\s*([a-záéíóúñ]+)", texto or "", re.IGNORECASE)}
+
+
+def _feed_lleno() -> tuple:
+    """(carril lleno?, pendientes, tope). El carril de feed drena 1/día: cuando se
+    llena, `enqueue()` descarta en silencio lo que se generó. Mejor planificar
+    historias y decirlo que producir piezas que no entran."""
+    try:
+        from ..integrations import publish_queue as pq
+        pend = pq.pending_count(lane="feed")
+        return (pend >= pq.MAX_PENDING_FEED, pend, pq.MAX_PENDING_FEED)
+    except Exception:
+        return (False, 0, 0)
+
+
 def _playbook_block() -> str:
     try:
         from ..integrations.competitor_playbook import playbook_block
@@ -82,10 +101,17 @@ class SocialMediaAgent(BaseAgent):
         if today.weekday() == 6:
             next_monday = today + timedelta(days=1)
         week_start = next_monday.strftime("%Y-%m-%d")
+        lleno, pend, tope = _feed_lleno()
+        aviso = ("" if not lleno else
+                 f"\n\n⚠️ **El carril de FEED está lleno** ({pend} pendientes, tope {tope}): "
+                 "todo lo que encoles como post/carrusel se descarta sin publicar. "
+                 "Planificá SOLO historias (`FORMATO: historia`) hasta que baje, y decilo "
+                 "arriba de tu reporte con `feed_blocked=true` y cuántas piezas esperan.")
         return (
             f"Generá el calendario para la semana que arranca el {week_start}. "
             "Revisá el contenido de la semana actual en data/ para no repetir formatos ni temas. "
             "Balanceá: si la semana pasada fue mucha venta, esta que sea más educativa."
+            + aviso
             + official_site_directive()
             + competitor_visual_directive_for(ctx)
             + _playbook_block()
@@ -104,7 +130,16 @@ class SocialMediaAgent(BaseAgent):
         pub_final, qa_line, gap_line = pub, "", ""
         try:
             from ..integrations import text_judge
-            gate = text_judge.qa_gate(self.name, "social", response_text)
+            # Los estilos que son texto (tipográfico) o metáfora (surreal) puntúan
+            # bajo con la rúbrica de foto aunque hagan bien su trabajo: el 2026-08-16
+            # un lote tipográfico sacó 12/100 y se frenó la publicación entera. Se
+            # miden con umbral 30, y el reporte dice con qué vara se midió.
+            estilos = _estilos_del_lote(response_text)
+            legible = bool(estilos) and estilos <= {"tipografico", "surreal"}
+            gate = text_judge.qa_gate(
+                self.name, "social", response_text,
+                hold_below=30 if legible else None,
+                qa_mode="legibilidad" if legible else "")
             pub_final = pub and gate["publish_ok"]
             qa_line = gate["line"]
             # Cierre del loop competitivo: brecha vs el estudio del competidor → lección.
@@ -112,6 +147,10 @@ class SocialMediaAgent(BaseAgent):
         except Exception:
             pass
         text = augment_with_images(response_text, s.content_image_count, publish=pub_final)
+        lleno, pend, tope = _feed_lleno()
+        if lleno:
+            text += (f"\n\n`feed_blocked=true` — {pend} piezas de feed esperando (tope {tope}). "
+                     "Lo que se encole como post/carrusel hoy se descarta sin publicar.")
         if qa_line:
             text += "\n" + qa_line
         if gap_line:

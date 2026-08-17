@@ -737,6 +737,40 @@ def test_harvest_no_corta_el_pendiente_ni_anota_los_que_no_existen(tmp_path, mon
     assert abiertos[0]["titulo"].endswith("sin pasar por el sandbox")
 
 
+def test_el_feed_pasado_de_tope_drena_mas_rapido(tmp_path, monkeypatch):
+    """A 1/día una cola pasada de tope no se recupera: el 2026-08-17 había 15
+    pendientes de feed, el más viejo del 03/08, y 5 vencieron sin salir mientras
+    `enqueue()` rechazaba lo nuevo. Por encima del tope drena de a 3; por debajo,
+    vuelve solo a 1 por día."""
+    from app.integrations import publish_queue as pq
+    monkeypatch.setattr(pq, "_data_dir", lambda: tmp_path)
+
+    class _FakeSP:
+        enabled = staticmethod(lambda: True)
+        publish = staticmethod(lambda *a, **k: {"ok": True, "results": {"instagram": {"ok": True}}})
+
+    monkeypatch.setitem(__import__("sys").modules, "app.integrations.social_publish", _FakeSP)
+    monkeypatch.setattr(pq, "_notify_discord", lambda *a, **k: None)
+    monkeypatch.setattr(pq, "backfill_permalinks", lambda: {})
+
+    for i in range(pq.MAX_PENDING_FEED):
+        assert pq.enqueue(f"img{i}.jpg", caption=f"pieza {i}", kind="post")
+    # El 15 no entra por `enqueue` (el tope lo frena); en producción la cola quedó
+    # pasada de tope desde antes de que el tope existiera. Se simula igual.
+    store = pq.load_store()
+    store["items"].insert(0, dict(store["items"][0], id="extra", image="extra.jpg"))
+    pq.save_store(store)
+    assert pq.pending_count(lane="feed") > pq.MAX_PENDING_FEED
+
+    res = pq.drain_one()
+    assert len([res["feed"]] + res.get("feed_extra", [])) == pq.FEED_CATCHUP
+    assert pq.pending_count(lane="feed") == pq.MAX_PENDING_FEED + 1 - pq.FEED_CATCHUP
+
+    # ya está bajo el tope: al otro día vuelve a salir una sola (force saltea el 1/día)
+    res2 = pq.drain_one(force=True)
+    assert "feed_extra" not in res2 and res2["feed"]["ok"]
+
+
 def test_el_titulo_largo_se_corta_donde_se_entiende(tmp_path, monkeypatch):
     """El 2026-08-17 cinco de los 24 abiertos terminaban a mitad de palabra
     ("...publicar la página con outline d") porque el tope de 300 cortaba a la
@@ -1322,6 +1356,11 @@ def test_el_stock_gotea_sin_reventar_la_cola(tmp_path, monkeypatch):
             encoladas.append(image) or {"id": "x"}),
     )
     monkeypatch.setitem(__import__("sys").modules, "app.integrations.publish_queue", fake_pq)
+    # `from . import publish_queue` resuelve por atributo del paquete cuando el módulo
+    # real ya se importó (otro test lo hace): sin esto el falso se ignora y el drenaje
+    # mide contra la cola de verdad.
+    import app.integrations as _pkg
+    monkeypatch.setattr(_pkg, "publish_queue", fake_pq, raising=False)
 
     for i in range(4):
         vb.agregar(f"Nazareno de frente, plano medio, dice el gancho {i} en 9:16 realista")

@@ -32,6 +32,11 @@ FEED_KINDS = ("post", "carousel", "reel")
 # vencer. Un carril no puede tener más pendientes que lo que drena en PENDING_TTL_DIAS
 # — lo que sobra vence sin publicarse y la cuota de Vertex que costó generarlo se tira.
 MAX_PENDING_FEED = 14    # 1/día × 14 días de TTL
+# A 1/día, una cola que se pasó del tope NO se recupera: mientras drena, lo que vence
+# se pierde y `enqueue()` sigue rechazando lo nuevo. El 2026-08-17 había 15 pendientes
+# de feed, el más viejo del 03/08, y 5 vencieron sin publicarse. Mientras esté por
+# encima del tope drena a este ritmo; abajo del tope vuelve solo a 1/día.
+FEED_CATCHUP = 3
 MAX_PENDING_STORY = 6    # 2/día × 3 días: una historia de la semana pasada ya no es historia
 LANE_CAP = {"feed": MAX_PENDING_FEED, "story": MAX_PENDING_STORY}
 MAX_PENDING = MAX_PENDING_FEED + MAX_PENDING_STORY   # total, para mostrar en el panel
@@ -315,13 +320,24 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
     except Exception:
         pass
     out: Dict[str, Any] = {"ok": True}
-    # 1) pieza de feed (post/carrusel/reel)
-    if not force and published_today_count(store) >= 1:
-        out["feed"] = {"skipped": "ya se publicó hoy"}
+    # 1) pieza(s) de feed (post/carrusel/reel): 1/día, salvo que la cola se haya
+    # pasado del tope — ahí drena de a FEED_CATCHUP hasta bajarla.
+    cupo = FEED_CATCHUP if pending_count(store, "feed") > MAX_PENDING_FEED else 1
+    ya = 0 if force else published_today_count(store)
+    piezas: List[Dict[str, Any]] = []
+    while ya < cupo:
+        item = _pick_feed_item(load_store())
+        if item is None:
+            break
+        piezas.append(_publish_item(item))
+        ya += 1
+    if piezas:
+        out["feed"] = piezas[0]
+        if len(piezas) > 1:
+            out["feed_extra"] = piezas[1:]
+        out["ok"] = all(p.get("ok", True) for p in piezas)
     else:
-        item = _pick_feed_item(store)
-        out["feed"] = _publish_item(item) if item else {"skipped": "cola de feed vacía"}
-        out["ok"] = out["feed"].get("ok", True)
+        out["feed"] = {"skipped": "ya se publicó hoy" if ya else "cola de feed vacía"}
     # 2) historias del día (no cuentan para el tope del feed)
     stories: List[Dict[str, Any]] = []
     store = load_store()

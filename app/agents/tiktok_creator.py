@@ -20,7 +20,7 @@ import uuid
 from pathlib import Path
 
 from .base import BaseAgent, AgentContext
-from ._common import get_context_block, official_site_directive
+from ._common import get_context_block, official_site_directive, upstream_handoff_block
 from ..log import get_logger
 
 log = get_logger("tiktok_creator")
@@ -216,7 +216,22 @@ class TikTokCreatorAgent(BaseAgent):
             + official_site_directive()
             + _playbook_block()
             + self._reaction_seed()
+            + self._guiones_sin_filmar()
         )
+
+    def _guiones_sin_filmar(self) -> str:
+        """Cada corrida escribe 3 guiones y filma UNO: los otros dos quedan en el
+        reporte y nadie vuelve por ellos. Si la tanda anterior dejó guiones sin
+        filmar, el de hoy sale de ahí antes que de una idea nueva."""
+        bloque = upstream_handoff_block(
+            "tiktok_creator", titulo="Tu tanda ANTERIOR (guiones que quedaron sin filmar)",
+            max_chars=3500)
+        if not bloque:
+            return ""
+        return bloque + (
+            "\nANTES de inventar: si ahí quedó un guión bueno SIN filmar (sólo se filma "
+            "el principal de cada tanda), el video de hoy sale de ese. Decí cuál "
+            "retomaste y cuántos siguen esperando (`guiones_pendientes: N`).\n")
 
     def _reaction_seed(self) -> str:
         """Trae un post viral REAL de un competidor/ref (ig_discovery) para el formato

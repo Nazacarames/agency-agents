@@ -23,7 +23,13 @@ from .jsonstore import write_json_atomic
 log = get_logger("comment_watch")
 
 _STATE = Path(__file__).resolve().parent.parent.parent / "data" / "comment-watch.json"
-_GATE_WORDS = re.compile(r"\b(demo|story|guia|guía|prompt|checklist|info|quiero)\b", re.IGNORECASE)
+# Las keywords del gate ROTAN con cada tanda: en W34/W35 el CTA que plantamos es
+# "comentá AGENTE" y las viejas (DEMO/GUIA) ya casi no aparecen. Un comentario que
+# no matchea llega a Discord sin 🔥 y se atiende tarde — que es justo lo contrario
+# del speed-to-lead que motiva este vigía.
+_GATE_WORDS = re.compile(
+    r"\b(demo|story|guia|guía|prompt|checklist|info|quiero|agente|agentes|automatiz\w+)\b",
+    re.IGNORECASE)
 _MAX_SEEN = 4000
 
 

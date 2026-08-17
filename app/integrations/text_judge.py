@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..log import get_logger
 
@@ -185,11 +185,17 @@ def judge_emails(emails: List[Dict[str, Any]]) -> Dict[str, Any]:
     return judge("email", payload)
 
 
-def qa_gate(agent_name: str, kind: str, payload: str) -> Dict[str, Any]:
+def qa_gate(agent_name: str, kind: str, payload: str,
+            hold_below: Optional[int] = None, qa_mode: str = "") -> Dict[str, Any]:
     """Juzga `payload`, aprende si está flojo, y decide si conviene auto-publicar.
     Devuelve {line, avg, publish_ok}. publish_ok=False solo si el score < HOLD_BELOW
     (contenido muy flojo → se frena el auto-publish y queda para revisión humana).
-    Si el juez no está disponible, NUNCA bloquea (publish_ok=True). Best-effort."""
+    Si el juez no está disponible, NUNCA bloquea (publish_ok=True). Best-effort.
+
+    `hold_below` baja el umbral para lotes que la rúbrica base castiga por diseño:
+    una placa tipográfica o una escena surreal puntúa bajo en "estética de foto"
+    aunque cumpla su trabajo, que es leerse. `qa_mode` sólo se imprime, para que
+    en el reporte se vea con qué vara se midió."""
     try:
         if not enabled():
             return {"line": "", "avg": None, "publish_ok": True}
@@ -201,12 +207,15 @@ def qa_gate(agent_name: str, kind: str, payload: str) -> Dict[str, Any]:
         if fix and avg < LEARN_BELOW:
             from . import memory_store as ms
             ms.record_outcome(agent_name, f"QA de calidad (Gemini) sobre {kind}: {fix}")
-        publish_ok = avg >= HOLD_BELOW
+        tope = int(hold_below) if hold_below else HOLD_BELOW
+        publish_ok = avg >= tope
         line = f"\n## 🧪 QA Gemini\nScore promedio: **{avg}/100**"
+        if qa_mode:
+            line += f" · `qa_mode={qa_mode}` (umbral {tope})"
         if not publish_ok:
-            line += (f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {HOLD_BELOW}): quedó para tu "
+            line += (f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {tope}): quedó para tu "
                      f"revisión. Fix sugerido: _{fix}_" if fix else
-                     f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {HOLD_BELOW}): revisá antes de publicar.")
+                     f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {tope}): revisá antes de publicar.")
         elif fix and avg < LEARN_BELOW:
             line += f" · Fix aplicado a futuras corridas: _{fix}_"
         else:
