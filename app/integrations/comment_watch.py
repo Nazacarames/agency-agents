@@ -32,6 +32,20 @@ _GATE_WORDS = re.compile(
     re.IGNORECASE)
 _MAX_SEEN = 4000
 
+# La palabra del gate la elige la pieza, y rota con cada tanda ("comentá AGENTE"
+# en W34, once palabras distintas en W35). Mantener la lista a mano es una tarea
+# semanal que se olvida y deja los comentarios sin marcar; la fuente de verdad es
+# el CAPTION de nuestro propio post, así que se lee de ahí.
+_CTA = re.compile(
+    r"(?:coment[áa](?:me)?|escrib[íi]|pon[ée]|mand[áa])\s+"
+    r"(?:la\s+palabra\s+|el\s+comentario\s+)?[\"'«“]?([A-Za-zÁÉÍÓÚÑáéíóúñ0-9]{3,20})",
+    re.IGNORECASE)
+
+
+def _palabras_del_post(caption: str) -> set:
+    """La(s) palabra(s) de gate que pide ESTE post en su caption."""
+    return {m.group(1).lower() for m in _CTA.finditer(caption or "")}
+
 
 def mark_seen(comment_ids: List[str]) -> None:
     """Marca comment_ids como vistos (los usa comment_gate: el webhook ya los
@@ -60,6 +74,7 @@ def check(n_posts: int = 12) -> Dict[str, int]:
     seen = set(seen_list)
     new_items: List[Dict] = []
     for m in _our_media(n_posts):
+        propias = _palabras_del_post(m.get("caption", ""))
         r = _get(f"{m['id']}/comments",
                  {"fields": "id,text,username,timestamp", "limit": 50})
         for c in (r.get("data") or []):
@@ -68,9 +83,11 @@ def check(n_posts: int = 12) -> Dict[str, int]:
                 continue
             seen.add(cid)
             seen_list.append(cid)
+            texto = c.get("text") or ""
             new_items.append({"user": c.get("username", "?"),
-                              "text": (c.get("text") or "")[:200],
-                              "gate": bool(_GATE_WORDS.search(c.get("text") or "")),
+                              "text": texto[:200],
+                              "gate": bool(_GATE_WORDS.search(texto))
+                                      or any(p in texto.lower() for p in propias),
                               "permalink": m.get("permalink", "")})
     first_run = not st.get("seeded")
     st["seeded"] = True

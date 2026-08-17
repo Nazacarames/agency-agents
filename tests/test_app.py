@@ -737,6 +737,19 @@ def test_harvest_no_corta_el_pendiente_ni_anota_los_que_no_existen(tmp_path, mon
     assert abiertos[0]["titulo"].endswith("sin pasar por el sandbox")
 
 
+def test_la_palabra_del_gate_sale_del_caption_del_post():
+    """Las keywords del comment-gate rotan con cada tanda (AGENTE en W34, once
+    distintas en W35). Mantenerlas a mano en un regex era una tarea semanal que se
+    olvidaba: la palabra la pide el propio caption, así que se lee de ahí."""
+    from app.integrations.comment_watch import _GATE_WORDS, _palabras_del_post
+
+    cap = "3 pedidos perdidos. Comentá AUDITORIA y te mando la planilla."
+    assert _palabras_del_post(cap) == {"auditoria"}
+    assert not _GATE_WORDS.search("auditoria")            # no está en la lista fija
+    assert _GATE_WORDS.search("me pasás la DEMO?")        # las de siempre siguen
+    assert _palabras_del_post('Escribí "REPOSICION" abajo') == {"reposicion"}
+
+
 def test_el_feed_pasado_de_tope_drena_mas_rapido(tmp_path, monkeypatch):
     """A 1/día una cola pasada de tope no se recupera: el 2026-08-17 había 15
     pendientes de feed, el más viejo del 03/08, y 5 vencieron sin salir mientras
