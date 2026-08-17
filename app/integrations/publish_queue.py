@@ -107,6 +107,23 @@ def pending_count(store: Optional[Dict[str, Any]] = None,
                and (lane is None or _lane(it.get("kind")) == lane))
 
 
+def _dias_de_la_mas_vieja(store: Dict[str, Any]) -> int:
+    """Días que lleva esperando la pieza de feed pendiente más vieja."""
+    ahora = datetime.now(timezone.utc)
+    dias = 0
+    for it in store["items"]:
+        if it.get("status") != "pending" or _lane(it.get("kind")) != "feed":
+            continue
+        try:
+            d = datetime.fromisoformat(it["created_at"])
+        except Exception:
+            continue
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=timezone.utc)
+        dias = max(dias, (ahora - d).days)
+    return dias
+
+
 def expire_stale() -> int:
     """Vence los pendientes viejos; devuelve cuántos. Sin esto la cola se fosiliza:
     contra 1 pieza de feed por día se encolaban 3, así que el 2026-08-02 lo más viejo
@@ -304,11 +321,6 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
     y hasta MAX_STORIES_PER_DAY historias. Pensado para correr 1x/día. SÍNCRONO
     (llamarlo con asyncio.to_thread desde el scheduler para no bloquear el event
     loop: la Graph API hace self-fetch de /media). Devuelve un dict con el resultado."""
-    vencidos = expire_stale()   # antes de elegir: no publicar lo que ya caducó
-    if vencidos:
-        from ..log import get_logger
-        get_logger("publish_queue").info("publish_queue_expired", n=vencidos,
-                                         ttl_dias=PENDING_TTL_DIAS)
     store = load_store()
     from . import social_publish as sp
     if not sp.enabled():
@@ -320,9 +332,10 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
     except Exception:
         pass
     out: Dict[str, Any] = {"ok": True}
-    # 1) pieza(s) de feed (post/carrusel/reel): 1/día, salvo que la cola se haya
-    # pasado del tope — ahí drena de a FEED_CATCHUP hasta bajarla.
-    cupo = FEED_CATCHUP if pending_count(store, "feed") > MAX_PENDING_FEED else 1
+    # 1) pieza(s) de feed (post/carrusel/reel): 1/día, salvo que la cola esté pasada
+    # del tope o que la más vieja esté por vencer — ahí drena de a FEED_CATCHUP.
+    cupo = FEED_CATCHUP if (pending_count(store, "feed") > MAX_PENDING_FEED
+                            or _dias_de_la_mas_vieja(store) >= PENDING_TTL_DIAS - 3) else 1
     ya = 0 if force else published_today_count(store)
     piezas: List[Dict[str, Any]] = []
     while ya < cupo:
@@ -331,6 +344,14 @@ def drain_one(force: bool = False) -> Dict[str, Any]:
             break
         piezas.append(_publish_item(item))
         ya += 1
+    # Vencer DESPUÉS de publicar, no antes: si una pieza llegó a su último día, sale
+    # hoy o no sale nunca, y expirarla primero era garantizar lo segundo (2026-08-17:
+    # 5 piezas del 03/08 vencieron sin publicarse con el carril parado).
+    vencidos = expire_stale()
+    if vencidos:
+        from ..log import get_logger
+        get_logger("publish_queue").info("publish_queue_expired", n=vencidos,
+                                         ttl_dias=PENDING_TTL_DIAS)
     if piezas:
         out["feed"] = piezas[0]
         if len(piezas) > 1:

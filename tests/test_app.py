@@ -770,6 +770,18 @@ def test_el_feed_pasado_de_tope_drena_mas_rapido(tmp_path, monkeypatch):
     res2 = pq.drain_one(force=True)
     assert "feed_extra" not in res2 and res2["feed"]["ok"]
 
+    # Y una pieza en su último día SALE: vencer antes de publicar era garantizar que
+    # no saliera nunca. Se la envejece a un día del TTL.
+    store = pq.load_store()
+    viejo = (__import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+             - __import__("datetime").timedelta(days=pq.PENDING_TTL_DIAS - 1)).isoformat()
+    for it in store["items"]:
+        if it.get("status") == "pending":
+            it["created_at"] = viejo
+    pq.save_store(store)
+    res3 = pq.drain_one(force=True)
+    assert len([res3["feed"]] + res3.get("feed_extra", [])) == pq.FEED_CATCHUP
+
 
 def test_el_titulo_largo_se_corta_donde_se_entiende(tmp_path, monkeypatch):
     """El 2026-08-17 cinco de los 24 abiertos terminaban a mitad de palabra
