@@ -737,6 +737,25 @@ def test_harvest_no_corta_el_pendiente_ni_anota_los_que_no_existen(tmp_path, mon
     assert abiertos[0]["titulo"].endswith("sin pasar por el sandbox")
 
 
+def test_el_titulo_largo_se_corta_donde_se_entiende(tmp_path, monkeypatch):
+    """El 2026-08-17 cinco de los 24 abiertos terminaban a mitad de palabra
+    ("...publicar la página con outline d") porque el tope de 300 cortaba a la
+    bruta. El agente escribe un párrafo donde va un título: el corte tiene que
+    caer en la última oración cerrada, o al menos en una palabra entera."""
+    from app.integrations import backlog as bl
+    monkeypatch.setattr(bl, "_FILE", tmp_path / "backlog.json")
+
+    parrafo = ("Recortar el title tag a 54 caracteres. " + "Reescribir la meta description. " * 8
+               + "Y despues publicar la pagina con outline de este plan")
+    assert len(parrafo) > 300
+    it = bl.abrir("web", parrafo, origen="test")
+
+    assert it["titulo"].endswith("…")
+    assert it["titulo"][:-1].endswith(("description", "chars", "caracteres"))   # palabra entera
+    assert 150 < len(it["titulo"]) <= 301
+    assert bl.abrir("web", "corto pero valido para el minimo")["titulo"][-1] != "…"
+
+
 def test_watchdog_caza_el_reporte_enano_sin_marcador(tmp_path, monkeypatch):
     """El 2026-08-10 leadhunter entregó 723 bytes diciendo que el reporte estaba
     'impreso en la respuesta'. Terminó bien y sin firma de degradación, así que

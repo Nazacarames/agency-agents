@@ -131,7 +131,12 @@ def resumen(settings: Settings, dias: int = 7, max_mensajes: int = 40) -> Dict[s
     try:
         svc = _service(settings)
         user_id = settings.gmail_user_id or "me"
-        query = f"to:{RUA_BUZON} has:attachment newer_than:{int(dias)}d"
+        # `in:anywhere` NO es opcional: los informes llegan al grupo DMARC ("via
+        # DMARC" en el From) y Gmail los deja fuera del alcance de una búsqueda
+        # normal. Sin esto la consulta devolvía 0 informes en 30 días mientras en
+        # el buzón había 15 — o sea, el watchdog miraba una casilla vacía y no lo
+        # decía. Medido el 2026-08-17: misma query con `in:anywhere` → 15.
+        query = f"to:{RUA_BUZON} has:attachment in:anywhere newer_than:{int(dias)}d"
         ids = svc.users().messages().list(
             userId=user_id, q=query, maxResults=int(max_mensajes)
         ).execute().get("messages", []) or []

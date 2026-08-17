@@ -107,6 +107,22 @@ _NADA_QUE_ANOTAR = re.compile(
     re.IGNORECASE)
 
 
+def _titular(texto: str, tope: int = 300) -> str:
+    """El título, cortado donde se entiende: en la última oración o palabra entera.
+
+    El agente escribe un párrafo donde va un título, y `texto[:300]` lo dejaba
+    cortado a mitad de palabra ("...publicar la página con outline d"). El 08-17
+    eran 5 de 24 ítems. Lo que no se entiende no le hace presión a nadie.
+    """
+    t = " ".join((texto or "").split())
+    if len(t) <= tope:
+        return t
+    corte = t.rfind(". ", 0, tope + 1)
+    if corte < tope // 2:                       # sin oración cerrada cerca: palabra entera
+        corte = t.rfind(" ", 0, tope + 1)
+    return (t[:corte].rstrip(" .,;:") if corte > 0 else t[:tope]) + "…"
+
+
 def _citado(items: List[Dict[str, Any]], titulo: str) -> Optional[Dict[str, Any]]:
     """El pendiente abierto cuyo id aparece mencionado en el texto, si lo hay."""
     ids = set(_ID_RE.findall((titulo or "").lower()))
@@ -126,7 +142,7 @@ def abrir(area: str, titulo: str, origen: str = "", dias_atras: int = 0) -> Opti
     con edad cero, porque la edad es justamente lo que tiene que hacer presión.
     """
     area = (area or "").strip().lower()
-    titulo = " ".join((titulo or "").split())[:300]
+    titulo = _titular(titulo)
     if area not in AREAS or len(titulo) < 10 or _NADA_QUE_ANOTAR.match(titulo):
         return None
     data = _load()
