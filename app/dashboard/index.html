@@ -1793,18 +1793,25 @@ function backlogHumanoHtml(bkl){
       <div class="ph-sub"${alerta}>abierto ${edad} · <code>${esc(i.id)}</code></div>
       ${notas}
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-        <input class="bkl-nota" data-id="${esc(i.id)}" placeholder="Contestales sin cerrarlo (ej: de esto me ocupo yo)" style="flex:1;min-width:180px">
-        <button class="btn" onclick="bklNota('${esc(i.id)}')">Responder</button>
+        <input class="bkl-nota" data-id="${esc(i.id)}" placeholder="Contestales y se cierra (si sigue pasando, lo reabren solos)" style="flex:1;min-width:180px">
+        <button class="btn" onclick="bklNota('${esc(i.id)}')">Responder y cerrar</button>
         <button class="btn" onclick="bklListo('${esc(i.id)}')">Ya está</button>
       </div></div>`;
   }).join('');
 }
 async function bklNota(id){
+  // Contestar CIERRA: si el dueño ya contestó, el ítem no tiene que seguir
+  // ocupándole la pantalla. La red de seguridad es que los agentes lo reabren
+  // si vuelven a encontrarlo (backlog.abrir → reapertura tras 3 días).
   const inp=document.querySelector('.bkl-nota[data-id="'+id+'"]');
   const nota=(inp&&inp.value||'').trim();
-  if(nota.length<3){ if(inp) inp.focus(); return; }
-  try{ await api('/api/backlog/'+id+'/nota',{method:'POST',body:JSON.stringify({nota})}); loadOverview(); }
-  catch(e){ alert('No pude guardar la nota: '+e.message); }
+  if(nota.length<10){ if(inp){ inp.focus(); toast('Escribí una frase entera: eso queda como evidencia del cierre.'); } return; }
+  try{
+    await api('/api/backlog/'+id+'/nota',{method:'POST',body:JSON.stringify({nota})});
+    await api('/api/backlog/'+id+'/resolver',{method:'POST',body:JSON.stringify({evidencia:nota,por:'dueño'})});
+    toast('Contestado y cerrado ✓');
+    loadOverview();
+  }catch(e){ alert('No pude cerrarlo: '+e.message); }
 }
 async function bklListo(id){
   // Cerrar exige evidencia a propósito: sin eso "resuelto" es una opinión y el
@@ -3275,6 +3282,9 @@ function clientHealth(c, usd){
   if(isFrozen(c.stage)) return {c:'grey', t:'Memoria congelada / descartado'};
   if(st==='baja') return {c:'red', t:'Baja'};
   if(st==='pausado') return {c:'amber', t:'Pausado'};
+  // Etapa (embudo) y estado (facturación) son dos interruptores distintos: pasar
+  // a etapa 'cliente' NO lo mete en finanzas. Antes eso era un no-op silencioso.
+  if(c.stage==='cliente' && st!=='activo') return {c:'amber', t:'Cerrado como cliente pero NO entra a finanzas: poné Estado=Activo y Fecha de alta'};
   if(st==='onboarding') return {c:'amber', t:'En onboarding'};
   if(st==='activo' && usd<=0) return {c:'amber', t:'Activo pero sin facturación cargada'};
   if(st==='activo') return {c:'green', t:'Activo y facturando'};
@@ -3316,7 +3326,16 @@ el('clientBtn').addEventListener('click', async ()=>{
     clearClientForm(); loadClients();
   }catch(e){ toast('Error: '+e.message); } finally{ el('clientBtn').disabled=false; }
 });
-async function setStage(id, stage){ try{ await api('/api/clients/'+id,{method:'PUT',body:JSON.stringify({stage})}); toast(isFrozen(stage)?'Cliente descartado · memoria congelada ❄':'Etapa → '+labelStage(stage)); loadClients(); }catch(e){ toast('Error: '+e.message); } }
+async function setStage(id, stage){ try{
+  await api('/api/clients/'+id,{method:'PUT',body:JSON.stringify({stage})});
+  const c=(CACHE.clients&&CACHE.clients.clients||[]).find(x=>x.id===id);
+  // Mover la etapa no toca la facturación. Avisarlo acá evita el "lo pasé a
+  // cliente y no apareció en finanzas".
+  if(stage==='cliente' && c && (c.status||'')!=='activo')
+    toast('Etapa → Cliente. Ojo: sigue en "'+(c.status||'onboarding')+'", así que NO entra a finanzas. Editá y poné Estado=Activo + Fecha de alta cuando cobres.', 6000);
+  else toast(isFrozen(stage)?'Cliente descartado · memoria congelada ❄':'Etapa → '+labelStage(stage));
+  loadClients();
+}catch(e){ toast('Error: '+e.message); } }
 async function delClient(id){
   const c=(CACHE.clients&&CACHE.clients.clients||[]).find(x=>x.id===id);
   if(!confirm('¿Borrar a '+(c?c.name:'este cliente')+'?'))return;

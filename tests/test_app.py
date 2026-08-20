@@ -1436,3 +1436,34 @@ def test_vertical_agro_no_cae_en_manufactura():
     assert _vertical_for("repuestos y service de maquinaria") == "repuestos"
     assert _vertical_for("industria metalúrgica") == "manufactura"    # no se rompió
     assert _CONVOS["repuestos"][0]["from"] == "them"                  # arranca el cliente
+
+
+def test_pendiente_resuelto_se_reabre_no_se_duplica(tmp_path, monkeypatch):
+    """El id es sha1(area:titulo): un pendiente RESUELTO que el agente volvía a
+    reportar entraba como ítem nuevo CON EL MISMO id (dos filas, misma clave).
+    Ahora se reabre el mismo — y recién pasado el período de gracia, para que
+    cerrar a la mañana no lo resucite el brief de la noche."""
+    from datetime import datetime, timedelta, timezone
+    from app.integrations import backlog as bk
+
+    monkeypatch.setattr(bk, "_FILE", tmp_path / "backlog.json")
+    t = "confirmar el número de WhatsApp antes de mandar la demo al cliente"
+
+    item = bk.abrir("humano", t, origen="test")
+    assert item and item["estado"] == "abierto"
+    assert bk.resolver(item["id"], "lo confirmé por teléfono con el cliente") is True
+    assert bk.abiertos("humano") == []
+
+    # Re-reporte inmediato: cuenta la re-aparición pero NO revive.
+    again = bk.abrir("humano", t, origen="test2")
+    assert again["id"] == item["id"] and again["estado"] == "resuelto"
+    assert again["veces"] == 2
+    assert len(bk._load()["items"]) == 1                  # no duplicó
+
+    # Pasada la gracia, el agente sí lo reabre.
+    viejo = (datetime.now(timezone.utc) - timedelta(days=bk.REABRIR_TRAS_DIAS + 1)).isoformat()
+    data = bk._load(); data["items"][0]["resuelto_at"] = viejo; bk._save(data)
+    reab = bk.abrir("humano", t, origen="test3")
+    assert reab["estado"] == "abierto" and reab["evidencia_previa"]
+    assert len(bk._load()["items"]) == 1
+    assert [i["id"] for i in bk.abiertos("humano")] == [item["id"]]

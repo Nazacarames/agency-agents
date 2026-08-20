@@ -49,6 +49,9 @@ AREAS = ("web", "dev", "humano")
 # se llena de casi-duplicados y la edad — que es todo el valor — se resetea sola.
 _SIMILAR = 0.82
 RESUELTO_TTL_DIAS = 90
+# Gracia después de cerrar: si el agente lo vuelve a reportar antes de esto, se
+# cuenta la re-aparición pero NO se reabre (cerrar tiene que servir de algo).
+REABRIR_TRAS_DIAS = 3
 
 
 def _now() -> str:
@@ -86,10 +89,16 @@ def _dias(desde: str) -> int:
 
 
 def _match(items: List[Dict[str, Any]], area: str, titulo: str) -> Optional[Dict[str, Any]]:
-    """El ítem abierto del mismo área que ya dice lo mismo, si existe."""
+    """El ítem del mismo área que ya dice lo mismo, abierto O resuelto.
+
+    Antes sólo miraba los abiertos, y como el id es `sha1(area:titulo)` un
+    pendiente resuelto que el agente volvía a reportar entraba como ítem NUEVO
+    con el MISMO id: dos filas con la misma clave y el historial partido al
+    medio. Ahora se reabre el que ya estaba (ver `abrir`).
+    """
     n = _norm(titulo)
     for it in items:
-        if it.get("estado") != "abierto" or it.get("area") != area:
+        if it.get("area") != area:
             continue
         otro = _norm(it.get("titulo", ""))
         if otro == n or SequenceMatcher(None, otro, n).ratio() >= _SIMILAR:
@@ -169,6 +178,16 @@ def abrir(area: str, titulo: str, origen: str = "", dias_atras: int = 0) -> Opti
         ya["visto_ultima"] = _now()
         if origen and origen not in (ya.get("origenes") or []):
             ya.setdefault("origenes", []).append(origen)
+        if ya.get("estado") == "resuelto":
+            # El dueño lo dio por cerrado y el agente lo vuelve a ver: se REABRE,
+            # pero recién pasado el período de gracia. Sin eso, cerrar a la mañana
+            # y que el brief de la noche lo resucite hace que cerrar no sirva.
+            if _dias(ya.get("resuelto_at") or "") >= REABRIR_TRAS_DIAS:
+                ya.update({"estado": "abierto", "abierto": _now(),
+                           "reabierto_at": _now(),
+                           "evidencia_previa": ya.get("evidencia", ""),
+                           "evidencia": "", "resuelto_at": ""})
+                log.info("backlog_reabierto", id=ya["id"], area=area, origen=origen)
         _save(data)
         return ya
     desde = _now()
