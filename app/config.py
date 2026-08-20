@@ -133,6 +133,9 @@ class Settings(BaseSettings):
 
     # ── Render (auto-injected) ──
     render_service_id: str = ""
+    # Vestigio de Render: desde la migración a Railway nunca viene, y por eso los
+    # logs de producción decían env=dev. Railway sí setea RAILWAY_ENVIRONMENT.
+    railway_environment: str = ""
     render_external_url: str = ""
 
     # ── Gmail (Inbox Assistant) ──
@@ -272,7 +275,7 @@ class Settings(BaseSettings):
 
     @property
     def is_production(self) -> bool:
-        return bool(self.render_service_id)
+        return bool(self.render_service_id) or self.railway_environment == "production"
 
     @property
     def gmail_configured(self) -> bool:

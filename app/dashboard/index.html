@@ -1736,10 +1736,16 @@ function svgSpark(values, color){
 }
 
 // ── Resumen / cockpit ──
+const OV_FAIL=[];
 async function loadOverview(){
   el('overviewKpis').innerHTML=skelKpis(5);
   try{
-    const [stats, ag, tk, pubq, health, bill, gsc, geo, bkl, pipe] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), api('/api/publish/queue').catch(()=>null), api('/api/system/health').catch(()=>null), api('/api/finance/summary').catch(()=>null), api('/api/diag/gsc').catch(()=>null), api('/api/web/ai-visits').catch(()=>null), api('/api/backlog?area=humano').catch(()=>null), api('/api/pipeline').catch(()=>null) ]);
+    // `catch(()=>null)` convertía un endpoint caído en una tarjeta vacía, que se
+    // lee igual que "no hay nada". Ahora se anota cuál falló y se avisa.
+    OV_FAIL.length=0;
+    const soft=(nombre,pr)=>pr.catch(()=>{ OV_FAIL.push(nombre); return null; });
+    const [stats, ag, tk, pubq, health, bill, gsc, geo, bkl, pipe] = await Promise.all([ api('/api/dashboard/stats'), api('/api/agents'), api('/api/tasks'), soft('cola de publicación',api('/api/publish/queue')), soft('salud del sistema',api('/api/system/health')), soft('finanzas',api('/api/finance/summary')), soft('Search Console',api('/api/diag/gsc')), soft('visitas de IA',api('/api/web/ai-visits')), soft('pendientes',api('/api/backlog?area=humano')), soft('pipeline',api('/api/pipeline')) ]);
+    if(OV_FAIL.length) toast('⚠️ No pude cargar: '+OV_FAIL.join(', ')+'. Lo que ves está incompleto.', 9000);
     CACHE.agents=ag; CACHE.tasks=tk; CACHE.stats=stats;
     const b=stats.billing, f=stats.finance, m=stats.metrics||{};
     const profitCls = f.profit_month_usd>=0?'up':'down';
@@ -1782,6 +1788,8 @@ async function loadOverview(){
 // La caja de respuesta existe porque el sistema sabía pedir y no sabía escuchar:
 // con CLAMEVET el dueño ya estaba en contacto y los agentes se lo seguían pidiendo.
 function backlogHumanoHtml(bkl){
+  // null = la llamada falló. "Nada trabado" ahí sería mentira.
+  if(bkl===null) return '<div class="card empty">No pude cargar los pendientes — el panel no sabe si hay o no. Recargá.</div>';
   const items=(bkl&&bkl.items)||[];
   if(!items.length) return '<div class="card empty">Nada trabado esperándote. 🎉</div>';
   return items.map(i=>{
@@ -1824,6 +1832,7 @@ async function bklListo(id){
 
 // ── Leads que llenaron el formulario de la web ──
 function inboundWebHtml(pipe){
+  if(pipe===null) return '<div class="card empty">No pude cargar el pipeline — esto NO quiere decir que no haya leads. Recargá.</div>';
   const leads=((pipe&&pipe.leads)||[]).filter(l=>l.origen==='web');
   if(!leads.length) return '<div class="card empty">Todavía nadie llenó el formulario de la web.</div>';
   leads.sort((a,b)=>String(b.first_seen||'').localeCompare(String(a.first_seen||'')));
