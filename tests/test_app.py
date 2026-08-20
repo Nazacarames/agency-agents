@@ -1467,3 +1467,29 @@ def test_pendiente_resuelto_se_reabre_no_se_duplica(tmp_path, monkeypatch):
     assert reab["estado"] == "abierto" and reab["evidencia_previa"]
     assert len(bk._load()["items"]) == 1
     assert [i["id"] for i in bk.abiertos("humano")] == [item["id"]]
+
+
+def test_un_cobro_real_manda_sobre_el_mrr_devengado(monkeypatch):
+    """Entraba plata al negocio (un anticipo, un pago único) y el panel seguía
+    mostrando el mes en rojo: la serie de ingresos sólo miraba el MRR devengado
+    de clientes activos, y el libro de pagos no tocaba ninguna métrica."""
+    from app.integrations import clients_store as cs, finance_store as fs
+
+    meses = fs._recent_months(12)
+    este, anterior = meses[-1], meses[-2]
+
+    monkeypatch.setattr(fs, "_cobros_por_mes", lambda n: {este: 300.0})
+    monkeypatch.setattr(fs, "expenses_by_month", lambda months=12: {este: 77.0})
+    monkeypatch.setattr(fs, "expenses_by_category", lambda month=None: {})
+    monkeypatch.setattr(cs, "mrr_usd", lambda: 0.0)
+    monkeypatch.setattr(cs, "mrr_usd_for_month", lambda m: 0.0)
+
+    s = fs.finance_summary()
+    assert s["cobrado_mes_usd"] == 300.0
+    assert s["ingresos_mes_usd"] == 300.0
+    assert s["profit_month_usd"] == 223.0            # 300 cobrado − 77 de gastos
+    assert s["revenue_series"][-1] == 300.0
+    assert s["mrr_usd"] == 0.0                       # el devengado sigue siendo 0
+    # Un mes sin cobros cargados cae al devengado, como antes del libro de pagos.
+    monkeypatch.setattr(cs, "mrr_usd_for_month", lambda m: 40.0 if m == anterior else 0.0)
+    assert fs.finance_summary()["revenue_series"][-2] == 40.0

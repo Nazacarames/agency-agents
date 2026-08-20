@@ -1750,7 +1750,7 @@ async function loadOverview(){
     const b=stats.billing, f=stats.finance, m=stats.metrics||{};
     const profitCls = f.profit_month_usd>=0?'up':'down';
     el('overviewKpis').innerHTML = `
-      ${kpiBig('MRR', fmtUsd(b.mrr_usd), 'ingreso recurrente / mes', ICONS.finanzas, 'accent', svgSpark(m.mrr_usd,'#fff'), '', kpiDelta(m.mrr_usd))}
+      ${kpiBig(f.cobrado_mes_usd>0?'Ingresos (mes)':'MRR', fmtUsd(f.cobrado_mes_usd>0?f.ingresos_mes_usd:b.mrr_usd), f.cobrado_mes_usd>0?('cobrado este mes · MRR '+fmtUsd(b.mrr_usd)):'ingreso recurrente / mes', ICONS.finanzas, 'accent', svgSpark(m.mrr_usd,'#fff'), '', kpiDelta(m.mrr_usd))}
       ${kpiBig('Ganancia (mes)', fmtUsd(f.profit_month_usd), 'ingresos − gastos', ICONS.growth, '', svgSpark(m.profit_month_usd, f.profit_month_usd>=0?CH.green:CH.red), profitCls, kpiDelta(m.profit_month_usd))}
       ${kpiBig('Clientes activos', b.active, b.total+' en total · ARPU '+fmtUsd(b.arpu_usd), ICONS.clientes, '', svgSpark(m.active_clients,CH.blue), '', kpiDelta(m.active_clients))}
       ${kpiBig('Leads pipeline', stats.pipeline.total||0, 'en el motor de outbound', ICONS.pipeline, '', svgSpark(m.leads_total,CH.violet), '', kpiDelta(m.leads_total))}
@@ -1972,7 +1972,11 @@ async function loadFinanzas(){
     const profitCls=s.profit_month_usd>=0?'up':'down';
     const fa=s.facturado_anio||{}; const co=s.cobrado_anio||{};
     el('finKpis').innerHTML =
-      kpiBig('Ingresos (MRR)', fmtUsd(s.mrr_usd), 'recurrente / mes', ICONS.finanzas,'accent') +
+      // Lo cobrado manda sobre lo devengado: si entró plata este mes, ESE es el
+      // ingreso. Antes la tarjeta decía MRR 0 con un anticipo ya cobrado.
+      kpiBig('Ingresos (mes)', fmtUsd(s.ingresos_mes_usd),
+             (s.cobrado_mes_usd>0 ? 'cobrado este mes · MRR '+fmtUsd(s.mrr_usd) : 'MRR devengado · sin cobros cargados'),
+             ICONS.finanzas,'accent') +
       // El MRR sólo describe el mes; el pago único no entra ahí. Sin esta tarjeta
       // un anticipo cobrado no aparecía en ninguna métrica del panel.
       kpiBig('Cobrado ' + (co.anio||fa.anio||''), fmtUsd(co.total_usd||0),

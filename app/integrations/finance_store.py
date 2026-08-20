@@ -18,6 +18,10 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 
+from ..log import get_logger
+
+log = get_logger("finance_store")
+
 CATEGORIES = ["sueldos", "herramientas", "infra", "ads", "impuestos", "otros"]
 MAX_ITEMS = 2000
 _TZ = pytz.timezone("America/Buenos_Aires")
@@ -190,8 +194,26 @@ def _recent_months(n: int) -> List[str]:
     return list(reversed(out))
 
 
+def _cobros_por_mes(months: int) -> Dict[str, float]:
+    """Cobros reales por mes (USD). {} si no hay DB o falla: finanzas nunca se cae
+    por el libro de pagos."""
+    try:
+        from . import payments_store as ps
+        return ps.collected_by_month(months) if ps.enabled() else {}
+    except Exception as e:                       # pragma: no cover - best effort
+        log.warning("cobros_por_mes_falló", error=str(e)[:150])
+        return {}
+
+
 def finance_summary(months: int = 12) -> Dict[str, Any]:
-    """Ingresos (MRR de clientes activos), gastos y ganancia. Totales USD + serie mensual."""
+    """Ingresos, gastos y ganancia. Totales USD + serie mensual.
+
+    Ingreso del mes = **lo cobrado de verdad** (libro de pagos). Si en un mes no
+    hay ningún cobro registrado se cae al MRR devengado de los clientes activos,
+    que es como funcionaba antes de que existiera el libro. Sin esto, un pago
+    único —un anticipo— no movía ni el ingreso ni la ganancia: entraba plata al
+    negocio y el panel seguía mostrando el mes en rojo.
+    """
     from . import clients_store as cs
     mrr = cs.mrr_usd()                         # ingreso recurrente mensual actual (USD)
     by_month_exp = expenses_by_month()
@@ -199,18 +221,25 @@ def finance_summary(months: int = 12) -> Dict[str, Any]:
     exp_this = round(by_month_exp.get(this_month, 0.0), 2)
 
     series_months = _recent_months(months)
-    # Ingresos por mes: clientes activos cuyo start_date cae en/antes del mes.
-    rev_series = []
+    cobros = _cobros_por_mes(months)
+    # Ingresos por mes: el cobro real manda sobre lo devengado.
+    rev_series, cob_series = [], []
     for m in series_months:
-        rev_series.append(round(cs.mrr_usd_for_month(m), 2))
+        c = round(cobros.get(m, 0.0), 2)
+        cob_series.append(c)
+        rev_series.append(c if c > 0 else round(cs.mrr_usd_for_month(m), 2))
     exp_series = [round(by_month_exp.get(m, 0.0), 2) for m in series_months]
     profit_series = [round(r - e, 2) for r, e in zip(rev_series, exp_series)]
+    ing_this = rev_series[-1] if rev_series else 0.0
 
     return {
         "currency": "USD",
         "mrr_usd": round(mrr, 2),
+        "cobrado_mes_usd": cob_series[-1] if cob_series else 0.0,
+        "cobrado_series": cob_series,
+        "ingresos_mes_usd": ing_this,
         "expenses_month_usd": exp_this,
-        "profit_month_usd": round(mrr - exp_this, 2),
+        "profit_month_usd": round(ing_this - exp_this, 2),
         "months": series_months,
         "revenue_series": rev_series,
         "expenses_series": exp_series,

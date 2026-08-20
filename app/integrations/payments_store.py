@@ -113,6 +113,20 @@ def list_payments(client_id: Optional[str] = None, anio: Optional[int] = None,
     return [_row(r) for r in db.fetchall(sql, params)]
 
 
+def collected_by_month(months: int = 12) -> Dict[str, float]:
+    """Cobrado por mes (USD), desde pagos reales. La clave es `YYYY-MM`.
+
+    Existe para que finanzas muestre la plata que ENTRÓ: hasta ahora el panel
+    sólo graficaba el MRR devengado de los clientes activos, así que un cobro
+    real no movía ni el ingreso ni la ganancia del mes.
+    """
+    filas = db.fetchall(
+        "SELECT to_char(p.fecha, 'YYYY-MM') AS mes, SUM(p.amount_usd) AS usd "
+        "FROM payments p WHERE p.fecha >= (CURRENT_DATE - INTERVAL '%s months') "
+        "GROUP BY 1" % int(max(1, months)))
+    return {r["mes"]: round(float(r["usd"] or 0), 2) for r in filas if r.get("mes")}
+
+
 def collected_year(anio: Optional[int] = None) -> Dict[str, Any]:
     """Cobrado del año, desde pagos reales. Este SÍ concilia con el banco."""
     y = int(anio or datetime.now(timezone.utc).year)
