@@ -35,6 +35,14 @@ _FILE = Path(__file__).resolve().parent.parent.parent / "data" / "lead-demos.jso
 # Conversaciones por vertical: (cliente, bot) — el bot SIEMPRE resuelve rápido,
 # con número/detalle creíble y cierre suave (así se ve el producto funcionando).
 _CONVOS: Dict[str, List[Dict[str, str]]] = {
+    "repuestos": [
+        {"from": "them", "time": "20:41", "text": "Hola, se me rompió el filtro de aire de la motoguadaña. ¿Tienen repuesto?"},
+        {"from": "bot", "time": "20:41", "text": "¡Hola! Sí, tenemos. Para darte el correcto necesito el modelo: está en la etiqueta del motor. ¿Me lo pasás?"},
+        {"from": "them", "time": "20:43", "text": "MT-245"},
+        {"from": "bot", "time": "20:43", "text": "Perfecto. Para la MT-245 va el filtro cód. 43-0912, $6.400, en stock en el mostrador de repuestos. ¿Te lo reservo a tu nombre?"},
+        {"from": "them", "time": "20:44", "text": "Dale. ¿Y sirve para la 260 de mi hermano?"},
+        {"from": "bot", "time": "20:44", "text": "Esa lleva otro (cód. 43-0918). Te reservo los dos y mañana 8:00 los tenés listos para retirar. Te aviso cuando estén."},
+    ],
     "distribucion": [
         {"from": "them", "time": "21:47", "text": "Hola, ¿tienen stock del jabón líquido 5L? Necesito 40 para el jueves"},
         {"from": "bot", "time": "21:47", "text": "¡Hola! Sí, tenemos 120 unidades del 5L. Para 40 te queda $8.900 c/u con entrega el jueves a la mañana. ¿Te armo el pedido?"},
@@ -63,6 +71,9 @@ _CONVOS: Dict[str, List[Dict[str, str]]] = {
 _DEFAULT = "distribucion"
 
 _ALIASES = {
+    # agro/herramientas primero: "industria" también matchea manufactura
+    "agro": "repuestos", "herramienta": "repuestos", "ferretería": "repuestos",
+    "ferreteria": "repuestos", "repuesto": "repuestos", "maquinaria": "repuestos",
     "distribución": "distribucion", "distribucion": "distribucion", "mayorista": "distribucion",
     "manufactura": "manufactura", "metalúrgica": "manufactura", "metalurgica": "manufactura",
     "industria": "manufactura", "fábrica": "manufactura", "fabrica": "manufactura",

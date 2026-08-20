@@ -1424,3 +1424,15 @@ def test_la_identidad_de_nazareno_se_pega_en_codigo(monkeypatch):
 
     # Sin escena tampoco se rompe: queda al menos la identidad.
     assert NAZARENO_IDENTITY.strip() in vb.prompt_final({"prompt": ""})
+
+
+def test_vertical_agro_no_cae_en_manufactura():
+    """El rubro de Sumiagro dice "herramientas para agro, construcción e industria":
+    la palabra "industria" matcheaba manufactura y la demo mostraba una conversación
+    de piezas a plano. El alias de agro/herramientas tiene que ganar."""
+    from app.integrations.lead_demo import _CONVOS, _vertical_for
+
+    assert _vertical_for("herramientas para agro, construcción e industria") == "repuestos"
+    assert _vertical_for("repuestos y service de maquinaria") == "repuestos"
+    assert _vertical_for("industria metalúrgica") == "manufactura"    # no se rompió
+    assert _CONVOS["repuestos"][0]["from"] == "them"                  # arranca el cliente
