@@ -1493,3 +1493,28 @@ def test_un_cobro_real_manda_sobre_el_mrr_devengado(monkeypatch):
     # Un mes sin cobros cargados cae al devengado, como antes del libro de pagos.
     monkeypatch.setattr(cs, "mrr_usd_for_month", lambda m: 40.0 if m == anterior else 0.0)
     assert fs.finance_summary()["revenue_series"][-2] == 40.0
+
+
+def test_lo_contestado_le_llega_al_agente_aunque_este_cerrado(tmp_path, monkeypatch):
+    """Contestar ahora CIERRA el pendiente. Si el bloque que va al prompt sólo
+    listara los abiertos, la respuesta del dueño desaparecería y el agente
+    volvería a pedir lo mismo — que es el problema que se quiso arreglar."""
+    from app.integrations import backlog as bk
+
+    monkeypatch.setattr(bk, "_FILE", tmp_path / "backlog.json")
+    it = bk.abrir("humano", "decidir si publicamos los 3 videos de esta semana", origen="social")
+    assert "PENDIENTES ABIERTOS" in bk.bloque("humano")
+
+    assert bk.resolver(it["id"], "si, publicalos") is True
+    assert bk.abiertos("humano") == []                 # desaparece de la pantalla
+
+    b = bk.bloque("humano")                            # pero NO del prompt del agente
+    assert "YA CONTESTADO" in b
+    assert "si, publicalos" in b
+    assert "decidir si publicamos los 3 videos" in b
+    assert not b.startswith("\n")
+
+    # Y con otro pendiente abierto conviven las dos secciones.
+    bk.abrir("humano", "confirmar el numero de whatsapp del cliente nuevo", origen="ventas")
+    b2 = bk.bloque("humano")
+    assert "PENDIENTES ABIERTOS" in b2 and "YA CONTESTADO" in b2

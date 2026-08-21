@@ -266,6 +266,21 @@ def abiertos(area: str = "") -> List[Dict[str, Any]]:
     return out
 
 
+def resueltos_recientes(area: str = "", dias: int = 14) -> List[Dict[str, Any]]:
+    """Lo cerrado hace poco, con su evidencia. Del más nuevo al más viejo."""
+    out = []
+    for it in _load()["items"]:
+        if it.get("estado") != "resuelto":
+            continue
+        if area and it.get("area") != area:
+            continue
+        d = _dias(it.get("resuelto_at") or "")
+        if d <= dias:
+            out.append({**it, "dias": d})
+    out.sort(key=lambda i: i["dias"])
+    return out
+
+
 def resumen() -> Dict[str, Any]:
     ab = abiertos()
     return {
@@ -282,7 +297,7 @@ def bloque(area: str = "", limite: int = 12, titulo: str = "") -> str:
     """Los pendientes como texto para meter en el prompt de un agente."""
     ab = abiertos(area)[:limite]
     if not ab:
-        return ""
+        return _ya_contestado(area).lstrip()
     cab = titulo or ("## PENDIENTES ABIERTOS" if not area
                      else f"## PENDIENTES ABIERTOS ({area})")
     filas = []
@@ -295,4 +310,23 @@ def bloque(area: str = "", limite: int = 12, titulo: str = "") -> str:
         for n in (i.get("notas") or []):
             filas.append(f"    ↳ 💬 **{n.get('por', 'dueño')} dijo:** {n['texto']} "
                          "(esto MANDA sobre lo que supongas: no lo vuelvas a pedir)")
-    return cab + "\n" + "\n".join(filas)
+    return cab + "\n" + "\n".join(filas) + _ya_contestado(area)
+
+
+def _ya_contestado(area: str = "", dias: int = 14, limite: int = 10) -> str:
+    """Lo cerrado hace poco, para que el agente no lo vuelva a preguntar.
+
+    Antes la respuesta del dueño le llegaba al agente porque el ítem seguía
+    ABIERTO con su nota debajo. Desde que contestar CIERRA, sin esto la respuesta
+    desaparecía del prompt y el agente volvía a pedir lo mismo a los tres días,
+    que es justo lo que había que evitar.
+    """
+    hechos = resueltos_recientes(area, dias)[:limite]
+    if not hechos:
+        return ""
+    filas = [f"- **{h['titulo']}** → {h.get('evidencia') or 'cerrado'} "
+             f"(hace {h['dias']} día(s))" for h in hechos]
+    return ("\n\n## YA CONTESTADO — NO LO VUELVAS A PEDIR\n"
+            + "\n".join(filas)
+            + "\nSi tenés evidencia NUEVA de que sigue pasando, decilo con el dato; "
+              "si no, dalo por cerrado.")
