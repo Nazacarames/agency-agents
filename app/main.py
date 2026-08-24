@@ -609,6 +609,14 @@ class ExpenseBody(BaseModel):
     recurring: Optional[bool] = False
 
 
+class InvoiceBody(BaseModel):
+    amount: float = 0                 # monto ARS
+    description: Optional[str] = ""
+    cliente: Optional[str] = ""
+    doc_tipo: Optional[int] = 99      # 99 = consumidor final; 80 = CUIT; 96 = DNI
+    doc_nro: Optional[int] = 0        # CUIT/DNI del receptor cuando doc_tipo != 99
+
+
 class FxBody(BaseModel):
     rates: Dict[str, float]
 
@@ -1838,6 +1846,23 @@ async def api_finance_delete(expense_id: str, request: Request):
     _verify_webhook_secret(request)
     from .integrations import finance_store as fs
     return {"ok": fs.delete_expense(expense_id)}
+
+
+@app.get("/api/finance/invoices")
+async def api_invoices_list(request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import facturacion as fac
+    return {"invoices": fac.list_invoices(), "configured": fac.is_configured(),
+            "production": bool(fac._settings().arca_production)}
+
+
+@app.post("/api/finance/invoice")
+async def api_invoice_emit(body: InvoiceBody, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import facturacion as fac
+    inv = fac.emit_invoice(body.amount, body.description or "", body.cliente or "",
+                           body.doc_tipo or 99, body.doc_nro or 0)
+    return {"ok": inv["status"] == "issued", "invoice": inv}
 
 
 @app.get("/api/finance/summary")

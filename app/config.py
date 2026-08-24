@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     minimax_max_tokens: int = 8192
     minimax_timeout_seconds: int = 120
 
+    # ── ARCA (facturación electrónica vía AfipSDK) ──
+    arca_access_token: str = ""     # token de app.afipsdk.com
+    arca_production: bool = False    # False = homologación, True = producción real
+    arca_cuit: str = ""             # CUIT emisor sin guiones (homo: 20409378472)
+    arca_pto_vta: int = 1
+    arca_cbte_tipo: int = 11        # 11 = Factura C (monotributo)
+
     # ── Discord ──
     discord_webhook_url: str = ""              # fallback general (canal por defecto)
     discord_default_username: str = "Automiq Agents"

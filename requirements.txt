@@ -35,6 +35,9 @@ structlog>=24.1.0
 # Base de datos (Supabase Postgres) — capa de memoria de la agencia (schema `agency`)
 psycopg[binary]>=3.1.0
 
+# Facturación electrónica ARCA (ex AFIP) vía AfipSDK
+afip.py>=1.2.0
+
 # Composición de texto sobre las imágenes generadas (carteles con texto exacto)
 Pillow>=10.0.0
 

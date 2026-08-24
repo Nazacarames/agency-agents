@@ -1026,6 +1026,24 @@
           <tr><th>Fecha</th><th>Cliente</th><th>Concepto</th><th>Período</th><th style="text-align:right">Importe</th><th style="text-align:right">USD</th><th>Método</th><th></th></tr>
         </thead><tbody id="pyList"></tbody></table></div>
 
+        <div class="sec-head"><h2>Facturación electrónica (ARCA)</h2><span class="faint" style="font-size:12px" id="invEnv">Factura C monotributo vía AfipSDK.</span></div>
+        <div class="panel" style="margin-bottom:14px">
+          <div class="row">
+            <div style="flex:2;min-width:170px"><label>Cliente</label><input id="invCliente" class="inp" placeholder="CLAMEVET, Sumiagro…"/></div>
+            <div style="flex:1;min-width:120px"><label>Monto ARS</label><input id="invAmount" class="inp" type="number" step="0.01" placeholder="0"/></div>
+            <div style="flex:1;min-width:130px"><label>Doc receptor</label><select id="invDocTipo" class="inp"><option value="99">Consumidor final</option><option value="80">CUIT</option><option value="96">DNI</option></select></div>
+            <div style="flex:1;min-width:130px;display:none" id="invDocNroWrap"><label>Nº CUIT/DNI</label><input id="invDocNro" class="inp" type="number" placeholder="sin guiones"/></div>
+          </div>
+          <div class="row" style="margin-top:4px">
+            <div style="flex:3;min-width:200px"><label>Descripción</label><input id="invDesc" class="inp" placeholder="Plataforma CLAMEVET — anticipo"/></div>
+          </div>
+          <div style="margin-top:8px"><button class="btn" id="invBtn" onclick="emitInvoice()">Emitir Factura C</button>
+            <span class="faint" style="font-size:12px;margin-left:8px" id="invHint">Monotributo → Factura C, sin IVA discriminado.</span></div>
+        </div>
+        <div class="tbl-wrap" style="margin-bottom:24px"><table><thead>
+          <tr><th>Fecha</th><th>Cliente</th><th>Comprobante</th><th style="text-align:right">Monto</th><th>CAE</th><th>Estado</th></tr>
+        </thead><tbody id="invList"></tbody></table></div>
+
         <div class="grid-2">
           <div class="panel">
             <h3>Cargar gasto</h3><div class="ph-sub">Para calcular la ganancia.</div>
@@ -2047,6 +2065,7 @@ async function loadFinanzas(){
       <td style="white-space:nowrap"><button class="btn-ghost btn-xs" onclick="editExpense('${x.id}')">✎</button><button class="btn-ghost btn-xs" onclick="delExpense('${x.id}')">🗑</button></td></tr>`).join('')
       : '<tr><td colspan="6" class="empty">Sin gastos cargados.</td></tr>';
     loadPayments();
+    loadInvoices();
   }catch(e){ el('finKpis').innerHTML='<p class="err">'+esc(e.message)+'</p>'; }
 }
 let exEditId=null;
@@ -2066,6 +2085,43 @@ el('exBtn').addEventListener('click', async ()=>{
   }catch(e){ toast('Error: '+e.message); } finally{ el('exBtn').disabled=false; }
 });
 async function delExpense(id){ if(!confirm('¿Borrar este gasto?'))return; try{ await api('/api/finance/'+id,{method:'DELETE'}); loadFinanzas(); }catch(e){ toast('Error: '+e.message); } }
+
+/* ── Facturación ARCA ── */
+async function loadInvoices(){
+  const tb=el('invList'); if(!tb) return;
+  try{
+    const r=await api('/api/finance/invoices');
+    const env = r.configured ? (r.production?'🟢 Producción':'🟡 Homologación (pruebas)') : '⚙️ Falta configurar ARCA (token + CUIT en Railway)';
+    if(el('invEnv')) el('invEnv').textContent = 'Factura C monotributo vía AfipSDK · '+env;
+    const inv=r.invoices||[];
+    tb.innerHTML = inv.length ? inv.map(x=>{
+      const st = x.status==='issued'?'<span class="badge ok">emitida</span>' : x.status==='error'?'<span class="badge red" title="'+esc(x.error||'')+'">error</span>' : '<span class="badge grey">'+esc(x.status)+'</span>';
+      const comp = x.cbte_nro?('C '+String(x.pto_vta||0).padStart(4,'0')+'-'+String(x.cbte_nro).padStart(8,'0')):'—';
+      return `<tr><td class="faint" style="font-size:12px;white-space:nowrap">${esc((x.created_at||'').slice(0,10))}</td>
+        <td>${esc(x.cliente||'—')}${x.description?'<div class="faint" style="font-size:11px">'+esc(x.description)+'</div>':''}</td>
+        <td class="money">${comp}</td>
+        <td style="text-align:right" class="money">${(x.amount||0).toLocaleString('es-AR')} ${esc(x.currency||'ARS')}</td>
+        <td class="faint" style="font-size:12px">${x.cae?esc(x.cae)+'<div>vto '+esc(x.cae_vto||'')+'</div>':'—'}</td>
+        <td>${st}</td></tr>`;
+    }).join('') : '<tr><td colspan="6" class="empty">Sin facturas emitidas.</td></tr>';
+  }catch(e){ tb.innerHTML='<tr><td colspan="6" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+async function emitInvoice(){
+  const amount=parseFloat(el('invAmount').value||'0');
+  if(!amount){ toast('Poné un monto ARS'); return; }
+  const dt=parseInt(el('invDocTipo').value||'99');
+  const body={amount, description:el('invDesc').value.trim(), cliente:el('invCliente').value.trim(), doc_tipo:dt, doc_nro: dt===99?0:parseInt(el('invDocNro').value||'0')};
+  if(dt!==99 && !body.doc_nro){ toast('Falta el CUIT/DNI del receptor'); return; }
+  if(!confirm('¿Emitir Factura C por '+amount.toLocaleString('es-AR')+' ARS'+(body.cliente?(' a '+body.cliente):'')+'?')) return;
+  el('invBtn').disabled=true;
+  try{
+    const r=await api('/api/finance/invoice',{method:'POST',body:JSON.stringify(body)});
+    if(r.ok){ toast('✅ Factura emitida · CAE '+(r.invoice.cae||'')); el('invAmount').value='';el('invDesc').value='';el('invCliente').value=''; }
+    else{ toast('⚠️ '+(r.invoice.status==='skipped'?'ARCA no configurado':('Rechazada: '+(r.invoice.error||'')))); }
+    loadInvoices();
+  }catch(e){ toast('Error: '+e.message); } finally{ el('invBtn').disabled=false; }
+}
+if(el('invDocTipo')) el('invDocTipo').addEventListener('change', ()=>{ el('invDocNroWrap').style.display = el('invDocTipo').value==='99'?'none':''; });
 
 /* ── Libro de pagos ── */
 async function loadPayments(){
