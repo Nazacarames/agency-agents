@@ -1865,6 +1865,13 @@ async def api_invoice_emit(body: InvoiceBody, request: Request):
     return {"ok": inv["status"] == "issued", "invoice": inv}
 
 
+@app.delete("/api/finance/invoice/{inv_id}")
+async def api_invoice_delete(inv_id: str, request: Request):
+    _verify_webhook_secret(request)
+    from .integrations import facturacion as fac
+    return {"ok": fac.delete_invoice(inv_id)}
+
+
 @app.get("/api/finance/summary")
 async def api_finance_summary(request: Request):
     _verify_webhook_secret(request)

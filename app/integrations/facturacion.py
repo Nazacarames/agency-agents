@@ -94,6 +94,16 @@ def list_invoices(limit: int = 200) -> List[Dict[str, Any]]:
     return items[:limit]
 
 
+def delete_invoice(inv_id: str) -> bool:
+    """Borra un registro del log local (no anula nada en AFIP)."""
+    with _LOCK:
+        items = load_invoices()
+        before = len(items)
+        items = [i for i in items if i.get("id") != inv_id]
+        _save(items)
+        return len(items) < before
+
+
 def emit_invoice(amount: float, description: str = "", cliente: str = "",
                  doc_tipo: int = 99, doc_nro: int = 0, cond_iva_receptor: int = 5) -> Dict[str, Any]:
     """Emite una Factura C por `amount` ARS (Concepto 2, servicios). doc_tipo/doc_nro

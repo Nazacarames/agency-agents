@@ -2102,7 +2102,7 @@ async function loadInvoices(){
         <td class="money">${comp}</td>
         <td style="text-align:right" class="money">${(x.amount||0).toLocaleString('es-AR')} ${esc(x.currency||'ARS')}</td>
         <td class="faint" style="font-size:12px">${x.cae?esc(x.cae)+'<div>vto '+esc(x.cae_vto||'')+'</div>':'—'}</td>
-        <td>${st}</td></tr>`;
+        <td>${st} <button class="btn-ghost btn-xs" title="Borrar del registro (no anula en AFIP)" onclick="delInvoice('${x.id}')">🗑</button></td></tr>`;
     }).join('') : '<tr><td colspan="6" class="empty">Sin facturas emitidas.</td></tr>';
   }catch(e){ tb.innerHTML='<tr><td colspan="6" class="err">'+esc(e.message)+'</td></tr>'; }
 }
@@ -2122,6 +2122,10 @@ async function emitInvoice(){
   }catch(e){ toast('Error: '+e.message); } finally{ el('invBtn').disabled=false; }
 }
 if(el('invDocTipo')) el('invDocTipo').addEventListener('change', ()=>{ el('invDocNroWrap').style.display = el('invDocTipo').value==='99'?'none':''; });
+async function delInvoice(id){
+  if(!confirm('¿Borrar esta factura del registro? (NO la anula en AFIP; para eso va nota de crédito)')) return;
+  try{ await api('/api/finance/invoice/'+id,{method:'DELETE'}); loadInvoices(); }catch(e){ toast('Error: '+e.message); }
+}
 
 /* ── Libro de pagos ── */
 async function loadPayments(){
