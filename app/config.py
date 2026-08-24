@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     arca_cuit: str = ""             # CUIT emisor sin guiones (homo: 20409378472)
     arca_pto_vta: int = 1
     arca_cbte_tipo: int = 11        # 11 = Factura C (monotributo)
+    arca_cert: str = ""             # certificado de producción (PEM o base64); vacío en homo
+    arca_key: str = ""              # clave privada del certificado (PEM o base64)
 
     # ── Discord ──
     discord_webhook_url: str = ""              # fallback general (canal por defecto)

@@ -42,14 +42,31 @@ def is_configured() -> bool:
     return bool(s.arca_access_token and s.arca_cuit)
 
 
+def _pem(v: str) -> str:
+    """Acepta el cert/key como PEM crudo o base64 (para meterlo cómodo en una env var)."""
+    import base64
+    v = (v or "").strip()
+    if not v or "BEGIN" in v:
+        return v
+    try:
+        return base64.b64decode(v).decode("utf-8")
+    except Exception:
+        return v
+
+
 def _client():
     from afip import Afip
     s = _settings()
-    return Afip({
+    opts = {
         "CUIT": int(str(s.arca_cuit).replace("-", "").strip()),
         "access_token": s.arca_access_token,
         "production": bool(s.arca_production),
-    })
+    }
+    cert, key = _pem(s.arca_cert), _pem(s.arca_key)
+    if cert and key:                 # producción: WSAA con certificado
+        opts["cert"] = cert
+        opts["key"] = key
+    return Afip(opts)
 
 
 def load_invoices() -> List[Dict[str, Any]]:
