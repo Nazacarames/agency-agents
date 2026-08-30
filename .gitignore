@@ -34,6 +34,7 @@ scripts/youtube_token.json
 **/client_secret*.json
 **/gmail_token*.json
 **/youtube_token*.json
+**/google_ads_token*.json
 
 # Tokens y estado OAuth de TikTok — NUNCA commitear
 data/tiktok-token.json
