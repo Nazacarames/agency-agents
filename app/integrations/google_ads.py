@@ -21,9 +21,10 @@ from ..log import get_logger
 
 log = get_logger("google_ads")
 
-# La API versiona seguido y las viejas se deprecan (~1/año). Si un día responde
-# "invalid version", subí este número (v18 vigente al 2026-08). ponytail: knob.
-API_VERSION = "v18"
+# La API versiona seguido y las viejas se REMUEVEN (dan 404 HTML, no error JSON).
+# Verificado 2026-08-30: v22–v25 responden, v21 y anteriores ya no existen. Si un día
+# vuelve a dar 404, subí este número (probá v26, v27…). ponytail: knob.
+API_VERSION = "v25"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 _STATUS_MAP = {"ENABLED": "activa", "PAUSED": "pausada",
