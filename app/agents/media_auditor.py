@@ -85,15 +85,40 @@ class MediaAuditorAgent(BaseAgent):
         except Exception:
             return ""
 
+    def _google_block(self) -> str:
+        """Campañas reales de Google Ads (API) para el prompt. '' si no hay conexión."""
+        try:
+            from ..integrations import google_ads
+            if not google_ads.enabled():
+                return ""
+            camps = google_ads.live_campaigns()
+            if not camps:
+                return ""
+            lines = []
+            for c in camps[:25]:
+                lines.append(
+                    f"- {c['name']} [{c['status']}] objetivo={c['objective'] or 's/d'} · "
+                    f"spend USD {c['spend_usd']} · resultados {c['results']} · "
+                    f"CPL USD {c['cpl_usd']} · ROAS {c['roas']} · "
+                    f"impresiones {c['impressions']} · clics {c['clicks']}"
+                )
+            return ("\n\n## CAMPAÑAS REALES DE GOOGLE ADS (API — datos de verdad, usalos)\n"
+                    + "\n".join(lines))
+        except Exception:
+            return ""
+
     def build_user_message(self, ctx: AgentContext) -> str:
         from datetime import datetime
         import pytz
         tz = pytz.timezone("America/Buenos_Aires")
         now = datetime.now(tz)
         meta = self._meta_block()
+        google = self._google_block()
         fuentes = []
         if meta:
             fuentes.append("el bloque CAMPAÑAS REALES DE META de abajo")
+        if google:
+            fuentes.append("el bloque CAMPAÑAS REALES DE GOOGLE ADS de abajo")
         if not fuentes:
             fuentes.append("benchmarks [BENCHMARK] de PyME argentina (no hay cuentas conectadas)")
         return (
@@ -102,5 +127,5 @@ class MediaAuditorAgent(BaseAgent):
             "Entregá: resumen ejecutivo, tabla de métricas, 3 problemas con $ perdido "
             "estimado, 3 oportunidades con $ ganable estimado, auditoría de seguridad, "
             "y checklist priorizado de la semana."
-            + meta
+            + meta + google
         )

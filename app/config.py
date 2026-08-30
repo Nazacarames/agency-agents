@@ -133,6 +133,18 @@ class Settings(BaseSettings):
     # (libera su memoria). Los clientes 'activo' (pagando) nunca se archivan.
     client_archive_days: int = 10
 
+    # ── Google Ads (API REST, lectura para media_auditor) ──
+    # La API es gratis. Se necesita: developer token (de una cuenta Manager/MCC →
+    # API Center, con "Basic access" para leer cuentas reales), OAuth client
+    # (id/secret) y un refresh_token (scripts/google_ads_oauth.py). customer_id = la
+    # cuenta a leer (dígitos sin guiones); login_customer_id = la MCC (si aplica).
+    google_ads_developer_token: str = ""
+    google_ads_client_id: str = ""
+    google_ads_client_secret: str = ""
+    google_ads_refresh_token: str = ""
+    google_ads_customer_id: str = ""         # cuenta objetivo, dígitos sin guiones
+    google_ads_login_customer_id: str = ""   # MCC (opcional, si se accede vía manager)
+
     @property
     def social_publish_configured(self) -> bool:
         return bool(self.meta_page_token and (self.meta_page_id or self.ig_business_id))
