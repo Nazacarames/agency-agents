@@ -281,6 +281,14 @@ def playbook_block() -> str:
         radar = trend_radar.block()
     except Exception:
         pass
+    # Voz de audiencia: dolores/lenguaje/objeciones reales escuchados en Reddit
+    # (scout de texto). Best-effort; vacío hasta que haya token de Reddit.
+    voice = ""
+    try:
+        from . import reddit_pulse
+        voice = reddit_pulse.block()
+    except Exception:
+        voice = ""
     # Lecciones del QA de Gemini sobre NUESTRO output (imágenes y shorts propios).
     learnings = ""
     try:
@@ -293,6 +301,7 @@ def playbook_block() -> str:
         + autopsy
         + vault
         + radar
+        + voice
         + trends
         + learnings
         + "\nAplicá esto a CADA pieza: gancho en 2s, outcome-first, formato/duración por "
