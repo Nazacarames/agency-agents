@@ -193,6 +193,31 @@ def _ddg_search(query: str, n: int) -> List[Dict[str, Any]]:
     return []
 
 
+def read_page(url: str, max_chars: int = 6000) -> str:
+    """Lee una página web entera como markdown vía Jina Reader (`r.jina.ai`).
+
+    GRATIS y funciona desde datacenter (proxy que renderiza JS) → evita el 403 /
+    socket-hang-up que sufren landings y SPAs con httpx directo. Con `JINA_API_KEY`
+    sube el rate limit; sin key también anda. Devuelve '' si falla.
+    """
+    if not url:
+        return ""
+    # OJO: NO mandar UA de browser — r.jina.ai devuelve 403 a UAs de Chrome
+    # (anti-abuse). El default de httpx (python-httpx/…) pasa 200.
+    headers = {"X-Return-Format": "markdown"}
+    key = os.environ.get("JINA_API_KEY", "")
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+    try:
+        r = httpx.get("https://r.jina.ai/" + url, headers=headers,
+                      timeout=30.0, follow_redirects=True)
+        if r.status_code != 200:
+            return ""
+        return (r.text or "").strip()[:max_chars]
+    except Exception:
+        return ""
+
+
 def web_search(query: str, n: int = 5) -> List[Dict[str, Any]]:
     """Devuelve hasta `n` resultados [{title, url, snippet}, ...].
 

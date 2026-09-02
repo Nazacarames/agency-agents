@@ -37,6 +37,18 @@ def _competitor_queries():
     return [f"{c} anuncios reels contenido marketing que usa" for c in COMPETITORS[:6]]
 
 
+# Landing oficial de cada competidor: fuente RICA (copy/hooks/propuesta/prueba
+# social reales), leída entera vía Jina Reader (gratis, datacenter-proof).
+COMPETITOR_SITES = {
+    "Kommo": "https://www.kommo.com",
+    "ManyChat": "https://manychat.com",
+    "Cliengo": "https://www.cliengo.com",
+    "Tidio": "https://www.tidio.com",
+    "Landbot": "https://landbot.io",
+    "Whaticket": "https://whaticket.com",
+}
+
+
 _DISTILL_SYSTEM = (
     "Sos un estratega de contenido para una agencia argentina de automatización con IA. "
     "Te paso resultados de búsqueda REALES sobre qué contenido/anuncios rinden HOY en "
@@ -62,7 +74,7 @@ def refresh() -> Dict[str, Any]:
     """Re-investiga y reescribe el playbook. Devuelve {ok, chars, queries}."""
     s = get_settings()
     try:
-        from packs.automiq.tools.web_search import web_search
+        from packs.automiq.tools.web_search import web_search, read_page
     except Exception as e:
         log.warning("competitor_refresh_no_search", error=str(e)[:150])
         return {"ok": False, "reason": "web_search no disponible"}
@@ -85,6 +97,21 @@ def refresh() -> Dict[str, Any]:
     except Exception as e:
         log.warning("competitor_adlibrary_failed", error=str(e)[:150])
 
+    # Fuente RICA: landings REALES de competidores vía Jina Reader (lee la página
+    # entera desde datacenter, gratis). Da copy/hooks/propuesta/prueba social de verdad,
+    # no snippets sueltos. Best-effort: si una falla, sigue con las demás.
+    sites_read = 0
+    for name, url in COMPETITOR_SITES.items():
+        try:
+            md = read_page(url, max_chars=2200)
+            if md:
+                blocks.append(f"- [LANDING de {name}]: {md}")
+                sites_read += 1
+        except Exception as e:
+            log.warning("competitor_landing_failed", site=name, error=str(e)[:120])
+    if sites_read:
+        log.info("competitor_landings", sites=sites_read)
+
     # Fuente secundaria: búsquedas web (siempre) — tendencias + competidores por nombre.
     for q in _QUERIES + _competitor_queries():
         try:
@@ -100,8 +127,9 @@ def refresh() -> Dict[str, Any]:
         return {"ok": False, "reason": f"búsqueda devolvió poco ({len(blocks)})"}
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    user = (f"Fecha: {today}. Material real (los items '[ANUNCIO REAL de X]' son "
-            f"creativos que la competencia CORRE de verdad en Meta — priorizalos):\n\n"
+    user = (f"Fecha: {today}. Material real: los '[ANUNCIO REAL de X]' son creativos que "
+            f"la competencia CORRE en Meta; los '[LANDING de X]' son el copy REAL de la "
+            f"home del competidor (hooks/propuesta/prueba social). Priorizá ambos:\n\n"
             + "\n".join(blocks[:50])
             + "\n\nDestilá el playbook con las secciones pedidas.")
     try:
@@ -118,7 +146,15 @@ def refresh() -> Dict[str, Any]:
         log.warning("competitor_distill_thin", chars=len(text))
         return {"ok": False, "reason": "destilado pobre"}
 
-    src = f"{ads_found} anuncios reales (Ad Library) + búsquedas web" if ads_found else "búsquedas web"
+    _parts = []
+    if ads_found:
+        _parts.append(f"{ads_found} anuncios reales (Ad Library)")
+    if sites_read:
+        _parts.append(f"{sites_read} landings (Jina Reader)")
+    _parts.append("búsquedas web")
+    src = " + ".join(_parts)
     cp.save_playbook(text + f"\n\n_Refrescado el {today} desde {src}._\n")
-    log.info("competitor_refresh_ok", chars=len(text), queries=len(_QUERIES), ads=ads_found)
-    return {"ok": True, "chars": len(text), "queries": len(_QUERIES), "real_ads": ads_found}
+    log.info("competitor_refresh_ok", chars=len(text), queries=len(_QUERIES),
+             ads=ads_found, sites=sites_read)
+    return {"ok": True, "chars": len(text), "queries": len(_QUERIES),
+            "real_ads": ads_found, "sites_read": sites_read}
