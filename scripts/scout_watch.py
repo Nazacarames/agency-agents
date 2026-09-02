@@ -31,10 +31,6 @@ try:
     from app.integrations import ig_discovery, vision
 except Exception:
     ig_discovery = vision = None
-try:
-    from app.integrations import reddit_pulse
-except Exception:
-    reddit_pulse = None
 
 # TikTok = perfil (lo que el usuario produce); YT = búsqueda (backup). Handles best-effort.
 TIKTOK = {   # handles VERIFICADOS 2026-07-05 (kommo TikTok es privado → cae a YT backup)
@@ -126,14 +122,6 @@ def main(argv: list[str]) -> int:
     if not (vision and vision.enabled()):
         print("[scout] OJO: visión no configurada (falta GOOGLE_SERVICE_ACCOUNT_JSON) → "
               "no puedo destilar. Seteá la credencial (railway variables --json).")
-
-    # 0) Voz de audiencia (Reddit): texto, independiente del video. Best-effort.
-    if reddit_pulse and reddit_pulse.enabled():
-        print("[scout] escuchando Reddit (voz de audiencia) …", flush=True)
-        print(f"[scout] reddit → {reddit_pulse.refresh()}")
-    elif reddit_pulse:
-        print("[scout] reddit: sin REDDIT_CLIENT_ID/SECRET → salteado "
-              "(reddit.com/prefs/apps, app tipo 'script', gratis)")
 
     notes: list[tuple[str, str]] = []
 
