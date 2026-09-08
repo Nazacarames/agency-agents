@@ -199,7 +199,7 @@ class TikTokCreatorAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-redes,reels-scripting,hook-generator,humanizer"
     claude_code_timeout = 700
-    llm_provider = "glm"   # GLM 5.2: guiones más vivos; fallback CC/MiniMax
+    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
 
     @property
     def system_prompt(self) -> str:

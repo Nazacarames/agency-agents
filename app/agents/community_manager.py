@@ -46,7 +46,7 @@ class CommunityManagerAgent(BaseAgent):
     description = "Engagement: responde comentarios/DMs, engancha y detecta oportunidades"
     schedule = "30 15 * * mon-fri"  # días hábiles 15:30, después de social_media
     max_tokens = 5000
-    llm_provider = "glm"            # copy/voz viva; fallback MiniMax
+    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
     claude_code_skill = "social,humanizer"
 
     @property

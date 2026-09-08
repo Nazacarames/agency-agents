@@ -267,7 +267,9 @@ class Settings(BaseSettings):
     # El system-user token de publicación NO sirve para esta API.
     meta_ad_library_token: str = ""
     glm_model: str = "z-ai/glm-5.2"
-    deepseek_model: str = "deepseek-ai/deepseek-v4-pro"
+    # El id sin fecha murió el 2026-08-07 (410 Gone) y los agentes venían
+    # cayendo en silencio al fallback. El fechado sigue vivo.
+    deepseek_model: str = "deepseek-ai/deepseek-v4-pro-0813"
     # Kimi K3: razona antes de responder. Más capaz que GLM/DeepSeek en
     # tareas de análisis, pero ~19 s incluso para algo trivial → sólo para
     # agentes de fondo (cron), nunca en un camino donde alguien espera.

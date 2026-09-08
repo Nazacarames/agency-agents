@@ -140,7 +140,7 @@ class InboxAssistantAgent(BaseAgent):
     max_tokens = 6000
     temperature = 0.6
     use_claude_code = False   # composición de texto pura → no consume como un run CC
-    llm_provider = "glm"      # OpenCode+GLM: harness con skills (gratis); fallback MiniMax
+    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
     claude_code_skill = "humanizer"
 
     @property

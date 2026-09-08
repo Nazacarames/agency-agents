@@ -185,7 +185,7 @@ class OutboundAgent(BaseAgent):
     max_tokens = 8000
     temperature = 0.6
     use_claude_code = False   # composición de texto + envío determinístico (liviano)
-    llm_provider = "glm"      # OpenCode+GLM: harness con skills (gratis); fallback MiniMax
+    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
     claude_code_skill = "cold-email,customer-research,humanizer"
 
     @property
