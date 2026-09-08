@@ -494,7 +494,8 @@ class OutboundAgent(BaseAgent):
                 ls.save_store(store)
                 _save_sent_log(sent_log)
             # Igual mostramos un resumen útil (ingest + cola WhatsApp) en vez del texto pelado.
-            return super().post_process(self._summary_when_idle(ctx), ctx)
+            return super().post_process(
+                self._summary_when_idle(ctx) + self._serie_historica(), ctx)
 
         due_keys = set(ctx.args.get("_ob_due_keys", []))
 
@@ -575,18 +576,43 @@ class OutboundAgent(BaseAgent):
 
         if live:
             ls.save_store(store)
-            if sent or reeng_sent:
+            # Los errores del dia van al mismo log: es el unico dato del embudo que
+            # no se puede derivar despues (un envio que fallo no deja toque). Y se
+            # guarda TAMBIEN cuando no salio nada, que es justo el dia que importa
+            # medir: antes, un dia de 0 enviados y 12 errores no dejaba rastro.
+            n_err = len(errors) + len(reeng_errors)
+            if n_err:
+                errs = sent_log.setdefault("errores", {})
+                errs[today] = int(errs.get(today, 0)) + n_err
+            if sent or reeng_sent or n_err:
                 _save_sent_log(sent_log)
 
         log.info("outbound_done", run_id=ctx.run_id, sent=len(sent),
                  preview=len(preview), errors=len(errors), live=live, qa_improved=qa_improved)
 
         report = self._render_report(ctx, live, auto, sent, preview, errors, missing)
+        report += self._serie_historica()
         if qa_avg is not None:
             report += (f"\n## 🧪 QA Gemini (evaluator-optimizer)\nScore promedio: **{qa_avg}/100**"
                        + (f" · **{qa_improved}** email(s) flojo(s) regenerado(s) antes de enviar"
                           if qa_improved else " · sin regeneraciones (buen lote)"))
         return super().post_process(report, ctx)
+
+    def _serie_historica(self) -> str:
+        """La serie del embudo, al pie de cada reporte.
+
+        Nueve pendientes distintos entre el 24/08 y el 08/09 pidieron esto y ninguno
+        se ejecuto. La version que pedian era que el modelo escribiera un bloque JSON
+        con los numeros; no se hizo asi a proposito: un modelo escribiendo metricas
+        las inventa, y ese error ya nos costo caro una vez. Los numeros salen de
+        leads_store, que es donde realmente pasan las cosas.
+        """
+        try:
+            from ..integrations import metrics_store as mts
+            return "\n\n## 📈 Serie historica del embudo\n" + mts.resumen_outbound(21)
+        except Exception as e:
+            log.warning("outbound_serie_failed", error=str(e)[:150])
+            return ""
 
     # ── Evaluator-optimizer: juzgar y regenerar los emails flojos antes de enviar ──
 

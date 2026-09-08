@@ -60,6 +60,16 @@ class DataAnalystAgent(BaseAgent):
         except Exception as e:
             log.warning("da_metrics_failed", error=str(e)[:150])
         try:
+            # El embudo de outbound. Hasta el 2026-09-08 este agente no tenia UN
+            # numero de adquisicion: la serie traia MRR, clientes, leads acumulados
+            # y ganancia, nada de si salieron mails o si alguien contesto. Abrio
+            # nueve pendientes pidiendolo; el dato existia, no llegaba hasta aca.
+            from ..integrations import metrics_store as mts
+            parts.append("## Embudo de outbound (derivado de leads_store)\n"
+                         + mts.resumen_outbound(21) + "\n")
+        except Exception as e:
+            log.warning("da_outbound_failed", error=str(e)[:150])
+        try:
             from ..integrations import finance_store as fs, clients_store as cs
             parts.append(f"## Finanzas (6m)\n{fs.finance_summary(months=6)}\n")
             parts.append(f"## Clientes\nActivos: {cs.active_count()} · MRR: US$ {cs.mrr_usd():.0f}\n")

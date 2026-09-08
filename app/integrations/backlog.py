@@ -281,6 +281,76 @@ def resueltos_recientes(area: str = "", dias: int = 14) -> List[Dict[str, Any]]:
     return out
 
 
+# Palabras que aparecen en todos lados y no dicen de que se trata un pendiente.
+_VACIAS = {
+    "agregar", "cuando", "sobre", "antes", "desde", "hasta", "porque", "entre",
+    "reportar", "revisar", "verificar", "confirmar", "mostrar", "hacer", "poner",
+    "todos", "todas", "cada", "para", "esta", "este", "esto", "estan", "tiene",
+    "debe", "puede", "sigue", "queda", "sino", "otra", "otro", "mismo", "misma",
+    "dueno", "agente", "agentes", "panel", "reporte", "corrida", "produccion",
+}
+
+
+def _fichas(titulo: str) -> set:
+    """Las palabras que identifican DE QUE habla un pendiente.
+
+    Se quedan las largas y, sobre todo, las que tienen guion bajo o punto: los
+    nombres de variables y archivos (`series_historicas_w34_w35`, `outbound.py`)
+    son lo mas distintivo que escribe un agente.
+    """
+    crudo = re.findall(r"[a-z0-9_.]{5,}", _norm_ident(titulo))
+    fichas = set()
+    for w in crudo:
+        w = w.strip("._")
+        # Un ano suelto ("2026") agrupaba seis pendientes que no tenian nada que
+        # ver. Un numero nunca dice de que se trata algo.
+        if len(w) < 5 or w in _VACIAS or w.replace(".", "").isdigit():
+            continue
+        fichas.add(w)
+    return fichas
+
+
+def _norm_ident(s: str) -> str:
+    """Como _norm pero conservando `_` y `.` (los nombres de codigo importan)."""
+    s = unicodedata.normalize("NFKD", (s or "").lower())
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9_. ]+", " ", s)).strip()
+
+
+def temas_repetidos(area: str = "", minimo: int = 3) -> list:
+    """Pendientes distintos que hablan de lo mismo, agrupados por su palabra clave.
+
+    Por que existe: el 2026-09-08 habia NUEVE pendientes abiertos pidiendo que
+    outbound reportara su serie historica, escritos por agentes distintos a lo
+    largo de 15 dias. Cada uno figuraba como "reportado 1 vez", asi que la lista
+    los mostraba como nueve pedidos chiquitos en vez de un reclamo repetido nueve
+    veces — que es exactamente la senal que este modulo existe para dar.
+
+    NO los fusiona: dos pedidos sobre el mismo tema pueden pedir cosas distintas y
+    fusionarlos perderia informacion. Solo deja de esconder que se repiten.
+    """
+    ab = abiertos(area)
+    porficha: Dict[str, List[Dict[str, Any]]] = {}
+    for it in ab:
+        for f in _fichas(it.get("titulo", "")):
+            porficha.setdefault(f, []).append(it)
+    grupos, ya = [], set()
+    # De mayor a menor: el tema mas repetido se queda con sus items y los demas
+    # no los vuelven a listar bajo una palabra mas floja.
+    for ficha, items in sorted(porficha.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        libres = [i for i in items if i["id"] not in ya]
+        if len(libres) < minimo:
+            continue
+        ya.update(i["id"] for i in libres)
+        grupos.append({
+            "tema": ficha,
+            "cantidad": len(libres),
+            "dias_max": max(i["dias"] for i in libres),
+            "ids": [i["id"] for i in libres],
+        })
+    return grupos
+
+
 def resumen() -> Dict[str, Any]:
     ab = abiertos()
     return {
@@ -290,6 +360,7 @@ def resumen() -> Dict[str, Any]:
         "resueltos_30d": sum(1 for it in _load()["items"]
                              if it.get("estado") == "resuelto"
                              and _dias(it.get("resuelto_at", "")) <= 30),
+        "temas_repetidos": temas_repetidos(),
     }
 
 
@@ -301,6 +372,13 @@ def bloque(area: str = "", limite: int = 12, titulo: str = "") -> str:
     cab = titulo or ("## PENDIENTES ABIERTOS" if not area
                      else f"## PENDIENTES ABIERTOS ({area})")
     filas = []
+    # Lo primero que tiene que ver el agente: en que se esta repitiendo el equipo.
+    # Sin esto, nueve pedidos sobre el mismo tema parecen nueve temas distintos.
+    for g in temas_repetidos(area)[:3]:
+        filas.append(
+            f"- ⚠️ **{g['cantidad']} pendientes distintos hablan de `{g['tema']}`** "
+            f"(el mas viejo lleva {g['dias_max']} dias). No abras otro: si es lo mismo, "
+            f"decilo con el id del que ya esta; si es distinto, deci en que se diferencia.")
     for i in ab:
         filas.append(
             f"- `{i['id']}` [{i['area']}] **{i['titulo']}** — abierto hace "

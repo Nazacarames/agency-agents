@@ -19,6 +19,25 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
+def _settings_watchdog(**cambios):
+    """Settings para los tests del watchdog, arrancando de los defaults REALES.
+
+    Antes cada test armaba un SimpleNamespace a mano con los cuatro campos que
+    usaba. Cada vez que se cableaba un proveedor nuevo el watchdog leia un campo
+    que el falso no tenia y los tres tests se caian en main sin que nadie los
+    mirara (paso con `nvidia_api_key` al cablear Kimi K3). Partiendo de los
+    defaults reales, agregar una opcion de configuracion no vuelve a romperlos.
+    """
+    from app.config import Settings
+    base = Settings(_env_file=None)
+    campos = {k: getattr(base, k) for k in base.model_fields}
+    campos.update({"gmail_configured": False, "watchdog_grace_min": 30,
+                   "discord_agencia_webhook_url": "", "discord_webhook_errors": "",
+                   "discord_webhook_url": ""})
+    campos.update(cambios)
+    return SimpleNamespace(**campos)
+
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
@@ -859,10 +878,8 @@ def test_watchdog_avisa_pendientes_del_dueno_a_agencia(tmp_path, monkeypatch):
         def send(self, _msg, url=None, embed=None):
             enviados.append((url, embed.title, embed.description))
 
-    s = SimpleNamespace(gmail_configured=False, watchdog_grace_min=30,
-                        discord_agencia_webhook_url="https://discord.test/agencia",
-                        discord_webhook_errors="https://discord.test/errores",
-                        discord_webhook_url="")
+    s = _settings_watchdog(discord_agencia_webhook_url="https://discord.test/agencia",
+                           discord_webhook_errors="https://discord.test/errores")
     out = wd.check(s, discord=_Discord())
 
     agencia = [e for e in enviados if e[0] == "https://discord.test/agencia"]
@@ -893,9 +910,7 @@ def test_watchdog_no_marca_avisado_si_no_hay_canal(tmp_path, monkeypatch):
         def send(self, *a, **k):
             pass
 
-    s = SimpleNamespace(gmail_configured=False, watchdog_grace_min=30,
-                        discord_agencia_webhook_url="", discord_webhook_errors="",
-                        discord_webhook_url="")
+    s = _settings_watchdog()
     wd.check(s, discord=_Discord())
     # Con el canal ya configurado, el mismo pendiente TIENE que salir.
     s.discord_agencia_webhook_url = "https://discord.test/agencia"
@@ -1250,9 +1265,7 @@ def test_si_el_dueno_ya_contesto_el_watchdog_no_insiste(tmp_path, monkeypatch):
         def send(self, _c, url=None, embed=None):
             enviados.append(embed.description)
 
-    s = SimpleNamespace(gmail_configured=False, watchdog_grace_min=30,
-                        discord_agencia_webhook_url="https://discord.test/agencia",
-                        discord_webhook_errors="", discord_webhook_url="")
+    s = _settings_watchdog(discord_agencia_webhook_url="https://discord.test/agencia")
     assert wd.check(s, discord=_D())["backlog_humano_avisados"] == 1
     texto = "\n".join(enviados)
     assert "Meta Pixel" in texto                 # el que no contestó, sí avisa
