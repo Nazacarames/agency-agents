@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -20,6 +21,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pytz
+
+from ..log import get_logger
+
+log = get_logger("publish_queue")
 
 MAX_ITEMS = 500          # historial total que se conserva
 PENDING_TTL_DIAS = 14    # una pieza que no salió en dos semanas ya no es noticia
@@ -198,12 +203,98 @@ def stories_published_today(store: Optional[Dict[str, Any]] = None) -> int:
     )
 
 
+def _sumar_rechazo(nombre: str, origen: str) -> None:
+    """Cuenta los rechazos por nombre de tercero, por día y por agente.
+
+    Sin este número el gate es invisible: nadie sabe si frenó una pieza o mil, ni
+    qué agente las está generando. Va al mismo store que la cola para no sumar otro
+    archivo que después nadie limpia.
+    """
+    try:
+        with _LOCK:
+            store = load_store()
+            reg = store.setdefault("rechazos_nombre_tercero", {})
+            dia = reg.setdefault(_today_art(), {})
+            clave = f"{origen or '?'}:{nombre}"
+            dia[clave] = dia.get(clave, 0) + 1
+            # Sólo los últimos 30 días: un contador que crece para siempre es otra
+            # lista que nadie limpia.
+            for viejo in sorted(reg)[:-30]:
+                reg.pop(viejo, None)
+            save_store(store)
+    except Exception as e:
+        log.warning("no pude contar el rechazo: %s", str(e)[:120])
+
+
+def rechazos_de_hoy() -> Dict[str, int]:
+    """Rechazos por nombre de tercero de hoy, para que el agente lo reporte."""
+    try:
+        return dict(load_store().get("rechazos_nombre_tercero", {}).get(_today_art(), {}))
+    except Exception:
+        return {}
+
+
+def _clientes_no_nombrables() -> List[str]:
+    """Clientes que NO se pueden nombrar en material público.
+
+    La política es: **sólo CLAMEVET es nombrable**; cualquier otro va en genérico
+    ("una distribuidora de Córdoba") salvo permiso escrito. La lista se arma sola
+    desde el registro de clientes para que dar de alta uno nuevo no exija acordarse
+    de esto — que es exactamente como se filtra un nombre.
+    """
+    fuera = {"clamevet"}          # el único con permiso
+    nombres: List[str] = []
+    try:
+        from . import clients_store as cs
+        for c in cs.list_clients():
+            n = (c.get("name") or "").strip()
+            if not n or n.lower().startswith("clamevet"):
+                continue
+            # El nombre entero y también el primer token largo: "Cordoba
+            # Automatizaciones (CBA Portones)" tiene que pegar con "CBA Portones"
+            # y con "Cordoba Automatizaciones" sueltos.
+            nombres.append(n)
+            for parte in re.split(r"[()/,]", n):
+                parte = parte.strip()
+                if len(parte) >= 6 and parte.lower() not in fuera:
+                    nombres.append(parte)
+    except Exception as e:
+        log.warning("no pude leer los clientes para el gate de nombres: %s", str(e)[:120])
+    return nombres
+
+
+def nombre_de_tercero(caption: str) -> str:
+    """El nombre de cliente que aparece en el texto, o "" si no hay ninguno.
+
+    Existe porque publicar el nombre de un cliente sin permiso escrito es un
+    problema con una persona real del otro lado, y no se deshace borrando el post.
+    Se chequea acá —en el ÚNICO punto por el que pasa todo lo que se publica— y no
+    en cada agente, porque un gate que hay que acordarse de invocar no es un gate.
+    """
+    texto = (caption or "").lower()
+    if not texto:
+        return ""
+    for n in _clientes_no_nombrables():
+        # Límite de palabra a los costados para que "CBA" no pegue dentro de otra
+        # palabra. Sin \b, que el editor lo corrompe a un backspace literal.
+        if re.search(r"(?<![\w])" + re.escape(n.lower()) + r"(?![\w])", texto):
+            return n
+    return ""
+
+
 def enqueue(image: str, caption: str = "", targets: Optional[List[str]] = None,
             source: str = "", kind: str = "post",
             images: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
     """Encola una pieza. `kind`: post | story | carousel | reel.
     `images`: lista para carruseles (image = portada). Para reels, `image` es el mp4.
-    Devuelve el item, o None si la cola pendiente está llena."""
+    Devuelve el item, o None si la cola pendiente está llena o si el texto nombra a
+    un cliente sin permiso."""
+    tercero = nombre_de_tercero(caption)
+    if tercero:
+        log.warning("pieza RECHAZADA: el texto nombra a «%s», que no es nombrable "
+                    "en publico. Origen: %s", tercero, source or "?")
+        _sumar_rechazo(tercero, source)
+        return None
     kind = (kind or "post").lower()
     if kind not in FEED_KINDS + ("story",):
         kind = "post"
