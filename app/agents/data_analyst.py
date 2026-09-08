@@ -50,8 +50,7 @@ class DataAnalystAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        from .departments import autonomy_note
-        return f"{get_context_block()}\n\n{autonomy_note(self.name)}\n\n{DA_INSTRUCTIONS}"
+        return f"{get_context_block()}\n\n{DA_INSTRUCTIONS}"
 
     def build_user_message(self, ctx: AgentContext) -> str:
         parts = ["Analizá las métricas del negocio con las series de abajo.\n"]

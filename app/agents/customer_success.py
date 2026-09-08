@@ -51,8 +51,7 @@ class CustomerSuccessAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        from .departments import autonomy_note
-        return f"{get_context_block()}\n\n{autonomy_note(self.name)}\n\n{CS_INSTRUCTIONS}"
+        return f"{get_context_block()}\n\n{CS_INSTRUCTIONS}"
 
     def build_user_message(self, ctx: AgentContext) -> str:
         parts = ["Armá el brief de Customer Success con la cartera de abajo.\n"]

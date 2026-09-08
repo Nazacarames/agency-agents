@@ -350,6 +350,21 @@ class BaseAgent(ABC):
         """Inyecta contexto de empresa + lecciones + memoria del cliente al prompt."""
         from ..integrations import memory_store as ms
         blocks: List[str] = []
+        # Su lugar en la empresa y qué puede hacer solo. Va acá y no en cada agente
+        # porque sólo 6 de 21 lo inyectaban en su propio system prompt: los otros 13
+        # —incluidos outbound y leadhunter, los que más acciones ejecutan— corrían sin
+        # saber su nivel de autonomía. Acá lo reciben todos, y un agente nuevo lo
+        # hereda sin que nadie se acuerde de agregarlo.
+        # Fuente ÚNICA: los 6 que lo armaban en su propio system_prompt dejaron de
+        # hacerlo. Si algún día vuelve a aparecer ahí, se va a ver duplicado en el
+        # prompt — un bug visible, que es mejor que una comprobación cara por corrida.
+        try:
+            from .departments import autonomy_note
+            nota = autonomy_note(self.name)
+            if nota:
+                blocks.append(nota)
+        except Exception as e:
+            log.warning("autonomy_note_failed", agent=self.name, error=str(e)[:120])
         company = ms.company_digest()
         if company:
             blocks.append("## CONTEXTO DE AUTOMIQ (memoria general)\n" + company)

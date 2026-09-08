@@ -379,8 +379,7 @@ class ChiefOfStaffAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        from .departments import autonomy_note
-        return f"{get_context_block()}\n\n{autonomy_note(self.name)}\n\n{COS_INSTRUCTIONS}"
+        return f"{get_context_block()}\n\n{COS_INSTRUCTIONS}"
 
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         """Además de persistir el brief, el Chief EJECUTA sus decisiones:

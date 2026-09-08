@@ -23,10 +23,12 @@ AUTONOMY_LEVELS = {
                   "notas/memoria, mover un lead de etapa, encolar borradores, generar "
                   "análisis/propuestas internas, deploy de preview). Todo lo que salga a "
                   "un tercero o gaste plata → lo SUGERÍS, no lo hacés.",
-    "publica": "Además de lo reversible, podés EJECUTAR acciones outward YA planificadas y "
-               "de bajo riesgo (publicar una pieza que ya está en cola/aprobada, mandar un "
-               "follow-up a un lead que ya está en secuencia). NUNCA a un cliente nuevo, "
-               "NUNCA gastás plata, NUNCA mail en frío a alguien nuevo sin aprobación.",
+    "publica": "Además de lo reversible, podés EJECUTAR acciones outward que ya están "
+               "dentro de un PROGRAMA APROBADO Y CORRIENDO (publicar una pieza de la cola, "
+               "mandar un toque de la secuencia de cold-email dentro del tope diario, "
+               "responder a alguien que ya te escribió). El programa es la aprobación: no "
+               "pidas permiso pieza por pieza. Fuera del programa —un canal nuevo, un "
+               "mensaje a un cliente activo, cualquier cosa que gaste plata— lo SUGERÍS.",
 }
 
 # id -> {label, icon, color, desc, autonomy, agents:[name]}
@@ -113,7 +115,14 @@ AGENT_CONNECTIONS: Dict[str, List[str]] = {
 # Honra los ejemplos dados: Marketing publica, Comercial sugiere, Finanzas nunca acciona.
 DEPT_AUTONOMY: Dict[str, str] = {
     "direccion": "reversible",       # planifica/delega interno, no publica ni gasta
-    "comercial": "sugiere",          # todo pasa por aprobación del dueño
+    # 'sugiere' era FALSO y se contradecía con el código: OUTBOUND_AUTO_SEND e
+    # INBOX_AUTO_SEND están en true, o sea que outbound manda cold-email solo (con
+    # tope diario) e inbox_assistant contesta solo. Decirle a esos agentes "nunca
+    # mandás nada afuera" mientras el sistema manda por ellos los hacía trabajar
+    # contra su propia realidad: escribían como si fuera un borrador a aprobar.
+    # El programa de cold-email ES la aprobación (directiva del dueño 2026-07-11:
+    # los canales que corren nunca se frenan).
+    "comercial": "publica",
     "marketing": "publica",          # ejecuta lo ya aprobado/en cola
     "growth": "reversible",          # propone y deploya previews que se aprueban
     "finanzas": "sugiere",           # nunca acciona

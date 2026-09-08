@@ -56,8 +56,7 @@ class FinanceOfficerAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        from .departments import autonomy_note
-        return f"{get_context_block()}\n\n{autonomy_note(self.name)}\n\n{FINANCE_INSTRUCTIONS}"
+        return f"{get_context_block()}\n\n{FINANCE_INSTRUCTIONS}"
 
     def build_user_message(self, ctx: AgentContext) -> str:
         month = datetime.now(ZoneInfo(self.timezone)).strftime("%Y-%m")
