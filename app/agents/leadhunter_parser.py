@@ -76,7 +76,7 @@ def parse_leads(md_text: str) -> List[Dict]:
             "titulo": lead.get("titulo", ""),
             "campos": campos,
             "empresa": campos.get("empresa", ""),
-            "web": campos.get("web", ""),
+            "web": limpiar_web(campos.get("web", "")),
             "ciudad": campos.get("ubicación") or campos.get("ubicacion") or campos.get("ciudad", ""),
             "industria": campos.get("industria", ""),
             "fit_score": campos.get("fit_score", ""),
@@ -86,6 +86,33 @@ def parse_leads(md_text: str) -> List[Dict]:
             "decisor": campos.get("decisor", ""),
         })
     return out
+
+
+def limpiar_web(valor: str) -> str:
+    """Deja SOLO una URL en el campo web, o vacío.
+
+    El modelo escribe la celda de la tabla como se le ocurre y ahí se colaba de todo:
+    el 2026-09-08, el 27% de los leads con `web` tenía la cantidad de empleados y
+    notas en vez de la URL ("20–40 (20+ años en el mercado) Web: https://…"), y otros
+    tenían "sin sitio propio (FB + IG)". El buscador de emails recibía esa basura,
+    fallaba al instante y marcaba al lead como incontactable para siempre.
+
+    Como no se puede controlar lo que escribe el modelo, la defensa va acá: si el
+    valor no es una URL, se busca una adentro; si no hay ninguna, queda vacío —
+    vacío es honesto, basura hace que todo lo de aguas abajo falle en silencio.
+    """
+    v = (valor or "").strip()
+    if not v:
+        return ""
+    # ¿Ya es una URL limpia?
+    if re.match(r"^https?://\S+$", v) or re.match(r"^[a-z0-9][a-z0-9.\-]*\.[a-z]{2,}(/\S*)?$", v, re.I):
+        return v
+    # Si no, rescatar la primera URL que haya adentro ("… Web: https://x.com").
+    m = re.search(r"https?://[^\s|)\]]+", v)
+    if not m:
+        m = re.search(r"(?<![\w])((?:www\.)?[a-z0-9][a-z0-9\-]*\.(?:com|net|org|ar|com\.ar|net\.ar|org\.ar)"
+                      r"(?:\.[a-z]{2})?)(?:/\S*)?", v, re.I)
+    return m.group(0).rstrip(".,;") if m else ""
 
 
 def _strip_brackets(s: str) -> str:
