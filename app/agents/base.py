@@ -522,6 +522,24 @@ class BaseAgent(ABC):
                         log.warning("hermes_unavailable_fallback", agent=self.name,
                                     run_id=ctx.run_id, provider=prov or "minimax",
                                     error=str(e)[:200])
+                        # Un modelo DADO DE BAJA no se arregla solo, y el fallback lo
+                        # tapa: GLM 5.2 y DeepSeek V4 Pro estuvieron muertos un mes
+                        # entero (410 Gone) con 14 agentes degradando en silencio a
+                        # MiniMax, y sólo se descubrió mirando a mano. Un 410/404 va
+                        # al backlog para que aparezca en el brief del día siguiente;
+                        # los timeouts y 429/504 NO, que son de carga y se recuperan.
+                        if prov and any(s in str(e) for s in ("410", "404", "end of life",
+                                                              "no longer available")):
+                            try:
+                                from ..integrations import backlog
+                                backlog.abrir("dev",
+                                              f"el modelo del provider '{prov}' fue dado de baja "
+                                              f"por el proveedor (410/404): los agentes que lo usan "
+                                              f"están cayendo al fallback sin avisar. Hay que "
+                                              f"repuntarlo a un modelo vivo.",
+                                              origen=self.name)
+                            except Exception:
+                                pass
                         response = None
 
             # 0a) OpenCode (harness con tools+skills, backend NVIDIA GLM/DeepSeek).
