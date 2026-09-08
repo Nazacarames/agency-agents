@@ -128,6 +128,18 @@ def _extract_body(payload: dict) -> str:
     return ""
 
 
+def _hilo_inexistente(e: Exception) -> bool:
+    """¿El error de Gmail es 'ese hilo/mensaje no existe' y no otra cosa?
+
+    Se mira el status 404 Y el texto: un 404 por credenciales o por buzón
+    equivocado no se arregla reintentando sin hilo, y tragárselo escondería un
+    problema real.
+    """
+    status = getattr(getattr(e, "resp", None), "status", None)
+    texto = str(e)
+    return (status == 404 or "404" in texto) and "not found" in texto.lower()
+
+
 def _header(headers: List[dict], name: str) -> str:
     for h in headers or []:
         if h.get("name", "").lower() == name.lower():
@@ -314,7 +326,22 @@ class GmailClient:
         payload = {"raw": raw}
         if thread_id:
             payload["threadId"] = thread_id
-        sent = svc.users().messages().send(userId=self.user_id, body=payload).execute()
+        try:
+            sent = svc.users().messages().send(userId=self.user_id, body=payload).execute()
+        except Exception as e:
+            # Por acá pasan los SEGUIMIENTOS del outbound (van con threadId para
+            # colgarse del primer toque). Los hilos anteriores a la migración a
+            # Workspace no existen en esta casilla y Gmail devuelve 404 "Requested
+            # entity was not found": medido el 2026-09-07, moría el 100% de los
+            # seguimientos (6 de 6) mientras los primeros toques salían perfecto, y
+            # se juntaron 247 toques vencidos. El hilo es una comodidad; el mail es
+            # el negocio, así que se manda igual, suelto.
+            if not (thread_id and _hilo_inexistente(e)):
+                raise
+            log.warning("gmail_send_sin_hilo", to=to, thread_id=thread_id,
+                        detalle="el hilo no existe en esta casilla; se manda suelto")
+            sent = svc.users().messages().send(userId=self.user_id, body={"raw": raw}).execute()
+            thread_id = None
         msg_id = sent.get("id", "")
         log.info("gmail_message_sent", to=to, msg_id=msg_id, subject=subject[:60],
                  threaded=bool(thread_id))
@@ -339,12 +366,26 @@ class GmailClient:
             except Exception:
                 pass
         raw = base64.urlsafe_b64encode(mime.as_bytes()).decode("utf-8")
-        sent = (
-            svc.users()
-            .messages()
-            .send(userId=self.user_id, body={"raw": raw, "threadId": thread_id})
-            .execute()
-        )
+
+        def _enviar(cuerpo):
+            return svc.users().messages().send(userId=self.user_id, body=cuerpo).execute()
+
+        try:
+            sent = _enviar({"raw": raw, "threadId": thread_id})
+        except Exception as e:
+            # El hilo puede no existir en ESTA casilla: los msg_id/thread_id anteriores
+            # a la migración a Workspace quedaron apuntando al buzón viejo, y Gmail
+            # responde 404 "Requested entity was not found". Antes eso hacía fallar el
+            # seguimiento entero: medido el 2026-09-07, el 100% de los seguimientos
+            # moría así (6 de 6) mientras los primeros toques salían bien, y se
+            # acumularon 247 toques vencidos. Un seguimiento que llega fuera del hilo
+            # es muchísimo mejor que uno que no llega.
+            if not _hilo_inexistente(e):
+                raise
+            log.warning("gmail_reply_sin_hilo", thread_id=thread_id, to=to,
+                        detalle="el hilo no existe en esta casilla; se manda suelto")
+            sent = _enviar({"raw": raw})
+
         msg_id = sent.get("id", "")
         log.info("gmail_reply_sent", thread_id=thread_id, msg_id=msg_id, to=to)
         return msg_id
