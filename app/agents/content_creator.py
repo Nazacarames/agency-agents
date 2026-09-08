@@ -6,10 +6,15 @@ v2 (2026-06-12) — Actualizado con:
 - "Empresa → Oferta → Tecnología" (Visual Project V2): copy arranca por el problema
 - max_tokens subido de 5000 a 12000 para evitar truncamiento
 """
+import re
+
+from ..log import get_logger
 from .base import BaseAgent, AgentContext
 from ._common import (get_context_block, official_site_directive,
                       image_prompt_directive, augment_with_images,
                       competitor_visual_directive_for)
+
+log = get_logger("content_creator")
 
 
 def _playbook_block() -> str:
@@ -102,6 +107,44 @@ class ContentCreatorAgent(BaseAgent):
             + image_prompt_directive()
         )
 
+    # Las líneas que disparan la generación de imágenes. Si se pierden, la pieza sale
+    # sin imagen — mismo patrón que reconoce `_common.py` al extraer los prompts.
+    _RE_IMAGEN = re.compile(r"^[\s>*`\-]*(?:IMAGEN|PROMPT DE IMAGEN|VISUAL SUGERIDO)\s*[:：]",
+                            re.IGNORECASE | re.MULTILINE)
+
+    def _reescribir_cuidando_imagenes(self, texto: str, fix: str):
+        """Pide una revisión del lote SIN tocar las líneas `IMAGEN:`.
+
+        Devuelve None si la revisión perdió o alteró alguna, y entonces
+        `improve_text` se queda con el original. Preferir una copy mediocre con su
+        imagen antes que una mejor sin imagen: la pieza sin marcador no se publica.
+        """
+        originales = self._RE_IMAGEN.findall(texto)
+        if not originales:
+            return None          # sin marcadores no hay nada que cuidar ni que arreglar
+        pedido = (
+            f"{texto}\n\n---\nRevisá el contenido de arriba aplicando esta corrección: "
+            f"{fix}\n\nREGLA INVIOLABLE: las líneas que empiezan con `IMAGEN:` van "
+            "TAL CUAL, palabra por palabra, sin agregar ni sacar ninguna. Sólo podés "
+            "mejorar el texto que las rodea. Devolvé el lote COMPLETO."
+        )
+        try:
+            from ..clients.minimax import MiniMaxClient
+            from ..config import get_settings
+            r = MiniMaxClient(get_settings()).complete(
+                "Sos un editor de contenido para redes.",
+                [{"role": "user", "content": pedido}], max_tokens=4000, temperature=0.4)
+            nuevo = (r.text or "").strip()
+        except Exception as e:
+            log.warning("reescritura_fallo", agent=self.name, error=str(e)[:140])
+            return None
+        # La guarda: mismo número de marcadores o no vale.
+        if len(self._RE_IMAGEN.findall(nuevo)) != len(originales):
+            log.warning("reescritura_descartada", agent=self.name,
+                        antes=len(originales), despues=len(self._RE_IMAGEN.findall(nuevo)))
+            return None
+        return nuevo
+
     def post_process(self, response_text: str, ctx: AgentContext) -> str:
         from ..config import get_settings
         s = get_settings()
@@ -115,6 +158,22 @@ class ContentCreatorAgent(BaseAgent):
         pub_final, qa_line, gap_line = pub, "", ""
         try:
             from ..integrations import text_judge
+            # Un pase de auto-corrección ANTES de juzgar para publicar: si el lote
+            # está flojo (score < 70) se pide UNA revisión con el fix de Gemini como
+            # guía y se queda la mejor de las dos. Es el mismo evaluator-optimizer
+            # que ya usa meeting_prep, que hasta ahora no se aplicaba acá.
+            #
+            # OJO con el gotcha: regenerar contenido social a lo bruto ROMPE las
+            # líneas `IMAGEN:`, que son las que disparan la generación de las
+            # imágenes. Una pieza sin su marcador no se publica con imagen, así que
+            # sería peor el remedio. Por eso `_reescribir_cuidando_imagenes` le
+            # prohíbe tocarlas y, además, se verifica que sigan estando: si falta
+            # una, se descarta la versión nueva entera.
+            mejorado = text_judge.improve_text(
+                self.name, "social", response_text,
+                self._reescribir_cuidando_imagenes, below=70)
+            if mejorado.get("improved"):
+                response_text = mejorado["text"]
             gate = text_judge.qa_gate(self.name, "social", response_text)
             pub_final = pub and gate["publish_ok"]
             qa_line = gate["line"]
