@@ -152,6 +152,24 @@ def _wa_link(phone: str) -> str:
     return f"https://wa.me/{digits}" if digits else ""
 
 
+def _wa_titulo(ctx, mostrados: list) -> str:
+    """Encabezado de la cola, diciendo cuántos esperan en total.
+
+    Mostrar 15 nombres sin el total hace imposible saber si la cola son 15 o 116, y
+    sin eso nadie decide sentarse a trabajarla. Se aclara que rotan para que el dueño
+    no crea que son los mismos de ayer y saltee la sección entera, que es justo lo que
+    venía pasando: 116 en cola y 2 contactados en meses.
+    """
+    try:
+        total = int(ctx.args.get("_ob_wa_total") or 0)
+    except Exception:
+        total = 0
+    if total > len(mostrados):
+        return (f"## 📱 Cola WhatsApp — **{total} esperando**, te muestro "
+                f"{len(mostrados)} (rotan: mañana salen otras)")
+    return "## 📱 Cola WhatsApp (sin email — clic y escribí)"
+
+
 def _wa_line(w: dict) -> str:
     """Línea de la cola WhatsApp con link clickeable + decisor + demo para pegar."""
     link = _wa_link(w.get("phone", ""))
@@ -271,9 +289,15 @@ class OutboundAgent(BaseAgent):
         ctx.args["_ob_ingest"] = ingest_stats
         wa_queue = []
         base_url_wa = (ctx.settings.public_base_url or "").rstrip("/")
-        for l in ls.whatsapp_queue(store)[:15]:
-            item = {"company": l.get("company", "?"), "phone": l.get("phone", ""),
-                    "decisor": l.get("decisor", "")}
+        cola_wa = ls.whatsapp_queue(store)
+        # Cuántos esperan en total: sin este número el dueño ve 15 nombres y no sabe
+        # si son 15 o 116, así que no puede decidir si vale la pena sentarse a
+        # trabajarlos. El 2026-09-08 eran 116 y sólo 2 habían sido contactados.
+        ctx.args["_ob_wa_total"] = len(cola_wa)
+        mostrados = cola_wa[:15]
+        for l in mostrados:
+            item = {"key": l.get("key", ""), "company": l.get("company", "?"),
+                    "phone": l.get("phone", ""), "decisor": l.get("decisor", "")}
             # demo lista para pegar en el WhatsApp (facilitar > vender en el 1er mensaje)
             if base_url_wa:
                 try:
@@ -285,6 +309,12 @@ class OutboundAgent(BaseAgent):
                     pass
             wa_queue.append(item)
         ctx.args["_ob_wa_queue"] = wa_queue
+        # Se marcan DESPUÉS de armarlos: la próxima corrida muestra otros y así rota
+        # toda la cola en vez de repetir siempre las mismas 15 empresas.
+        try:
+            ls.marcar_wa_mostrados(store, mostrados, today)
+        except Exception as e:
+            log.warning("wa_marcar_fallo", error=str(e)[:120])
 
         if not due_today:
             ctx.args["_ob_status"] = "nothing_due"
@@ -675,7 +705,7 @@ class OutboundAgent(BaseAgent):
         ]
         parts += self._reengage_section(ctx)
         if wa:
-            parts += ["", "## 📱 Cola WhatsApp (sin email — clic y escribí)"]
+            parts += ["", _wa_titulo(ctx, wa)]
             parts += [_wa_line(w) for w in wa]
         return "\n".join(parts)
 
@@ -713,7 +743,7 @@ class OutboundAgent(BaseAgent):
             parts += ["## ⚠️ Errores", *errors, ""]
         parts += self._reengage_section(ctx)
         if wa:
-            parts += ["## 📱 Cola WhatsApp (sin email — clic y escribí)"]
+            parts += [_wa_titulo(ctx, wa)]
             parts += [_wa_line(w) for w in wa]
             parts += [""]
         if not sent and not preview and not errors and not missing:

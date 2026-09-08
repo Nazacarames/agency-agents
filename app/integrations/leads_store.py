@@ -606,11 +606,35 @@ def due_for_reengage(
 
 
 def whatsapp_queue(store: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Leads nuevos SIN email (sólo WhatsApp/teléfono) → cola para contactar a mano."""
-    return [
+    """Leads sin email y con teléfono → cola para contactar a mano, ROTANDO.
+
+    Antes devolvía siempre los mismos en el mismo orden, así que el reporte diario
+    mostraba las mismas 15 empresas un día tras otro. Medido el 2026-09-08: 116 leads
+    en la cola y sólo 2 contactados en meses. Una lista que nunca cambia se vuelve
+    invisible: el dueño aprende que ya la vio y saltea la sección entera.
+
+    Ahora se ordena por "hace cuánto que no lo muestro" (`_wa_visto`), así cada día
+    aparecen caras nuevas y toda la cola rota. Marcarlo lo hace `marcar_wa_mostrados`
+    DESPUÉS de renderizar el reporte, no acá: si se marcara al leer, una corrida que
+    falla igual quemaría el turno de esos leads.
+    """
+    cola = [
         l for l in store.get("leads", {}).values()
         if l.get("state") == "nuevo" and l.get("phone") and not l.get("email")
     ]
+    # Los nunca mostrados primero (""), después los más viejos.
+    cola.sort(key=lambda l: str(l.get("_wa_visto") or ""))
+    return cola
+
+
+def marcar_wa_mostrados(store: Dict[str, Any], leads: List[Dict[str, Any]],
+                        hoy: str) -> None:
+    """Deja constancia de que estos leads ya salieron en el reporte de hoy."""
+    porclave = {l.get("key"): l for l in store.get("leads", {}).values()}
+    for l in leads:
+        real = porclave.get(l.get("key"))
+        if real is not None:
+            real["_wa_visto"] = hoy
 
 
 def summary_counts(store: Dict[str, Any]) -> Dict[str, int]:
