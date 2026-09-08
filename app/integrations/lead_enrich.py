@@ -16,6 +16,7 @@ pasar a ser contactable por mail. Best-effort: si algo falla, el lead queda igua
 from __future__ import annotations
 
 import re
+import time
 from typing import Any, Dict, Optional
 
 import httpx
@@ -31,7 +32,21 @@ _JUNK = ("sentry", "wixpress", "wix.com", "example.", "yourdomain", "domain.com"
          "email.com", "tuempresa", "@2x", ".png", ".jpg", ".jpeg", ".gif", ".webp",
          "godaddy", "cloudflare", "sentry.io", "schema.org", "w3.org")
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Automiq/1.0"
-_PATHS = ("", "/contacto")   # home + contacto; suficiente para PyMEs, acota latencia
+# Rutas donde una PyME argentina publica el mail. Eran sólo ("", "/contacto") y con eso
+# los 102 leads que tenían web sin email fallaron TODOS y quedaron marcados como
+# imposibles para siempre — 21% del pipeline dado de baja por mirar dos páginas.
+# El corte es barato: se para en la primera que devuelve un mail (ver el break), así
+# que en el caso bueno sigue siendo 1 request.
+_PATHS = ("", "/contacto", "/contacto.html", "/contactanos", "/contactenos",
+          "/institucional", "/nosotros", "/quienes-somos", "/empresa")
+
+# Versión de la estrategia de búsqueda. Cuando cambia (más rutas, mejor parseo), los
+# leads que fallaron con la estrategia vieja vuelven a ser candidatos: marcarlos como
+# "imposible" para siempre por un intento con menos herramientas es tirar pipeline.
+_ESTRATEGIA = 2
+
+# Segundos como mucho por lead (todas sus rutas juntas).
+_PRESUPUESTO_LEAD = 15.0
 
 
 def _domain_of(url: str) -> str:
@@ -48,10 +63,17 @@ def find_published_email(web: str) -> Optional[str]:
         web = "https://" + web
     site_dom = _domain_of(web)
     found: Dict[str, bool] = {}   # email -> es del mismo dominio del sitio
+    # Presupuesto por lead. Con 9 rutas y 6 s cada una, un sitio que cuelga se comía
+    # casi un minuto él solo y la corrida entera se iba de tiempo. Se prueban rutas
+    # hasta encontrar o hasta agotar el presupuesto, lo que pase primero.
+    arranque = time.monotonic()
     for path in _PATHS:
+        if time.monotonic() - arranque > _PRESUPUESTO_LEAD:
+            log.info("lead_enrich_sin_tiempo", web=web[:60], probadas=_PATHS.index(path))
+            break
         url = web.rstrip("/") + path
         try:
-            r = httpx.get(url, timeout=6.0, follow_redirects=True,
+            r = httpx.get(url, timeout=4.0, follow_redirects=True,
                           headers={"User-Agent": _UA})
             if r.status_code != 200 or not r.text:
                 continue
@@ -83,9 +105,13 @@ def enrich_missing_emails(store: Dict[str, Any], limit: int = 4) -> int:
     for key, l in leads.items():
         if n >= limit:
             break
-        if l.get("email") or not l.get("web") or l.get("_enrich_tried"):
+        if l.get("email") or not l.get("web"):
             continue
-        l["_enrich_tried"] = True   # un intento por lead (aunque falle) → no hostiga sitios
+        # Un intento por lead POR ESTRATEGIA (no uno para toda la vida): si mejoró la
+        # búsqueda, se le da otra oportunidad. Sigue sin hostigar: una vez por versión.
+        if int(l.get("_enrich_tried") or 0) >= _ESTRATEGIA:
+            continue
+        l["_enrich_tried"] = _ESTRATEGIA
         try:
             e = find_published_email(l.get("web"))
         except Exception as ex:
