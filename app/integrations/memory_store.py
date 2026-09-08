@@ -14,9 +14,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from ..log import get_logger
+
+log = get_logger("memory_store")
 
 from . import db
 
@@ -250,16 +255,53 @@ def bump_lesson_weight(lesson_id: Any, by: int = 1) -> bool:
     return False
 
 
+def _huella(texto: str) -> frozenset:
+    """Las palabras con carga semántica de una lección, para comparar dos que dicen
+    lo mismo con otras palabras."""
+    import re
+    from unicodedata import normalize as _n
+    t = _n("NFKD", (texto or "").lower()).encode("ascii", "ignore").decode()
+    vacias = {"el", "la", "los", "las", "un", "una", "de", "del", "que", "y", "o", "a",
+              "en", "es", "no", "se", "con", "por", "para", "su", "sus", "al", "lo",
+              "mas", "pero", "si", "ya", "cuando", "como", "sobre", "hay", "este",
+              "esta", "eso", "ese", "nos", "le", "les", "ni", "sin", "the", "of"}
+    return frozenset(p for p in re.findall(r"[a-z0-9]{3,}", t) if p not in vacias)
+
+
+def _mismo_tema(a: str, b: str, umbral: float = 0.65) -> bool:
+    """Jaccard sobre las palabras con carga. 0.65 separa bien 'la misma lección
+    reescrita' de 'dos lecciones distintas del mismo tema' — medido sobre las 592
+    que había el 2026-09-08."""
+    ha, hb = _huella(a), _huella(b)
+    if not ha or not hb:
+        return False
+    return len(ha & hb) / len(ha | hb) >= umbral
+
+
 def record_outcome(agent: str, lesson: str, weight: int = 1) -> Optional[Dict[str, Any]]:
     """Lección automática de tipo 'outcome'. Es el motor del aprendizaje automático:
     lo dispara el pipeline cuando observa un resultado real (p.ej. un lead respondió).
-    Si la lección ya existe (idéntica + activa), REFUERZA su peso en vez de duplicar —
-    así las señales que se repiten suben de prioridad y se inyectan primero."""
+    Si la lección ya existe, REFUERZA su peso en vez de duplicar — así las señales
+    que se repiten suben de prioridad y se inyectan primero.
+
+    El parecido se mide por CONTENIDO, no por string exacto. Exigir igualdad byte a
+    byte no reforzaba nunca: dos lecciones escritas por un LLM jamás salen idénticas,
+    así que el 2026-09-08 había 551 lecciones de 592 estancadas en peso 1 y cada
+    aprendizaje nuevo empujaba al anterior fuera del prompt (sólo entran 8).
+    """
     lesson = (lesson or "").strip()
     if not lesson:
         return None
+    # Un pedido bloqueado NO es una lección: es un pendiente. Colarlo acá le come
+    # un lugar de los 8 a un aprendizaje de verdad, y encima se repite cada corrida
+    # mientras siga bloqueado.
+    if re.search(r"PENDIENTE\s*\(|hace falta (acceso|presupuesto)|conseguir acceso",
+                 lesson, re.IGNORECASE):
+        log.info("leccion_descartada_es_pendiente", agent=agent, texto=lesson[:80])
+        return None
     for l in list_lessons(agent=agent, active_only=True):
-        if l.get("lesson", "").strip() == lesson:
+        actual = l.get("lesson", "").strip()
+        if actual == lesson or _mismo_tema(actual, lesson):
             bump_lesson_weight(l.get("id"), by=weight)   # refuerzo
             return l
     return add_lesson(agent, lesson, kind="outcome", weight=weight)
@@ -341,10 +383,28 @@ def company_digest(max_chars: int = 3500) -> str:
     return ("\n\n".join(parts))[:max_chars]
 
 
-def lessons_for(agent: str, max_items: int = 8, max_chars: int = 1800) -> str:
-    """Lecciones aprendidas relevantes para un agente, para inyectar en su prompt."""
-    rows = list_lessons(agent=agent, active_only=True)[:max_items]
+def lessons_for(agent: str, max_items: int = 10, max_chars: int = 2400) -> str:
+    """Lecciones aprendidas de un agente, para inyectar en su prompt.
+
+    Mezcla a propósito DURADERAS + RECIENTES. El orden de `list_lessons` es
+    `weight DESC, created_at DESC`, así que cortar los primeros N daba "las más
+    nuevas" cuando casi todo pesa 1 — y una directiva del dueño de julio quedaba
+    enterrada bajo el aprendizaje de anteayer. Reservando lugares para las de más
+    peso, lo que se ganó a fuerza de repetirse no se cae del prompt.
+    """
+    rows = list_lessons(agent=agent, active_only=True)
     if not rows:
         return ""
-    lines = [f"- {l['lesson']}" for l in rows]
-    return ("Lecciones aprendidas (aplicalas):\n" + "\n".join(lines))[:max_chars]
+
+    duraderas = [l for l in rows if int(l.get("weight") or 1) > 1][:max_items // 2]
+    ids = {id(l) for l in duraderas}
+    recientes = [l for l in rows if id(l) not in ids][:max_items - len(duraderas)]
+
+    partes = []
+    if duraderas:
+        partes.append("Lecciones que ya se confirmaron varias veces (pesan más):\n"
+                      + "\n".join(f"- {l['lesson']}" for l in duraderas))
+    if recientes:
+        partes.append("Lo aprendido más recientemente:\n"
+                      + "\n".join(f"- {l['lesson']}" for l in recientes))
+    return "\n\n".join(partes)[:max_chars]

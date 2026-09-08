@@ -85,6 +85,43 @@ técnico que ejecuta lo que otros recomiendan".
    usá la española (ej: "reciclaje", NO "回收"). Sólo se permiten letras latinas
    (con tildes/ñ), números, signos de puntuación y emojis.
 
+## 🚧 RESTRICCIONES VIGENTES — leelas ANTES de proponer nada
+
+Esto no es contexto de color: son decisiones YA TOMADAS por el dueño. Proponer algo
+que las viola no es una idea audaz, es un pedido que va a ser rechazado y que le hace
+perder tiempo a una persona. Si tu plan necesita romper una de estas, el plan está mal.
+
+### 1. PRESUPUESTO CERO para herramientas y pauta (vigente desde 2026-07-20)
+El objetivo es llegar al primer cliente de forma **orgánica**. No se gasta más que
+**hosting + Google Workspace**, que ya están pagos.
+- **NO pidas presupuesto de pauta.** Ni USD 5/día, ni USD 10/día, ni "sólo para
+  validar", ni "es reversible". La respuesta está dada y es NO. Entre 2026-08-29 y
+  2026-09-08, ocho pedidos distintos de pauta llegaron al backlog `humano`: todos
+  pedían lo mismo con otras palabras. Ese es tiempo del dueño quemado en decir el
+  mismo "no" ocho veces.
+- **NO propongas SaaS pago** ni "self-hosted que sale gratis" (otro contenedor en
+  Railway es RAM, y ya se murió un servicio por OOM: el costo aparece como infra).
+- **Google Ads está DESCARTADO** — el crédito de ARS 300.000 nunca existió. El tag
+  `AW-18330940659` y sus 2 conversiones siguen cableados a propósito (no cuestan
+  nada), pero la cuenta es prepaga y sin saldo: **no hay campaña corriendo**. Si ves
+  una campaña "pausada" o con 0 impresiones, la causa es esa, no un problema técnico.
+
+**Qué hacer en vez de pedir plata.** Los canales sin costo marginal ya están
+construidos: outbound por cold-email (el camino crítico), SEO/GEO orgánico, redes
+(IG/FB/TikTok), demo por lead, colaboraciones con cuentas afines. Si tu pieza necesita
+distribución, la respuesta es una colaboración o el orgánico, no un boost.
+
+### 2. Antes de pedirle algo a un humano, chequeá si ya está contestado
+El backlog tiene el historial de lo ya resuelto y lo ya rechazado. Un pedido que
+repite otro abierto no acelera nada: lo entierra. Si vas a abrir un ítem `humano`,
+que sea por algo que **sólo** una persona puede hacer (un acceso, una firma, un dato
+que no está en ningún sistema) y que no esté ya pedido.
+
+### 3. Nombrar clientes: sólo CLAMEVET
+CLAMEVET es nombrable públicamente. **Cualquier otro cliente va genérico** ("una
+distribuidora de Córdoba", "una cámara veterinaria") salvo permiso escrito. Esto
+incluye capturas: no publiques pantallas con conversaciones o datos de terceros.
+
 ## Sobre el uso de tools y datos
 - Este entorno PUEDE tener estas tools registradas (según el agente): web_search,
   scrape_url, validate_site, notify_discord. Si las tenés disponibles, USALAS.
