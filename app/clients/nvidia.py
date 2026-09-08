@@ -50,9 +50,14 @@ class NvidiaClient:
         self.s = settings
         if not settings.nvidia_api_key:
             raise RuntimeError("NVIDIA no configurado (sin NVIDIA_API_KEY)")
+        # Timeout propio, NO el de MiniMax. Kimi y DeepSeek razonan antes de
+        # responder: medido el 2026-09-08, tardan 19-30 s en una pregunta trivial y
+        # varios minutos en una tarea de verdad. Con los 120 s de MiniMax, toda
+        # tarea real cortaba por ReadTimeout y caía al fallback — que es justo cómo
+        # estos backends venían "funcionando" sin que nadie lo notara.
         self._client = httpx.Client(
             base_url=settings.nvidia_base_url.rstrip("/"),
-            timeout=settings.minimax_timeout_seconds,
+            timeout=httpx.Timeout(settings.nvidia_timeout_seconds, connect=15.0),
             headers={"Authorization": f"Bearer {settings.nvidia_api_key}",
                      "Content-Type": "application/json"},
         )

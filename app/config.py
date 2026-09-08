@@ -249,6 +249,10 @@ class Settings(BaseSettings):
     # Si la key está vacía, el flag llm_provider de los agentes se ignora → MiniMax.
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
+    # Los modelos de NVIDIA que razonan (Kimi K3, DeepSeek V4 Pro) tardan
+    # mucho mas que MiniMax. Con el timeout de MiniMax (120 s) toda tarea
+    # real cortaba y caia al fallback sin avisar.
+    nvidia_timeout_seconds: int = 600
 
     # ── TokenRouter (kimi-k3-free) — backend de texto GRATIS de ÚLTIMO recurso ──
     # Se usa SOLO cuando MiniMax falla (típicamente 429 de cuota). Lento (~40-70s,
@@ -266,7 +270,10 @@ class Settings(BaseSettings):
     # Token de USUARIO con confirmación de identidad (facebook.com/ads/library/api).
     # El system-user token de publicación NO sirve para esta API.
     meta_ad_library_token: str = ""
-    glm_model: str = "z-ai/glm-5.2"
+    # GLM 5.2 murio el 2026-08-21 y no hay variante viva (probe 5 nombres, 404).
+    # El provider "glm" queda apuntando a Kimi para que una referencia vieja
+    # degrade a un modelo que anda, en vez de tirar 410.
+    glm_model: str = "moonshotai/kimi-k3"
     # El id sin fecha murió el 2026-08-07 (410 Gone) y los agentes venían
     # cayendo en silencio al fallback. El fechado sigue vivo.
     deepseek_model: str = "deepseek-ai/deepseek-v4-pro-0813"
