@@ -375,6 +375,7 @@ class ChiefOfStaffAgent(BaseAgent):
     max_tokens = 6000
     temperature = 0.4
     llm_provider = "deepseek"   # razonamiento/síntesis (bake-off 2026-07-04); fallback MiniMax
+    claude_code_skill = "revops"
 
     @property
     def system_prompt(self) -> str:

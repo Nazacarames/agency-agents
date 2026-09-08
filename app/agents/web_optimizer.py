@@ -184,7 +184,7 @@ class WebOptimizerAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     deliver_to_discord = True
     use_claude_code = True
-    claude_code_skill = "marketing-seo-contenido,ai-seo,schema,seo-audit,humanizer"
+    claude_code_skill = "marketing-seo-contenido,ai-seo,schema,seo-audit,humanizer,directory-submissions"
     claude_code_timeout = 1800
     # Sin Bash a propósito: que NO pueda deployar ni romper por su cuenta (el
     # deploy lo hace este archivo, en Python, después de revisar).

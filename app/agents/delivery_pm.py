@@ -67,6 +67,7 @@ class DeliveryPMAgent(BaseAgent):
     schedule = "15 7 * * mon"  # activo: lun 07:15 (cron en scheduler.DEFAULT_SCHEDULES)
     max_tokens = 5000
     llm_provider = "deepseek"
+    claude_code_skill = "onboarding"
 
     @property
     def system_prompt(self) -> str:

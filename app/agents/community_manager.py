@@ -47,7 +47,7 @@ class CommunityManagerAgent(BaseAgent):
     schedule = "30 15 * * mon-fri"  # días hábiles 15:30, después de social_media
     max_tokens = 5000
     llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
-    claude_code_skill = "social,humanizer"
+    claude_code_skill = "social,humanizer,community-marketing"
 
     @property
     def system_prompt(self) -> str:

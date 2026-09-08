@@ -254,6 +254,7 @@ LEADHUNTER_TOOLS = [
 class LeadHunterAgent(BaseAgent):
     name = "leadhunter"
     description = "Genera leads con contacto verificado (FIT 4-6) — Nivel N3"
+    claude_code_skill = "prospecting,competitor-profiling"
     schedule = "0 14 * * *"  # 14:00 ART diario
     timezone = "America/Buenos_Aires"
     max_tokens = 8000

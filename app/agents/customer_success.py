@@ -47,7 +47,7 @@ class CustomerSuccessAgent(BaseAgent):
     schedule = "30 7 * * mon,thu"  # activo: lun+jue 07:30 (cron en scheduler.DEFAULT_SCHEDULES)
     max_tokens = 5000
     llm_provider = "deepseek"
-    claude_code_skill = "customer-research,marketing-emails"  # entender churn + redactar follow-ups
+    claude_code_skill = "customer-research,marketing-emails,churn-prevention"  # entender churn + redactar follow-ups
 
     @property
     def system_prompt(self) -> str:
