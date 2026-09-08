@@ -403,8 +403,35 @@ def lessons_for(agent: str, max_items: int = 10, max_chars: int = 2400) -> str:
     partes = []
     if duraderas:
         partes.append("Lecciones que ya se confirmaron varias veces (pesan más):\n"
-                      + "\n".join(f"- {l['lesson']}" for l in duraderas))
+                      + "\n".join(f"- {_con_fecha(l)}" for l in duraderas))
     if recientes:
         partes.append("Lo aprendido más recientemente:\n"
-                      + "\n".join(f"- {l['lesson']}" for l in recientes))
+                      + "\n".join(f"- {_con_fecha(l)}" for l in recientes))
+    if any(_tiene_numeros(l) for l in duraderas + recientes):
+        partes.append("⚠️ Las lecciones con números (tasas, rankings, porcentajes) valían "
+                      "en SU fecha. Un número medido hace meses puede ser falso hoy y el "
+                      "peso alto sólo significa que se repitió, no que se re-verificó. Si "
+                      "vas a DECIDIR sobre una de esas cifras, medila de nuevo primero.")
     return "\n\n".join(partes)[:max_chars]
+
+
+_RE_NUMEROS = re.compile(r"\d+\s*%|\d+\s*/\s*\d+|\bratio\b|\branking\b", re.IGNORECASE)
+
+
+def _tiene_numeros(l: Dict[str, Any]) -> bool:
+    return bool(_RE_NUMEROS.search(l.get("lesson", "")))
+
+
+def _con_fecha(l: Dict[str, Any]) -> str:
+    """La lección con su fecha cuando afirma un número.
+
+    Sin esto, 'manufacturing convierte 3%' se lee como una verdad presente. El
+    2026-09-08 esa lección estaba en peso 33 —la más influyente del sistema— y ya
+    era falsa: medida de nuevo daba 2 y 2, indistinguible. El peso venía de haberse
+    repetido, no de haberse re-verificado.
+    """
+    texto = l.get("lesson", "")
+    if not _tiene_numeros(l):
+        return texto
+    fecha = str(l.get("created_at") or "")[:10]
+    return f"{texto}  [medido {fecha}]" if fecha else texto
