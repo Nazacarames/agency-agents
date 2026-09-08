@@ -221,7 +221,11 @@ def _proveedores_caidos(settings: Settings) -> List[Tuple[str, str]]:
                            headers={"Authorization": f"Bearer {settings.nvidia_api_key}"},
                            json={"model": modelo,
                                  "messages": [{"role": "user", "content": "ok"}],
-                                 "max_tokens": 1},
+                                 "max_tokens": 1,
+                                 # El pensamiento no lo limita max_tokens: sin esto,
+                                 # el modelo razona igual antes de devolver el único
+                                 # token que se le pidió. Acá no hay nada que pensar.
+                                 "reasoning_effort": "low"},
                            timeout=60)
             # 429 y 5xx son de carga: se recuperan solos y alertarlos es ruido.
             # 404/410 significan que el modelo YA NO EXISTE y no se arregla esperando.
