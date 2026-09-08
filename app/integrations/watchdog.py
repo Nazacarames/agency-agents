@@ -205,33 +205,30 @@ def _proveedores_caidos(settings: Settings) -> List[Tuple[str, str]]:
     import httpx
     rotos: List[Tuple[str, str]] = []
 
-    # Los modelos que los agentes tienen configurados como backend.
-    for etiqueta, modelo in (("kimi", settings.kimi_model),
-                             ("deepseek", settings.deepseek_model)):
-        if not (settings.nvidia_api_key and modelo):
-            continue
+    # ¿Los modelos que los agentes tienen configurados siguen existiendo?
+    #
+    # Se pregunta al CATÁLOGO, no se les manda una completion. Medido: el catálogo
+    # tarda 0,2 s y responde justo lo que importa; una completion de prueba tardaba
+    # 41-50 s con Kimi (piensa antes de responder aunque se le pida un solo token) y
+    # encima quema cuota. Probé bajarle el esfuerzo de razonamiento y salió PEOR
+    # (49,7 s contra 41,0 en Kimi; 6,6 s contra 0,4 en DeepSeek), así que ese camino
+    # está descartado y medido, no supuesto.
+    if settings.nvidia_api_key:
         try:
-            # max_tokens al mínimo A PROPÓSITO: acá sólo importa el código de estado.
-            # Un modelo dado de baja devuelve 404/410 sin generar nada; uno vivo
-            # devuelve 200 con la respuesta cortada, que alcanza. Pidiendo 16384 el
-            # chequeo tardaba 53 s porque esperaba a que el modelo terminara de
-            # pensar — 53 s de espera y de tokens quemados, varias veces por día,
-            # para saber algo que el status code ya decía.
-            r = httpx.post(f"{settings.nvidia_base_url}/chat/completions",
-                           headers={"Authorization": f"Bearer {settings.nvidia_api_key}"},
-                           json={"model": modelo,
-                                 "messages": [{"role": "user", "content": "ok"}],
-                                 "max_tokens": 1,
-                                 # El pensamiento no lo limita max_tokens: sin esto,
-                                 # el modelo razona igual antes de devolver el único
-                                 # token que se le pidió. Acá no hay nada que pensar.
-                                 "reasoning_effort": "low"},
-                           timeout=60)
-            # 429 y 5xx son de carga: se recuperan solos y alertarlos es ruido.
-            # 404/410 significan que el modelo YA NO EXISTE y no se arregla esperando.
-            if r.status_code in (404, 410):
-                rotos.append((f"modelo {etiqueta} ({modelo})",
-                              f"HTTP {r.status_code} — dado de baja por el proveedor"))
+            r = httpx.get(f"{settings.nvidia_base_url}/models",
+                          headers={"Authorization": f"Bearer {settings.nvidia_api_key}"},
+                          timeout=30)
+            if r.status_code == 200:
+                catalogo = {m.get("id") for m in r.json().get("data", [])}
+                # Sólo si el catálogo vino con contenido: una lista vacía es un
+                # problema del endpoint, no 80 modelos dados de baja a la vez.
+                if catalogo:
+                    for etiqueta, modelo in (("kimi", settings.kimi_model),
+                                             ("deepseek", settings.deepseek_model),
+                                             ("glm", settings.glm_model)):
+                        if modelo and modelo not in catalogo:
+                            rotos.append((f"modelo de {etiqueta} ({modelo})",
+                                          "ya no está en el catálogo del proveedor"))
         except Exception:
             pass   # una caída de red puntual no es un modelo muerto
 
