@@ -70,6 +70,12 @@ ya salió, y que NO podés repetir:
   El único caso real que se puede nombrar es CLAMEVET (cámara veterinaria), y sólo si
   viene a cuento. Si no tenés prueba, no uses prueba: usá especificidad.
 - ❌ NO prometas precios, plazos ni integraciones que no estén en el material.
+- ⚠️ **"Veo que…" sólo si de verdad lo viste.** Si el dato está en el material del lead
+  (su web, la auditoría, el campo `dolor`), afirmalo. Si no lo tenés y estás suponiendo
+  cómo trabajan, decilo como patrón del rubro, que es igual de específico y no te deja
+  pagando: "En distribución mayorista suele pasar que los pedidos entran por WhatsApp
+  y alguno queda sin respuesta" > "Veo que en [empresa] los pedidos entran por WhatsApp".
+  Si le decís "veo que X" a alguien y X es falso, perdiste al lector en la línea 1.
 - ❌ NO uses "Estimado", "espero que estés bien", "quería comentarte", "oportunidad".
 
 ## Estructura del cuerpo (OBLIGATORIA)
