@@ -185,6 +185,71 @@ def judge_emails(emails: List[Dict[str, Any]]) -> Dict[str, Any]:
     return judge("email", payload)
 
 
+RACHA_MALA = 2          # cuántas corridas flojas seguidas antes de frenar al agente
+RACHA_UMBRAL = 70       # qué se considera "flojo" para contar la racha
+
+
+def _ruta_rachas():
+    from pathlib import Path
+    return Path(__file__).resolve().parent.parent.parent / "data" / "qa-rachas.json"
+
+
+def _anotar_score(agente: str, kind: str, avg: float, fix: str) -> str:
+    """Lleva la cuenta de corridas flojas seguidas y frena al agente si insiste.
+
+    Un agente que entrega flojo un día no es un problema. Uno que entrega flojo
+    todos los días SÍ, y hasta ahora nadie lo notaba: cada corrida se juzgaba sola,
+    publicaba igual mientras superara el piso, y al día siguiente empezaba de cero.
+    El mismo patrón que dejó dos modelos muertos un mes: sin memoria entre corridas,
+    lo que falla siempre parece un incidente aislado.
+
+    Devuelve el texto a agregar al reporte cuando hay que frenar, o "" si va todo bien.
+    """
+    import json as _json
+    try:
+        p = _ruta_rachas()
+        estado = {}
+        if p.exists():
+            estado = _json.loads(p.read_text(encoding="utf-8"))
+        clave = f"{agente}:{kind}"
+        r = estado.get(clave, {"seguidas": 0, "fixes": []})
+        if avg < RACHA_UMBRAL:
+            r["seguidas"] = int(r.get("seguidas", 0)) + 1
+            r["fixes"] = ([*r.get("fixes", []), fix or ""])[-3:]
+        else:
+            r = {"seguidas": 0, "fixes": []}     # una buena corta la racha
+        estado[clave] = r
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(_json.dumps(estado, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        if r["seguidas"] < RACHA_MALA:
+            return ""
+
+        # El mismo fix repetido significa que el agente NO está aprendiendo del
+        # feedback: no alcanza con frenar la publicación, hay que avisarle a alguien.
+        repetido = len(set(f for f in r["fixes"] if f)) == 1 and len(r["fixes"]) >= 2
+        try:
+            from . import backlog
+            backlog.abrir("dev",
+                          f"{agente} lleva {r['seguidas']} corridas seguidas con QA por "
+                          f"debajo de {RACHA_UMBRAL} sobre {kind}"
+                          + (f", siempre con el mismo fix pendiente: {r['fixes'][-1][:120]}"
+                             if repetido else "")
+                          + ". Se le freno la auto-publicacion. Requiere revision del "
+                            "pipeline, no otra corrida.",
+                          origen=agente)
+        except Exception:
+            pass
+        return (f" · ⛔ **FRENADO POR RACHA**: {r['seguidas']} corridas seguidas por debajo "
+                f"de {RACHA_UMBRAL}."
+                + (f" Y siempre el MISMO fix sin aplicar (_{r['fixes'][-1][:110]}_), así que "
+                   "el problema no es la corrida: es el pipeline." if repetido else "")
+                + " No se publica nada hasta que alguien lo revise.")
+    except Exception as e:
+        log.warning("qa_racha_failed", agent=agente, error=str(e)[:140])
+        return ""
+
+
 def qa_gate(agent_name: str, kind: str, payload: str,
             hold_below: Optional[int] = None, qa_mode: str = "") -> Dict[str, Any]:
     """Juzga `payload`, aprende si está flojo, y decide si conviene auto-publicar.
@@ -209,9 +274,15 @@ def qa_gate(agent_name: str, kind: str, payload: str,
             ms.record_outcome(agent_name, f"QA de calidad (Gemini) sobre {kind}: {fix}")
         tope = int(hold_below) if hold_below else HOLD_BELOW
         publish_ok = avg >= tope
+        # Registrar el score ANTES de armar la línea: si el agente viene fallando
+        # seguido, eso cambia lo que hay que reportar.
+        racha = _anotar_score(agent_name, kind, avg, fix)
         line = f"\n## 🧪 QA Gemini\nScore promedio: **{avg}/100**"
         if qa_mode:
             line += f" · `qa_mode={qa_mode}` (umbral {tope})"
+        if racha:
+            publish_ok = False
+            line += racha
         if not publish_ok:
             line += (f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {tope}): quedó para tu "
                      f"revisión. Fix sugerido: _{fix}_" if fix else
