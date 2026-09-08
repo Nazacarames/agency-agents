@@ -188,6 +188,69 @@ def _brain_stale() -> float:
 
 # ── entrada ──
 
+def _proveedores_caidos(settings: Settings) -> List[Tuple[str, str]]:
+    """Modelos y servicios externos que dejaron de responder.
+
+    Existe por un caso real: GLM 5.2 y DeepSeek V4 Pro murieron (410 Gone del
+    endpoint de NVIDIA) y estuvieron **un mes entero** caídos con 14 agentes
+    degradando en silencio al fallback. Nadie se enteró porque el fallback tapa el
+    síntoma: el agente entrega igual, sólo que peor.
+
+    La regla para agregar algo acá: que su caída NO levante excepción en ninguna
+    corrida. Si algo se rompe con estruendo, ya se ve en los logs y no hace falta.
+
+    Cada sonda es la más barata que confirma vida real y NUNCA gasta cuota de LLM
+    de verdad ni publica nada: un token, un GET liviano, un puñado de tokens.
+    """
+    import httpx
+    rotos: List[Tuple[str, str]] = []
+
+    # Los modelos que los agentes tienen configurados como backend.
+    for etiqueta, modelo in (("kimi", settings.kimi_model),
+                             ("deepseek", settings.deepseek_model)):
+        if not (settings.nvidia_api_key and modelo):
+            continue
+        try:
+            r = httpx.post(f"{settings.nvidia_base_url}/chat/completions",
+                           headers={"Authorization": f"Bearer {settings.nvidia_api_key}"},
+                           json={"model": modelo,
+                                 "messages": [{"role": "user", "content": "ok"}],
+                                 "max_tokens": 16384},
+                           timeout=120)
+            # 429 y 5xx son de carga: se recuperan solos y alertarlos es ruido.
+            # 404/410 significan que el modelo YA NO EXISTE y no se arregla esperando.
+            if r.status_code in (404, 410):
+                rotos.append((f"modelo {etiqueta} ({modelo})",
+                              f"HTTP {r.status_code} — dado de baja por el proveedor"))
+        except Exception:
+            pass   # una caída de red puntual no es un modelo muerto
+
+    # Search Console: si la service account pierde el acceso, el SEO trabaja a ciegas
+    # y el agente lo reporta como "no configurado" en vez de como una falla.
+    try:
+        from . import search_console
+        if search_console.enabled() and not search_console.list_sites():
+            rotos.append(("Search Console",
+                          "la service account no ve ninguna propiedad — "
+                          "¿la sacaron de los usuarios?"))
+    except Exception:
+        pass
+
+    # Token de Meta: cuando vence, las publicaciones de IG/FB fallan calladas.
+    tok = getattr(settings, "meta_page_token", "") or getattr(settings, "meta_access_token", "")
+    if tok:
+        try:
+            r = httpx.get("https://graph.facebook.com/v21.0/me",
+                          params={"access_token": tok, "fields": "id"}, timeout=30)
+            if r.status_code == 400:
+                rotos.append(("token de Meta (IG/FB)",
+                              "rechazado — se vence y hay que renovarlo"))
+        except Exception:
+            pass
+
+    return rotos
+
+
 def check(settings: Settings, discord=None) -> Dict[str, Any]:
     """Corre los chequeos y alerta a Discord lo que esté roto (dedup por día).
     Devuelve un dict con el resultado. Best-effort: nunca levanta."""
@@ -238,6 +301,20 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
             "→ Prendé la máquina del vault o corré `scripts/brain_sync.bat` a mano."
         )
         fresh_keys.append("brain")
+
+    # 4b) Proveedores externos dados de baja. Va acá y no en los logs porque su
+    #     caída es SILENCIOSA: el fallback entrega igual y nadie se entera. GLM y
+    #     DeepSeek estuvieron muertos un mes entero así.
+    for nombre, detalle in _proveedores_caidos(settings):
+        key = f"prov:{nombre}"
+        if key in already:
+            continue
+        problems.append(
+            f"🔌 **{nombre} no responde** — {detalle}\n"
+            "→ Los agentes que lo usan están cayendo al fallback SIN avisar: "
+            "entregan igual pero peor. Repuntalo a un modelo/credencial que ande."
+        )
+        fresh_keys.append(key)
 
     # 5) Token de la Biblioteca de Anuncios (es de USUARIO: se cae solo cada ~60 días
     #    o con un logout). Cuando muere, el estudio de competencia sigue "corriendo"
