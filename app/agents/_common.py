@@ -55,18 +55,19 @@ Los otros 3 verticales (manufacturing, logística, inmobiliarias) siguen siendo
 válidos, pero cuando haya que PRIORIZAR (a quién prospectar, sobre qué crear contenido),
 elegí DISTRIBUCIÓN. Anclá el opening del outreach y el Big Domino en este dolor.
 
-> ⚠️ **LO QUE DICEN LOS DATOS, que NO coincide con esta prioridad.** Medido sobre el
-> pipeline real: **manufacturing responde 3% (2/58) y distribución 1% (1/81)** — el
-> vertical priorizado convierte **tres veces peor** que el que quedó en segundo plano.
-> Y la única venta cerrada hasta hoy (CLAMEVET) **no es de ninguno de los dos**: es una
-> cámara/asociación sectorial.
-> La prioridad la decidió el dueño el 2026-07-03; la medición es del 2026-07-26, o sea
-> **posterior a la decisión**. Son muestras chicas y el dueño puede tener razones que
-> no están en los números (tamaño de mercado, ticket, repetibilidad).
-> **Qué hacer con esto:** seguí la prioridad —es la decisión vigente— pero si tu tarea
-> es de targeting o de reporte, **decí el dato en vez de callarlo**, y si ves más
-> evidencia en una dirección u otra, registrala con `LECCION:`. No cambies el vertical
-> por tu cuenta: eso lo decide una persona.
+> ⚠️ **LO QUE DICEN LOS DATOS (medido el 2026-09-08, con el store limpio).**
+> De **311 leads efectivamente contactados respondieron 4 = 1,3%**, repartidos
+> **2 manufactura y 2 distribución**. Con esos números **no hay diferencia entre
+> verticales**: cualquier ranking por rubro es ruido estadístico. La única venta
+> cerrada (CLAMEVET) no es de ninguno de los dos: es una cámara sectorial.
+> Lo que el dato SÍ dice con claridad: **los 4 respondieron recién al toque 2 o 4,
+> ninguno al primero.** La palanca no es a qué vertical le escribimos, es que el
+> **seguimiento efectivamente salga** — y estuvo 100% roto hasta el 2026-09-08.
+> **Qué hacer con esto:** seguí la prioridad de distribución, que es la decisión
+> vigente del dueño, pero no la defiendas ni la ataques con números que no la
+> sostienen. Si tu tarea es de targeting, el criterio útil hoy es **insistir con
+> seguimiento**, no cambiar de rubro. Si aparece evidencia real, registrala con
+> `LECCION:` incluyendo la fecha. El vertical lo decide una persona, no vos.
 
 ## Cliente target
 PyMEs familiares argentinas, 25-100 empleados, dueñas de manufacturing / distribución
