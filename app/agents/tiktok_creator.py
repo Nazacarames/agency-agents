@@ -284,16 +284,43 @@ class TikTokCreatorAgent(BaseAgent):
 
     @staticmethod
     def _video_has_audio(path) -> bool:
-        """True si el mp4 tiene pista de audio (ffprobe). Si no se puede chequear,
-        asume que sí (no bloquear publicación por un fallo del probe)."""
+        """True si el audio del mp4 sirve. Si no se puede chequear, asume que sí
+        (no bloquear una publicación por un fallo del probe).
+
+        Chequea DOS cosas, no una. Que exista la pista era el único control y no
+        alcanzaba: el 04/09 y el 07/09 salieron shorts con la pista presente pero el
+        audio TRUNCADO, y los dos pasaron este guard para morir después en el QA de
+        Gemini (30/100 y 2/10) — con el costo de generación ya gastado.
+
+        La segunda comprobación es la duración: si el audio dura mucho menos que el
+        video, está cortado. Se tolera hasta un 25% de diferencia porque el cierre
+        suele quedar sin voz a propósito.
+        """
         if not path:
             return True
         try:
             import subprocess
-            r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a",
-                                "-show_entries", "stream=index", "-of", "csv=p=0", str(path)],
-                               capture_output=True, timeout=30)
-            return bool(r.stdout.decode().strip())
+
+            def _probe(args):
+                r = subprocess.run(["ffprobe", "-v", "error", *args, "-of", "csv=p=0",
+                                    str(path)], capture_output=True, timeout=30)
+                return r.stdout.decode().strip()
+
+            if not _probe(["-select_streams", "a", "-show_entries", "stream=index"]):
+                log.warning("audio_ausente", path=str(path)[:90])
+                return False
+
+            dur_a = _probe(["-select_streams", "a:0", "-show_entries", "stream=duration"])
+            dur_v = _probe(["-select_streams", "v:0", "-show_entries", "stream=duration"])
+            try:
+                a, v = float(dur_a.split("\n")[0]), float(dur_v.split("\n")[0])
+            except (ValueError, IndexError):
+                return True      # sin duraciones fiables no se bloquea nada
+            if v > 0 and a < v * 0.75:
+                log.warning("audio_truncado", audio_s=round(a, 1), video_s=round(v, 1),
+                            path=str(path)[:90])
+                return False
+            return True
         except Exception as e:
             log.warning("audio_probe_failed", error=str(e)[:100])
             return True
@@ -350,9 +377,12 @@ class TikTokCreatorAgent(BaseAgent):
             # Veo vino sin voz), NO se publica a ningún lado — reel mudo = quema marca.
             if not self._video_has_audio(self._media_to_path(url)):
                 log.warning("tiktok_video_muted_skip_publish", url=url)
-                return text.rstrip() + ("\n\n> ⚠️ **El video quedó SIN AUDIO** (el clip "
-                                        "del presentador vino sin voz). NO se publicó a "
-                                        "IG/TikTok/YouTube — revisar Veo/Omni.\n")
+                return text.rstrip() + ("\n\n> ⚠️ **El audio del short no sirve** — o falta "
+                                        "la pista, o quedó TRUNCADO (dura mucho menos que "
+                                        "el video). NO se publicó a IG/TikTok/YouTube: un "
+                                        "reel mudo o cortado a la mitad quema marca.\n"
+                                        "> Mirá el log `audio_truncado` / `audio_ausente` "
+                                        "para ver cuál de los dos fue.\n")
             # QA con Gemini: MIRA el short final (video + audio + texto en pantalla)
             # antes de publicar. Describe, puntúa y deja la lección en
             # creative_learnings (se reinyecta en las próximas tandas). Sólo bloquea
