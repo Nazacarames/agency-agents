@@ -48,6 +48,12 @@ _ESTRATEGIA = 2
 # Segundos como mucho por lead (todas sus rutas juntas).
 _PRESUPUESTO_LEAD = 15.0
 
+# Casillas gratuitas: media PyME argentina publica su contacto en Gmail, asi que
+# un mail de estos dominios SI puede ser el del lead aunque no coincida con su web.
+_GRATUITOS = {"gmail.com", "hotmail.com", "hotmail.com.ar", "yahoo.com",
+              "yahoo.com.ar", "outlook.com", "outlook.com.ar", "live.com",
+              "icloud.com", "fibertel.com.ar", "speedy.com.ar"}
+
 
 def _domain_of(url: str) -> str:
     m = re.sub(r"^https?://", "", (url or "").strip().lower())
@@ -89,7 +95,16 @@ def find_published_email(web: str) -> Optional[str]:
     if not found:
         return None
     # Preferir el email del mismo dominio del sitio; gatear TODOS por MX (email_guard).
-    for e, _same in sorted(found.items(), key=lambda kv: (not kv[1],)):
+    for e, mismo in sorted(found.items(), key=lambda kv: (not kv[1],)):
+        # Un mail de OTRA organización que aparece en la página no es el contacto del
+        # lead: el 2026-09-08 la búsqueda devolvió comercializacion@industria.misiones
+        # .gob.ar para una maderera privada — escribirle a un organismo público
+        # creyendo que es el prospecto es peor que no encontrar nada. Se acepta el
+        # dominio propio y las casillas gratuitas (media PyME argentina usa Gmail),
+        # pero NO el dominio de un tercero.
+        if not mismo and e.split("@")[-1] not in _GRATUITOS:
+            log.info("lead_enrich_descartado_dominio_ajeno", email=e, sitio=site_dom)
+            continue
         ok, _motivo = email_guard.es_enviable(e)
         if ok:
             return e
