@@ -27,7 +27,17 @@ log = get_logger("nvidia")
 _PROVIDER_MODEL = {
     "glm": ("glm_model", {}),
     "deepseek": ("deepseek_model", {"chat_template_kwargs": {"thinking": False}}),
+    # Kimi K3 razona antes de responder y el pensamiento se cobra como salida. Medido
+    # el 2026-09-08: una pregunta de 6 palabras gastó 92 tokens de completion y tardó
+    # 18,6 s con `reasoning_effort: max`. Por eso NO se le recorta el pensamiento y su
+    # techo de tokens es alto (ver _MIN_TOKENS): apretarlo hace que se quede sin lugar
+    # para responder DESPUÉS de pensar y devuelva vacío o cortado.
+    "kimi": ("kimi_model", {"reasoning_effort": "max"}),
 }
+
+# Piso de max_tokens por provider. Sólo importa en los que razonan: el pensamiento
+# sale del mismo presupuesto que la respuesta.
+_MIN_TOKENS = {"kimi": 16384}
 
 
 def provider_model(provider: str, s: Settings) -> str:
@@ -65,7 +75,7 @@ class NvidiaClient:
             "model": model,
             "messages": [{"role": "system", "content": system}] + list(messages),
             "temperature": temperature,
-            "max_tokens": max_tokens or 4000,
+            "max_tokens": max(max_tokens or 4000, _MIN_TOKENS.get(provider, 0)),
             "top_p": 0.95,
             **extra,
         }

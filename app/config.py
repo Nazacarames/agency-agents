@@ -268,6 +268,10 @@ class Settings(BaseSettings):
     meta_ad_library_token: str = ""
     glm_model: str = "z-ai/glm-5.2"
     deepseek_model: str = "deepseek-ai/deepseek-v4-pro"
+    # Kimi K3: razona antes de responder. Más capaz que GLM/DeepSeek en
+    # tareas de análisis, pero ~19 s incluso para algo trivial → sólo para
+    # agentes de fondo (cron), nunca en un camino donde alguien espera.
+    kimi_model: str = "moonshotai/kimi-k3"
     # OpenCode: harness headless (tools + skills de .claude/skills) sobre los
     # modelos NVIDIA. Kill-switch: OPENCODE_ENABLED=false → NVIDIA directo.
     opencode_enabled: bool = True
