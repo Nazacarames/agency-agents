@@ -50,49 +50,166 @@ Recibís una lista de leads que toca contactar HOY. Cada uno trae un `step`:
 
 Tu trabajo: por cada lead, redactar el email que corresponde a SU step.
 
-## Reglas comunes del email
-- Español argentino, tono humano y directo (NO plantilla obvia, NO "Estimado señor").
-- **Subject**: máximo 45 caracteres (en el celular Gmail corta ahí) y tiene que abrir con
-  LA SEÑAL DEL PROSPECTO, no con lo que vos vendés. Sin MAYÚSCULAS, sin "!!!", sin "oferta",
-  sin "gratis". **PROHIBIDO arrancar el subject con "demo para"** ni usar la misma estructura
-  en dos leads distintos: cada asunto se lee como escrito por una persona para ESA empresa.
-  Bien: "pedidos que entran a las 11 de la noche" · "las 7 sucursales y un solo WhatsApp".
-  Mal: "demo para Laco: pedidos de Bahía Blanca que entran fuera de horario".
-- Firmá como "{{FIRMA}}".
-- NUNCA inventes precios, plazos ni datos del lead que no estén en el material.
+## Lo que medimos (leé esto antes de escribir)
+En 21 días salieron 156 mails y respondieron **cero** personas. Cero rebotes, así que
+llegan. Lo que no funciona es lo que dice el mail. Los tres defectos medidos en lo que
+ya salió, y que NO podés repetir:
+
+1. **Todos abrían igual**: "Hola, soy Nazareno de Automiq. ..." En las primeras seis
+   palabras el lector ya sabe que es una venta y deja de leer.
+2. **Todos eran un bloque de texto** sin un solo salto de línea, con la firma pegada a
+   la última oración. Se lee como un bot.
+3. **Varios inventaban casos de éxito**: "una fábrica similar recuperó cerca del 30%".
+   **Eso es mentira y no lo vamos a mandar.** No tenemos ese caso.
+
+## Prohibiciones duras (si dudás, no lo pongas)
+- ❌ **NO arranques presentándote.** Nada de "soy X de Automiq", "te escribo de", "somos
+  una agencia". Tu nombre va en la firma, que es donde el lector lo busca.
+- ❌ **NO inventes clientes, casos, porcentajes ni resultados de terceros.** Ni "una
+  empresa similar", ni "un cliente del rubro", ni "%" de mejora que no te dimos.
+  El único caso real que se puede nombrar es CLAMEVET (cámara veterinaria), y sólo si
+  viene a cuento. Si no tenés prueba, no uses prueba: usá especificidad.
+- ❌ NO prometas precios, plazos ni integraciones que no estén en el material.
+- ❌ NO uses "Estimado", "espero que estés bien", "quería comentarte", "oportunidad".
+
+## Estructura del cuerpo (OBLIGATORIA)
+El cuerpo va con **saltos de línea reales** (`\n` en el JSON). Así:
+
+```
+Hola{{, nombre}},
+
+<1-2 oraciones sobre SU situación concreta. Arranca con ELLOS, no con nosotros.>
+
+<1-2 oraciones: qué pasa si eso se resuelve. Concreto, sin porcentajes inventados.>
+
+<CTA de una línea.>
+
+Saludos,
+{{FIRMA}}
+```
+
+Entre bloque y bloque va **una línea en blanco**. La firma va en dos líneas, separada
+del cuerpo por una línea en blanco.
+
+## Subject
+Máximo 45 caracteres (en el celular Gmail corta ahí). Tiene que sonar a asunto de mail
+entre dos personas, no a campaña: en minúscula, sin signos de admiración, sin "oferta"
+ni "gratis" ni "demo".
+- ❌ PROHIBIDO empezar con "demo para". Prohibido repetir la misma estructura en dos
+  leads distintos.
+- ✅ Bien: "pedidos que entran a las 11 de la noche" · "las 7 sucursales y un solo whatsapp"
+- ❌ Mal: "demo para Laco: pedidos de Bahía Blanca fuera de horario"
 
 ## Cómo cambia el mensaje según el step
-- **step 0 (primer toque)** ≤ 90 palabras, que se sienta escrito a mano 1-a-1 (NO masivo).
-  Regla de oro (respaldada por datos 2026: los mails que citan una señal ESPECÍFICA del
-  prospecto responden 5x más que los genéricos):
-  1. **Apertura con SU señal**: usá el dato más específico que tengas del lead (el campo
-     `dolor`/`evidencia` del material, un hallazgo de la auditoría web, su rubro + escenario
-     concreto). "Vi que [dato observable de SU negocio]" > cualquier frase genérica.
-  2. **1 beneficio medible** (Big Domino, con número si es creíble): "un agente de IA contesta
-     al toque 24/7, califica al cliente y te lo carga al CRM — recuperás las ventas que hoy se
-     pierden por no contestar a tiempo".
-  3. **CTA = la DEMO del lead**: si el lead trae `demo`, el CTA es mirar esa demo: "te armé
-     una demo de cómo respondería un agente en [empresa] — son 20 segundos: [demo]". Los
-     mails con demo personalizada agendan 40-50% más reuniones que los de texto solo. La demo
-     va en el CUERPO, nunca en el subject (ver regla de subject). Si NO hay demo, ofrecé
-     armarla: "¿te mando un ejemplo del agente funcionando por WhatsApp, armado para
-     [empresa]?".
-- **step 1 (follow-up 1)** ≤ 55 palabras: breve, subí un dato/beneficio NUEVO (no repitas),
-  re-ofrecé el ejemplo por WhatsApp. Asunto "Re: <asunto anterior>".
-- **step 2 (follow-up 2)** ≤ 40 palabras: un ángulo distinto o mini-prueba ("a [rubro similar]
-  le subió un 30% las respuestas"), CTA suave.
-- **step 3 (follow-up 3, ÚLTIMO)** ≤ 30 palabras: cierre cordial sin presión ("¿lo dejo por
-  acá o te sirve que te muestre 15 min?").
+- **step 0 (primer toque)** ≤ 80 palabras.
+  Abrí con el dato más específico que tengas de ELLOS (industria + escenario concreto,
+  el `dolor` del material, un hallazgo de la auditoría web). Después, en una oración,
+  qué cambia si eso se resuelve.
+  **El CTA es la demo, y es lo único que pedís.** Si el lead trae `demo`, el cierre es
+  mirarla: "Te armé uno para [empresa]: son 20 segundos, [demo]." y nada más — **no
+  pidas una reunión en el primer mail**, es el pedido más caro que existe para alguien
+  que no te conoce. Si NO hay demo, la pregunta se contesta con una palabra:
+  "¿Te armo uno con los productos de [empresa] y te lo mando?"
+- **step 1** ≤ 50 palabras: un ángulo NUEVO (no repitas el del primero), misma estructura,
+  CTA de una palabra. Asunto "Re: <asunto anterior>".
+- **step 2** ≤ 40 palabras: nombrá la objeción probable de frente ("si ya tenés a alguien
+  contestando los WhatsApp, esto le saca el 80% del ida y vuelta") y ofrecé algo chico.
+- **step 3 (ÚLTIMO)** ≤ 30 palabras: cierre cordial que **deja algo útil**, no sólo una
+  despedida. Ej: "Te dejo el ejemplo por si en algún momento sirve: [demo]. Si no es el
+  momento, ningún problema — no te escribo más."
 
 ## Formato de salida (OBLIGATORIO)
 Devolvé EXCLUSIVAMENTE un array JSON válido (sin texto antes/después, sin ```), un
-objeto por lead, COPIANDO la `key` tal cual te la pasé:
+objeto por lead, COPIANDO la `key` tal cual te la pasé. Los saltos de línea del cuerpo
+van como `\n` dentro del string JSON:
 
 [
   {"key": "<la key del lead>", "company": "Nombre", "email": "info@empresa.com.ar",
-   "step": 0, "subject": "asunto", "body": "cuerpo completo del email"}
+   "step": 0, "subject": "asunto", "body": "Hola,\n\nprimer bloque...\n\nSaludos,\nNazareno"}
 ]
 """.strip()
+
+
+# ── Guardas del mensaje que sale ─────────────────────────────────────────────
+# Medido el 2026-09-08 leyendo los mails REALES de la casilla: 156 salieron en 21
+# dias, 0 respuestas, y todos compartian los mismos tres defectos. El prompt ahora
+# los prohibe, pero un prompt es una sugerencia: esto es la red.
+
+# "una fabrica similar recupero cerca del 30%", "un cliente del rubro le subio un
+# 25%". No tenemos ese caso. Mandarle un numero inventado a un prospecto bajo el
+# nombre del dueno es lo peor que puede hacer este agente, asi que ese mail NO sale.
+_INVENTA_CASO = re.compile(
+    r"(?:otra|otro|una|un)\s+(?:empresa|cliente|fabrica|f\u00e1brica|distribuidora|"
+    r"pyme|negocio|comercio|caso)\s+(?:similar|parecid|del rubro|como)"
+    r"|(?:similar|parecid\w+)\s+a\s+\w+.{0,40}?(?:recuper|subi|aument|mejor|logr)"
+    r"|(?:recuper|subi|aument|mejor)\w*\s+(?:cerca del\s+)?\d{1,3}\s*%",
+    re.IGNORECASE)
+
+# El saludo es "Hola" con, a lo sumo, un nombre propio detras, y TERMINA en la coma.
+# Sin exigir la coma se comia los primeros 40 caracteres del cuerpo y los metia en el
+# renglon del saludo ("Hola, En adhesivos industriales el comprador,").
+_SALUDO = re.compile(
+    r"^\s*(?:hola|buenas|buen d[i\u00ed]a|qu[e\u00e9] tal)"
+    r"(?:\s+[A-Z\u00c1\u00c9\u00cd\u00d3\u00da\u00d1][\w\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1]{1,15}){0,2}\s*[,:]",
+    re.IGNORECASE)
+_CIERRE = re.compile(r"(saludos|abrazo|gracias|un saludo)\s*[,.]?\s*", re.IGNORECASE)
+
+
+def _sin_presentacion(cuerpo: str) -> str:
+    """Saca el 'soy Nazareno de Automiq' del arranque.
+
+    Aparecia en practicamente todos los mails enviados. En las primeras seis palabras
+    el lector ya sabe que es una venta. El nombre va en la firma, que es donde se busca.
+    """
+    return re.sub(r"^(\s*(?:hola|buenas)[^\n,.]{0,30}[,.]?\s*)"
+                  r"(?:soy|te escribo|te escribe|habla)\s+[^.\n]{0,60}?\.\s*",
+                  r"\1", cuerpo, count=1, flags=re.IGNORECASE)
+
+
+def _dar_formato(cuerpo: str, firma: str) -> str:
+    """Un mail de una sola linea con la firma pegada se lee como un bot. Le devuelve
+    la forma de un mail escrito por una persona: saludo, cuerpo en bloques cortos,
+    firma aparte. Si el modelo ya mando saltos de linea, no se toca nada."""
+    cuerpo = (cuerpo or "").strip()
+    if "\n" in cuerpo:
+        return cuerpo
+
+    saludo = ""
+    m = _SALUDO.match(cuerpo)
+    if m:
+        saludo = m.group(0).strip().rstrip(",.:")
+        cuerpo = cuerpo[m.end():].strip()
+
+    cierre = ""
+    m = _CIERRE.search(cuerpo)
+    if m and len(cuerpo) - m.start() < 90:      # solo si esta cerca del final
+        cierre = cuerpo[m.start():].strip()
+        cuerpo = cuerpo[:m.start()].strip()
+        cierre = re.sub(r"^([^,\n]+),?\s*", r"\1,\n", cierre, count=1)
+    elif firma and cuerpo.endswith(firma):
+        cuerpo = cuerpo[: -len(firma)].strip().rstrip(",-\u2014 ")
+        cierre = f"Saludos,\n{firma}"
+    if not cierre:
+        cierre = f"Saludos,\n{firma}"
+
+    # El medio, en parrafos de a dos oraciones: es lo que hace que se lea en el celular.
+    oraciones = [s.strip() for s in re.split(r"(?<=[.!?])\s+", cuerpo) if s.strip()]
+    parrafos = [" ".join(oraciones[k:k + 2]) for k in range(0, len(oraciones), 2)]
+
+    partes = ([f"{saludo}," ] if saludo else []) + parrafos + [cierre]
+    return "\n\n".join(p for p in partes if p)
+
+
+def _limpiar_subject(subject: str) -> str:
+    """El prompt prohibe arrancar con 'demo para' desde hace semanas y seguia saliendo
+    ('Re: demo para Castillo: consultas de propiedades...'). Se saca aca."""
+    s = (subject or "").strip()
+    pre = ""
+    if s.lower().startswith("re:"):
+        pre, s = "Re: ", s[3:].strip()
+    s = re.sub(r"^demo para\s+[^:]{0,30}:\s*", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"^demo para\s+", "", s, flags=re.IGNORECASE)
+    return (pre + s).strip()
 
 
 def _reengage_body(lead: Dict[str, Any], firma: str = "Equipo Automiq") -> str:
@@ -529,11 +646,22 @@ class OutboundAgent(BaseAgent):
             if not it:
                 missing.append(f"• {company} <{email}> — el modelo no redactó el {label}")
                 continue
-            subject = (it.get("subject") or "").strip()
+            subject = _limpiar_subject(it.get("subject") or "")
             body = (it.get("body") or "").strip()
             if not subject or not body:
                 errors.append(f"• {company} <{email}> → sin subject/body, omitido")
                 continue
+            # Un caso de exito inventado NO sale. El lead queda due y manana se
+            # redacta de nuevo; perder un toque es infinitamente mas barato que
+            # mandarle un numero falso a un prospecto con la firma del dueño.
+            inventado = _INVENTA_CASO.search(body)
+            if inventado:
+                errors.append(f"• {company} <{email}> → **NO enviado: inventó un caso de "
+                              f"éxito** («{inventado.group(0)[:60]}»). Se reintenta mañana.")
+                log.warning("outbound_caso_inventado", company=company,
+                            fragmento=inventado.group(0)[:120])
+                continue
+            body = _dar_formato(_sin_presentacion(body), ctx.settings.outbound_from_name)
             # Barrera de entregabilidad: el regex de forma dejaba pasar cualquier
             # mail bien escrito, inventado incluido. Un rebote no es cosmético —
             # es lo que más rápido quema la reputación del dominio de envío.
