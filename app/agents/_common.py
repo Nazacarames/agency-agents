@@ -55,19 +55,40 @@ Los otros 3 verticales (manufacturing, logística, inmobiliarias) siguen siendo
 válidos, pero cuando haya que PRIORIZAR (a quién prospectar, sobre qué crear contenido),
 elegí DISTRIBUCIÓN. Anclá el opening del outreach y el Big Domino en este dolor.
 
-> ⚠️ **LO QUE DICEN LOS DATOS (medido el 2026-09-08, con el store limpio).**
-> De **311 leads efectivamente contactados respondieron 4 = 1,3%**, repartidos
-> **2 manufactura y 2 distribución**. Con esos números **no hay diferencia entre
-> verticales**: cualquier ranking por rubro es ruido estadístico. La única venta
-> cerrada (CLAMEVET) no es de ninguno de los dos: es una cámara sectorial.
-> Lo que el dato SÍ dice con claridad: **los 4 respondieron recién al toque 2 o 4,
-> ninguno al primero.** La palanca no es a qué vertical le escribimos, es que el
-> **seguimiento efectivamente salga** — y estuvo 100% roto hasta el 2026-09-08.
-> **Qué hacer con esto:** seguí la prioridad de distribución, que es la decisión
-> vigente del dueño, pero no la defiendas ni la ataques con números que no la
-> sostienen. Si tu tarea es de targeting, el criterio útil hoy es **insistir con
-> seguimiento**, no cambiar de rubro. Si aparece evidencia real, registrala con
-> `LECCION:` incluyendo la fecha. El vertical lo decide una persona, no vos.
+> ⚠️ **LO QUE DICEN LOS DATOS (medido contra el store y la casilla el 2026-09-08).**
+>
+> | | |
+> |---|---|
+> | Contactados alguna vez | **311** |
+> | De esos, respondieron | **4 = 1,3%** |
+> | Últimos 21 días | **156 mails enviados → 0 respuestas** |
+> | Rebotes en 30 días | **0** (los mails LLEGAN: no es plomería ni direcciones inventadas) |
+> | Leads que recibieron la secuencia COMPLETA (3-4 toques) | **163 → 1 respondió** |
+>
+> **Lo que esto descarta, con el número al lado:**
+> - **No es el vertical.** Los 4 que respondieron son 2 de manufactura y 2 de
+>   distribución. Cualquier ranking por rubro con 4 casos es ruido. La única venta
+>   cerrada (CLAMEVET) no es de ninguno de los dos: es una cámara sectorial.
+> - **No es el buzón.** Genérico (`info@`) 1,5% contra personal 0,9%, sobre 3 y 1
+>   respuestas. No hay señal; perseguir mails personales no está sostenido por nada.
+> - **No es que falte seguimiento.** 163 leads recibieron 3 o 4 toques y dieron 1
+>   respuesta. La secuencia se completa. (Corrige la versión anterior de esta nota,
+>   que decía que el seguimiento estaba "100% roto": lo estuvo un tiempo, ya no.)
+> - **No es el volumen.** Hay 247 leads con el turno vencido y el cupo son 12/día,
+>   así que la cola no drena — pero mandar más de un mensaje que convierte 1 cada
+>   200 sólo produce más silencio, y arriesga la reputación del dominio (DMARC en
+>   p=none, Workspace recién migrado). **Proponer "subir el cupo" no es una
+>   propuesta válida hoy**: si querés defenderla, traé una respuesta primero.
+>
+> **Lo que queda en pie:** el mensaje/la oferta no está enganchando a nadie. Ése es
+> el cuello de botella real de la adquisición, y es el único lugar donde vale la
+> pena gastar ideas. Cuando propongas algo de outbound, que sea sobre QUÉ decimos y
+> a cambio de qué, no sobre a cuántos.
+>
+> Seguí la prioridad de distribución porque es la decisión vigente del dueño, pero
+> no la defiendas ni la ataques con números que no la sostienen. Si aparece
+> evidencia real, registrala con `LECCION:` incluyendo la fecha. El vertical lo
+> decide una persona, no vos.
 
 ## Cliente target
 PyMEs familiares argentinas, 25-100 empleados, dueñas de manufacturing / distribución
