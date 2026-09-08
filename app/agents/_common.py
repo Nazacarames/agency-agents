@@ -55,6 +55,19 @@ Los otros 3 verticales (manufacturing, logística, inmobiliarias) siguen siendo
 válidos, pero cuando haya que PRIORIZAR (a quién prospectar, sobre qué crear contenido),
 elegí DISTRIBUCIÓN. Anclá el opening del outreach y el Big Domino en este dolor.
 
+> ⚠️ **LO QUE DICEN LOS DATOS, que NO coincide con esta prioridad.** Medido sobre el
+> pipeline real: **manufacturing responde 3% (2/58) y distribución 1% (1/81)** — el
+> vertical priorizado convierte **tres veces peor** que el que quedó en segundo plano.
+> Y la única venta cerrada hasta hoy (CLAMEVET) **no es de ninguno de los dos**: es una
+> cámara/asociación sectorial.
+> La prioridad la decidió el dueño el 2026-07-03; la medición es del 2026-07-26, o sea
+> **posterior a la decisión**. Son muestras chicas y el dueño puede tener razones que
+> no están en los números (tamaño de mercado, ticket, repetibilidad).
+> **Qué hacer con esto:** seguí la prioridad —es la decisión vigente— pero si tu tarea
+> es de targeting o de reporte, **decí el dato en vez de callarlo**, y si ves más
+> evidencia en una dirección u otra, registrala con `LECCION:`. No cambies el vertical
+> por tu cuenta: eso lo decide una persona.
+
 ## Cliente target
 PyMEs familiares argentinas, 25-100 empleados, dueñas de manufacturing / distribución
 / logística / inmobiliarias, que están digitalizadas parcialmente y necesitan escalar.
