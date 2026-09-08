@@ -211,12 +211,18 @@ def _proveedores_caidos(settings: Settings) -> List[Tuple[str, str]]:
         if not (settings.nvidia_api_key and modelo):
             continue
         try:
+            # max_tokens al mínimo A PROPÓSITO: acá sólo importa el código de estado.
+            # Un modelo dado de baja devuelve 404/410 sin generar nada; uno vivo
+            # devuelve 200 con la respuesta cortada, que alcanza. Pidiendo 16384 el
+            # chequeo tardaba 53 s porque esperaba a que el modelo terminara de
+            # pensar — 53 s de espera y de tokens quemados, varias veces por día,
+            # para saber algo que el status code ya decía.
             r = httpx.post(f"{settings.nvidia_base_url}/chat/completions",
                            headers={"Authorization": f"Bearer {settings.nvidia_api_key}"},
                            json={"model": modelo,
                                  "messages": [{"role": "user", "content": "ok"}],
-                                 "max_tokens": 16384},
-                           timeout=120)
+                                 "max_tokens": 1},
+                           timeout=60)
             # 429 y 5xx son de carga: se recuperan solos y alertarlos es ruido.
             # 404/410 significan que el modelo YA NO EXISTE y no se arregla esperando.
             if r.status_code in (404, 410):
