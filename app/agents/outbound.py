@@ -154,6 +154,11 @@ _INVENTA_CASO = re.compile(
 # El saludo es "Hola" con, a lo sumo, un nombre propio detras, y TERMINA en la coma.
 # Sin exigir la coma se comia los primeros 40 caracteres del cuerpo y los metia en el
 # renglon del saludo ("Hola, En adhesivos industriales el comprador,").
+# `https://app.automiq.agency/d/` sin el id (o con un punto pegado) es un link
+# roto. Si el modelo lo escribe a medias, ese mail no sale: mandarle a un
+# prospecto un link que no abre es peor que no mandarle nada.
+_DEMO_ROTA = re.compile(r"/d/(?![0-9a-f]{6,})", re.IGNORECASE)
+
 _SALUDO = re.compile(
     r"^\s*(?:hola|buenas|buen d[i\u00ed]a|qu[e\u00e9] tal)"
     r"(?:\s+[A-Z\u00c1\u00c9\u00cd\u00d3\u00da\u00d1][\w\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1]{1,15}){0,2}\s*[,:]",
@@ -456,8 +461,14 @@ class OutboundAgent(BaseAgent):
         base_url = (ctx.settings.public_base_url or "").rstrip("/")
         if base_url:
             from ..integrations import lead_demo
+            # La demo va en TODOS los toques, no sólo en el primero. El 2026-09-09
+            # el prompt del último toque decía "te dejo el ejemplo: [demo]" pero al
+            # lead de step 3 nunca se le adjuntaba una, así que el modelo escribió
+            # el link a medias —`https://app.automiq.agency/d/`, sin el id— y ese
+            # link roto salió a prospectos reales. `ensure_demo` es idempotente:
+            # para un lead que ya la tiene devuelve la misma ruta.
             for l in due_today:
-                if l.get("next_step", 0) == 0:
+                if True:
                     try:
                         path = lead_demo.ensure_demo(l)
                         if path:
@@ -660,6 +671,13 @@ class OutboundAgent(BaseAgent):
             # Un caso de exito inventado NO sale. El lead queda due y manana se
             # redacta de nuevo; perder un toque es infinitamente mas barato que
             # mandarle un numero falso a un prospecto con la firma del dueño.
+            rota = _DEMO_ROTA.search(body)
+            if rota:
+                errors.append(f"• {company} <{email}> → **NO enviado: link de demo "
+                              f"incompleto** (`{body[max(0, rota.start()-30):rota.end()+10]}`). "
+                              f"Se reintenta mañana.")
+                log.warning("outbound_demo_rota", company=company)
+                continue
             inventado = _INVENTA_CASO.search(body)
             if inventado:
                 errors.append(f"• {company} <{email}> → **NO enviado: inventó un caso de "

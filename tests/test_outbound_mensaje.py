@@ -9,8 +9,8 @@ import pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from app.agents.outbound import (_INVENTA_CASO, _dar_formato, _limpiar_subject,
-                                 _sin_presentacion)
+from app.agents.outbound import (_DEMO_ROTA, _INVENTA_CASO, _dar_formato,
+                                 _limpiar_subject, _sin_presentacion)
 
 FIRMA = "Nazareno Carames"
 
@@ -84,6 +84,18 @@ def test_no_toca_lo_que_ya_viene_bien():
     assert _dar_formato(ya, FIRMA) == ya
 
 
+def test_frena_el_link_de_demo_a_medias():
+    """El 2026-09-09 salieron mails de ultimo toque con
+    'https://app.automiq.agency/d/.' — sin el id. Link roto a un prospecto real."""
+    assert _DEMO_ROTA.search("Te dejo el ejemplo: https://app.automiq.agency/d/.")
+    assert _DEMO_ROTA.search("mira: https://app.automiq.agency/d/ ")
+    assert _DEMO_ROTA.search("https://app.automiq.agency/d/")
+    # Un link entero pasa, con o sin punto final de la oracion.
+    assert not _DEMO_ROTA.search("https://app.automiq.agency/d/25e1134286")
+    assert not _DEMO_ROTA.search("son 20 segundos: https://app.automiq.agency/d/9be91298dc.")
+    assert not _DEMO_ROTA.search("Hola, sin ningun link aca.")
+
+
 def test_limpia_el_subject_prohibido():
     """El prompt prohibia 'demo para' hacia semanas y seguia saliendo."""
     assert _limpiar_subject("demo para Castillo: consultas de propiedades en CABA") == \
@@ -100,7 +112,8 @@ def test_limpia_el_subject_prohibido():
 if __name__ == "__main__":
     for fn in (test_frena_el_caso_de_exito_inventado, test_saca_la_presentacion_del_arranque,
                test_le_da_forma_de_mail_al_bloque, test_respeta_el_nombre_en_el_saludo,
-               test_no_toca_lo_que_ya_viene_bien, test_limpia_el_subject_prohibido):
+               test_no_toca_lo_que_ya_viene_bien, test_frena_el_link_de_demo_a_medias,
+               test_limpia_el_subject_prohibido):
         fn()
         print("OK", fn.__name__)
     print("\n--- antes y despues, con el mail real de QUIPA ---")
