@@ -157,8 +157,12 @@ def test_el_video_pide_audio_explicito(monkeypatch):
 
     assert enviado["generate_audio"] is True
     assert enviado["aspect_ratio"] == "9:16"
-    assert enviado["resolution"] == "1080p"
-    assert enviado["duration"] == 8
+    # STRINGS, no números ni "1080p": así lo pide la spec oficial. Con enteros o
+    # con la "p" la API rechaza cada request, y se descubriría recién el día que
+    # alguien pegue la credencial.
+    assert enviado["resolution"] == "1080"
+    assert enviado["duration"] == "8"
+    assert isinstance(enviado["duration"], str)
 
 
 def test_falta_de_credito_se_distingue_de_un_error_cualquiera():
@@ -167,3 +171,90 @@ def test_falta_de_credito_se_distingue_de_un_error_cualquiera():
     assert _sin_credito({}, 402) is True
     assert _sin_credito({"error": "insufficient credits"}, 400) is True
     assert _sin_credito({"error": "bad prompt"}, 400) is False
+
+
+# ── verificado contra la OpenAPI oficial, no contra la memoria ──
+
+def test_las_rutas_salen_de_la_spec_oficial():
+    """Escritas de memoria estaban mal las cuatro: host api.* en vez de platform.*,
+    /veo3.1/text-to-video, soul/v2/standard y resolution "1080p". Se corrigieron
+    leyendo la OpenAPI 2.0.0 que ya estaba bajada en Downloads."""
+    import ast
+    from app.integrations import higgsfield
+    assert higgsfield.BASE == "https://platform.higgsfield.ai"
+
+    # Se miran los literales del CÓDIGO, no el archivo entero: el docstring
+    # nombra las rutas viejas justamente para explicar por qué estaban mal, y un
+    # grep crudo se tropieza con esa explicación.
+    arbol = ast.parse((APP / "integrations/higgsfield.py").read_text(encoding="utf-8"))
+    literales = {n.value for n in ast.walk(arbol)
+                 if isinstance(n, ast.Constant) and isinstance(n.value, str)
+                 and "\n" not in n.value}
+    for malo in ("https://api.higgsfield.ai", "veo3.1/text-to-video",
+                 "higgsfield-ai/soul/v2/standard"):
+        assert malo not in literales, f"{malo} sigue usándose en el código"
+    for bueno in ("veo3.1", "veo3.1/reference-to-video",
+                  "higgsfield-ai/soul/standard"):
+        assert bueno in literales, f"falta la ruta {bueno}"
+
+
+def test_con_referencias_usa_el_endpoint_que_conserva_la_cara(monkeypatch):
+    """/veo3.1/reference-to-video toma image_urls. Es lo que mantiene la cara de
+    Nazareno entre clips: sin eso cada video le inventa una persona distinta."""
+    from app.config import get_settings
+    from app.integrations import higgsfield
+    s = get_settings()
+    monkeypatch.setattr(s, "higgsfield_key_id", "id1")
+    monkeypatch.setattr(s, "higgsfield_key_secret", "sec1")
+    monkeypatch.setattr(higgsfield, "get_settings", lambda: s)
+    visto = {}
+    monkeypatch.setattr(higgsfield, "_submit",
+                        lambda ruta, cuerpo: visto.update(ruta=ruta, **cuerpo) or None)
+
+    higgsfield.generar_video("naza", referencias=["https://x/1.png"])
+    assert visto["ruta"] == "veo3.1/reference-to-video"
+    assert visto["image_urls"] == ["https://x/1.png"]
+
+    visto.clear()
+    higgsfield.generar_video("naza")
+    assert visto["ruta"] == "veo3.1"
+    assert "image_urls" not in visto
+
+
+def test_las_imagenes_van_en_un_solo_pedido(monkeypatch):
+    """La API tiene num_images: pedirlas de a una gastaba un request por imagen."""
+    from app.config import get_settings
+    from app.integrations import higgsfield
+    s = get_settings()
+    monkeypatch.setattr(s, "higgsfield_key_id", "id1")
+    monkeypatch.setattr(s, "higgsfield_key_secret", "sec1")
+    monkeypatch.setattr(higgsfield, "get_settings", lambda: s)
+    pedidos = []
+    monkeypatch.setattr(higgsfield, "_submit",
+                        lambda ruta, cuerpo: pedidos.append(cuerpo) or None)
+
+    higgsfield.generar_imagen("un gato", aspect_ratio="9:16", n=4)
+
+    assert len(pedidos) == 1, "un request, no cuatro"
+    assert pedidos[0]["num_images"] == 4
+    assert pedidos[0]["aspect_ratio"] == "9:16"
+
+
+def test_un_aspect_ratio_que_la_api_no_acepta_cae_a_uno_valido(monkeypatch):
+    from app.config import get_settings
+    from app.integrations import higgsfield
+    s = get_settings()
+    monkeypatch.setattr(s, "higgsfield_key_id", "id1")
+    monkeypatch.setattr(s, "higgsfield_key_secret", "sec1")
+    monkeypatch.setattr(higgsfield, "get_settings", lambda: s)
+    pedidos = []
+    monkeypatch.setattr(higgsfield, "_submit",
+                        lambda ruta, cuerpo: pedidos.append(cuerpo) or None)
+
+    higgsfield.generar_imagen("x", aspect_ratio="7:3", n=1)
+    assert pedidos[0]["aspect_ratio"] == "1:1"
+
+
+def test_tiktok_creator_le_pasa_las_referencias():
+    t = (APP / "agents/tiktok_creator.py").read_text(encoding="utf-8")
+    assert "reference_image_urls=refs" in t

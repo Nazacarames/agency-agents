@@ -569,8 +569,11 @@ class TikTokCreatorAgent(BaseAgent):
             # Sin credencial de Higgsfield NO hay video: es preferible no publicar
             # a publicar algo sin el clip, y el reporte lo dice.
             motor = "Higgsfield/Veo 3.1"
+            # `refs` vuelve a viajar: la spec expone /veo3.1/reference-to-video,
+            # que toma image_urls y es lo que mantiene la CARA entre clips.
             res = higgsfield.generate_and_wait(
-                nazareno_veo_prompt(frase, lugar), aspect_ratio="9:16", timeout_s=420)
+                nazareno_veo_prompt(frase, lugar), aspect_ratio="9:16",
+                timeout_s=420, reference_image_urls=refs)
             b64 = res.get("b64")
             if not b64:
                 return text, None
