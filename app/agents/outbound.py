@@ -29,6 +29,7 @@ import pytz
 from .base import BaseAgent, AgentContext
 from ._common import get_context_block, upstream_handoff_block
 from ..config import get_settings
+from ..integrations.compuertas import Frenado as _Frenado
 from ..integrations.gmail_client import get_gmail_client, GmailError
 from ..integrations import leads_store as ls
 from ..integrations import email_guard as _eg
@@ -585,6 +586,11 @@ class OutboundAgent(BaseAgent):
                                    "step": "reengage", "msg_id": mid, "run_id": run_id}
                 n_sent += 1
                 lines.append(f"• **{company}** <{email}> → ✅ reenganche enviado (`{mid[:10]}`)")
+            except _Frenado:
+                # Frenado por compuerta no es un fallo: el lead queda due y sale
+                # solo cuando lo aprueben. Contarlo como error ensuciaba el único
+                # dato del embudo que no se puede reconstruir después.
+                lines.append(f"• **{company}** <{email}> → ⏸️ reenganche esperando tu OK")
             except Exception as e:
                 log.error("outbound_reengage_failed", email=email, error=str(e))
                 errors.append(f"• {company} <{email}> → ❌ {e}")
@@ -650,7 +656,7 @@ class OutboundAgent(BaseAgent):
         # de enviar (no solo "se aprende para la próxima"). Mejora el mail que sale hoy.
         qa_improved, qa_avg = self._improve_weak_emails(ctx, by_key, store)
 
-        sent, preview, errors, missing = [], [], [], []
+        sent, preview, errors, missing, frenados = [], [], [], [], []
         for key in ctx.args.get("_ob_due_keys", []):
             lead = store.get("leads", {}).get(key)
             if not lead:
@@ -722,6 +728,10 @@ class OutboundAgent(BaseAgent):
                 sent_map[email] = {"company": company, "date": today, "subject": subject,
                                    "step": step, "msg_id": mid, "run_id": ctx.run_id}
                 sent.append(f"• **{company}** <{email}> → ✅ {label} enviado (`{mid[:10]}`)")
+            except _Frenado:
+                # No salió, pero tampoco falló: espera el OK de un humano. El lead
+                # queda due y el toque sale solo en la próxima corrida aprobada.
+                frenados.append(f"• **{company}** <{email}> — _{label}_: {subject}")
             except Exception as e:
                 log.error("outbound_send_failed", email=email, step=step, error=str(e))
                 errors.append(f"• {company} <{email}> → ❌ {e}")
@@ -742,7 +752,8 @@ class OutboundAgent(BaseAgent):
         log.info("outbound_done", run_id=ctx.run_id, sent=len(sent),
                  preview=len(preview), errors=len(errors), live=live, qa_improved=qa_improved)
 
-        report = self._render_report(ctx, live, auto, sent, preview, errors, missing)
+        report = self._render_report(ctx, live, auto, sent, preview, errors,
+                                     missing, frenados)
         report += self._serie_historica()
         if qa_avg is not None:
             report += (f"\n## 🧪 QA Gemini (evaluator-optimizer)\nScore promedio: **{qa_avg}/100**"
@@ -887,7 +898,8 @@ class OutboundAgent(BaseAgent):
             parts += [_wa_line(w) for w in wa]
         return "\n".join(parts)
 
-    def _render_report(self, ctx, live, auto, sent, preview, errors, missing) -> str:
+    def _render_report(self, ctx, live, auto, sent, preview, errors, missing,
+                       frenados=None) -> str:
         ing = ctx.args.get("_ob_ingest", {}) or {}
         over_cap = ctx.args.get("_ob_over_cap", 0)
         wa = ctx.args.get("_ob_wa_queue", []) or []
@@ -915,6 +927,11 @@ class OutboundAgent(BaseAgent):
             parts += ["## ✅ Enviados hoy", *sent, ""]
         if preview:
             parts += ["## 👀 Se enviarían (auto_send OFF o dry-run)", *preview, ""]
+        if frenados:
+            parts += ["## ⏸️ Esperando tu OK (compuerta de aprobación)",
+                      "Redactados y frenados antes de salir. Se aprueban en "
+                      "`/api/admin/pendientes` y salen en la próxima corrida.",
+                      *frenados, ""]
         if missing:
             parts += ["## ⚠️ Sin redactar (revisar)", *missing, ""]
         if errors:

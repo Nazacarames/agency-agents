@@ -191,6 +191,14 @@ class Settings(BaseSettings):
     # Si =True el agente promueve a PRODUCCIÓN solo; default False = sólo preview + aviso.
     web_auto_deploy: bool = False
 
+    # ── Compuertas de aprobación ──
+    # CSV de tipos de acción que NO salen sin que un humano diga que sí: mail, post.
+    # Vacío = ninguna compuerta (comportamiento de siempre). La compuerta vive en el
+    # cuello de botella por donde pasa todo lo que sale, no en cada agente: una
+    # bandera por camino ya nos falló (se taparon 1 de 6 salidas y se escaparon 4
+    # mensajes). La aprobación se pega al par (tipo, destino) y no vence.
+    approval_gates: str = ""
+
     # ── Outbound (cold-email automático a los leads) ──
     # ⚠️ Si auto_send=True, el agente outbound ENVÍA cold-emails reales (no borradores).
     # Dedup por email (sent-log en el volume) + tope diario. Default OFF por seguridad.

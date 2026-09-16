@@ -31,6 +31,15 @@ from ..log import get_logger
 log = get_logger("gmail")
 
 
+def _compuerta(destino: str, resumen: str, detalle: dict) -> None:
+    """Freno de mano antes de que el mail salga. Si `APPROVAL_GATES` incluye
+    `mail` y ese destinatario no fue aprobado, levanta `compuertas.Frenado` y el
+    mail NO se manda. Va acá y no en cada agente porque los tres que mandan mail
+    (outbound, seguimientos, inbox_assistant) pasan todos por este método."""
+    from .compuertas import frena
+    frena("mail", destino, resumen, detalle)
+
+
 def _anotar(tipo: str, resumen: str, **kw) -> None:
     """Deja el mail enviado en la bitácora única. Import adentro para no arrastrar
     la DB a quien sólo quiera leer la casilla, y nunca levanta: un mail que salió
@@ -320,6 +329,8 @@ class GmailClient:
         `thread_id`: si se pasa, el mensaje se envía DENTRO de ese hilo — así los
         follow-ups quedan colgados del primer toque (mejor UX y deliverability que
         un mail suelto con asunto "Re:" falso)."""
+        _compuerta(to, f"Quiere mandar: {subject[:120]}",
+                   {"subject": subject[:200], "cuerpo": (body or "")[:1000]})
         svc = self._build_service()
         mime = MIMEText(body, "plain", "utf-8")
         mime["To"] = to
@@ -367,6 +378,8 @@ class GmailClient:
         """ENVÍA una respuesta DENTRO del hilo (no borrador). Devuelve el message id.
         Usado por el inbox_assistant cuando inbox_auto_send=True: responde solo,
         apuntando a agendar una reunión. Threadea por `threadId` + asunto 'Re:'."""
+        _compuerta(to, f"Quiere responder: {subject[:120]}",
+                   {"thread_id": thread_id, "cuerpo": (body or "")[:1000]})
         svc = self._build_service()
         mime = MIMEText(body, "plain", "utf-8")
         mime["To"] = to

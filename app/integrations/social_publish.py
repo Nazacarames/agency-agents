@@ -297,6 +297,21 @@ def publish(image: str, caption: str = "", targets: Optional[List[str]] = None,
     Devuelve resultado por red."""
     targets = [(t or "").lower() for t in (targets or ["instagram", "facebook"])]
     kind = (kind or "post").lower()
+    # Compuerta: con `post` en APPROVAL_GATES nada se publica sin OK de un humano.
+    # Se devuelve el resultado como error en vez de levantar porque los llamadores
+    # ya miran `ok` y arman el reporte con eso.
+    try:
+        from .compuertas import frena, Frenado
+        try:
+            frena("post", ",".join(targets), f"Quiere publicar un {kind}",
+                  {"kind": kind, "caption": (caption or "")[:300]})
+        except Frenado as f:
+            log.warning("social_publish_frenado", kind=kind, evento=f.evento_id)
+            return {"ok": False, "results": {},
+                    "error": f"esperando aprobación (evento {f.evento_id})",
+                    "evento_id": f.evento_id}
+    except ImportError:  # pragma: no cover
+        pass
     results: Dict[str, Any] = {}
     for t in targets:
         ig = t in ("ig", "instagram")

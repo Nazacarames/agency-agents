@@ -2422,6 +2422,34 @@ async def api_admin_eventos(request: Request, limite: int = 100, tipo: str = "",
     return {"total": len(filas), "eventos": filas}
 
 
+@app.get("/api/admin/pendientes")
+async def api_admin_pendientes(request: Request, limite: int = 100):
+    """Lo que los agentes quisieron hacer y quedó esperando el OK de un humano."""
+    _verify_webhook_secret(request)
+    from .integrations import compuertas
+    filas = await run_in_threadpool(compuertas.pendientes, limite)
+    return {"compuertas": sorted(compuertas.activas()),
+            "total": len(filas), "pendientes": filas}
+
+
+@app.post("/api/admin/pendientes/{evento_id}")
+async def api_admin_resolver(request: Request, evento_id: int,
+                             aprobar: bool = True, por: str = ""):
+    """Aprobar o rechazar una acción frenada.
+
+    Aprobar un mail habilita ese destinatario de acá en adelante (los agentes
+    reintentan solos todos los días, así que no hace falta reanudar nada).
+    Rechazar sólo deja asentado que se dijo que no: el destino sigue frenado."""
+    _verify_webhook_secret(request)
+    from .integrations import compuertas
+    ok = await run_in_threadpool(compuertas.resolver, evento_id, bool(aprobar), por)
+    if not ok:
+        raise HTTPException(status_code=404,
+                            detail="no existe o ya estaba resuelto")
+    return {"ok": True, "evento_id": evento_id,
+            "estado": "aprobado" if aprobar else "rechazado"}
+
+
 @app.get("/api/admin/dmarc")
 async def api_admin_dmarc(request: Request, dias: int = 7):
     """Quién mandó mail diciendo ser automiq.agency, según los informes DMARC.

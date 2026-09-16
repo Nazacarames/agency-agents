@@ -110,6 +110,60 @@ def registrar(tipo: str, resumen: str, *, agente: str = "", run_id: str = "",
         return None
 
 
+def resolver(evento_id: int, estado: str, por: str = "") -> bool:
+    """Marca un evento frenado como aprobado o rechazado. Devuelve si lo encontró."""
+    estado = (estado or "").strip()
+    if estado not in ("aprobado", "rechazado"):
+        raise ValueError(f"estado inválido: {estado}")
+    if db.enabled():
+        try:
+            row = db.fetchone(
+                "UPDATE agent_events SET estado = %s,"
+                " detalle = detalle || jsonb_build_object('resuelto_por', %s::text,"
+                " 'resuelto_el', %s::text)"
+                " WHERE id = %s AND estado = 'esperando_ok' RETURNING id",
+                (estado, por or "", datetime.now(timezone.utc).isoformat(), int(evento_id)),
+            )
+            return bool(row)
+        except Exception as e:
+            log.warning("evento_resolver_db_fallo", id=evento_id, error=str(e)[:200])
+            return False
+    try:
+        items = _json_load()
+        for it in items:
+            if int(it.get("id", 0)) == int(evento_id) and it.get("estado") == "esperando_ok":
+                it["estado"] = estado
+                it.setdefault("detalle", {})["resuelto_por"] = por or ""
+                it["detalle"]["resuelto_el"] = datetime.now(timezone.utc).isoformat()
+                write_json_atomic(_json_path(), items, indent=2)
+                return True
+        return False
+    except Exception as e:
+        log.warning("evento_resolver_json_fallo", id=evento_id, error=str(e)[:200])
+        return False
+
+
+def hay_aprobado(tipo: str, destino: str) -> bool:
+    """¿Un humano ya dijo que sí para esta acción y este destino?
+
+    La aprobación queda pegada al par (tipo, destino) y no a una corrida: los
+    agentes corren todos los días y reintentan solos, así que aprobar una vez
+    alcanza para que el próximo intento pase."""
+    if not destino:
+        return False
+    if db.enabled():
+        try:
+            row = db.fetchone(
+                "SELECT 1 AS ok FROM agent_events WHERE tipo = %s AND destino = %s"
+                " AND estado = 'aprobado' LIMIT 1", (tipo, destino))
+            return bool(row)
+        except Exception as e:
+            log.warning("evento_aprobado_db_fallo", error=str(e)[:200])
+            return False
+    return any(i.get("tipo") == tipo and i.get("destino") == destino
+               and i.get("estado") == "aprobado" for i in _json_load())
+
+
 def ultimos(limite: int = 50, *, tipo: str = "", agente: str = "",
             estado: str = "") -> List[Dict[str, Any]]:
     """La línea de tiempo, lo más nuevo primero. Sin esto la bitácora vuelve a
