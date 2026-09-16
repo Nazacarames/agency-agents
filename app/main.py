@@ -2422,6 +2422,21 @@ async def api_admin_eventos(request: Request, limite: int = 100, tipo: str = "",
     return {"total": len(filas), "eventos": filas}
 
 
+@app.get("/api/admin/credenciales")
+async def api_admin_credenciales(request: Request, verificar: bool = False):
+    """El llavero: qué credencial está, quién la usa y qué se rompe al rotarla.
+
+    Nunca devuelve el valor de una credencial. Con `verificar=true` sale a pedir
+    un token de verdad contra cada proveedor — es lo único que distingue una clave
+    viva de una revocada, y tarda unos segundos."""
+    _verify_webhook_secret(request)
+    from .integrations import credenciales
+    filas = await run_in_threadpool(credenciales.estado, bool(verificar))
+    return {"total": len(filas),
+            "caidas": [f["clave"] for f in filas if f["estado"] == "fail"],
+            "credenciales": filas}
+
+
 @app.get("/api/admin/pendientes")
 async def api_admin_pendientes(request: Request, limite: int = 100):
     """Lo que los agentes quisieron hacer y quedó esperando el OK de un humano."""

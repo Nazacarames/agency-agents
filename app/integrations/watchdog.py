@@ -279,6 +279,26 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
         )
         fresh_keys.append("gmail")
 
+    # 1b) El resto del llavero. Gmail tenía verificación desde siempre; las demás
+    # credenciales se morían en silencio (una service account revocada o un token
+    # de Meta vencido se ven idénticos a uno bueno mirando las env vars).
+    cred_caidas: List[str] = []
+    try:
+        from .credenciales import caidas as _cred_caidas
+        # Gmail queda afuera: ya se verificó y avisó arriba, y repetir el refresh
+        # castiga un consentimiento en Testing que de por sí dura 7 días.
+        for c in _cred_caidas(omitir={"gmail_oauth"}):
+            cred_caidas.append(c["clave"])
+            key = f"cred:{c['clave']}"
+            if key in already:
+                continue
+            problems.append(
+                f"🔑 **Credencial caída: `{c['env']}`** — `{c['detalle']}`\n"
+                f"→ La usan: {', '.join(c['usan'])}. Sin ella, {c['rompe']}.")
+            fresh_keys.append(key)
+    except Exception as e:                                      # pragma: no cover
+        log.warning("watchdog_credenciales_falló", error=str(e)[:150])
+
     # 2) Corridas caídas
     missed = _missed_runs(settings)
     for nombre, hora in missed:
@@ -413,6 +433,7 @@ def check(settings: Settings, discord=None) -> Dict[str, Any]:
             log.error("watchdog_agencia_alert_failed", error=str(e)[:150])
 
     result = {"gmail": g_status, "gmail_detail": g_detail,
+              "credenciales_caidas": cred_caidas,
               "adlib": adlib_ok, "brain_stale_h": round(stale, 1),
               "missed": [m[0] for m in missed],
               "degraded": [d[0] for d in degraded],
