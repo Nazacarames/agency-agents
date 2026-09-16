@@ -89,6 +89,28 @@ def marcar_listo(n: int, media: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def tomar_para_short() -> Optional[Dict[str, Any]]:
+    """Presta un clip YA generado para armar un short, sin gastar un crédito.
+
+    Existe porque el dueño frenó la generación el 2026-09-16: hay 46 clips del
+    banco de agosto y la orden es usar esos. Se elige el MENOS usado para que la
+    rotación no repita siempre el mismo, y se lleva la cuenta en `usos`.
+
+    Devuelve el item (con su `media`) o None si el banco está vacío.
+    """
+    d = _load()
+    listos = [i for i in d["items"] if i.get("media")]
+    if not listos:
+        return None
+    listos.sort(key=lambda i: (int(i.get("usos", 0)), int(i.get("n", 0))))
+    elegido = listos[0]
+    elegido["usos"] = int(elegido.get("usos", 0)) + 1
+    elegido["ultimo_uso"] = _now()
+    _save(d)
+    log.info("video_bank_prestado", n=elegido.get("n"), usos=elegido["usos"])
+    return elegido
+
+
 def _reparto(items: List[Dict[str, Any]], por_semana: int) -> None:
     """Le pone fecha a cada pieza lista, repartidas `por_semana` a lo largo del año."""
     hoy = date.today()

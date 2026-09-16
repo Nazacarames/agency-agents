@@ -2286,16 +2286,24 @@ async def api_video_bank_prompts(request: Request):
     if not isinstance(piezas, list) or not piezas:
         raise HTTPException(status_code=400, detail="falta `piezas` (lista)")
     from .integrations import video_bank as vb
-    creadas = []
+    creadas, listas = [], []
     for p in piezas[:300]:
         if not isinstance(p, dict):
             continue
         it = vb.agregar(str(p.get("prompt") or ""), str(p.get("copy") or ""),
                         str(p.get("gancho") or ""), str(p.get("kind") or "reel"),
                         str(body.get("origen") or "operador"))
-        if it:
-            creadas.append(it["n"])
-    return {"ok": True, "creadas": creadas, "resumen": vb.resumen()}
+        if not it:
+            continue
+        creadas.append(it["n"])
+        # Una pieza puede llegar CON su clip ya hecho: es el caso del banco de 39
+        # videos generados en agosto, que se subieron al volumen y no hay que
+        # volver a generar. Sin esto quedarían PENDIENTE y nadie las usaría.
+        media = str(p.get("media") or "").strip()
+        if media:
+            vb.marcar_listo(it["n"], media)
+            listas.append(it["n"])
+    return {"ok": True, "creadas": creadas, "listas": listas, "resumen": vb.resumen()}
 
 
 @app.post("/api/video/bank/lote")
@@ -3583,50 +3591,6 @@ async def api_video_status(request: Request):
 
 
 # ── Google Veo 3 — generación de video con créditos GCP (path principal TikTok) ──
-
-@app.post("/api/veo/test")
-async def api_veo_test(request: Request):
-    """Crea una tarea de video Veo (image-to-video). Body: {prompt, image_url?, aspect_ratio?, negative_prompt?}.
-    Devuelve operation; consultar con GET /api/veo/status?operation=."""
-    _verify_webhook_secret(request)
-    from .integrations import veo_video as veo
-    if not veo.enabled():
-        raise HTTPException(status_code=400,
-                            detail="Veo no configurado (falta GOOGLE_SERVICE_ACCOUNT_JSON / credencial de Vertex)")
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    prompt = (body or {}).get("prompt") or ""
-    if not prompt.strip():
-        raise HTTPException(status_code=400, detail="falta prompt")
-    image_url = (body or {}).get("image_url") or None
-    aspect = (body or {}).get("aspect_ratio") or "9:16"
-    negative = (body or {}).get("negative_prompt") or ""
-    try:
-        op = await run_in_threadpool(veo.create_task, prompt, image_url, None, aspect, negative)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e)[:400])
-    return {"ok": True, "operation": op}
-
-
-@app.get("/api/veo/status")
-async def api_veo_status(request: Request):
-    _verify_webhook_secret(request)
-    from .integrations import veo_video as veo
-    op = request.query_params.get("operation", "")
-    if not op:
-        raise HTTPException(status_code=400, detail="falta operation")
-    try:
-        q = await run_in_threadpool(veo.query_task, op)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e)[:400])
-    # No devolver el base64 gigante del video; sólo resumen.
-    return {"done": q.get("done"), "has_video": bool(q.get("b64") or q.get("gcsUri")),
-            "gcsUri": q.get("gcsUri"), "error": q.get("error")}
-
-
-# ── Web (landing): aprobar el preview del web_optimizer → producción ──
 
 @app.get("/api/web/deployments")
 async def api_web_deployments(request: Request):

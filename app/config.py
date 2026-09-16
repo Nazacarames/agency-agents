@@ -99,6 +99,12 @@ class Settings(BaseSettings):
     # ⚠️ La API COBRA CRÉDITOS del pool prepago (~835 comprados). El plan
     # ilimitado es sólo web/manual: sus términos excluyen API y automatización.
     # No hay endpoint de saldo → mirarlo en cloud.higgsfield.ai.
+    # ⚠️ APAGADO por decisión del dueño (2026-09-16): "usemos esos videos
+    # generados anteriormente, no generemos más por el momento". Con esto en
+    # False el sistema NO llama a Higgsfield ni gasta un crédito: los shorts
+    # salen del banco de 46 clips ya generados en agosto.
+    video_gen_enabled: bool = False
+
     higgsfield_key_id: str = ""       # (SECRET) HF_API_KEY_ID
     higgsfield_key_secret: str = ""   # (SECRET) HF_API_KEY_SECRET
     # Tope de seguridad: el agente decide CUÁNTAS imágenes generar según su

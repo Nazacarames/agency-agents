@@ -543,12 +543,45 @@ class TikTokCreatorAgent(BaseAgent):
             return text
 
     # ── Clip de Nazareno con Veo 3.1 Fast ──
+    def _clip_del_banco(self):
+        """Presta un clip YA generado en vez de crear uno. (path, frase) o (None, "").
+
+        El dueño frenó la generación el 2026-09-16: hay 46 clips del banco de
+        agosto y la orden es usar esos hasta nuevo aviso.
+
+        ⚠️ El subtítulo NO puede ser la frase que escribió el modelo para este
+        short: el clip del banco ya trae SU PROPIA voz diciendo otra cosa, y
+        subtitular palabras que no se dicen es peor que no subtitular. Se usa el
+        copy del propio clip, o nada.
+        """
+        from pathlib import Path as _P
+        from ..integrations import video_bank as vb
+        item = vb.tomar_para_short()
+        if not item:
+            log.warning("banco_de_video_vacio")
+            return None, ""
+        media = (item.get("media") or "").strip()
+        nombre = media.rsplit("/", 1)[-1]
+        ruta = _P(__file__).resolve().parent.parent.parent / "data" / "images" / nombre
+        if not ruta.exists():
+            log.warning("clip_del_banco_sin_archivo", n=item.get("n"), media=media)
+            return None, ""
+        log.info("clip_del_banco", n=item.get("n"), archivo=nombre)
+        return ruta, (item.get("copy") or item.get("gancho") or "").strip()
+
     def _add_nazareno_clip(self, text: str):
         """Devuelve (texto, path_local_del_clip | None)."""
         try:
             from ..integrations import higgsfield
             from ..config import get_settings
-            if not text or not higgsfield.enabled():
+            if not text:
+                return text, None
+            # Generación APAGADA: el clip sale del banco y no se gasta un crédito.
+            if not get_settings().video_gen_enabled:
+                ruta, frase = self._clip_del_banco()
+                self._veo_frase = frase
+                return text, ruta
+            if not higgsfield.enabled():
                 return text, None
             mf = re.search(r"^[\s>*`\-]*VEO_FRASE\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
             ml = re.search(r"^[\s>*`\-]*VEO_LUGAR\s*[:：]\s*(\w+)", text, re.IGNORECASE | re.MULTILINE)

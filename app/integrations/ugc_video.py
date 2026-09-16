@@ -4,8 +4,8 @@ ugc_video — genera videos estilo UGC (User-Generated Content) con IA: un "clie
 Auténtico, no publicidad. Complementa la marca personal de Nazareno (que es un presentador
 fijo); acá la gracia es la VARIEDAD de personas y la estética casera/creíble.
 
-Reusa Veo (veo_video) SIN reference images a propósito → cada video una persona distinta
-(como testimonios reales de clientes diferentes). Best-effort: si Veo no está, devuelve None.
+Genera SIN imágenes de referencia a propósito → cada video una persona distinta
+(como testimonios reales de clientes diferentes). Best-effort: si no hay motor, devuelve None.
 """
 from __future__ import annotations
 
@@ -39,9 +39,16 @@ _UGC_NEG = ("aspecto de publicidad, estudio de fotografía, iluminación profesi
 
 
 def enabled() -> bool:
+    """Apagado si la generación está frenada, o si no hay credencial.
+
+    El 2026-09-16 se sacó Google de los agentes y el dueño ademas freno la
+    generacion ("usemos los videos ya generados"). Este camino tambien tiene que
+    respetarlo: es el fallback del clip de marca y se disparaba solo.
+    """
     try:
-        from . import veo_video
-        return veo_video.enabled()
+        from ..config import get_settings
+        from . import higgsfield
+        return bool(get_settings().video_gen_enabled) and higgsfield.enabled()
     except Exception:
         return False
 
@@ -66,16 +73,12 @@ def generate(frase: str, persona: Optional[str] = None,
     if not enabled() or not (frase or "").strip():
         return None
     try:
-        from . import veo_video, omni_video
+        from . import higgsfield
         p = persona or random.choice(PERSONAS)
-        # Omni primero (mejor dicción/acento; persona variada sin reference);
-        # preview → fallback a Veo si falla o filtra.
-        res = omni_video.generate_and_wait(
-            ugc_veo_prompt(frase, p), negative_prompt=_UGC_NEG, timeout_s=300)
-        if not res.get("b64"):
-            res = veo_video.generate_and_wait(
-                ugc_veo_prompt(frase, p), aspect_ratio="9:16",
-                negative_prompt=_UGC_NEG, timeout_s=300, poll=12)
+        # SIN referencias a proposito: cada video una persona distinta, como
+        # testimonios de clientes diferentes. Antes iba por Omni y Veo (Google).
+        res = higgsfield.generate_and_wait(
+            ugc_veo_prompt(frase, p), aspect_ratio="9:16", timeout_s=300)
         b64 = res.get("b64")
         if not b64:
             return None
