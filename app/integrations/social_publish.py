@@ -324,6 +324,21 @@ def publish(image: str, caption: str = "", targets: Optional[List[str]] = None,
         return {"ok": False, "results": {}, "error": f"sin targets aplicables para kind={kind}"}
     ok = any(v.get("ok") for v in results.values())
     log.info("social_publish", ok=ok, kind=kind, results={k: v.get("ok") for k, v in results.items()})
+    # Bitácora única: qué salió publicado y con qué link. Antes esto vivía sólo
+    # en publish-queue.json y en Discord, así que "¿qué posteamos esta semana?"
+    # no se podía contestar sin abrir dos lugares distintos.
+    try:
+        from . import eventos
+        for red, r in results.items():
+            eventos.registrar(
+                "post", f"{kind} publicado en {red}" if r.get("ok")
+                else f"{kind} NO se publicó en {red}",
+                destino=red, ref=r.get("permalink") or r.get("id") or "",
+                ok=bool(r.get("ok")),
+                detalle={"kind": kind, "caption": (caption or "")[:200],
+                         "error": r.get("error", "")})
+    except Exception:
+        pass
     return {"ok": ok, "results": results}
 
 

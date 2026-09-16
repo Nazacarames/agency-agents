@@ -444,6 +444,13 @@ class BaseAgent(ABC):
                        meta={"run_id": ctx.run_id, "triggered_by": ctx.triggered_by})
 
     def run(self, ctx: AgentContext) -> str:
+        """Envoltorio fino: firma la corrida para que TODO lo que salga al mundo
+        adentro de ella quede atribuido al agente sin pasarlo por toda la pila."""
+        from ..integrations import eventos
+        with eventos.en_curso(self.name, ctx.run_id):
+            return self._run(ctx)
+
+    def _run(self, ctx: AgentContext) -> str:
         t0 = time.perf_counter()
         log.info(
             "agent_run_start",
@@ -716,6 +723,16 @@ class BaseAgent(ABC):
                     "ok": True,
                 },
             )
+            # Lo mismo, pero donde sobrevive a un deploy: logs/ vive en el
+            # contenedor y render.yaml no monta ningún disco.
+            from ..integrations import eventos
+            eventos.registrar(
+                "run", f"Corrida OK ({ctx.triggered_by})",
+                destino=ctx.triggered_by, ref=ctx.run_id, ok=True,
+                detalle={"model": response.model, "elapsed_ms": elapsed_ms,
+                         "input_tokens": response.input_tokens,
+                         "output_tokens": response.output_tokens,
+                         "chars": len(output or "")})
 
             # Delivery a Discord
             if self.deliver_to_discord and ctx.discord:
@@ -742,6 +759,14 @@ class BaseAgent(ABC):
 
         except Exception as e:
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
+            # PRIMERO la bitácora: si `log.exception` explota (pasa de verdad —
+            # stdout en cp1252 y un mensaje con acentos alcanza), el registro del
+            # fallo se perdería justo en la corrida que había que poder mirar.
+            from ..integrations import eventos
+            eventos.registrar(
+                "run", f"Corrida FALLÓ: {type(e).__name__}",
+                destino=ctx.triggered_by, ref=ctx.run_id, ok=False,
+                detalle={"error": str(e)[:500], "elapsed_ms": elapsed_ms})
             log.exception("agent_run_failed", agent=self.name, run_id=ctx.run_id)
             write_run_log(
                 "agent_runs",

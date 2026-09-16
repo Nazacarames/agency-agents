@@ -2406,6 +2406,22 @@ async def api_backlog_resolver(item_id: str, request: Request):
     return {"ok": True, "resumen": backlog.resumen()}
 
 
+@app.get("/api/admin/eventos")
+async def api_admin_eventos(request: Request, limite: int = 100, tipo: str = "",
+                            agente: str = "", estado: str = ""):
+    """La bitácora: qué hicieron los agentes, lo más nuevo primero.
+
+    Antes esto había que reconstruirlo abriendo Discord, 13 JSON de `data/` y el
+    backlog, y aun así lo que había pasado en un deploy anterior no existía más
+    (logs/ vive en el contenedor, sin disco montado). Una línea de tiempo sin
+    lector vuelve a ser de sólo escritura, así que el lector va junto con ella."""
+    _verify_webhook_secret(request)
+    from .integrations import eventos
+    filas = await run_in_threadpool(
+        eventos.ultimos, limite, tipo=tipo, agente=agente, estado=estado)
+    return {"total": len(filas), "eventos": filas}
+
+
 @app.get("/api/admin/dmarc")
 async def api_admin_dmarc(request: Request, dias: int = 7):
     """Quién mandó mail diciendo ser automiq.agency, según los informes DMARC.

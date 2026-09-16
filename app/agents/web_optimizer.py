@@ -228,7 +228,14 @@ class WebOptimizerAgent(BaseAgent):
         return task + ordenes + bloques + WEB_OPTIMIZER_TASK
 
     # Override completo: descarga determinística + edición CC + deploy determinístico.
+    # Ojo: no pasa por `base.run`, así que la firma de la corrida se pone acá a mano
+    # (si no, los deploys de este agente saldrían sin dueño en la bitácora).
     def run(self, ctx: AgentContext) -> str:
+        from ..integrations import eventos
+        with eventos.en_curso(self.name, ctx.run_id):
+            return self._run_web(ctx)
+
+    def _run_web(self, ctx: AgentContext) -> str:
         if not ctx.settings.web_optimizer_configured:
             return self._deliver(ctx, (
                 "⚙️ **Web Optimizer pendiente de configuración.** Faltan `VERCEL_TOKEN` y/o "

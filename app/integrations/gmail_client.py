@@ -30,6 +30,18 @@ from ..log import get_logger
 
 log = get_logger("gmail")
 
+
+def _anotar(tipo: str, resumen: str, **kw) -> None:
+    """Deja el mail enviado en la bitácora única. Import adentro para no arrastrar
+    la DB a quien sólo quiera leer la casilla, y nunca levanta: un mail que salió
+    bien no se convierte en error porque falle el registro."""
+    try:
+        from . import eventos
+        eventos.registrar(tipo, resumen, **kw)
+    except Exception:
+        pass
+
+
 # Scopes: leer + componer/enviar + crear eventos de Calendar (Meet).
 # El refresh token se mintea con estos 3; agregar calendar NO rompe gmail (en el
 # refresh, Google devuelve los scopes realmente otorgados). Si el token viejo no
@@ -345,6 +357,8 @@ class GmailClient:
         msg_id = sent.get("id", "")
         log.info("gmail_message_sent", to=to, msg_id=msg_id, subject=subject[:60],
                  threaded=bool(thread_id))
+        _anotar("mail", f"Mail enviado: {subject[:120]}", destino=to, ref=msg_id,
+                detalle={"threaded": bool(thread_id), "chars": len(body or "")})
         return msg_id
 
     def send_reply(
@@ -388,6 +402,8 @@ class GmailClient:
 
         msg_id = sent.get("id", "")
         log.info("gmail_reply_sent", thread_id=thread_id, msg_id=msg_id, to=to)
+        _anotar("mail", f"Respuesta enviada: {subject[:120]}", destino=to, ref=msg_id,
+                detalle={"thread_id": thread_id, "chars": len(body or "")})
         return msg_id
 
     def create_draft(
