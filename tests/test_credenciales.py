@@ -79,11 +79,17 @@ def test_sin_verificador_no_se_inventa_un_ok(monkeypatch):
 
 def test_el_radio_de_explosion_de_la_service_account_esta_completo():
     """Es la llave que abre todo el proyecto de Google Cloud: si la lista de quién
-    la usa queda corta, rotarla rompe algo sin aviso."""
+    la usa queda corta, rotarla rompe algo sin aviso.
+
+    Desde el 2026-09-16 la lista es MÁS CORTA a propósito: se le sacaron Imagen,
+    Veo y Gemini (lo único que facturaba) y quedó sólo con APIs gratis.
+    """
     r = credenciales.radio_de_explosion("vertex_sa")
     usan = " ".join(r["usan"]).lower()
-    for esperado in ("image_gen", "veo", "drive", "search_console", "youtube"):
+    for esperado in ("drive", "search_console", "youtube"):
         assert esperado in usan, f"falta {esperado} en el radio de explosión"
+    for fuera in ("image_gen", "veo", "reel_study"):
+        assert fuera not in usan, f"{fuera} ya no usa la service account"
     assert "cloud-platform" in r["alcance"]
 
 

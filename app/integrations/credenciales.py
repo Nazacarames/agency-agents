@@ -80,9 +80,13 @@ INVENTARIO: List[Dict[str, Any]] = [
         "env": "GOOGLE_SERVICE_ACCOUNT_JSON",
         "presente": lambda s: bool(s.google_service_account_json),
         "alcance": "cloud-platform — acceso total al proyecto de Google Cloud",
-        "usan": ["image_gen (Imagen)", "veo_video", "drive_client", "search_console",
-                 "youtube_client (si no hay YOUTUBE_OAUTH_JSON)", "reel_study"],
-        "rompe": "se cortan imágenes, videos, el sync de Drive y los datos de Search Console",
+        # 2026-09-16: se le sacaron Imagen, Veo y Gemini (era lo único que
+        # facturaba). Lo que le queda son APIs GRATIS, con cuota y sin cargo.
+        "usan": ["drive_client", "search_console",
+                 "youtube_client (si no hay YOUTUBE_OAUTH_JSON)"],
+        "rompe": "se corta el sync de Drive y los datos de Search Console",
+        "nota": ("ya NO genera imágenes ni video: eso pasó a Higgsfield, y la visión "
+                 "y el texto a NVIDIA. Los servicios que le quedan no facturan"),
         "verificar": _vertex,
     },
     {
@@ -140,6 +144,19 @@ INVENTARIO: List[Dict[str, Any]] = [
         "alcance": "publicar y enriquecer leads en LinkedIn",
         "usan": ["leadhunter", "social_media"],
         "rompe": "no hay enriquecimiento ni publicación en LinkedIn",
+        "verificar": None,
+    },
+    {
+        "clave": "higgsfield",
+        "env": "HIGGSFIELD_KEY_ID / HIGGSFIELD_KEY_SECRET",
+        "presente": lambda s: bool(getattr(s, "higgsfield_key_id", "")
+                                   and getattr(s, "higgsfield_key_secret", "")),
+        "alcance": "generar imagen y video; consume el pool de creditos prepago",
+        "usan": ["image_gen", "tiktok_creator"],
+        "rompe": ("no se genera ni un video; las imagenes caen a MiniMax, que anda "
+                  "pero da menos calidad"),
+        "nota": ("no hay endpoint de saldo: el credito se mira en cloud.higgsfield.ai. "
+                 "El plan ilimitado es solo web/manual, la API cobra"),
         "verificar": None,
     },
     {

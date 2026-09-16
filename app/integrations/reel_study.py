@@ -1,9 +1,9 @@
 """
-reel_study — Gemini MIRA los reels del competidor y destila prompts/lecciones.
+reel_study — el sistema MIRA los reels del competidor y destila prompts/lecciones.
 
 El sector video es el más flojo del sistema; @ai._kid (Claura) es la referencia
 que el algoritmo empuja. Business Discovery nos da el media_url de sus reels
-(API oficial, sin scraping) → se bajan los top no estudiados → Gemini 2.5 Pro
+(API oficial, sin scraping) → se bajan los top no estudiados → el modelo de visión
 (Vertex, misma auth que Veo/nano) los mira DE VERDAD (imagen + audio + texto en
 pantalla) y devuelve: estructura, estilo visual, por qué retiene, y prompts
 listos (Veo 3.1 / imagen / guión) adaptados a Automiq.
@@ -18,14 +18,13 @@ en data/reel-study.json. Best-effort: sin auth de Vertex o sin reels → no-op.
 """
 from __future__ import annotations
 
-import base64
+import tempfile
 import json
 import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Dict, List
 
-import httpx
 
 from ..config import get_settings
 from ..log import get_logger
@@ -37,8 +36,7 @@ _DATA = Path(__file__).resolve().parent.parent.parent / "data"
 _STATE = _DATA / "reel-study.json"
 _DIGEST = _DATA / "reel-study.md"
 _HANDLE = "ai._kid"         # fallback si no hay config
-_MAX_VIDEO_MB = 18          # límite inline de Gemini ~20MB; margen
-_MODELS = ("gemini-3.6-flash", "gemini-2.5-flash")   # flash más nuevo → fallback conocido
+_MAX_VIDEO_MB = 18          # tope de descarga: un reel más pesado que esto no aporta
 
 
 def _handles() -> List[str]:
@@ -90,41 +88,34 @@ def _discover(handle: str, limit: int = 25) -> List[Dict]:
     return vids
 
 
-def _gemini_watch(video: bytes, prompt: str) -> str:
-    """Le da el video a Gemini (Vertex) y devuelve el análisis. '' si falla."""
-    from . import veo_video
-    s = get_settings()
-    if not s.google_service_account_json:
+def _mirar_reel(video: bytes, prompt: str) -> str:
+    """Analiza el reel y devuelve el texto. '' si falla.
+
+    Antes le mandaba el MP4 entero a Gemini (Vertex), que lo miraba nativo con
+    audio. Se sacó de Google el 2026-09-16: Vertex era lo único que facturaba en
+    los agentes y quedó reservado para CLAMEVET. Ahora el video se muestrea en
+    frames y los mira Llama 3.2 Vision por la cuenta de NVIDIA.
+
+    ⚠️ Se pierde el audio. Para un reel con voz en off eso es parte del análisis,
+    así que el playbook que sale de acá va a ser más pobre en lo sonoro y más
+    fuerte en lo visual. Está asumido, no es un bug.
+    """
+    from . import vision
+    if not vision.enabled():
         return ""
-    token, project = veo_video._token(), veo_video._project()
-    body = {
-        "contents": [{"role": "user", "parts": [
-            {"inlineData": {"mimeType": "video/mp4",
-                            "data": base64.b64encode(video).decode()}},
-            {"text": prompt},
-        ]}],
-        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 6000,
-                             # los flash de Gemini usan "thinking" y se comen el budget de
-                             # tokens → análisis truncado. thinkingBudget=0 lo apaga.
-                             "thinkingConfig": {"thinkingBudget": 0}},
-    }
-    for model in _MODELS:
-        url = (f"https://aiplatform.googleapis.com/v1beta1/projects/{project}"
-               f"/locations/global/publishers/google/models/{model}:generateContent")
+    tmp = Path(tempfile.mkdtemp(prefix="reel_")) / "reel.mp4"
+    try:
+        tmp.write_bytes(video)
+        return vision.describe_video(str(tmp), prompt, max_tokens=6000)
+    except Exception as e:                                  # noqa: BLE001
+        log.warning("mirar_reel_falló", error=str(e)[:150])
+        return ""
+    finally:
         try:
-            with httpx.Client(timeout=420) as c:
-                r = c.post(url, json=body, headers={"Authorization": f"Bearer {token}"})
-            if r.status_code == 200:
-                parts = (((r.json().get("candidates") or [{}])[0])
-                         .get("content", {}) or {}).get("parts", [])
-                text = "".join(p.get("text", "") for p in parts).strip()
-                if text:
-                    return text
-            log.warning("gemini_watch_status", model=model, status=r.status_code,
-                        detail=r.text[:200])
-        except Exception as e:
-            log.warning("gemini_watch_failed", model=model, error=str(e)[:150])
-    return ""
+            tmp.unlink()
+            tmp.parent.rmdir()
+        except Exception:
+            pass
 
 
 def study(n: int = 2, per_secondary: int = 1) -> Dict[str, int]:
@@ -162,7 +153,7 @@ def study(n: int = 2, per_secondary: int = 1) -> Dict[str, int]:
             log.info("reel_too_big", handle=h, id=m["id"], mb=len(video) // (1024 * 1024))
             studied.add(m["id"])  # no reintentar cada semana
             continue
-        analysis = _gemini_watch(video, _PROMPT.format(
+        analysis = _mirar_reel(video, _PROMPT.format(
             handle=h, caption=(m.get("caption") or "")[:200].replace('"', "'"),
             likes=m.get("like_count", 0), comments=m.get("comments_count", 0),
             permalink=m.get("permalink", "")))
@@ -199,7 +190,7 @@ def study(n: int = 2, per_secondary: int = 1) -> Dict[str, int]:
         if s.discord_configured:
             dw = DiscordWebhook(s)
             dw.send_agent_output(
-                agent_name="🎬 Estudio de reels (Gemini miró a la competencia)",
+                agent_name="🎬 Estudio de reels (miramos a la competencia)",
                 text=f"{len(sections)} reels de la competencia ({handles_txt}) analizados a "
                      f"fondo (video+audio+texto). Prompts y lecciones ya inyectados a los "
                      f"agentes de contenido.\n\n" + body[:1400],
@@ -231,6 +222,6 @@ def block() -> str:
     if not t:
         return ""
     from .freshness import sello
-    return ("\n\n=== ESTUDIO DE VIDEO DEL COMPETIDOR (Gemini MIRÓ sus reels — usá estos "
+    return ("\n\n=== ESTUDIO DE VIDEO DEL COMPETIDOR (miramos sus reels — usá estos "
             "prompts/lecciones" + sello(_DIGEST) + ") ===\n" + t[:4500]
             + "\n=== fin estudio de video ===")

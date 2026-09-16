@@ -1,106 +1,162 @@
 """
-vision — deja que el sistema MIRE imágenes (los agentes son ciegos). Usa Gemini
-multimodal vía Vertex reusando el auth de veo_video (service account, SIN key nueva).
-El scout le pasa los contact sheets de los reels descubiertos y Gemini destila el
-playbook de edición/hooks/visual → cierra el loop "descubre → mira → destila" sin humano.
+vision — deja que el sistema MIRE imágenes (los agentes son ciegos).
 
-Best-effort: si Vertex no está configurado o la llamada falla, devuelve "".
+Antes esto era Gemini multimodal vía Vertex. Se sacó de Google por decisión del
+dueño (2026-09-16): Vertex era lo ÚNICO de Google que factura por uso en los
+agentes — Gmail, Drive, Search Console, YouTube y la API de Ads son gratis — y
+se decidió dejar Google Cloud sólo para CLAMEVET.
+
+Ahora corre todo por la cuenta de NVIDIA que ya usábamos para texto:
+  · mirar imágenes → `meta/llama-3.2-90b-vision-instruct`
+  · texto puro     → Kimi K3
+
+Kimi NO tiene variante multimodal en los catálogos que tenemos: verificado el
+2026-09-16 listando los dos endpoints (tokenrouter expone 1 modelo, NVIDIA 82) y
+no hay ningún `kimi-vl`. Por eso las imágenes las mira Llama y no Kimi.
+
+⚠️ LO QUE SE PIERDE, y no es menor: Gemini analizaba el VIDEO NATIVO —movimiento,
+AUDIO y texto en pantalla a lo largo del tiempo—. Llama Vision sólo ve imágenes
+fijas, así que el video se muestrea en frames con ffmpeg (que ya está en la
+imagen) y se pierde el audio. Para juzgar un short hablado eso es un bajón real;
+está anotado acá para que nadie lo descubra por accidente.
+
+Best-effort en todo: si no hay credencial o la llamada falla, devuelve "".
 """
 from __future__ import annotations
 
 import base64
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import List
 
-import httpx
-
-from . import veo_video
+from ..config import get_settings
 from ..log import get_logger
 
 log = get_logger("vision")
 
-# Modelo de análisis (el flash más nuevo de Gemini — barato y capaz). Un solo lugar
-# para todas las llamadas de visión/síntesis. thinkingBudget=0 (abajo) evita que el
-# "thinking" se coma el budget de tokens y trunque la respuesta.
-_MODEL = "gemini-3.6-flash"
+# Cuántos frames se le muestran al modelo de un video. Ocho cubre arco narrativo
+# (apertura, desarrollo, cierre) sin inflar el request: cada frame es una imagen.
+FRAMES_POR_VIDEO = 8
+
+# Compatibilidad: los llamadores viejos podían pasar `model=`. Ya no se usa —
+# el modelo sale de la config— pero se acepta para no romper ninguna firma.
+_MODEL = "nvidia"
 
 
 def enabled() -> bool:
-    return veo_video.enabled()
+    return bool(get_settings().nvidia_api_key)
 
 
-_MAX_INLINE = 18 * 1024 * 1024   # límite práctico de inlineData en Vertex (~20MB request)
-
-
-def _generate(parts: list, model: str, max_tokens: int, timeout: float = 240.0) -> str:
+def _completar(mensajes: list, proveedor: str, max_tokens: int) -> str:
+    """Una completion contra NVIDIA. "" si falla: mirar es opcional, romper no."""
     try:
-        token = veo_video._token()
-        project = veo_video._project()
-    except Exception as e:
-        log.warning("vision_auth_failed", error=str(e)[:150])
+        from ..clients.nvidia import NvidiaClient
+        with NvidiaClient(get_settings()) as c:
+            r = c.complete("", mensajes, provider=proveedor,
+                           max_tokens=max_tokens, temperature=0.4)
+        return (r.text or "").strip()
+    except Exception as e:                                  # noqa: BLE001
+        log.warning("vision_falló", proveedor=proveedor, error=str(e)[:150])
         return ""
-    url = (f"https://aiplatform.googleapis.com/v1/projects/{project}"
-           f"/locations/global/publishers/google/models/{model}:generateContent")
-    body = {"contents": [{"role": "user", "parts": parts}],
-            "generationConfig": {"temperature": 0.4, "maxOutputTokens": max_tokens,
-                                 # los flash de Gemini usan "thinking" y se comen el budget
-                                 # de tokens → respuesta truncada. thinkingBudget=0 lo apaga.
-                                 "thinkingConfig": {"thinkingBudget": 0}}}
+
+
+def _parte_imagen(ruta: Path) -> dict | None:
+    """Una imagen como data-URI, en el formato multimodal de OpenAI."""
     try:
-        with httpx.Client(timeout=timeout) as c:
-            r = c.post(url, json=body, headers={"Authorization": f"Bearer {token}"})
-        if r.status_code != 200:
-            log.warning("vision_http", status=r.status_code, body=r.text[:200])
-            return ""
-        cand = (r.json().get("candidates") or [{}])[0]
-        return "".join(pt.get("text", "")
-                       for pt in (cand.get("content", {}).get("parts") or [])).strip()
-    except Exception as e:
-        log.warning("vision_failed", error=str(e)[:150])
-        return ""
+        datos = base64.b64encode(ruta.read_bytes()).decode()
+    except Exception:
+        return None
+    mime = "image/png" if str(ruta).lower().endswith(".png") else "image/jpeg"
+    return {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{datos}"}}
 
 
 def describe(image_paths: List[str], prompt: str, model: str = _MODEL,
              max_tokens: int = 1800) -> str:
-    """Gemini mira imágenes (hasta 8) y responde texto. "" si falla."""
+    """Mira imágenes (hasta 8) y responde texto. "" si falla."""
     if not enabled() or not image_paths:
         return ""
-    parts = []
+    partes = []
     for p in image_paths[:8]:
-        try:
-            data = base64.b64encode(Path(p).read_bytes()).decode()
-        except Exception:
-            continue
-        mime = "image/png" if str(p).lower().endswith(".png") else "image/jpeg"
-        parts.append({"inlineData": {"mimeType": mime, "data": data}})
-    if not parts:
+        parte = _parte_imagen(Path(p))
+        if parte:
+            partes.append(parte)
+    if not partes:
         return ""
-    parts.append({"text": prompt})
-    return _generate(parts, model, max_tokens)
+    partes.append({"type": "text", "text": prompt})
+    return _completar([{"role": "user", "content": partes}], "vision", max_tokens)
+
+
+def _frames(video_path: str, n: int = FRAMES_POR_VIDEO) -> List[Path]:
+    """Saca `n` frames repartidos a lo largo del video. [] si no se puede.
+
+    `fps` fijo no sirve: un video de 5 s y uno de 60 s darían cantidades muy
+    distintas. Se calcula la duración y se muestrea parejo.
+    """
+    ffmpeg = shutil.which("ffmpeg")
+    ffprobe = shutil.which("ffprobe")
+    if not ffmpeg:
+        log.warning("vision_sin_ffmpeg")
+        return []
+    dur = 0.0
+    if ffprobe:
+        try:
+            out = subprocess.run(
+                [ffprobe, "-v", "error", "-show_entries", "format=duration",
+                 "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+                capture_output=True, text=True, timeout=60)
+            dur = float((out.stdout or "0").strip() or 0)
+        except Exception:
+            dur = 0.0
+    destino = Path(tempfile.mkdtemp(prefix="frames_"))
+    # Sin duración medible se cae a 1 frame por segundo, con tope: peor muestreo,
+    # pero mejor que no mirar nada.
+    filtro = (f"fps={max(n / dur, 0.1):.4f}" if dur > 0 else "fps=1")
+    try:
+        subprocess.run(
+            [ffmpeg, "-v", "error", "-i", video_path, "-vf", filtro,
+             "-frames:v", str(n), "-q:v", "3", str(destino / "f%02d.jpg")],
+            capture_output=True, timeout=180)
+    except Exception as e:                                  # noqa: BLE001
+        log.warning("vision_frames_falló", error=str(e)[:150])
+        return []
+    salida = sorted(destino.glob("*.jpg"))
+    log.info("vision_frames", video=Path(video_path).name, frames=len(salida),
+             duracion=round(dur, 1))
+    return salida
 
 
 def describe_video(video_path: str, prompt: str, model: str = _MODEL,
                    max_tokens: int = 1800) -> str:
-    """Gemini analiza el VIDEO ENTERO nativo (movimiento + AUDIO + texto en pantalla en
-    el tiempo) — muy superior a frames sueltos. El video debe venir ya achicado (<~18MB
-    inline). "" si falla o pesa demasiado."""
+    """Analiza un video muestreando frames. "" si falla.
+
+    OJO: son fotos, no el video. No hay audio ni movimiento. Se le dice al modelo
+    explícitamente para que no describa cosas que no puede saber --si cree que
+    está viendo el video entero, opina sobre el ritmo y la música y se lo inventa.
+    """
     if not enabled() or not video_path:
         return ""
+    frames = _frames(video_path)
+    if not frames:
+        return ""
+    aviso = (f"Son {len(frames)} fotogramas tomados a intervalos regulares de un "
+             "video, en orden. NO tenés el audio ni el movimiento: no opines sobre "
+             "música, voz, ritmo ni transiciones. Limitate a lo que se ve.\n\n")
     try:
-        raw = Path(video_path).read_bytes()
-    except Exception:
-        return ""
-    if len(raw) > _MAX_INLINE:
-        log.warning("vision_video_too_big", bytes=len(raw))
-        return ""
-    parts = [{"inlineData": {"mimeType": "video/mp4", "data": base64.b64encode(raw).decode()}},
-             {"text": prompt}]
-    return _generate(parts, model, max_tokens)
+        return describe([str(f) for f in frames], aviso + prompt, max_tokens=max_tokens)
+    finally:
+        for f in frames:
+            try:
+                f.unlink()
+            except Exception:
+                pass
 
 
 def synthesize(text: str, prompt: str, model: str = _MODEL,
                max_tokens: int = 2000) -> str:
-    """Llamada solo-texto (para sintetizar notas en el playbook final). "" si falla."""
+    """Llamada solo-texto (sintetizar notas en el playbook final). "" si falla."""
     if not enabled() or not text.strip():
         return ""
-    return _generate([{"text": prompt + "\n\n" + text}], model, max_tokens)
+    return _completar([{"role": "user", "content": prompt + "\n\n" + text}],
+                      "kimi", max_tokens)

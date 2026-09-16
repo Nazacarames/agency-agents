@@ -546,9 +546,9 @@ class TikTokCreatorAgent(BaseAgent):
     def _add_nazareno_clip(self, text: str):
         """Devuelve (texto, path_local_del_clip | None)."""
         try:
-            from ..integrations import veo_video
+            from ..integrations import higgsfield
             from ..config import get_settings
-            if not text or not veo_video.enabled():
+            if not text or not higgsfield.enabled():
                 return text, None
             mf = re.search(r"^[\s>*`\-]*VEO_FRASE\s*[:：]\s*(.+)$", text, re.IGNORECASE | re.MULTILINE)
             ml = re.search(r"^[\s>*`\-]*VEO_LUGAR\s*[:：]\s*(\w+)", text, re.IGNORECASE | re.MULTILINE)
@@ -562,29 +562,15 @@ class TikTokCreatorAgent(BaseAgent):
             s = get_settings()
             base = (s.public_base_url or "").rstrip("/")
             refs = [f"{base}{p}" for p in NAZA_REFERENCE_PATHS] if base else None
-            # Gemini Omni primero (mejor dicción/acento/lip-sync, cara por referencia);
-            # es preview → si falla o filtra, cae a Veo 3.1 FULL (calidad, GA
-            # verificado 2026-07-14) y recién después a Veo 3.1 Fast (sin regresión).
-            from ..integrations import omni_video
-            motor = "Gemini Omni"
-            res = omni_video.generate_and_wait(
-                nazareno_veo_prompt(frase, lugar), reference_image_urls=refs,
-                negative_prompt=_VEO_NEG, timeout_s=300)
-            if not res.get("b64") and getattr(s, "veo_model_quality", ""):
-                motor = "Veo 3.1"
-                try:
-                    res = veo_video.generate_and_wait(
-                        nazareno_veo_prompt(frase, lugar), reference_image_urls=refs,
-                        aspect_ratio="9:16", negative_prompt=_VEO_NEG, timeout_s=420,
-                        poll=12, model=s.veo_model_quality)
-                except Exception as e:
-                    log.warning("veo_quality_failed", error=str(e)[:200])
-                    res = {}
-            if not res.get("b64"):
-                motor = "Veo 3.1 Fast"
-                res = veo_video.generate_and_wait(
-                    nazareno_veo_prompt(frase, lugar), reference_image_urls=refs,
-                    aspect_ratio="9:16", negative_prompt=_VEO_NEG, timeout_s=300, poll=12)
+            # 2026-09-16: se sacó Google de los agentes. Antes esto era una cadena
+            # Gemini Omni → Veo 3.1 full → Veo 3.1 fast, los tres por Vertex. Ahora
+            # el único motor es Higgsfield (que por debajo usa Veo 3.1, pero se
+            # paga con los créditos ya comprados y no con la cuenta de Google).
+            # Sin credencial de Higgsfield NO hay video: es preferible no publicar
+            # a publicar algo sin el clip, y el reporte lo dice.
+            motor = "Higgsfield/Veo 3.1"
+            res = higgsfield.generate_and_wait(
+                nazareno_veo_prompt(frase, lugar), aspect_ratio="9:16", timeout_s=420)
             b64 = res.get("b64")
             if not b64:
                 return text, None

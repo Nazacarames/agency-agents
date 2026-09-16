@@ -149,6 +149,14 @@ def _vertex_imagen(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
         return out
 
 
+def _higgsfield_imagen(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
+    """Imágenes por Higgsfield. [] si no hay credencial o falla → cae a MiniMax."""
+    from . import higgsfield
+    if not higgsfield.enabled():
+        return []
+    return higgsfield.generar_imagen(prompt, aspect_ratio=aspect_ratio, n=n)
+
+
 def _minimax_image(prompt: str, aspect_ratio: str, n: int) -> List[bytes]:
     """Genera imágenes con MiniMax image-01 (fallback). Devuelve bytes crudos."""
     s = get_settings()
@@ -234,6 +242,10 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
     provider = getattr(s, "image_provider", "nano")
     # Cadena de fallback: el provider elegido primero, después los demás.
     _chain = {
+        # Google quedó fuera (decisión 2026-09-16): Higgsfield primero y MiniMax
+        # de red. `nano` y `vertex` se mantienen mapeados por si alguien los
+        # fuerza por env, pero ya no son el camino por defecto de nadie.
+        "higgsfield": [("higgsfield", _higgsfield_imagen), ("minimax", _minimax_image)],
         "nano":   [("nano", _nano_banana), ("vertex", _vertex_imagen), ("minimax", _minimax_image)],
         "vertex": [("vertex", _vertex_imagen), ("minimax", _minimax_image)],
         "minimax": [("minimax", _minimax_image)],

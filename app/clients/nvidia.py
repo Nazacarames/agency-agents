@@ -33,6 +33,8 @@ _PROVIDER_MODEL = {
     # techo de tokens es alto (ver _MIN_TOKENS): apretarlo hace que se quede sin lugar
     # para responder DESPUÉS de pensar y devuelva vacío o cortado.
     "kimi": ("kimi_model", {"reasoning_effort": "max"}),
+    # Mira imágenes. Sin reasoning_effort: los modelos de visión no lo aceptan.
+    "vision": ("nvidia_vision_model", {}),
 }
 
 # Piso de max_tokens por provider. Sólo importa en los que razonan: el pensamiento

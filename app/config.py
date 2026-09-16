@@ -82,7 +82,10 @@ class Settings(BaseSettings):
     image_prompt_refine: bool = True   # refinar el prompt con el image-prompt-engineer
     # Provider: "nano" (Nano Banana Pro / Gemini 3 Pro Image — mejor fidelidad al prompt)
     # → fallback "vertex" (Imagen 4) → "minimax" (image-01). Todo con la misma credencial.
-    image_provider: str = "nano"
+    # 2026-09-16: se saca Vertex de los agentes (Imagen/Veo/Gemini eran lo único
+    # de Google que factura acá). El orden ahora es Higgsfield → MiniMax; los
+    # providers de Google quedaron fuera de la cadena.
+    image_provider: str = "higgsfield"
     nano_image_model: str = "gemini-3-pro-image"
     # QA visual con Gemini (2026-07-14): mira cada imagen/short generado contra el
     # brief, regenera si es floja y cosecha lecciones (creative_learnings) que se
@@ -91,6 +94,13 @@ class Settings(BaseSettings):
     video_qa_enabled: bool = True
     vertex_image_model: str = "imagen-4.0-generate-001"
     image_model: str = "image-01"    # fallback MiniMax
+
+    # ── Higgsfield (imagen + video, reemplaza a Imagen y Veo) ──
+    # ⚠️ La API COBRA CRÉDITOS del pool prepago (~835 comprados). El plan
+    # ilimitado es sólo web/manual: sus términos excluyen API y automatización.
+    # No hay endpoint de saldo → mirarlo en cloud.higgsfield.ai.
+    higgsfield_key_id: str = ""       # (SECRET) HF_API_KEY_ID
+    higgsfield_key_secret: str = ""   # (SECRET) HF_API_KEY_SECRET
     # Tope de seguridad: el agente decide CUÁNTAS imágenes generar según su
     # planificación (1 por idea/post). Esto sólo evita que un plan enorme dispare
     # costo/tiempo de MiniMax sin control.
@@ -289,6 +299,11 @@ class Settings(BaseSettings):
     # tareas de análisis, pero ~19 s incluso para algo trivial → sólo para
     # agentes de fondo (cron), nunca en un camino donde alguien espera.
     kimi_model: str = "moonshotai/kimi-k3"
+    # Visión SIN Google. Kimi no tiene variante multimodal en los catálogos que
+    # tenemos (verificado 2026-09-16: tokenrouter expone 1 modelo y NVIDIA 82,
+    # ningún kimi-vl), así que las imágenes las mira Llama 3.2 Vision por la misma
+    # cuenta de NVIDIA que ya usamos para texto.
+    nvidia_vision_model: str = "meta/llama-3.2-90b-vision-instruct"
     # OpenCode: harness headless (tools + skills de .claude/skills) sobre los
     # modelos NVIDIA. Kill-switch: OPENCODE_ENABLED=false → NVIDIA directo.
     opencode_enabled: bool = True
