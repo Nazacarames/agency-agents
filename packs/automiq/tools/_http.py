@@ -33,11 +33,40 @@ def get(url: str, timeout: float = 20.0) -> httpx.Response:
     """GET normal; ante un error de certificado reintenta sin verificar TLS.
 
     Cualquier otro fallo se propaga tal cual.
+
+    El reintento sin verificar es a propósito (ver el docstring de arriba), pero
+    NO puede ser mudo: sin verificación, lo que vuelve puede venir de cualquiera
+    que esté en el medio, y ese texto termina adentro del prompt de un agente.
+    Se deja anotado en el log y marcado en la respuesta para que quien la use
+    sepa que ese contenido vale menos.
     """
     try:
         return httpx.get(url, headers=_HEADERS, timeout=timeout, follow_redirects=True)
     except Exception as e:
         if not _is_tls_error(e):
             raise
-        return httpx.get(url, headers=_HEADERS, timeout=timeout,
-                         follow_redirects=True, verify=False)
+        r = httpx.get(url, headers=_HEADERS, timeout=timeout,
+                      follow_redirects=True, verify=False)
+        # Marca para el llamador: el contenido llegó por un canal sin verificar.
+        try:
+            r.tls_sin_verificar = True                      # type: ignore[attr-defined]
+        except Exception:
+            pass
+        _log_degradado(url)
+        return r
+
+
+def _log_degradado(url: str) -> None:
+    """Deja rastro del downgrade. Import adentro para no acoplar el pack al app."""
+    try:
+        from app.log import get_logger
+        get_logger("http").warning("tls_sin_verificar", url=str(url)[:200],
+                                   detalle="certificado inválido; se bajó la verificación")
+    except Exception:
+        pass
+    try:
+        from app.integrations import eventos
+        eventos.registrar("seguridad", "GET sin verificar TLS (certificado inválido)",
+                          destino=str(url)[:200], ok=False)
+    except Exception:
+        pass

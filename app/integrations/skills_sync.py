@@ -50,6 +50,35 @@ def _dest_dir() -> Path:
     return _HERMES_HOME / "skills"
 
 
+# Skills que vienen con Hermes y NO tienen nada que hacer en agentes que
+# atienden clientes y mandan mails. `godmode` se describe a sí misma como
+# "Jailbreak LLMs: Parseltongue, GODMODE, ULTRAPLINIAN" con tag `safety-bypass`.
+# Que esté disponible es peligroso combinado con la inyección indirecta: el
+# texto de un mail ajeno entra al prompt, y desde ahí se puede nombrar una skill.
+# Se borran en cada arranque porque viven en el volumen, no en el repo, así que
+# una actualización del paquete las puede volver a dejar.
+SKILLS_PROHIBIDAS = ("godmode", "obliteratus")
+
+
+def _purgar_prohibidas(dest: Path) -> List[str]:
+    """Saca del home de Hermes las skills que no queremos al alcance. Best-effort."""
+    borradas: List[str] = []
+    try:
+        candidatos = [p for p in dest.rglob("*") if p.is_dir()
+                      and p.name.lower() in SKILLS_PROHIBIDAS]
+    except Exception as e:
+        log.warning("skills_purga_no_listable", error=str(e)[:120])
+        return borradas
+    for p in candidatos:
+        try:
+            shutil.rmtree(p)
+            borradas.append(p.name)
+            log.warning("skill_prohibida_borrada", skill=p.name, ruta=str(p))
+        except Exception as e:
+            log.error("skill_prohibida_no_borrada", skill=p.name, error=str(e)[:120])
+    return borradas
+
+
 def sync() -> Dict[str, object]:
     """Copia las skills del repo al home de Hermes. Best-effort: nunca lanza."""
     src = _source_dir()
@@ -83,11 +112,14 @@ def sync() -> Dict[str, object]:
     except Exception:
         propias = []
 
+    borradas = _purgar_prohibidas(dest)
+
     log.info("skills_sync_ok", copiadas=len(copiadas), fallidas=len(fallidas),
-             aprendidas=len(propias), origen=str(src), destino=str(dest))
+             aprendidas=len(propias), prohibidas_borradas=len(borradas),
+             origen=str(src), destino=str(dest))
     return {"ok": True, "copiadas": len(copiadas), "fallidas": fallidas,
             "aprendidas": len(propias), "origen": str(src), "destino": str(dest),
-            "skills": copiadas}
+            "prohibidas_borradas": borradas, "skills": copiadas}
 
 
 def status() -> Dict[str, object]:
