@@ -51,7 +51,7 @@ class FinanceOfficerAgent(BaseAgent):
     description = "CFO: brief financiero (gastos, MRR, cobranzas, decisiones de plata)"
     schedule = "0 7 * * mon"   # activo: lun 07:00 (cron real en scheduler.DEFAULT_SCHEDULES)
     max_tokens = 5000
-    llm_provider = "deepseek"  # razonamiento/finanzas; fallback MiniMax
+    llm_provider = "glm"  # razonamiento/finanzas; fallback MiniMax
     claude_code_skill = "pricing"  # decisiones de precio/monetización cuando aplican
 
     @property

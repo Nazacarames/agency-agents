@@ -82,7 +82,7 @@ class BaseAgent(ABC):
     # caracteres iguales para los cuatro—; ahora se sirve por relevancia desde el
     # cerebro, así que cada uno recibe lo que aplica a la pieza del día.
     needs_creative_material: bool = False
-    # Backend LLM alternativo (NVIDIA): "glm" | "deepseek" | "" (default MiniMax/CC).
+    # Backend LLM alternativo (NVIDIA): "glm" | "" (default MiniMax/CC).
     # Si está seteado y hay NVIDIA_API_KEY, el agente corre por completion directa con
     # ese modelo (salteando Claude Code); si NVIDIA falla, cae al flujo normal.
     llm_provider: str = ""
@@ -508,7 +508,7 @@ class BaseAgent(ABC):
                 providers = [self.llm_provider] + ([""] if self.llm_provider else [])
                 # Override de operador para BAKE-OFF de backends: `args._force_provider`
                 # fuerza un único backend (sin fallback) para poder medir su calidad pura.
-                # "minimax"/"" → MiniMax; "deepseek"/"glm" → NVIDIA. Sin el flag, nada cambia.
+                # "minimax"/"" → MiniMax; "glm" → NVIDIA. Sin el flag, nada cambia.
                 try:
                     fp = ctx.args.get("_force_provider") if isinstance(ctx.args, dict) else None
                     if fp is not None:
@@ -518,9 +518,9 @@ class BaseAgent(ABC):
                 except Exception:
                     pass
                 for prov in providers:
-                    # El tier gratis de NVIDIA (deepseek/glm) puede COLGARSE bajo carga:
+                    # El tier gratis de NVIDIA (GLM) puede COLGARSE bajo carga:
                     # medido en prod, Hermes esperaba los 600s COMPLETOS antes de caer a
-                    # MiniMax (cada agente deepseek perdía ~10min/corrida). De ahí este
+                    # MiniMax (cada agente con este backend perdía ~10min/corrida). De ahí este
                     # corte más corto que el de MiniMax (prov="" → claude_code_timeout).
                     # 2026-08-02: el run sano (sonda con el prompt EXACTO de
                     # creative_strategist, 30k chars, 15 turnos) tarda 90s, así que 180s

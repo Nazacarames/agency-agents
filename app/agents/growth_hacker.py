@@ -85,7 +85,7 @@ class GrowthHackerAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-funnel,referrals,co-marketing"
     claude_code_timeout = 1200  # 2026-07-14: 700 quedaba corto vía Hermes (2 timeouts medidos)
-    llm_provider = "deepseek"   # DeepSeek V4 Pro: mejor razonamiento sobre el funnel; fallback CC/MiniMax
+    llm_provider = "glm"   # GLM 5.3: mejor razonamiento sobre el funnel; fallback CC/MiniMax
 
     @property
     def system_prompt(self) -> str:

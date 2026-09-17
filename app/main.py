@@ -980,7 +980,7 @@ async def api_run_agent(name: str, request: Request, background: BackgroundTasks
         raise HTTPException(status_code=404, detail=f"agente {name} no existe")
     run_id = str(uuid.uuid4())
     args: Dict[str, Any] = {"force_global": True}
-    # Body opcional para bake-off / debug: {"provider": "deepseek|glm|minimax", "dry_run": true}
+    # Body opcional para bake-off / debug: {"provider": "glm|minimax", "dry_run": true}
     try:
         body = await request.json()
         if isinstance(body, dict):

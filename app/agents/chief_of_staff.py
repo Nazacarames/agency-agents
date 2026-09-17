@@ -374,7 +374,7 @@ class ChiefOfStaffAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 6000
     temperature = 0.4
-    llm_provider = "deepseek"   # razonamiento/síntesis (bake-off 2026-07-04); fallback MiniMax
+    llm_provider = "glm"   # razonamiento/síntesis (bake-off 2026-07-04); fallback MiniMax
     claude_code_skill = "revops"
 
     @property

@@ -823,7 +823,7 @@ class OutboundAgent(BaseAgent):
 
     def _regen_email(self, ctx: AgentContext, lead, current: Dict[str, Any], issue: str):
         """Reescribe un cold-email flojo corrigiendo `issue`. Devuelve {subject, body} o None.
-        Backend: NVIDIA (deepseek, gratis) primero; fallback MiniMax. Sin quemar cuota paga
+        Backend: NVIDIA (GLM, gratis) primero; fallback MiniMax. Sin quemar cuota paga
         salvo que NVIDIA falle."""
         if not lead:
             return None
@@ -840,7 +840,7 @@ class OutboundAgent(BaseAgent):
         if getattr(ctx.settings, "nvidia_api_key", ""):
             try:
                 from ..clients.nvidia import complete_with_provider
-                resp = complete_with_provider("deepseek", ctx.settings, self.system_prompt,
+                resp = complete_with_provider("glm", ctx.settings, self.system_prompt,
                                               prompt, 1200, self.temperature)
                 text = resp.text or ""
             except Exception as e:

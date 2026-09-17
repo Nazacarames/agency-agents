@@ -92,7 +92,7 @@ class MeetingPrepAgent(BaseAgent):
 
     def _regen_brief(self, ctx: AgentContext, text: str, fix: str):
         """Reescribe el brief corrigiendo el problema del QA, preservando TODAS las
-        secciones. NVIDIA (deepseek, gratis) primero; fallback MiniMax. Texto o None."""
+        secciones. NVIDIA (GLM, gratis) primero; fallback MiniMax. Texto o None."""
         prompt = (
             "Mejorá ESTE brief de reunion corrigiendo el problema detectado por el QA, SIN "
             "perder ninguna seccion (mantene: resumen 30s, dolores→solucion, discovery, que "
@@ -104,7 +104,7 @@ class MeetingPrepAgent(BaseAgent):
         if getattr(ctx.settings, "nvidia_api_key", ""):
             try:
                 from ..clients.nvidia import complete_with_provider
-                resp = complete_with_provider("deepseek", ctx.settings, self.system_prompt,
+                resp = complete_with_provider("glm", ctx.settings, self.system_prompt,
                                               prompt, self.max_tokens, self.temperature)
                 txt = resp.text or ""
             except Exception as e:

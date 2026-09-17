@@ -45,7 +45,7 @@ class DataAnalystAgent(BaseAgent):
     description = "Analista: tendencias y alertas de las métricas del negocio"
     schedule = "30 20 * * mon-fri"  # días hábiles 20:30, antes del cierre del Chief (21:00)
     max_tokens = 5000
-    llm_provider = "deepseek"       # razonamiento/números; fallback MiniMax
+    llm_provider = "glm"       # razonamiento/números; fallback MiniMax
     claude_code_skill = "analytics,ab-testing"
 
     @property

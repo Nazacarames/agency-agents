@@ -3,7 +3,7 @@ HermesRunner — ejecuta el CLI de Hermes (hermes-agent, Nous Research) headless
 (`hermes chat -q ... -Q --yolo`) como harness PRINCIPAL de todos los agentes.
 
 Backend LLM: MiniMax-M3 (provider `minimax`, MINIMAX_API_KEY) por default; los
-agentes con `llm_provider` ("glm"/"deepseek") corren con provider `nvidia` y su
+agentes con `llm_provider` ("glm") corren con provider `nvidia` y su
 modelo de siempre. Hermes lee las keys de las MISMAS env vars que ya usamos.
 
 `hermes chat` no tiene flag de system prompt → se antepone al mensaje (igual
@@ -114,9 +114,7 @@ def hermes_available() -> bool:
 def _provider_model(llm_provider: str, s: Settings) -> tuple[str, str]:
     """provider lógico del agente → (provider hermes, modelo)."""
     if llm_provider == "glm" and getattr(s, "nvidia_api_key", ""):
-        return "nvidia", getattr(s, "glm_model", "z-ai/glm-5.2")
-    if llm_provider == "deepseek" and getattr(s, "nvidia_api_key", ""):
-        return "nvidia", getattr(s, "deepseek_model", "deepseek-ai/deepseek-v4-pro")
+        return "nvidia", getattr(s, "glm_model", "z-ai/glm-5.3")
     return "minimax", s.minimax_model_primary
 
 

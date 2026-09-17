@@ -224,7 +224,6 @@ def _proveedores_caidos(settings: Settings) -> List[Tuple[str, str]]:
                 # problema del endpoint, no 80 modelos dados de baja a la vez.
                 if catalogo:
                     for etiqueta, modelo in (("kimi", settings.kimi_model),
-                                             ("deepseek", settings.deepseek_model),
                                              ("glm", settings.glm_model)):
                         if modelo and modelo not in catalogo:
                             rotos.append((f"modelo de {etiqueta} ({modelo})",

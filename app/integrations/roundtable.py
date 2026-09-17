@@ -12,7 +12,7 @@ que esa comunicación los potencie. Formato:
      (al buzón) para que lo debatido llegue a la próxima corrida de cada uno.
 
 Corre lunes 07:30 ART (antes del brief de 08:30, que la lee como un reporte
-más). LLM: NVIDIA (GLM/DeepSeek, gratis) con fallback MiniMax. Best-effort:
+más). LLM: NVIDIA (GLM, gratis) con fallback MiniMax. Best-effort:
 una voz que falla se saltea, la mesa sigue.
 """
 from __future__ import annotations

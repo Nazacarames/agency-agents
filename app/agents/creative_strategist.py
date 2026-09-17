@@ -74,7 +74,7 @@ class CreativeStrategistAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-ads,ad-creative,ads,humanizer"
     claude_code_timeout = 700
-    llm_provider = "deepseek"   # DeepSeek V4 Pro: copy de ads más afilado; fallback CC/MiniMax
+    llm_provider = "glm"   # GLM 5.3: copy de ads más afilado; fallback CC/MiniMax
 
     @property
     def system_prompt(self) -> str:

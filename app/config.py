@@ -267,13 +267,13 @@ class Settings(BaseSettings):
     veo_model_quality: str = "veo-3.1-generate-001"
     google_api_key: str = ""          # legacy/fallback (org bloquea keys → normalmente vacío)
 
-    # ── NVIDIA (backend LLM alternativo: GLM 5.2 / DeepSeek V4 Pro) ──
+    # ── NVIDIA (backend LLM alternativo: GLM 5.3) ──
     # Endpoint gratuito OpenAI-compatible. Ciertos agentes lo usan como backend
     # (bake-off 2026-07-04: mejor calidad que MiniMax-M3 en copy/razonamiento).
     # Si la key está vacía, el flag llm_provider de los agentes se ignora → MiniMax.
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
-    # Los modelos de NVIDIA que razonan (Kimi K3, DeepSeek V4 Pro) tardan
+    # Los modelos de NVIDIA que razonan (Kimi K3, GLM 5.3) tardan
     # mucho mas que MiniMax. Con el timeout de MiniMax (120 s) toda tarea
     # real cortaba y caia al fallback sin avisar.
     nvidia_timeout_seconds: int = 600
@@ -297,11 +297,10 @@ class Settings(BaseSettings):
     # GLM 5.2 murio el 2026-08-21 y no hay variante viva (probe 5 nombres, 404).
     # El provider "glm" queda apuntando a Kimi para que una referencia vieja
     # degrade a un modelo que anda, en vez de tirar 410.
-    glm_model: str = "moonshotai/kimi-k3"
+    glm_model: str = "z-ai/glm-5.3"
     # El id sin fecha murió el 2026-08-07 (410 Gone) y los agentes venían
     # cayendo en silencio al fallback. El fechado sigue vivo.
-    deepseek_model: str = "deepseek-ai/deepseek-v4-pro-0813"
-    # Kimi K3: razona antes de responder. Más capaz que GLM/DeepSeek en
+    # Kimi K3: razona antes de responder. Más capaz que GLM en
     # tareas de análisis, pero ~19 s incluso para algo trivial → sólo para
     # agentes de fondo (cron), nunca en un camino donde alguien espera.
     kimi_model: str = "moonshotai/kimi-k3"

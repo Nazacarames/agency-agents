@@ -5,7 +5,7 @@ constante y aprendizaje constante del sistema").
 
 Job mensual: busca en la web las mejores prácticas vigentes de los frentes que
 mueven el negocio (cold email, WhatsApp B2B LATAM, contenido corto), un LLM
-(DeepSeek) destila los hallazgos en lecciones CONCRETAS con números, y esas
+(GLM) destila los hallazgos en lecciones CONCRETAS con números, y esas
 lecciones entran al loop de aprendizaje (memory_store.record_outcome → se
 inyectan al agente correspondiente en cada corrida, con refuerzo de peso).
 
@@ -73,7 +73,7 @@ def refresh() -> Dict:
                 + "\n".join(results[:18])
                 + "\n\nDestilá las lecciones (máx 3, formato LECCION: ...).")
         try:
-            resp = complete_with_provider("deepseek", s, _SYSTEM, user, 800, 0.3)
+            resp = complete_with_provider("glm", s, _SYSTEM, user, 800, 0.3)
             text = resp.text or ""
         except Exception as e:
             log.warning("practice_llm_failed", front=front, error=str(e)[:150])

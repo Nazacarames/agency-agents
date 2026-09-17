@@ -53,7 +53,7 @@ DEFAULT_SCHEDULES: Dict[str, str] = {
     "chief_of_staff": "0 21 * * *",       # 21:00 todos los días — CIERRE del día: qué pasó, quién no entregó,
                                           # y el plan de acción para mañana. A las 08:30 corría ANTES que todo
                                           # el equipo (que trabaja de 08 a 20), así que planificaba a ciegas.
-    # Departamentos de soporte (backend gratis deepseek): temprano y escalonados,
+    # Departamentos de soporte (backend gratis GLM): temprano y escalonados,
     # cadencia liviana (no diaria) para no cargar cuota ni rate-limits.
     "finance_officer": "0 7 * * mon",      # lun 07:00 — revisión financiera semanal
     "delivery_pm": "15 7 * * mon",         # lun 07:15 — estado de proyectos de clientes

@@ -1,6 +1,6 @@
 """
 OpenCodeRunner — ejecuta el CLI de OpenCode (headless, `opencode run`) con los
-modelos de NVIDIA (GLM 5.2 / DeepSeek V4 Pro) como backend.
+modelos de NVIDIA (GLM 5.3) como backend.
 
 Por qué: los agentes con `llm_provider` corrían por completion directa SIN tools
 ni skills (las instrucciones de "cargá la skill X" y "hacé WebFetch" eran letra
@@ -38,9 +38,8 @@ def opencode_available() -> bool:
 
 
 def model_ref(provider: str, s: Settings) -> str:
-    """provider lógico ('glm'|'deepseek') → ref de opencode 'nvidia/<model-id>'."""
+    """provider lógico ('glm') → ref de opencode 'nvidia/<model-id>'."""
     mid = {"glm": getattr(s, "glm_model", "z-ai/glm-5.2"),
-           "deepseek": getattr(s, "deepseek_model", "deepseek-ai/deepseek-v4-pro")
            }.get(provider, getattr(s, "glm_model", "z-ai/glm-5.2"))
     return f"nvidia/{mid}"
 
@@ -120,7 +119,7 @@ def run_opencode(
     modelos chat lo respetan bien como bloque inicial marcado).
 
     Sampling: el CLI tampoco acepta temperature/max_tokens por corrida — la
-    temperatura se fija POR MODELO en opencode.json (glm 0.65 copy, deepseek
+    temperatura se fija POR MODELO en opencode.json (glm 0.65 copy,
     0.45 razonamiento, aproximando los valores de los agentes que los usan).
     """
     if not opencode_available():

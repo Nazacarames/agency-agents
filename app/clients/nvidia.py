@@ -2,8 +2,11 @@
 nvidia — cliente OpenAI-compatible para los modelos del endpoint gratuito de NVIDIA
 (build.nvidia.com / integrate.api.nvidia.com). Usado como backend ALTERNATIVO de
 ciertos agentes cuando su calidad supera a MiniMax-M3 (bake-off 2026-07-04):
-  - GLM 5.2 (z-ai/glm-5.2)        → copy de contenido (más vivo, menos plantillero)
-  - DeepSeek V4 Pro (deepseek-v4) → ads + razonamiento (más afilado)
+  - GLM 5.3 (z-ai/glm-5.3) → copy, razonamiento y síntesis.
+
+DeepSeek salió el 2026-09-17: NVIDIA lo dio de baja. La API devuelve 410 Gone —
+"the model has reached its end of life on 2026-09-14"— así que los agentes que lo
+tenían configurado fallaban sin motivo aparente.
 
 Expone la MISMA interfaz que MiniMaxClient.complete() y devuelve un MiniMaxResponse,
 así el runner de los agentes lo consume sin cambios. Es completion directa (sin las
@@ -25,8 +28,15 @@ log = get_logger("nvidia")
 
 # provider lógico → (env model attr, extra body para desactivar reasoning verboso)
 _PROVIDER_MODEL = {
-    "glm": ("glm_model", {}),
-    "deepseek": ("deepseek_model", {"chat_template_kwargs": {"thinking": False}}),
+    # GLM 5.3 razona antes de responder y el pensamiento sale del MISMO presupuesto
+    # de tokens que la respuesta. Medido el 2026-09-17 con la misma pregunta:
+    #   · max_tokens=150            → respuesta VACÍA, 584 chars de pensamiento, 32 s
+    #   · max_tokens=2000           → contesta bien, pero 89 s
+    #   · chat_template_kwargs      → VACÍA igual (el truco de DeepSeek NO le aplica)
+    #   · reasoning_effort="low"    → contesta bien en 2,9 s y sin pensamiento
+    # Por eso va con esfuerzo bajo: es un backend de respaldo y los agentes tienen
+    # timeout. Subirlo cuesta 30x en tiempo para una mejora que no se nota acá.
+    "glm": ("glm_model", {"reasoning_effort": "low"}),
     # Kimi K3 razona antes de responder y el pensamiento se cobra como salida. Medido
     # el 2026-09-08: una pregunta de 6 palabras gastó 92 tokens de completion y tardó
     # 18,6 s con `reasoning_effort: max`. Por eso NO se le recorta el pensamiento y su
@@ -43,7 +53,7 @@ _MIN_TOKENS = {"kimi": 16384}
 
 
 def provider_model(provider: str, s: Settings) -> str:
-    attr, _ = _PROVIDER_MODEL.get(provider, ("glm_model", {}))
+    attr, _ = _PROVIDER_MODEL.get(provider, _PROVIDER_MODEL["glm"])
     return getattr(s, attr, "")
 
 
@@ -77,7 +87,9 @@ class NvidiaClient:
                  provider: str = "glm", max_tokens: Optional[int] = None,
                  temperature: float = 0.7) -> MiniMaxResponse:
         model = provider_model(provider, self.s)
-        _, extra = _PROVIDER_MODEL.get(provider, ("", {}))
+        # Un provider desconocido cae a GLM CON su extra: sin el
+        # `reasoning_effort` el modelo devuelve vacio.
+        _, extra = _PROVIDER_MODEL.get(provider, _PROVIDER_MODEL["glm"])
         body: Dict[str, Any] = {
             "model": model,
             "messages": [{"role": "system", "content": system}] + list(messages),
