@@ -5,7 +5,7 @@ Gmail, Drive, Search Console, YouTube y la API de Ads son gratis y se quedan.
 Google Cloud pasa a ser exclusivo de CLAMEVET.
 
 Reemplazos: imagen y video → Higgsfield; texto → Kimi K3; mirar imágenes →
-Llama 3.2 Vision. Todo por cuentas que ya teníamos.
+GLM 5.3 Flash. Todo por cuentas que ya teníamos.
 """
 from pathlib import Path
 
@@ -84,11 +84,17 @@ def test_el_texto_va_por_kimi_y_las_imagenes_por_el_modelo_de_vision(monkeypatch
 
 
 def test_el_proveedor_de_vision_existe_en_el_cliente():
+    """Es GLM 5.3 Flash y no Llama, medido el 2026-09-17 con la misma imagen:
+    llama-3.2-90b no respondio NINGUNA de 3 veces (timeout a 300 s) y
+    llama-3.2-11b era rapido pero erro las dos. El flash tarda ~155 s y acierta."""
     from app.clients.nvidia import _PROVIDER_MODEL, provider_model
     from app.config import get_settings
     assert "vision" in _PROVIDER_MODEL
     assert "kimi" in _PROVIDER_MODEL
-    assert provider_model("vision", get_settings()).startswith("meta/llama-3.2")
+    assert provider_model("vision", get_settings()) == "z-ai/glm-5.3-flash"
+    # El flash razona: sin freno la descripcion vuelve vacia.
+    _, extra = _PROVIDER_MODEL["vision"]
+    assert extra.get("reasoning_effort") == "low"
 
 
 def test_al_video_se_le_avisa_que_son_fotos(monkeypatch, tmp_path):

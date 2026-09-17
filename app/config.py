@@ -305,10 +305,18 @@ class Settings(BaseSettings):
     # agentes de fondo (cron), nunca en un camino donde alguien espera.
     kimi_model: str = "moonshotai/kimi-k3"
     # Visión SIN Google. Kimi no tiene variante multimodal en los catálogos que
-    # tenemos (verificado 2026-09-16: tokenrouter expone 1 modelo y NVIDIA 82,
-    # ningún kimi-vl), así que las imágenes las mira Llama 3.2 Vision por la misma
-    # cuenta de NVIDIA que ya usamos para texto.
-    nvidia_vision_model: str = "meta/llama-3.2-90b-vision-instruct"
+    # tenemos (verificado 2026-09-16), así que las imágenes las mira otro modelo
+    # de la misma cuenta de NVIDIA.
+    #
+    # Es GLM 5.3 Flash y NO Llama Vision, medido el 2026-09-17 con la misma
+    # imagen (tres franjas de color + un cuadrado negro), dos intentos cada uno:
+    #   · llama-3.2-90b-vision → NO respondió NINGUNA vez (timeout a 300 s).
+    #     Era el que estaba cableado: el camino de visión estaba roto.
+    #   · llama-3.2-11b-vision → rápido (10 s) pero erró las dos veces.
+    #   · glm-5.3-flash        → ~155 s, pero es el único que describe bien.
+    # Se elige acertar sobre ir rápido: una descripción equivocada alimenta
+    # lecciones equivocadas al loop creativo, que es peor que no mirar.
+    nvidia_vision_model: str = "z-ai/glm-5.3-flash"
     # OpenCode: harness headless (tools + skills de .claude/skills) sobre los
     # modelos NVIDIA. Kill-switch: OPENCODE_ENABLED=false → NVIDIA directo.
     opencode_enabled: bool = True

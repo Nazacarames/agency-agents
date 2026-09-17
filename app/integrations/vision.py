@@ -7,15 +7,19 @@ agentes — Gmail, Drive, Search Console, YouTube y la API de Ads son gratis —
 se decidió dejar Google Cloud sólo para CLAMEVET.
 
 Ahora corre todo por la cuenta de NVIDIA que ya usábamos para texto:
-  · mirar imágenes → `meta/llama-3.2-90b-vision-instruct`
+  · mirar imágenes → `z-ai/glm-5.3-flash`
   · texto puro     → Kimi K3
 
 Kimi NO tiene variante multimodal en los catálogos que tenemos: verificado el
 2026-09-16 listando los dos endpoints (tokenrouter expone 1 modelo, NVIDIA 82) y
-no hay ningún `kimi-vl`. Por eso las imágenes las mira Llama y no Kimi.
+no hay ningún `kimi-vl`. Por eso mirar y escribir usan modelos distintos.
+
+⚠️ MIRAR ES LENTO: ~155 s por llamada, medido. Es el precio de acertar — los
+modelos rápidos que probamos describían mal o no respondían. Por eso el video
+se muestrea en pocos frames y todo esto corre fuera del camino de un request.
 
 ⚠️ LO QUE SE PIERDE, y no es menor: Gemini analizaba el VIDEO NATIVO —movimiento,
-AUDIO y texto en pantalla a lo largo del tiempo—. Llama Vision sólo ve imágenes
+AUDIO y texto en pantalla a lo largo del tiempo—. El modelo que mira ahora sólo ve imágenes
 fijas, así que el video se muestrea en frames con ffmpeg (que ya está en la
 imagen) y se pierde el audio. Para juzgar un short hablado eso es un bajón real;
 está anotado acá para que nadie lo descubra por accidente.
@@ -36,9 +40,10 @@ from ..log import get_logger
 
 log = get_logger("vision")
 
-# Cuántos frames se le muestran al modelo de un video. Ocho cubre arco narrativo
-# (apertura, desarrollo, cierre) sin inflar el request: cada frame es una imagen.
-FRAMES_POR_VIDEO = 8
+# Cuántos frames se le muestran al modelo de un video. Seis cubre el arco
+# (apertura, desarrollo, cierre) y mantiene el request manejable: mirar cuesta
+# ~155 s, y cada imagen de más lo encarece.
+FRAMES_POR_VIDEO = 6
 
 # Compatibilidad: los llamadores viejos podían pasar `model=`. Ya no se usa —
 # el modelo sale de la config— pero se acepta para no romper ninguna firma.
