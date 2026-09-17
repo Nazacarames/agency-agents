@@ -37,12 +37,23 @@ _PROVIDER_MODEL = {
     # Por eso va con esfuerzo bajo: es un backend de respaldo y los agentes tienen
     # timeout. Subirlo cuesta 30x en tiempo para una mejora que no se nota acá.
     "glm": ("glm_model", {"reasoning_effort": "low"}),
-    # Kimi K3 razona antes de responder y el pensamiento se cobra como salida. Medido
-    # el 2026-09-08: una pregunta de 6 palabras gastó 92 tokens de completion y tardó
-    # 18,6 s con `reasoning_effort: max`. Por eso NO se le recorta el pensamiento y su
-    # techo de tokens es alto (ver _MIN_TOKENS): apretarlo hace que se quede sin lugar
-    # para responder DESPUÉS de pensar y devuelva vacío o cortado.
-    "kimi": ("kimi_model", {"reasoning_effort": "max"}),
+    # Kimi K3 razona antes de responder y el pensamiento se cobra como salida.
+    #
+    # Estuvo en `max` desde el 2026-09-08 por miedo a que apretarlo lo dejara sin
+    # lugar para responder DESPUÉS de pensar. Medido el 2026-09-17 con sus dos
+    # tareas reales (juzgar un texto devolviendo JSON con forma fija, y sintetizar
+    # notas en prosa), 2 vueltas por nivel:
+    #   · max    → JSON 2/2 · 178,7 s de mediana · ~540 tokens · 1100 de pensamiento
+    #   · medium → HTTP 400 en las 4 llamadas: el proveedor NO acepta este valor
+    #   · low    → JSON 2/2 · 132,1 s de mediana · ~205 tokens · ~20 de pensamiento
+    # O sea: el miedo era infundado. Con `low` la calidad se sostiene en las dos
+    # tareas (JSON válido siempre, la síntesis salió con los mismos 3 bullets y
+    # hasta un poco más larga) y gasta un 60% menos de tokens. Los tiempos se
+    # solapan (max 217/140 s, low 150/114 s), así que la ganancia SEGURA es la de
+    # tokens, no la de velocidad.
+    #
+    # `medium` no existe para este modelo: si alguien lo pone, son 400 en cadena.
+    "kimi": ("kimi_model", {"reasoning_effort": "low"}),
     # Mira imágenes. GLM 5.3 Flash razona igual que su hermano grande, así que
     # lleva el mismo freno: sin esto el pensamiento se come el presupuesto y la
     # descripción vuelve vacía.
