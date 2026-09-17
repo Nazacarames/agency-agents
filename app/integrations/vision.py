@@ -6,23 +6,26 @@ dueño (2026-09-16): Vertex era lo ÚNICO de Google que factura por uso en los
 agentes — Gmail, Drive, Search Console, YouTube y la API de Ads son gratis — y
 se decidió dejar Google Cloud sólo para CLAMEVET.
 
-Ahora corre todo por la cuenta de NVIDIA que ya usábamos para texto:
-  · mirar imágenes → `z-ai/glm-5.3-flash`
-  · texto puro     → Kimi K3
+Quién hace qué ahora:
+  · mirar imágenes y video → Google AI Studio (gratis, API key sin tarjeta), con
+    `z-ai/glm-5.3-flash` de red cuando AI Studio se satura.
+  · texto puro             → Kimi K3 por NVIDIA.
+
+AI Studio NO es Vertex: no lleva service account ni facturación. Vertex sigue
+afuera. Entra sólo para mirar, porque devuelve el VIDEO NATIVO con audio que
+habíamos perdido — ver `gemini_free.py`.
 
 Kimi NO tiene variante multimodal en los catálogos que tenemos: verificado el
 2026-09-16 listando los dos endpoints (tokenrouter expone 1 modelo, NVIDIA 82) y
 no hay ningún `kimi-vl`. Por eso mirar y escribir usan modelos distintos.
 
-⚠️ MIRAR ES LENTO: ~155 s por llamada, medido. Es el precio de acertar — los
-modelos rápidos que probamos describían mal o no respondían. Por eso el video
-se muestrea en pocos frames y todo esto corre fuera del camino de un request.
+Tiempos medidos (2026-09-17, misma imagen): AI Studio 3,3 s · glm-5.3-flash
+~155 s. Por eso AI Studio va primero; glm queda para cuando no está.
 
-⚠️ LO QUE SE PIERDE, y no es menor: Gemini analizaba el VIDEO NATIVO —movimiento,
-AUDIO y texto en pantalla a lo largo del tiempo—. El modelo que mira ahora sólo ve imágenes
-fijas, así que el video se muestrea en frames con ffmpeg (que ya está en la
-imagen) y se pierde el audio. Para juzgar un short hablado eso es un bajón real;
-está anotado acá para que nadie lo descubra por accidente.
+El video va NATIVO por AI Studio (movimiento + audio + texto en pantalla). Sólo
+si eso no está disponible se cae al muestreo por frames con ffmpeg, que pierde el
+audio: en ese caso se le avisa al modelo que son fotos, para que no opine sobre
+música ni ritmo.
 
 Best-effort en todo: si no hay credencial o la llamada falla, devuelve "".
 """
@@ -79,8 +82,19 @@ def _parte_imagen(ruta: Path) -> dict | None:
 
 def describe(image_paths: List[str], prompt: str, model: str = _MODEL,
              max_tokens: int = 1800) -> str:
-    """Mira imágenes (hasta 8) y responde texto. "" si falla."""
-    if not enabled() or not image_paths:
+    """Mira imágenes (hasta 8) y responde texto. "" si falla.
+
+    AI Studio primero (3 s contra 155 s); si no está o se saturó, NVIDIA.
+    """
+    if not image_paths:
+        return ""
+    from . import gemini_free
+    if gemini_free.enabled():
+        r = gemini_free.describir_imagenes(image_paths, prompt, max_tokens)
+        if r:
+            return r
+        log.warning("vision_cae_a_nvidia", motivo="AI Studio no contestó")
+    if not enabled():
         return ""
     partes = []
     for p in image_paths[:8]:
@@ -136,11 +150,21 @@ def describe_video(video_path: str, prompt: str, model: str = _MODEL,
                    max_tokens: int = 1800) -> str:
     """Analiza un video muestreando frames. "" si falla.
 
-    OJO: son fotos, no el video. No hay audio ni movimiento. Se le dice al modelo
-    explícitamente para que no describa cosas que no puede saber --si cree que
-    está viendo el video entero, opina sobre el ritmo y la música y se lo inventa.
+    Por AI Studio va el video ENTERO, con audio. Si eso no está, se cae a frames:
+    ahí son fotos y se le avisa al modelo, para que no describa cosas que no puede
+    saber --si cree que ve el video entero, opina sobre ritmo y música y lo inventa.
     """
-    if not enabled() or not video_path:
+    if not video_path:
+        return ""
+    # NATIVO primero: con audio y movimiento. Los frames son el plan B.
+    from . import gemini_free
+    if gemini_free.enabled():
+        r = gemini_free.describir_video(video_path, prompt, max_tokens)
+        if r:
+            log.info("video_nativo_ok", video=Path(video_path).name)
+            return r
+        log.warning("video_cae_a_frames", motivo="AI Studio no contestó o pesa de más")
+    if not enabled():
         return ""
     frames = _frames(video_path)
     if not frames:

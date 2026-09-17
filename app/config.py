@@ -317,6 +317,18 @@ class Settings(BaseSettings):
     # Se elige acertar sobre ir rápido: una descripción equivocada alimenta
     # lecciones equivocadas al loop creativo, que es peor que no mirar.
     nvidia_vision_model: str = "z-ai/glm-5.3-flash"
+
+    # ── Google AI Studio (mirar imagenes y VIDEO) ──
+    # NO es Vertex. Es una API key suelta, sin tarjeta y sin facturacion, con
+    # cuota gratuita por minuto. Vertex (lo que factura) sigue afuera y reservado
+    # para CLAMEVET; esto entra sólo para MIRAR, porque devuelve algo que
+    # perdimos al salir: analizar VIDEO NATIVO con audio.
+    # Medido 2026-09-17 contra glm-5.3-flash, misma imagen y mismo clip:
+    #   · imagen → 3,3 s correcto (glm tardaba ~155 s)
+    #   · video  → 3,9 s, y acerto que el clip NO tiene audio: lo escucho.
+    # El tier gratis se satura (503 en una de las pruebas), por eso glm queda de
+    # red y el texto de los agentes NO pasa por aca.
+    gemini_api_key: str = ""          # (SECRET) AI Studio, no Vertex
     # OpenCode: harness headless (tools + skills de .claude/skills) sobre los
     # modelos NVIDIA. Kill-switch: OPENCODE_ENABLED=false → NVIDIA directo.
     opencode_enabled: bool = True
