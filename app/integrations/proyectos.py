@@ -73,8 +73,14 @@ PROYECTOS: List[Dict[str, Any]] = [
         "cliente": None,
         "que_es": "Los agentes de la agencia, sus departamentos y este mismo panel.",
         "url": "https://app.automiq.agency",
-        "sonda": "https://app.automiq.agency/healthz",
-        "resumen": None,        # es este mismo servicio: se responde local
+        # Es ESTE servicio: se contesta local y NO se pega a sí mismo por HTTP.
+        # Pegarse a sí mismo se cuelga: el pedido a `/healthz` espera al worker
+        # que justo está atendiendo el pedido de `/api/proyectos`. Medido: 20 s de
+        # ReadTimeout y el panel reportando "los agentes no responden" desde
+        # adentro de los agentes.
+        "propio": True,
+        "sonda": None,
+        "resumen": None,
         "repo": "agency-agents-render",
         "railway": "automiq-agents",
         "notas": "Se despliega solo al pushear a main.",
@@ -102,6 +108,10 @@ def _uno(pid: str) -> Optional[Dict[str, Any]]:
 
 def _sondear(p: Dict[str, Any]) -> Dict[str, Any]:
     """Pregunta si está vivo. Devuelve estado, latencia y lo que conteste."""
+    if p.get("propio"):
+        # Si este código está corriendo, este servicio está vivo. No hay nada
+        # que preguntar, y preguntarlo por HTTP se cuelga (ver el registro).
+        return {"estado": "ok", "ms": 0, "detalle": "es este mismo servicio"}
     url = p.get("sonda")
     if not url:
         return {"estado": "sin_sonda", "ms": None, "detalle": ""}
@@ -185,8 +195,9 @@ def salud(pid: Optional[str] = None) -> List[Dict[str, Any]]:
     salida = []
     for p in elegidos:
         sonda = _sondear(p)
-        resumen = _resumen_propio() if p["id"] == "agentes" else _resumen_remoto(p)
-        salida.append({**{k: v for k, v in p.items() if k not in ("sonda", "resumen")},
+        resumen = _resumen_propio() if p.get("propio") else _resumen_remoto(p)
+        salida.append({**{k: v for k, v in p.items()
+                          if k not in ("sonda", "resumen", "propio")},
                        "salud": sonda, "numeros": resumen})
     log.info("proyectos_salud", n=len(salida),
              caidos=[s["id"] for s in salida if s["salud"]["estado"] == "caido"])

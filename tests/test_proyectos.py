@@ -75,7 +75,19 @@ def test_un_proyecto_caido_no_voltea_a_los_otros(monkeypatch):
                         _cliente({}))  # todo 404 → todos caídos
     salida = proyectos.salud()
     assert len(salida) == len(proyectos.PROYECTOS)
-    assert all(s["salud"]["estado"] == "caido" for s in salida)
+    remotos = [s for s in salida if s["id"] != "agentes"]
+    assert all(s["salud"]["estado"] == "caido" for s in remotos)
+
+
+def test_este_servicio_no_se_pega_a_si_mismo(monkeypatch):
+    """Se colgaba de verdad: el pedido a `/healthz` esperaba al worker que justo
+    estaba atendiendo `/api/proyectos`. 20 s de ReadTimeout y el panel diciendo
+    "los agentes no responden" desde adentro de los agentes."""
+    monkeypatch.setattr(proyectos.httpx, "Client",
+                        lambda **k: pytest.fail("no tenía que salir a la red"))
+    agentes = next(p for p in proyectos.PROYECTOS if p["id"] == "agentes")
+    assert proyectos._sondear(agentes)["estado"] == "ok"
+    assert proyectos._sondear(agentes)["ms"] == 0
 
 
 def test_sin_secreto_no_pide_el_resumen(monkeypatch):
