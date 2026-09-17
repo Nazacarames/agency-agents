@@ -810,7 +810,10 @@
   .pry-n span{font-family:var(--mono);font-size:9px;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);color:#9aa3b8}
   .pry-n span b{color:#e2e9f7;font-weight:600}
   .pry-nota{font-family:var(--mono);font-size:8.5px;line-height:1.55;color:#6b7690;border-top:1px solid rgba(255,255,255,.05);padding-top:8px}
-  .pry-t{width:100%;border-collapse:collapse;margin-top:8px}
+  /* `auto` y no 100%: con 6 columnas cortas, estirarlas al ancho de la tarjeta
+     deja al nombre de la empresa a media pantalla de su número. */
+  .pry-t{width:auto;min-width:min(100%,540px);border-collapse:collapse;margin-top:8px}
+  .pry-t th:not(:first-child),.pry-t td:not(:first-child){text-align:right;padding-left:22px}
   .pry-t th{font-family:var(--mono);font-size:8px;letter-spacing:1.4px;color:#5f6a85;text-align:left;font-weight:400;padding:0 8px 5px 0}
   .pry-t td{font-size:11.5px;color:#c3cbdd;padding:4px 8px 4px 0;border-top:1px solid rgba(255,255,255,.04);font-variant-numeric:tabular-nums}
   .pry-t td:first-child{color:#e8edf9}
