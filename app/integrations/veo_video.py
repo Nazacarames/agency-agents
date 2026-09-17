@@ -36,8 +36,31 @@ _creds_lock = threading.Lock()
 _creds = None  # cache del objeto Credentials (refresca solo)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# EL ÚNICO GASTO DE GOOGLE CLOUD ES CLAMEVET (decisión del dueño, 2026-09-17).
+#
+# Por acá pasan LOS CUATRO caminos que le cuestan plata a Google Cloud en este
+# servicio, porque los cuatro piden su token a `_token()`:
+#     · Veo (video)            · Omni (que llama a Veo)
+#     · Nano Banana Pro        · Imagen 4
+# Por eso el freno va en `_token()`, y no una bandera en cada uno. Una bandera
+# por camino es exactamente cómo se escaparon 4 mensajes cuando la pausa de un
+# cliente tapaba uno de seis caminos: apagar es apagar TODO.
+#
+# NO alcanza con sacar la credencial de Railway: la MISMA service account la
+# usan `search_console` y `youtube_client`, que son GRATIS y se usan. Sacarla
+# apagaría el reporte de SEO y la subida de videos sin avisar. Por eso el corte
+# es acá, en el token de pago, y no en la llave.
+#
+# Se destraba con GOOGLE_CLOUD_PAGO=true en Railway, sin tocar código.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def gasto_permitido() -> bool:
+    return bool(getattr(get_settings(), "google_cloud_pago", False))
+
+
 def enabled() -> bool:
-    return bool(get_settings().google_service_account_json)
+    return gasto_permitido() and bool(get_settings().google_service_account_json)
 
 
 def _sa_info() -> Dict[str, Any]:
@@ -78,7 +101,16 @@ def _build_creds():
 
 
 def _token() -> str:
-    """Mintea/refresca un access token OAuth desde la credencial configurada."""
+    """Mintea/refresca un access token OAuth desde la credencial configurada.
+
+    Levanta si el gasto en Google Cloud está frenado. Levantar y no devolver ""
+    es a propósito: un token vacío haría que la llamada falle con un 401 confuso
+    a mitad de camino, y acá interesa que quede claro POR QUÉ no salió.
+    """
+    if not gasto_permitido():
+        raise RuntimeError(
+            "Gasto en Google Cloud frenado: el único proyecto que puede facturar "
+            "es CLAMEVET. Para habilitarlo acá, GOOGLE_CLOUD_PAGO=true.")
     global _creds
     import google.auth.transport.requests as gar
     with _creds_lock:

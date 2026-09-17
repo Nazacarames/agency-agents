@@ -108,6 +108,13 @@ class Settings(BaseSettings):
     # False el sistema NO llama a Higgsfield ni gasta un crédito: los shorts
     # salen del banco de 46 clips ya generados en agosto.
     video_gen_enabled: bool = False
+    # El único proyecto que puede facturar en Google Cloud es CLAMEVET (decisión
+    # del dueño, 2026-09-17, con la factura de septiembre en la mano: Veo US$22,40
+    # + Gemini US$26,93 + Model Garden US$10,10 contra US$0,01 de CLAMEVET).
+    # Esto frena los cuatro caminos de pago de este servicio en su cuello de
+    # botella, `veo_video._token()`. Lo gratis —Search Console, YouTube, la API
+    # key de AI Studio— no se toca: usa otra credencial u otra cuota.
+    google_cloud_pago: bool = False
 
     higgsfield_key_id: str = ""       # (SECRET) HF_API_KEY_ID
     higgsfield_key_secret: str = ""   # (SECRET) HF_API_KEY_SECRET

@@ -249,7 +249,10 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", n: int = 1,
         "nano":   [("nano", _nano_banana), ("vertex", _vertex_imagen), ("minimax", _minimax_image)],
         "vertex": [("vertex", _vertex_imagen), ("minimax", _minimax_image)],
         "minimax": [("minimax", _minimax_image)],
-    }.get(provider, [("nano", _nano_banana), ("vertex", _vertex_imagen), ("minimax", _minimax_image)])
+    # El default de un provider DESCONOCIDO no puede ser Google pago: un typo en
+    # la env var mandaba a facturar sin que nadie lo pidiera. Ahora cae en la
+    # cadena sin costo de Cloud.
+    }.get(provider, [("higgsfield", _higgsfield_imagen), ("minimax", _minimax_image)])
     if kind == "comic":
         # sólo nano sabe escribir dentro de los globos; mejor sin pieza que con
         # texto deforme publicado.
