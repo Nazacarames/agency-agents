@@ -779,7 +779,7 @@
   .cnx-u button{font-family:var(--mono);font-size:8px;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:#8b93ab;cursor:pointer;transition:.2s;text-transform:capitalize}
   .cnx-u button:hover{color:#fff;border-color:var(--dept)}
   /* ═══ PROYECTOS — los sistemas que operamos ═══ */
-  .pry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+  .pry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;align-items:start}
   .pry-c{border:1px solid rgba(255,255,255,.07);border-left:2px solid var(--est,#22c55e);border-radius:11px;background:rgba(13,18,28,.65);backdrop-filter:blur(14px);padding:13px 14px}
   .pry-h{display:flex;align-items:center;gap:8px;margin-bottom:3px}
   .pry-h b{font-size:13.5px;color:#e8edf9;flex:1;font-weight:600}
@@ -2851,9 +2851,18 @@ const PRY_ROT={empresas:'empresas',empresas_activas:'activas',usuarios:'usuarios
   eventos_recientes:'eventos',fallas_recientes:'fallas',esperando_ok:'esperando OK',
   clips_en_banco:'clips listos'};
 
+/* Una fecha cruda en ISO no dice nada de un vistazo, y lo que importa del
+   boletín no es el instante sino hace cuánto: si son más de 14 días la ingesta
+   se frenó. */
+function pryValor(k,v){
+  if(!/boletin|_at$|fecha/.test(k) || typeof v!=='string' || !/^\d{4}-\d{2}-\d{2}/.test(v)) return String(v);
+  const d=new Date(v); if(isNaN(d)) return String(v);
+  const dias=Math.floor((Date.now()-d.getTime())/86400000);
+  return `${v.slice(0,10)} (${dias===0?'hoy':'hace '+dias+'d'})`;
+}
 function pryChips(n){
   return Object.entries(n||{}).filter(([k,v])=>!Array.isArray(v)&&v!==null&&typeof v!=='object')
-    .map(([k,v])=>`<span>${esc(PRY_ROT[k]||k.replace(/_/g,' '))} <b>${esc(String(v))}</b></span>`).join('');
+    .map(([k,v])=>`<span>${esc(PRY_ROT[k]||k.replace(/_/g,' '))} <b>${esc(pryValor(k,v))}</b></span>`).join('');
 }
 function pryTenants(n){
   const filas=n&&n.empresas_detalle; if(!filas||!filas.length) return '';
