@@ -778,6 +778,25 @@
   .cnx-u{display:flex;flex-wrap:wrap;gap:4px}
   .cnx-u button{font-family:var(--mono);font-size:8px;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:#8b93ab;cursor:pointer;transition:.2s;text-transform:capitalize}
   .cnx-u button:hover{color:#fff;border-color:var(--dept)}
+  /* ═══ PROYECTOS — los sistemas que operamos ═══ */
+  .pry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+  .pry-c{border:1px solid rgba(255,255,255,.07);border-left:2px solid var(--est,#22c55e);border-radius:11px;background:rgba(13,18,28,.65);backdrop-filter:blur(14px);padding:13px 14px}
+  .pry-h{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+  .pry-h b{font-size:13.5px;color:#e8edf9;flex:1;font-weight:600}
+  .pry-ms{font-family:var(--mono);font-size:8.5px;letter-spacing:.6px;color:#5f6a85}
+  .pry-q{font-size:11.5px;color:#8b93ab;line-height:1.45;margin-bottom:10px}
+  .pry-n{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+  .pry-n span{font-family:var(--mono);font-size:9px;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);color:#9aa3b8}
+  .pry-n span b{color:#e2e9f7;font-weight:600}
+  .pry-nota{font-family:var(--mono);font-size:8.5px;line-height:1.55;color:#6b7690;border-top:1px solid rgba(255,255,255,.05);padding-top:8px}
+  .pry-t{width:100%;border-collapse:collapse;margin-top:8px}
+  .pry-t th{font-family:var(--mono);font-size:8px;letter-spacing:1.4px;color:#5f6a85;text-align:left;font-weight:400;padding:0 8px 5px 0}
+  .pry-t td{font-size:11.5px;color:#c3cbdd;padding:4px 8px 4px 0;border-top:1px solid rgba(255,255,255,.04);font-variant-numeric:tabular-nums}
+  .pry-t td:first-child{color:#e8edf9}
+  .pry-hall{border:1px solid rgba(255,255,255,.07);border-left:2px solid var(--sev);border-radius:9px;background:rgba(13,18,28,.6);padding:10px 12px;margin-bottom:7px}
+  .pry-hall .sev{font-family:var(--mono);font-size:8px;letter-spacing:1.6px;color:var(--sev)}
+  .pry-hall .que{font-size:12.5px;color:#e8edf9;margin:3px 0 3px}
+  .pry-hall .pq{font-size:11.5px;color:#8b93ab;line-height:1.5}
   /* ═══ ORGANIGRAMA ═══ */
   .org{font-family:var(--sans);max-width:1500px}
   .org-top{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:8px}
@@ -946,6 +965,10 @@
 
       <section id="tab-conexiones" class="tabsec hidden">
         <div class="cnx" id="cnxWrap"><div class="card empty">Cargando conexiones…</div></div>
+      </section>
+
+      <section id="tab-proyectos" class="tabsec hidden">
+        <div id="pryWrap"><div class="card empty">Sondeando los proyectos…</div></div>
       </section>
 
       <section id="tab-org" class="tabsec hidden">
@@ -1505,6 +1528,7 @@ const NAV = [
   {g:'INTELIGENCIA', id:'departamentos', label:'Optimal Engine', sub:'El cerebro: sectores, agentes y el conocimiento vivo de la agencia.'},
   {g:'INTELIGENCIA', id:'memoria', label:'Memoria', sub:'Conocimiento de la empresa y lecciones de los agentes.'},
   {g:'SISTEMA', id:'conexiones', label:'Conexiones', sub:'Todos los servicios y MCPs que usan los agentes, con su estado real.'},
+  {g:'SISTEMA', id:'proyectos', label:'Proyectos', sub:'Los sistemas que operamos: salud medida en vivo, quien los usa y sus hallazgos.'},
   {g:'SISTEMA', id:'growth', label:'Growth', sub:'Objetivos y tareas de crecimiento de la empresa.'},
   {g:'SISTEMA', id:'ceo', label:'CEO', sub:'Asigná un objetivo y repartilo a varios agentes de una.'},
   {g:'VARIANTES', id:'personas', label:'Personas', sub:'Quién opera el OS: pilares por sector, agentes y métricas.'},
@@ -1584,6 +1608,7 @@ function loadTab(tab, force){
   if(tab==='personas') loadPersonas();
   if(tab==='org') loadOrg();
   if(tab==='conexiones') loadConexiones();
+  if(tab==='proyectos') loadProyectos();
   if(tab==='finanzas') loadFinanzas();
   if(tab==='publicaciones') loadPublicaciones();
   if(tab==='ads') loadAds();
@@ -2813,6 +2838,75 @@ async function loadConexiones(){
       <div class="cnx-grid">${cards}</div>`;
   }catch(e){ w.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
 }
+/* ═══ PROYECTOS — los sistemas que operamos ═══ */
+const PRY_COLOR={ok:'#22c55e',degradado:'#eab308',caido:'#ef4444',sin_sonda:'#64748b'};
+const PRY_DOT={ok:'on',degradado:'idle',caido:'off',sin_sonda:'off'};
+/* Las claves que llegan del resumen de cada proyecto, en castellano y sin
+   guiones bajos. Las que no estén acá igual se muestran: preferible un rótulo
+   feo a un número que no aparece. */
+const PRY_ROT={empresas:'empresas',empresas_activas:'activas',usuarios:'usuarios',
+  canales_activos:'canales',mensajes_24h:'mensajes 24h',socios:'socios',
+  documentos:'documentos',documentos_con_error:'docs en error',fragmentos:'fragmentos',
+  consultas_7d:'consultas 7d',alertas_7d:'alertas 7d',agentes:'agentes',
+  eventos_recientes:'eventos',fallas_recientes:'fallas',esperando_ok:'esperando OK',
+  clips_en_banco:'clips listos'};
+
+function pryChips(n){
+  return Object.entries(n||{}).filter(([k,v])=>!Array.isArray(v)&&v!==null&&typeof v!=='object')
+    .map(([k,v])=>`<span>${esc(PRY_ROT[k]||k.replace(/_/g,' '))} <b>${esc(String(v))}</b></span>`).join('');
+}
+function pryTenants(n){
+  const filas=n&&n.empresas_detalle; if(!filas||!filas.length) return '';
+  return `<table class="pry-t"><tr><th>EMPRESA</th><th>USUARIOS</th><th>CANALES</th>
+    <th>CONVERSACIONES</th><th>IA</th></tr>`+filas.map(e=>`<tr>
+      <td>${esc(e.nombre||'—')}${e.activa?'':' <span style="color:#64748b">(baja)</span>'}</td>
+      <td>${e.usuarios}</td><td>${e.canales}</td>
+      <td>${e.conversaciones_mes}</td><td>${e.respuestas_ia_mes}</td></tr>`).join('')+`</table>`;
+}
+async function loadProyectos(){
+  const w=el('pryWrap');
+  try{
+    const r=await api('/api/proyectos');
+    const ps=r.proyectos||[];
+    const mal=ps.filter(p=>p.salud.estado!=='ok').length;
+    const cards=ps.map(p=>{
+      const st=p.salud.estado, col=PRY_COLOR[st]||'#64748b';
+      return `<div class="pry-c" style="--est:${col}">
+        <div class="pry-h"><span class="dot ${PRY_DOT[st]||'off'}"></span>
+          <b>${esc(p.nombre)}</b>
+          <span class="pry-ms">${st.toUpperCase()}${p.salud.ms!=null?' · '+p.salud.ms+' ms':''}</span></div>
+        <div class="pry-q">${esc(p.que_es)}</div>
+        <div class="pry-n">${pryChips(p.numeros)}</div>
+        ${pryTenants(p.numeros)}
+        ${p.notas?`<div class="pry-nota">${esc(p.notas)}</div>`:''}
+      </div>`;}).join('');
+    w.innerHTML=`<div class="cnx-head">▸ ${ps.length} SISTEMAS · ${mal?mal+' CON PROBLEMAS':'TODOS SANOS'}
+        <button id="pryAud" style="float:right;font-family:var(--mono);font-size:9px;letter-spacing:1.2px;padding:4px 11px;border-radius:5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#c3cbdd;cursor:pointer">AUDITAR</button></div>
+      <div class="pry-grid">${cards}</div>
+      <div id="pryHall" style="margin-top:18px"></div>`;
+    el('pryAud').addEventListener('click',auditarProyectos);
+  }catch(e){ w.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
+}
+async function auditarProyectos(){
+  const h=el('pryHall'), b=el('pryAud');
+  /* Verifica credenciales de verdad contra cada proveedor: son decenas de
+     segundos. Sin este aviso parece colgado y se clickea de nuevo. */
+  b.disabled=true; b.textContent='AUDITANDO…';
+  h.innerHTML='<div class="card empty">Verificando credenciales y tokens contra cada proveedor. Tarda.</div>';
+  try{
+    const r=await api('/api/proyectos/auditoria');
+    const hs=r.hallazgos||[];
+    if(!hs.length){ h.innerHTML='<div class="card empty">Sin hallazgos. Todo en orden.</div>'; return; }
+    const col={alta:'#ef4444',media:'#eab308',baja:'#64748b'};
+    h.innerHTML=`<div class="cnx-head">▸ ${hs.length} HALLAZGOS · ${r.altas} DE SEVERIDAD ALTA</div>`
+      + hs.map(x=>`<div class="pry-hall" style="--sev:${col[x.severidad]||'#64748b'}">
+          <div class="sev">${x.severidad.toUpperCase()} · ${esc(x.proyecto)}</div>
+          <div class="que">${esc(x.que)}</div>
+          <div class="pq">${esc(x.por_que)}</div></div>`).join('');
+  }catch(e){ h.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
+  finally{ b.disabled=false; b.textContent='AUDITAR'; }
+}
+
 /* ═══ ORGANIGRAMA (ref video: Operator → Conductor → crews por depto) ═══ */
 function cronShort(c){
   if(!c) return 'on-demand';

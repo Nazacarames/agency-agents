@@ -282,6 +282,43 @@ def _lo_de_hoy() -> str:
         return ""
 
 
+def _estado_de_los_proyectos() -> str:
+    """Salud y hallazgos de los sistemas que operamos, en texto para el prompt.
+
+    Sin la verificación en vivo de credenciales: acá corre todos los días y salir
+    a pedir un token contra cada proveedor en cada cierre es caro y, con el
+    consentimiento de Gmail en Testing, encima frágil. Para eso está la auditoría
+    a pedido."""
+    try:
+        from ..integrations import proyectos
+        estados = proyectos.salud()
+        lineas = []
+        for e in estados:
+            s = e["salud"]
+            marca = {"ok": "✅", "degradado": "⚠️", "caido": "🔴"}.get(s["estado"], "·")
+            nums = ", ".join(f"{k}={v}" for k, v in e["numeros"].items()
+                             if not isinstance(v, (list, dict)))
+            lineas.append(f"{marca} {e['nombre']} — {s['estado']} ({s['ms']} ms)"
+                          + (f" · {nums}" if nums else ""))
+        hallazgos = []
+        for e in estados:
+            if e["id"] == "agentes":
+                hallazgos.extend(proyectos._auditar_agentes(
+                    e["numeros"], credenciales_en_vivo=False))
+                continue
+            auditor = proyectos._AUDITORES.get(e["id"])
+            if auditor and e["numeros"]:
+                hallazgos.extend(auditor(e["numeros"]))
+        if hallazgos:
+            lineas.append("")
+            lineas += [f"[{h['severidad'].upper()}] {h['que']} — {h['por_que']}"
+                       for h in hallazgos]
+        return "\n".join(lineas)
+    except Exception as e:
+        log.warning("cos_proyectos_failed", error=str(e)[:150])
+        return ""
+
+
 def _open_delegations() -> str:
     """Las delegaciones recientes que dejó el chief (missions auto-delegadas), para que
     en el próximo cierre verifique si el agente las cumplió y re-delegue si no."""
@@ -538,6 +575,15 @@ class ChiefOfStaffAgent(BaseAgent):
                       "acciones. Un ítem con muchos días o muchas re-apariciones ya demostró "
                       "que la vía por la que iba no funciona: cambiá de vía o decí que lo "
                       "matás, no lo repitas igual.\n")
+        # Los sistemas que operamos. Va con los hallazgos YA detectados en código,
+        # no con los números crudos: el Chief prioriza y redacta, no diagnostica.
+        # Si el CRM está caído o CLAMEVET dejó de leer el boletín, eso no puede
+        # enterarse el dueño por un cliente.
+        proy = _estado_de_los_proyectos()
+        if proy:
+            extra += ("\n## LOS SISTEMAS QUE OPERAMOS (salud medida hoy, no reportada "
+                      "por nadie — un hallazgo de severidad ALTA va a Problemas sí o sí)\n"
+                      + proy + "\n")
         deleg = _open_delegations()
         if deleg:
             extra += ("\n## TUS DELEGACIONES RECIENTES (verificá si se cumplieron: cruzá cada "

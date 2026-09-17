@@ -1038,6 +1038,24 @@ async def api_delete_task(task_id: str, request: Request):
     return {"ok": ts.delete_task(task_id)}
 
 
+@app.get("/api/proyectos")
+async def api_proyectos(request: Request):
+    """Los sistemas que operamos y cómo están. Sondea en vivo, así que tarda lo
+    que tarde el más lento."""
+    _verify_webhook_secret(request)
+    from .integrations import proyectos
+    return {"proyectos": proyectos.salud()}
+
+
+@app.get("/api/proyectos/auditoria")
+async def api_proyectos_auditoria(request: Request, id: str = ""):
+    """Auditoría de todos o de uno (`?id=crm`). Verifica credenciales de verdad,
+    así que puede tardar decenas de segundos."""
+    _verify_webhook_secret(request)
+    from .integrations import proyectos
+    return proyectos.auditar(id or None)
+
+
 @app.get("/api/clients")
 async def api_list_clients(request: Request):
     _verify_webhook_secret(request)

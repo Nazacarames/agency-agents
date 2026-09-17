@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     log_level: str = "INFO"
     webhook_secret: str = ""
+    # Secreto ENTRE NUESTROS SERVICIOS, para leer `/health/resumen` del CRM y de
+    # CLAMEVET. Aparte de `webhook_secret` a propósito: ése es el que se escribe
+    # para entrar al panel, y no tiene por qué andar copiado en otros dos servicios.
+    panel_secret: str = ""
 
     # ── Base de datos (Supabase Postgres) ──
     # Capa de memoria/DB de la agencia (memoria general + por-cliente + lecciones).
