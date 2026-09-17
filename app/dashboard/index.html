@@ -779,6 +779,27 @@
   .cnx-u button{font-family:var(--mono);font-size:8px;letter-spacing:.4px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:#8b93ab;cursor:pointer;transition:.2s;text-transform:capitalize}
   .cnx-u button:hover{color:#fff;border-color:var(--dept)}
   /* ═══ PROYECTOS — los sistemas que operamos ═══ */
+  /* La lista: una fila por sistema, sólo el nombre y si está sano. El detalle
+     vive en su pantalla — mezclarlos hacía que la tabla de tenants del CRM
+     estirara las otras tarjetas y dejara media pantalla vacía. */
+  .pry-lista{display:flex;flex-direction:column;gap:7px;max-width:820px}
+  .pry-fila{display:flex;align-items:center;gap:11px;width:100%;text-align:left;cursor:pointer;
+    border:1px solid rgba(255,255,255,.07);border-left:2px solid var(--est,#22c55e);border-radius:10px;
+    background:rgba(13,18,28,.65);padding:13px 15px;transition:.18s;font-family:var(--sans)}
+  .pry-fila:hover{border-color:rgba(59,130,246,.35);background:rgba(20,28,44,.8);transform:translateX(2px)}
+  .pry-fila:focus-visible{outline:2px solid #2B5BE8;outline-offset:2px}
+  .pry-nom{flex:1;font-size:13.5px;font-weight:600;color:#e8edf9}
+  .pry-est{font-family:var(--mono);font-size:8.5px;letter-spacing:1px;color:#6b7690}
+  .pry-chev{color:#5f6a85;font-size:16px;line-height:1}
+  .pry-top{display:flex;gap:8px;margin-bottom:13px}
+  .pry-btn{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;padding:5px 12px;border-radius:5px;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#c3cbdd;cursor:pointer;transition:.2s}
+  .pry-btn:hover{color:#fff;border-color:rgba(59,130,246,.4)}
+  .pry-btn:disabled{opacity:.5;cursor:default}
+  .pry-det{max-width:820px}
+  .pry-sub{font-family:var(--mono);font-size:8px;letter-spacing:1.8px;color:#5f6a85;margin:14px 0 7px}
+  .pry-link{display:inline-block;font-family:var(--mono);font-size:9.5px;color:#7fa4f0;text-decoration:none;margin-top:4px}
+  .pry-link:hover{text-decoration:underline}
   .pry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;align-items:start}
   .pry-c{border:1px solid rgba(255,255,255,.07);border-left:2px solid var(--est,#22c55e);border-radius:11px;background:rgba(13,18,28,.65);backdrop-filter:blur(14px);padding:13px 14px}
   .pry-h{display:flex;align-items:center;gap:8px;margin-bottom:3px}
@@ -2864,46 +2885,96 @@ function pryChips(n){
   return Object.entries(n||{}).filter(([k,v])=>!Array.isArray(v)&&v!==null&&typeof v!=='object')
     .map(([k,v])=>`<span>${esc(PRY_ROT[k]||k.replace(/_/g,' '))} <b>${esc(pryValor(k,v))}</b></span>`).join('');
 }
+/* La tabla de tenants del CRM: quién vive adentro y cuánto usa.
+   `conversaciones` son CONTACTOS distintos que escribieron este mes, no mensajes
+   — el contador del CRM sumaba uno por mensaje entrante y mostraba 1.550 donde
+   había 163. Los mensajes van en su propia columna, que es lo que de verdad es. */
 function pryTenants(n){
   const filas=n&&n.empresas_detalle; if(!filas||!filas.length) return '';
-  return `<table class="pry-t"><tr><th>EMPRESA</th><th>USUARIOS</th><th>CANALES</th>
-    <th>CONVERSACIONES</th><th>IA</th></tr>`+filas.map(e=>`<tr>
+  return `<div class="pry-sub">EMPRESAS DENTRO DEL CRM</div>
+    <table class="pry-t"><tr><th>EMPRESA</th><th>USUARIOS</th><th>CANALES</th>
+    <th>CONVERSACIONES</th><th>MENSAJES</th><th>IA</th></tr>`+filas.map(e=>`<tr>
       <td>${esc(e.nombre||'—')}${e.activa?'':' <span style="color:#64748b">(baja)</span>'}</td>
       <td>${e.usuarios}</td><td>${e.canales}</td>
-      <td>${e.conversaciones_mes}</td><td>${e.respuestas_ia_mes}</td></tr>`).join('')+`</table>`;
+      <td>${e.conversaciones_mes}</td>
+      <td>${e.mensajes_recibidos_mes!=null?e.mensajes_recibidos_mes:'—'}</td>
+      <td>${e.respuestas_ia_mes}</td></tr>`).join('')+`</table>`;
 }
-async function loadProyectos(){
+
+/* Maestro/detalle. La lista es para saber de un vistazo si algo está mal; el
+   detalle es para entender qué. Mezclarlos hacía que la tabla de tenants del CRM
+   estirara las otras tres tarjetas y media pantalla quedara vacía. */
+let PRY_SEL='';      // id del proyecto abierto ('' = la lista)
+let PRY_CACHE=null;  // lo último que devolvió /api/proyectos
+
+async function loadProyectos(force){
   const w=el('pryWrap');
   try{
-    const r=await api('/api/proyectos');
-    const ps=r.proyectos||[];
-    const mal=ps.filter(p=>p.salud.estado!=='ok').length;
-    const cards=ps.map(p=>{
-      const st=p.salud.estado, col=PRY_COLOR[st]||'#64748b';
-      return `<div class="pry-c" style="--est:${col}">
-        <div class="pry-h"><span class="dot ${PRY_DOT[st]||'off'}"></span>
-          <b>${esc(p.nombre)}</b>
-          <span class="pry-ms">${st.toUpperCase()}${p.salud.ms!=null?' · '+p.salud.ms+' ms':''}</span></div>
-        <div class="pry-q">${esc(p.que_es)}</div>
-        <div class="pry-n">${pryChips(p.numeros)}</div>
-        ${pryTenants(p.numeros)}
-        ${p.notas?`<div class="pry-nota">${esc(p.notas)}</div>`:''}
-      </div>`;}).join('');
-    w.innerHTML=`<div class="cnx-head">▸ ${ps.length} SISTEMAS · ${mal?mal+' CON PROBLEMAS':'TODOS SANOS'}
-        <button id="pryAud" style="float:right;font-family:var(--mono);font-size:9px;letter-spacing:1.2px;padding:4px 11px;border-radius:5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#c3cbdd;cursor:pointer">AUDITAR</button></div>
-      <div class="pry-grid">${cards}</div>
-      <div id="pryHall" style="margin-top:18px"></div>`;
-    el('pryAud').addEventListener('click',auditarProyectos);
+    if(force||!PRY_CACHE){
+      w.innerHTML='<div class="card empty">Sondeando los proyectos…</div>';
+      PRY_CACHE=(await api('/api/proyectos')).proyectos||[];
+    }
+    PRY_SEL ? pryDetalle() : pryLista();
   }catch(e){ w.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
 }
-async function auditarProyectos(){
+
+function pryLista(){
+  const ps=PRY_CACHE||[];
+  const mal=ps.filter(p=>p.salud.estado!=='ok').length;
+  el('pryWrap').innerHTML=`<div class="cnx-head">▸ ${ps.length} SISTEMAS · ${mal?mal+' CON PROBLEMAS':'TODOS SANOS'}
+      <button id="pryAud" class="pry-btn" style="float:right">AUDITAR TODO</button></div>
+    <div class="pry-lista">${ps.map(p=>{
+      const st=p.salud.estado;
+      return `<button class="pry-fila" data-id="${esc(p.id)}" style="--est:${PRY_COLOR[st]||'#64748b'}">
+        <span class="dot ${PRY_DOT[st]||'off'}"></span>
+        <span class="pry-nom">${esc(p.nombre)}</span>
+        <span class="pry-est">${st.toUpperCase()}${p.salud.ms!=null?' · '+p.salud.ms+' ms':''}</span>
+        <span class="pry-chev">›</span></button>`;}).join('')}</div>
+    <div id="pryHall" style="margin-top:18px"></div>`;
+  el('pryAud').addEventListener('click',()=>auditarProyectos(''));
+  document.querySelectorAll('.pry-fila').forEach(b=>b.addEventListener('click',()=>{
+    PRY_SEL=b.dataset.id; pryDetalle();
+  }));
+}
+
+function pryDetalle(){
+  const p=(PRY_CACHE||[]).find(x=>x.id===PRY_SEL);
+  if(!p){ PRY_SEL=''; return pryLista(); }
+  const st=p.salud.estado;
+  const meta=[['repo',p.repo],['railway',p.railway],['cliente',p.cliente]]
+    .filter(([,v])=>v).map(([k,v])=>`<span>${k} <b>${esc(String(v))}</b></span>`).join('');
+  el('pryWrap').innerHTML=`
+    <div class="pry-top">
+      <button id="pryBack" class="pry-btn">‹ PROYECTOS</button>
+      <button id="pryAud" class="pry-btn">AUDITAR ESTE</button>
+    </div>
+    <div class="pry-c pry-det" style="--est:${PRY_COLOR[st]||'#64748b'}">
+      <div class="pry-h"><span class="dot ${PRY_DOT[st]||'off'}"></span>
+        <b>${esc(p.nombre)}</b>
+        <span class="pry-ms">${st.toUpperCase()}${p.salud.ms!=null?' · '+p.salud.ms+' ms':''}</span></div>
+      <div class="pry-q">${esc(p.que_es)}</div>
+      ${p.salud.detalle?`<div class="pry-nota">sonda: ${esc(p.salud.detalle)}</div>`:''}
+      <a class="pry-link" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url)} ↗</a>
+      <div class="pry-sub">NÚMEROS</div>
+      <div class="pry-n">${pryChips(p.numeros)||'<span>sin datos propios</span>'}</div>
+      ${pryTenants(p.numeros)}
+      <div class="pry-sub">DÓNDE VIVE</div>
+      <div class="pry-n">${meta}</div>
+      ${p.notas?`<div class="pry-nota">${esc(p.notas)}</div>`:''}
+    </div>
+    <div id="pryHall" style="margin-top:18px"></div>`;
+  el('pryBack').addEventListener('click',()=>{ PRY_SEL=''; pryLista(); });
+  el('pryAud').addEventListener('click',()=>auditarProyectos(p.id));
+}
+
+async function auditarProyectos(id){
   const h=el('pryHall'), b=el('pryAud');
   /* Verifica credenciales de verdad contra cada proveedor: son decenas de
      segundos. Sin este aviso parece colgado y se clickea de nuevo. */
   b.disabled=true; b.textContent='AUDITANDO…';
   h.innerHTML='<div class="card empty">Verificando credenciales y tokens contra cada proveedor. Tarda.</div>';
   try{
-    const r=await api('/api/proyectos/auditoria');
+    const r=await api('/api/proyectos/auditoria'+(id?'?id='+encodeURIComponent(id):''));
     const hs=r.hallazgos||[];
     if(!hs.length){ h.innerHTML='<div class="card empty">Sin hallazgos. Todo en orden.</div>'; return; }
     const col={alta:'#ef4444',media:'#eab308',baja:'#64748b'};
@@ -2913,7 +2984,7 @@ async function auditarProyectos(){
           <div class="que">${esc(x.que)}</div>
           <div class="pq">${esc(x.por_que)}</div></div>`).join('');
   }catch(e){ h.innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
-  finally{ b.disabled=false; b.textContent='AUDITAR'; }
+  finally{ b.disabled=false; b.textContent=id?'AUDITAR ESTE':'AUDITAR TODO'; }
 }
 
 /* ═══ ORGANIGRAMA (ref video: Operator → Conductor → crews por depto) ═══ */
