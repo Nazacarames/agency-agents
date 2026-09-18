@@ -84,7 +84,13 @@ def normalize_email(s: str) -> str:
 
 
 def normalize_phone(s: str) -> str:
-    """Devuelve el teléfono en formato compacto +54XXXXXXXXXX (solo dígitos tras +54)."""
+    """El teléfono como se DISCA: +54XXXXXXXXXX, con el 9 de celular si venía.
+
+    El 9 se conserva a propósito. `outbound._wa_link` arma `wa.me/{digitos}` con
+    esto, y para un celular argentino wa.me necesita el 9: sin él, el link no abre
+    el chat y falla en silencio. Para comparar dos leads NO se usa esta función
+    sino `identidad_telefono`.
+    """
     if not s:
         return ""
     m = _PHONE_RE.search(s)
@@ -94,6 +100,25 @@ def normalize_phone(s: str) -> str:
     if not digits.startswith("54"):
         return ""
     return "+" + digits
+
+
+def identidad_telefono(s: str) -> str:
+    """El mismo teléfono, sin el 9 de celular: sirve para saber si dos leads son uno.
+
+    En Argentina el mismo número se escribe de las dos formas —+54 9 11 4440-0131 y
+    +54 11 4440-0131— y comparándolos tal cual entraban como leads distintos: medido
+    el 2026-09-18, 25 grupos duplicados y 27 registros de más sobre 536. Eso es
+    contactar dos veces a la misma empresa y contar mal el embudo.
+
+    Sacar el 9 es seguro para comparar: ningún código de área argentino empieza con
+    9, así que un 9 pegado al 54 sólo puede ser el prefijo de móvil. Pero se usa
+    SÓLO para comparar — lo que se guarda y se disca es `normalize_phone`.
+    """
+    p = normalize_phone(s)
+    if not p:
+        return ""
+    resto = p[3:]                                   # después de "+54"
+    return "+54" + (resto[1:] if resto.startswith("9") else resto)
 
 
 def _slug(s: str) -> str:
@@ -164,6 +189,44 @@ def _is_due(next_touch_at: Optional[str], today: str) -> bool:
 
 # ───────────────────────── mutaciones ─────────────────────────
 
+def _mismo_lead(leads: Dict[str, Any], email: str, phone: str,
+                company: str) -> Optional[Dict[str, Any]]:
+    """El lead que YA existe para esta empresa, aunque haya entrado por otra puerta.
+
+    `lead_key` prioriza email > teléfono > empresa, así que una misma empresa que
+    aparece primero con teléfono y después con mail generaba DOS registros: medido
+    el 2026-09-18, 33 grupos y 37 registros de más sobre 536. Zarcam Logística
+    estaba dos veces, una de ellas con una respuesta real adentro.
+
+    Se busca por identidad fuerte (teléfono o mail) y, como último recurso, por
+    nombre de empresa normalizado. El nombre va último a propósito: es el más
+    frágil —«S.A.» contra «SA»— y sólo se usa si no hay nada mejor.
+    """
+    if phone:
+        for l in leads.values():
+            if identidad_telefono(l.get("phone", "")) == identidad_telefono(phone):
+                return l
+    if email:
+        for l in leads.values():
+            if normalize_email(l.get("email", "")) == email:
+                return l
+    c = _nombre_empresa(company)
+    if c:
+        for l in leads.values():
+            if _nombre_empresa(l.get("company", "")) == c:
+                return l
+    return None
+
+
+_SUFIJOS = re.compile(r"\b(s\.?a\.?s?|s\.?r\.?l\.?|srl|sa|sas|ltda|inc|cia)\b")
+
+
+def _nombre_empresa(s: str) -> str:
+    """El nombre sin sufijo societario ni puntuación: «Racer SRL» == «Racer S.R.L.»."""
+    s = _SUFIJOS.sub("", (s or "").lower())
+    return re.sub(r"[^a-z0-9]", "", s)
+
+
 def upsert_lead(
     store: Dict[str, Any],
     *,
@@ -190,8 +253,11 @@ def upsert_lead(
         return None
 
     leads = store.setdefault("leads", {})
-    existing = leads.get(key)
+    existing = leads.get(key) or _mismo_lead(leads, e, p, company)
     if existing is not None:
+        # Puede haberse encontrado por otra identidad (entró por teléfono y ahora
+        # viene con mail): se usa SU key, no la nueva, para no partirlo en dos.
+        key = existing.get("key") or key
         # Refrescar sólo lo estático / completar lo que falte. No tocar state/touches.
         if company and not existing.get("company"):
             existing["company"] = company
@@ -234,6 +300,101 @@ def upsert_lead(
         lead["next_touch_at"] = _add_days(seed_touched_on, FOLLOWUP_OFFSETS_DAYS[0])
     leads[key] = lead
     return key
+
+
+def respondidos_sin_atender(store: Dict[str, Any], dias: int = 1) -> List[Dict[str, Any]]:
+    """Leads que CONTESTARON y a los que nadie tocó desde entonces.
+
+    `mark_replied` corta la secuencia a propósito —a alguien que contestó no se le
+    sigue mandando el automático— pero al cortarla el lead deja de aparecer como
+    «due» y se vuelve invisible. Data Trace Argentina contestó el 2026-09-16 con la
+    secuencia ya agotada y estuvo dos días sin que nadie lo notara, siendo una de
+    las dos únicas respuestas en mes y medio.
+
+    Se considera atendido si hubo un toque DESPUÉS de la respuesta, o si ya avanzó
+    a reunión/propuesta/cerrado.
+    """
+    hoy = datetime.now(timezone.utc)
+    pendientes = []
+    for l in store.get("leads", {}).values():
+        resp = l.get("last_reply_at")
+        if not resp or l.get("state") in ("reunión", "propuesta", "cerrado"):
+            continue
+        ultimo = max([str(t.get("date") or "") for t in (l.get("touches") or [])],
+                     default="")
+        if ultimo and ultimo >= str(resp)[:10]:
+            continue                                   # se lo tocó después: atendido
+        try:
+            espera = (hoy - datetime.fromisoformat(str(resp))).days
+        except ValueError:
+            espera = 0
+        if espera >= dias:
+            pendientes.append({"key": l.get("key"), "empresa": l.get("company"),
+                               "respondio": str(resp)[:10], "dias": espera,
+                               "email": l.get("email"), "phone": l.get("phone")})
+    pendientes.sort(key=lambda x: -x["dias"])
+    return pendientes
+
+
+def _progreso(lead: Dict[str, Any]) -> tuple:
+    """Cuánto avanzó un lead. El que más avanzó es el que sobrevive a una fusión."""
+    return (1 if lead.get("last_reply_at") else 0,
+            {"cerrado": 5, "propuesta": 4, "reunión": 3, "respondió": 2}.get(
+                lead.get("state") or "", 0),
+            len(lead.get("touches") or []),
+            -len(str(lead.get("first_seen") or "9999")))     # el más viejo desempata
+
+
+def fusionar_duplicados(store: Dict[str, Any]) -> Dict[str, Any]:
+    """Junta los leads que son la MISMA empresa entrada por puertas distintas.
+
+    El daño que repara: la misma empresa con dos registros se contacta dos veces
+    —queda mal con el prospecto— y parte su historia, así que la respuesta puede
+    quedar en un registro mientras la secuencia sigue corriendo en el otro. Es lo
+    que pasó con Zarcam Logística.
+
+    Sobrevive el que más avanzó (ver `_progreso`), y nunca se pierde nada: los
+    campos vacíos se completan desde los otros y los toques se unen. Devuelve el
+    detalle de lo fusionado para poder mirarlo antes de guardar.
+    """
+    leads = store.setdefault("leads", {})
+    por_id: Dict[str, List[Dict[str, Any]]] = {}
+    for l in leads.values():
+        ident = (identidad_telefono(l.get("phone", ""))
+                 or normalize_email(l.get("email", ""))
+                 or _nombre_empresa(l.get("company", "")))
+        if ident:
+            por_id.setdefault(ident, []).append(l)
+
+    # Un lead puede caer en dos grupos (teléfono y nombre). Se fusiona una sola vez.
+    ya = set()
+    fusiones = []
+    for ident, grupo in por_id.items():
+        grupo = [l for l in grupo if l.get("key") not in ya]
+        if len(grupo) < 2:
+            continue
+        grupo.sort(key=_progreso, reverse=True)
+        gana, pierden = grupo[0], grupo[1:]
+        for p in pierden:
+            for campo in ("company", "email", "phone", "decisor", "industria", "web"):
+                if p.get(campo) and not gana.get(campo):
+                    gana[campo] = p[campo]
+            gana.setdefault("touches", []).extend(p.get("touches") or [])
+            if p.get("last_reply_at") and not gana.get("last_reply_at"):
+                gana["last_reply_at"] = p["last_reply_at"]
+                gana["state"] = "respondió"
+            ya.add(p.get("key"))
+            leads.pop(p.get("key"), None)
+        gana["touches"].sort(key=lambda t: str(t.get("date") or ""))
+        ya.add(gana.get("key"))
+        fusiones.append({"queda": gana.get("key"), "empresa": gana.get("company"),
+                         "absorbidos": [p.get("key") for p in pierden]})
+
+    log.info("leads_fusionados", grupos=len(fusiones),
+             borrados=sum(len(f["absorbidos"]) for f in fusiones))
+    return {"grupos": len(fusiones),
+            "borrados": sum(len(f["absorbidos"]) for f in fusiones),
+            "detalle": fusiones}
 
 
 def reprogramar_sin_agenda(store: Dict[str, Any], today: Optional[str] = None) -> int:
@@ -366,7 +527,8 @@ def mark_replied(
     if lead is None and p:
         key = "tel:" + p
         lead = leads.get(key) or next(
-            (l for l in leads.values() if normalize_phone(l.get("phone", "")) == p), None
+            (l for l in leads.values()
+             if identidad_telefono(l.get("phone", "")) == identidad_telefono(p)), None
         )
     if lead is None:
         return None

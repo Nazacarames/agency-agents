@@ -1108,6 +1108,33 @@ async def api_pipeline(request: Request):
     return {"counts": ls.summary_counts(store), "leads": leads}
 
 
+@app.post("/api/pipeline/fusionar")
+async def api_fusionar_duplicados(request: Request, aplicar: bool = False):
+    """Junta los leads que son la misma empresa entrada por puertas distintas.
+
+    Con `?aplicar=1` guarda; sin eso devuelve QUÉ haría sin tocar nada. En seco por
+    default a propósito: borra registros, y conviene mirar la lista antes.
+    """
+    _verify_webhook_secret(request)
+    from .integrations import leads_store as ls
+    store = ls.load_store()
+    antes = len(store.get("leads", {}))
+    r = ls.fusionar_duplicados(store)
+    if aplicar:
+        ls.save_store(store)
+    return {**r, "aplicado": aplicar, "leads_antes": antes,
+            "leads_despues": len(store.get("leads", {}))}
+
+
+@app.get("/api/pipeline/esperando")
+async def api_leads_esperando(request: Request, dias: int = 1):
+    """Los que contestaron y nadie tocó desde entonces."""
+    _verify_webhook_secret(request)
+    from .integrations import leads_store as ls
+    pend = ls.respondidos_sin_atender(ls.load_store(), dias=dias)
+    return {"total": len(pend), "leads": pend}
+
+
 @app.put("/api/pipeline/{key}")
 async def api_update_lead(key: str, body: LeadBody, request: Request):
     _verify_webhook_secret(request)

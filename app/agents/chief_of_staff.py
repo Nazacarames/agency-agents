@@ -282,6 +282,22 @@ def _lo_de_hoy() -> str:
         return ""
 
 
+def _respuestas_sin_atender() -> str:
+    """Los leads que contestaron y siguen esperando, en texto para el prompt."""
+    try:
+        from ..integrations import leads_store as ls
+        pend = ls.respondidos_sin_atender(ls.load_store(), dias=1)
+        if not pend:
+            return ""
+        return "\n".join(
+            f"- **{p['empresa'] or p['key']}** — contestó el {p['respondio']}, "
+            f"hace {p['dias']} día(s). Contacto: {p['email'] or p['phone'] or '—'}"
+            for p in pend[:10])
+    except Exception as e:
+        log.warning("cos_respuestas_failed", error=str(e)[:150])
+        return ""
+
+
 def _estado_de_los_proyectos() -> str:
     """Salud y hallazgos de los sistemas que operamos, en texto para el prompt.
 
@@ -575,6 +591,14 @@ class ChiefOfStaffAgent(BaseAgent):
                       "acciones. Un ítem con muchos días o muchas re-apariciones ya demostró "
                       "que la vía por la que iba no funciona: cambiá de vía o decí que lo "
                       "matás, no lo repitas igual.\n")
+        # Quien contestó y nadie le respondió. Va ARRIBA de todo lo demás: en mes y
+        # medio hubo dos respuestas, y una estuvo dos días parada sin que nadie lo
+        # viera porque al cortar la secuencia el lead deja de aparecer como pendiente.
+        esperando = _respuestas_sin_atender()
+        if esperando:
+            extra += ("\n## 🔥 CONTESTARON Y NADIE LES RESPONDIÓ (lo más urgente del "
+                      "brief: una respuesta es lo más caro que produce el sistema)\n"
+                      + esperando + "\n")
         # Los sistemas que operamos. Va con los hallazgos YA detectados en código,
         # no con los números crudos: el Chief prioriza y redacta, no diagnostica.
         # Si el CRM está caído o CLAMEVET dejó de leer el boletín, eso no puede
