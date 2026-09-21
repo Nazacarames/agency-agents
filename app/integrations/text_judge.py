@@ -24,6 +24,18 @@ LEARN_BELOW = 80
 # Debajo de este score NO conviene auto-publicar: se frena y queda para revisión humana.
 HOLD_BELOW = 50
 
+# El juez no conoce la restricción de presupuesto cero: mira una pieza orgánica y
+# concluye que le falta pauta. Grabar ESO como lección le enseña al agente a pedir
+# lo único que ya está contestado que no — y después el pedido reaparece en el
+# backlog `humano`. Entre 2026-08-29 y 2026-09-08 llegaron ocho pedidos de pauta
+# distintos: ésta es una de las canillas. Se descarta la LECCIÓN, no el score: si
+# la pieza es floja por otra cosa, el juez lo dice en otro fix y el freno opera igual.
+_FIX_IMPRACTICABLE = re.compile(
+    r"pauta|presupuesto|invertir en (?:ads|publicidad)|google ads|meta ads|"
+    r"publicidad paga|promoci[oó]n paga|contenido promocionado|\bboost(?:ear)?\b",
+    re.I,
+)
+
 
 def enabled() -> bool:
     from . import vision
@@ -269,9 +281,12 @@ def qa_gate(agent_name: str, kind: str, payload: str,
             return {"line": "", "avg": None, "publish_ok": True}
         avg = res.get("avg", 0)
         fix = (res.get("top_fix") or "").strip()
-        if fix and avg < LEARN_BELOW:
+        impracticable = bool(fix and _FIX_IMPRACTICABLE.search(fix))
+        if fix and avg < LEARN_BELOW and not impracticable:
             from . import memory_store as ms
             ms.record_outcome(agent_name, f"QA de calidad (Gemini) sobre {kind}: {fix}")
+        if impracticable:
+            log.info("text_judge_fix_descartado", agent=agent_name, kind=kind, fix=fix[:160])
         tope = int(hold_below) if hold_below else HOLD_BELOW
         publish_ok = avg >= tope
         # Registrar el score ANTES de armar la línea: si el agente viene fallando
@@ -287,6 +302,9 @@ def qa_gate(agent_name: str, kind: str, payload: str,
             line += (f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {tope}): quedó para tu "
                      f"revisión. Fix sugerido: _{fix}_" if fix else
                      f" · ⛔ **AUTO-PUBLICACIÓN FRENADA** (score < {tope}): revisá antes de publicar.")
+        elif impracticable and avg < LEARN_BELOW:
+            line += (f" · ⚠️ El fix sugerido pide pauta/presupuesto, que está descartado: "
+                     f"**no se guardó como lección**. Literal de Gemini: _{fix}_")
         elif fix and avg < LEARN_BELOW:
             line += f" · Fix aplicado a futuras corridas: _{fix}_"
         else:

@@ -152,7 +152,30 @@ repite otro abierto no acelera nada: lo entierra. Si vas a abrir un ítem `human
 que sea por algo que **sólo** una persona puede hacer (un acceso, una firma, un dato
 que no está en ningún sistema) y que no esté ya pedido.
 
-### 3. Nombrar clientes: sólo CLAMEVET
+### 3. Un ítem `dev` cita código que EXISTE, o no se abre
+Si vas a pedir un cambio de código, nombrá el archivo y la función tal como están
+hoy en el repo. No inventes la API que te gustaría que hubiera.
+
+El 2026-09-21 se revisaron los 46 ítems `dev` abiertos: **los 12 identificadores
+que citaban no existían en `app/**/*.py`** — `run_pipeline()`, `pipeline_used`,
+`clip_kind`, `audio_source`, `receta_presentador_tts`, `experimento_ab_activo`,
+`variante_id`, `tabla_ab`, `reply_por_variante`, `fixes_prohibidas`,
+`copy_reescrito`, `subtitulos_origen`. Cero apariciones, todos. Eran órdenes de
+trabajo contra un sistema imaginario, y una de ellas se repitió cinco veces.
+Once ítems se cerraron sin escribir una línea.
+
+Cómo se escribe uno que sirve:
+- ❌ "en tiktok_creator agregar assert `pipeline_used ∉ {presentador,avatar}` antes
+  de `run_pipeline()`" — ninguno de los dos existe.
+- ✅ "en `app/integrations/text_judge.py::qa_gate` el `top_fix` de Gemini se graba
+  como lección aunque pida pauta paga, que está prohibida" — archivo y función
+  reales, defecto describible.
+
+Si no pudiste mirar el código, escribí el **síntoma** que observaste y dejá el
+diagnóstico abierto. Un síntoma real vale más que una solución contra una API
+inventada.
+
+### 4. Nombrar clientes: sólo CLAMEVET
 CLAMEVET es nombrable públicamente. **Cualquier otro cliente va genérico** ("una
 distribuidora de Córdoba", "una cámara veterinaria") salvo permiso escrito. Esto
 incluye capturas: no publiques pantallas con conversaciones o datos de terceros.
