@@ -28,6 +28,24 @@ STAGES = ["oferta", "reunión", "negociación", "cliente", "descartado"]
 FROZEN_STAGES = {"descartado"}
 DEFAULT_STAGE = "oferta"
 
+# NEGOCIACIONES ABIERTAS: el auto-archivado NO las toca.
+#
+# El 2026-09-21 se encontró a Córdoba Automatizaciones marcado `descartado`: el
+# cliente MÁS avanzado que teníamos, con la prueba corriendo hasta el 7/10 y una
+# propuesta enviada tres días antes. Lo archivó este job.
+#
+# El defecto es el proxy. `auto_archive` mide "frío" por `updated_at`, que sólo
+# cambia cuando ALGUIEN EDITA LA FICHA A MANO — y nadie edita fichas. Mientras
+# tanto el lead tenía 165 conversaciones ese mes en su propio CRM. O sea que
+# medía actividad nuestra en el panel, no actividad del negocio.
+#
+# Arreglarlo por el lado del proxy sería adivinar. La etapa YA dice lo que hace
+# falta saber: si hubo una reunión o hay una negociación abierta, el trato está
+# vivo por definición y archivarlo es apagar el seguimiento justo cuando más
+# importa. `oferta` sí se archiva: ahí es donde se juntan los prospectos fríos
+# que el job vino a limpiar.
+NUNCA_ARCHIVAR = {"reunión", "negociación", "cliente", "descartado"}
+
 _COLS = ["id", "name", "vertical", "country", "contact_name", "contact_phone",
          "contact_email", "stage", "notes",
          "currency", "monthly_fee", "setup_fee", "services", "status", "start_date",
@@ -465,7 +483,7 @@ def auto_archive(days: int = 10) -> Dict[str, Any]:
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     archived = []
     for c in list_clients():
-        if c.get("stage") in ("cliente", "descartado"):
+        if c.get("stage") in NUNCA_ARCHIVAR:
             continue
         # Sólo protege a los que FACTURAN. Antes se salteaba a todo status "activo",
         # y como ese era el default de cualquier prospecto, el job no archivaba nada.
