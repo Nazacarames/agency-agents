@@ -90,16 +90,55 @@ def normalize_phone(s: str) -> str:
     esto, y para un celular argentino wa.me necesita el 9: sin él, el link no abre
     el chat y falla en silencio. Para comparar dos leads NO se usa esta función
     sino `identidad_telefono`.
+
+    ACEPTA EL FORMATO LOCAL, que es como escribe la gente. Antes se exigía `+54`
+    literal y todo lo demás se tiraba EN SILENCIO. Nadie pone el código de país en
+    un formulario: escribe `1153872152`, `11 5387-2152` o `011 15-5387-2152`.
+    Resultado medido el 2026-09-21: **los 3 leads inbound de la web —Sumiagro, CBA
+    y Exequiel— quedaron sin teléfono**, siendo los más valiosos que tuvimos y
+    siendo WhatsApp el canal por el que se los contacta.
+
+    Se asume celular (se agrega el 9) cuando no viene: el formulario pide el
+    WhatsApp, y el 9 es lo que necesita wa.me. Si fuera una línea fija el link no
+    abre, pero el número igual queda guardado y visible, que es lo que importaba.
     """
     if not s:
         return ""
+
+    # 1) Con `+54` explícito: se EXTRAE del texto. Hace falta porque a esta función
+    #    también le llega una fila entera de markdown del informe de leadhunter,
+    #    con otros números al lado (el #, el fit 5/6). Juntar todos los dígitos de
+    #    esa línea daría un teléfono inventado.
     m = _PHONE_RE.search(s)
-    if not m:
+    if m:
+        digits = re.sub(r"[^\d]", "", m.group(0))
+        if digits.startswith("54"):
+            return "+" + digits
+
+    # 2) Formato local: SÓLO si el texto es un teléfono y nada más. El `fullmatch`
+    #    es el que distingue el campo de un formulario de una línea que lo contiene.
+    crudo = s.strip()
+    if not crudo or not re.fullmatch(r"[\d\s\-().+]+", crudo):
         return ""
-    digits = re.sub(r"[^\d]", "", m.group(0))
-    if not digits.startswith("54"):
+    digits = re.sub(r"[^\d]", "", crudo)
+    if not digits:
         return ""
-    return "+" + digits
+
+    # 0 de larga distancia: 011..., 0351...
+    if digits.startswith("0"):
+        digits = digits[1:]
+    # El 15 del celular: 11 15 5387-2152. Se saca sólo si al sacarlo queda un
+    # número de largo válido, para no mutilar uno que tenga un 15 de verdad.
+    for i in (2, 3, 4):
+        if digits[i:i + 2] == "15" and len(digits) - 2 == 10:
+            digits = digits[:i] + digits[i + 2:]
+            break
+
+    if len(digits) == 10:                       # 11 5387-2152 → celular
+        return "+549" + digits
+    if len(digits) == 11 and digits.startswith("9"):
+        return "+54" + digits
+    return ""
 
 
 def identidad_telefono(s: str) -> str:

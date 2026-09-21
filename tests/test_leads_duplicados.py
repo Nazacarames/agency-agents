@@ -14,6 +14,8 @@ Los dos defectos salieron de mirar el pipeline real:
    Argentina contestó el 16/09 y estuvo dos días parado sin que nadie lo viera,
    siendo una de las DOS únicas respuestas en mes y medio.
 """
+import pytest
+
 from app.integrations import leads_store as ls
 
 
@@ -37,8 +39,46 @@ def test_no_se_come_un_9_que_es_del_numero():
 
 
 def test_un_telefono_de_otro_pais_sigue_sin_valer():
+    """Limitación conocida y aceptada: el pipeline es AR-only por ahora."""
     assert ls.normalize_phone("+13055551234") == ""
     assert ls.identidad_telefono("+13055551234") == ""
+
+
+# ── el formato LOCAL, que es como lo escribe la gente (2026-09-21) ──
+
+def test_un_numero_sin_codigo_de_pais_no_se_tira():
+    """Antes se exigía `+54` literal y todo lo demás se descartaba EN SILENCIO.
+    Medido: los 3 leads inbound de la web —Sumiagro, CBA y Exequiel— quedaron sin
+    teléfono, siendo los más valiosos que tuvimos y siendo WhatsApp el canal."""
+    assert ls.normalize_phone("1153872152") == "+5491153872152"
+
+
+@pytest.mark.parametrize("escrito", [
+    "1153872152",           # pelado, como sale del formulario
+    "11 5387-2152",         # con espacio y guion
+    "011 15-5387-2152",     # con el 0 de larga distancia y el 15 de celular
+    "+5491153872152",       # internacional completo
+    "9 11 5387 2152",       # con el 9 pero sin el país
+])
+def test_todas_las_formas_de_escribirlo_son_el_mismo_numero(escrito):
+    """Si no colapsan a la misma identidad, el mismo lead entra varias veces."""
+    assert ls.identidad_telefono(escrito) == "+541153872152"
+
+
+def test_el_link_de_whatsapp_queda_armable():
+    """El punto de todo esto: poder escribirle. wa.me necesita el 9."""
+    from app.agents.outbound import _wa_link
+    assert _wa_link(ls.normalize_phone("1153872152")) == "https://wa.me/5491153872152"
+
+
+def test_no_le_come_un_15_que_es_parte_del_numero():
+    """El 15 se saca sólo si al sacarlo queda un número de largo válido."""
+    assert ls.normalize_phone("1155158888") == "+5491155158888"
+
+
+def test_un_numero_corto_no_se_inventa():
+    assert ls.normalize_phone("1234") == ""
+    assert ls.normalize_phone("hola que tal") == ""
 
 
 # ── no crear el duplicado ──
