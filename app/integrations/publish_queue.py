@@ -30,6 +30,9 @@ MAX_ITEMS = 500          # historial total que se conserva
 PENDING_TTL_DIAS = 14    # una pieza que no salió en dos semanas ya no es noticia
 MAX_STORIES_PER_DAY = 2  # historias diarias (aparte del post/carrusel/reel del feed)
 FEED_KINDS = ("post", "carousel", "reel")
+# Estados que cuentan como "ya ocupó el cupo de hoy". `parcial` entra: salió en al
+# menos una red, y volver a drenar duplicaría la publicación en esa.
+PUBLICADO = ("published", "parcial")
 
 # Tope por CARRIL, no uno solo compartido. El feed drena 1/día y las historias 2/día:
 # con un tope único el feed se lo comía entero (2026-08-07: 27 de feed contra 3
@@ -185,7 +188,7 @@ def published_today_count(store: Optional[Dict[str, Any]] = None) -> int:
     today = _today_art()
     return sum(
         1 for it in store["items"]
-        if it.get("status") == "published"
+        if it.get("status") in PUBLICADO
         and _art_date(it.get("published_at", "")) == today
         and _is_ig_fb(it) and _kind(it) in FEED_KINDS
         and not it.get("recorded")          # record_published no cuenta
@@ -197,7 +200,7 @@ def stories_published_today(store: Optional[Dict[str, Any]] = None) -> int:
     today = _today_art()
     return sum(
         1 for it in store["items"]
-        if it.get("status") == "published"
+        if it.get("status") in PUBLICADO
         and _art_date(it.get("published_at", "")) == today
         and _kind(it) == "story"
     )
@@ -391,10 +394,19 @@ def _publish_item(item: Dict[str, Any]) -> Dict[str, Any]:
         store = load_store()
         for it in store["items"]:
             if it["id"] == item["id"]:
+                it["result"] = res.get("results")
                 if res.get("ok"):
                     it["status"] = "published"
                     it["published_at"] = _now()
-                    it["result"] = res.get("results")
+                elif res.get("parcial"):
+                    # Salió en una red y en otra no. NO es "published": el panel
+                    # lo mostraba así y media publicación se perdía en silencio.
+                    # Queda `published_at` porque ocupó el cupo del día —si no,
+                    # el próximo drenaje publicaría otra encima en la red que sí
+                    # funcionó— y queda escrito cuál falta para reintentar sólo esa.
+                    it["status"] = "parcial"
+                    it["published_at"] = _now()
+                    it["error"] = "no salió en: " + ", ".join(res.get("fallaron") or [])
                 else:
                     it["status"] = "failed"
                     it["error"] = json.dumps(res.get("results") or res, ensure_ascii=False)[:500]
@@ -543,11 +555,29 @@ def delete_item(item_id: str) -> bool:
 
 
 def retry_item(item_id: str) -> bool:
-    """Vuelve un item failed a pending (ej: falló por media faltante ya restaurada)."""
+    """Vuelve un item a pending para que el próximo drenaje lo tome de nuevo.
+
+    Si quedó `parcial`, se reintenta SÓLO en las redes que fallaron: los
+    `targets` se recortan a esas. Reintentarlo entero duplicaría el posteo en la
+    red donde sí salió, que es peor que no reintentarlo.
+    """
     with _LOCK:
         store = load_store()
         for it in store["items"]:
-            if it.get("id") == item_id and it.get("status") == "failed":
+            if it.get("id") != item_id:
+                continue
+            if it.get("status") == "parcial":
+                fallaron = [red for red, r in (it.get("result") or {}).items()
+                            if not (r or {}).get("ok")]
+                if not fallaron:
+                    return False
+                it["targets"] = fallaron
+                it["status"] = "pending"
+                it["published_at"] = None
+                it["error"] = None
+                save_store(store)
+                return True
+            if it.get("status") == "failed":
                 it["status"] = "pending"
                 it["error"] = None
                 save_store(store)

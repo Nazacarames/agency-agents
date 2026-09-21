@@ -781,7 +781,15 @@ def test_el_feed_pasado_de_tope_drena_mas_rapido(tmp_path, monkeypatch):
         enabled = staticmethod(lambda: True)
         publish = staticmethod(lambda *a, **k: {"ok": True, "results": {"instagram": {"ok": True}}})
 
+    # Parchear sys.modules NO alcanza. `drain_one` hace `from . import
+    # social_publish`, y eso resuelve por el ATRIBUTO del paquete antes que por
+    # sys.modules. Mientras nadie más importara el módulo el atributo no existía y
+    # caía a sys.modules, así que el truco funcionaba de casualidad: en cuanto otro
+    # test lo importó, acá volvía el módulo real, `sp.enabled()` daba False y
+    # `drain_one` salía antes de publicar nada. Se parchean los dos.
+    import app.integrations as _pkg
     monkeypatch.setitem(__import__("sys").modules, "app.integrations.social_publish", _FakeSP)
+    monkeypatch.setattr(_pkg, "social_publish", _FakeSP, raising=False)
     monkeypatch.setattr(pq, "_notify_discord", lambda *a, **k: None)
     monkeypatch.setattr(pq, "backfill_permalinks", lambda: {})
 

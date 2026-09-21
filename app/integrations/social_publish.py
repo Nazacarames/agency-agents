@@ -337,8 +337,23 @@ def publish(image: str, caption: str = "", targets: Optional[List[str]] = None,
                 results["facebook"] = publish_facebook(image, caption)
     if not results:
         return {"ok": False, "results": {}, "error": f"sin targets aplicables para kind={kind}"}
-    ok = any(v.get("ok") for v in results.values())
-    log.info("social_publish", ok=ok, kind=kind, results={k: v.get("ok") for k, v in results.items()})
+    # `ok` significa SALIÓ TODO LO QUE SE PIDIÓ, no "salió algo".
+    #
+    # Antes era `any(...)`: con que una red aceptara, el post entero se daba por
+    # bueno. Pasó el 2026-09-21: Facebook lo aceptó, Instagram lo rechazó
+    # ("Only photo or video can be accepted as media type") y el item quedó
+    # marcado `published`. En el panel figuraba publicado cuando media publicación
+    # no había salido, y nadie tenía por qué enterarse.
+    #
+    # Los que preguntan por `ok` —el panel, la cola, los agentes— quieren saber si
+    # el trabajo quedó hecho. `parcial` y `fallaron` dicen qué falta, para poder
+    # reintentar SÓLO esa red y no duplicar en la que ya salió.
+    fallaron = [k for k, v in results.items() if not v.get("ok")]
+    salieron = [k for k, v in results.items() if v.get("ok")]
+    ok = not fallaron
+    parcial = bool(salieron and fallaron)
+    log.info("social_publish", ok=ok, parcial=parcial, kind=kind,
+             fallaron=fallaron, results={k: v.get("ok") for k, v in results.items()})
     # Bitácora única: qué salió publicado y con qué link. Antes esto vivía sólo
     # en publish-queue.json y en Discord, así que "¿qué posteamos esta semana?"
     # no se podía contestar sin abrir dos lugares distintos.
@@ -354,7 +369,8 @@ def publish(image: str, caption: str = "", targets: Optional[List[str]] = None,
                          "error": r.get("error", "")})
     except Exception:
         pass
-    return {"ok": ok, "results": results}
+    return {"ok": ok, "parcial": parcial, "fallaron": fallaron,
+            "salieron": salieron, "results": results}
 
 
 def status() -> Dict[str, Any]:
