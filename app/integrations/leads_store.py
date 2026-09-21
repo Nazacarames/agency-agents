@@ -696,6 +696,12 @@ def update_lead(key: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                   "linkedin", "li_headline", "li_note", "li_dm", "li_state", "li_at"):
             if k in fields and fields[k] is not None:
                 lead[k] = fields[k]
+        # El teléfono editado a mano pasa por el normalizador igual que el que
+        # entra por el formulario. Sin esto se guardaba crudo —`1153872152`— y
+        # `_wa_link` armaba `wa.me/1153872152`, que no abre ningún chat. Si no se
+        # puede normalizar se conserva lo tipeado: peor es perderlo.
+        if fields.get("phone"):
+            lead["phone"] = normalize_phone(fields["phone"]) or fields["phone"]
         save_store(store)
         return lead_view(lead)
 

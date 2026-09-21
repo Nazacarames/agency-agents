@@ -81,6 +81,31 @@ def test_un_numero_corto_no_se_inventa():
     assert ls.normalize_phone("hola que tal") == ""
 
 
+def test_el_telefono_cargado_a_mano_tambien_se_normaliza(tmp_path, monkeypatch):
+    """Pasó de verdad: se cargó el de Exequiel por el panel, quedó crudo
+    (`1153872152`) y el link salió `wa.me/1153872152`, que no abre nada."""
+    monkeypatch.setattr(ls, "_STORE_FILE", tmp_path / "leads.json")
+    monkeypatch.setattr(ls, "_DATA_DIR", tmp_path)
+    store = ls._empty_store()
+    k = ls.upsert_lead(store, company="Exequiel", email="exe@hotmail.com")
+    ls.save_store(store)
+
+    ls.update_lead(k, {"phone": "1153872152"})
+    assert ls.load_store()["leads"][k]["phone"] == "+5491153872152"
+
+
+def test_si_no_se_puede_normalizar_no_se_pierde(tmp_path, monkeypatch):
+    """Peor que un número raro es un número que desaparece."""
+    monkeypatch.setattr(ls, "_STORE_FILE", tmp_path / "leads.json")
+    monkeypatch.setattr(ls, "_DATA_DIR", tmp_path)
+    store = ls._empty_store()
+    k = ls.upsert_lead(store, company="Raro", email="raro@x.com")
+    ls.save_store(store)
+
+    ls.update_lead(k, {"phone": "+1 305 555 1234"})
+    assert ls.load_store()["leads"][k]["phone"] == "+1 305 555 1234"
+
+
 # ── no crear el duplicado ──
 
 def _store():
