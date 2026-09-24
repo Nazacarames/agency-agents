@@ -43,7 +43,7 @@ log = get_logger("backlog")
 
 _FILE = Path(__file__).resolve().parent.parent.parent / "data" / "backlog.json"
 
-AREAS = ("web", "dev", "humano")
+AREAS = ("web", "crm-web", "dev", "humano")
 # Dos redacciones del mismo hallazgo tienen que ser UN ítem: el LLM escribe "H1
 # del home vacío" un día y "el home no tiene H1" al siguiente. Sin esto el store
 # se llena de casi-duplicados y la edad — que es todo el valor — se resetea sola.

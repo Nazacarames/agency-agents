@@ -17,7 +17,30 @@ SEO_INSTRUCTIONS = """
 Armar el plan SEO semanal de Automiq para captar tráfico orgánico calificado
 de PyMEs argentinas buscando automatizar sus procesos.
 
-## Foco por vertical
+## Los DOS sitios (los dos entran en el plan, siempre)
+- **automiq.agency** — la agencia. Vende servicio a medida, ticket alto, ciclo
+  largo. Busca al que quiere "que alguien me automatice esto".
+- **crm.automiq.agency** — el CRM. Es producto SaaS con suscripción mensual:
+  otra intención de búsqueda, otro comprador y otra competencia (los que ya
+  buscan "CRM" por nombre). Tiene su propia landing comercial en la raíz.
+
+No son el mismo sitio con distinta ropa: si les das las mismas keywords compiten
+entre ellos por la misma consulta y pierden los dos. Repartí:
+- Consultas de **servicio/agencia** ("automatizar", "agente de IA a medida",
+  "agencia") → automiq.agency.
+- Consultas de **producto/herramienta** ("CRM", "software de gestión de
+  clientes", "CRM con WhatsApp", comparativas y alternativas) → crm.automiq.agency.
+- Enlazá uno al otro con anchor descriptivo: la landing del CRM es la prueba
+  viva de lo que hace la agencia, y la agencia es el soporte que el SaaS no tiene.
+
+### CRM (producto, para crm.automiq.agency)
+- "CRM para PyMEs Argentina"
+- "CRM con WhatsApp integrado"
+- "CRM barato para pequeña empresa"
+- "alternativa a [CRM conocido] en español"
+- "CRM que responde WhatsApp solo"
+
+## Foco por vertical (para la landing de la AGENCIA)
 Keywords long-tail en español argentino, priorizando el vertical **distribución**:
 
 ### Distribución (PRIORIDAD)
@@ -44,9 +67,13 @@ Keywords long-tail en español argentino, priorizando el vertical **distribució
 
 ## Output esperado (COMPLETO, sin recortar)
 1. **Top 10 keywords a atacar esta semana** (con volumen estimado [BENCHMARK],
-   dificultad baja/media/alta, intención: comercial/informacional)
+   dificultad baja/media/alta, intención: comercial/informacional). **Cada
+   keyword dice a qué sitio va**: `[agencia]` o `[crm]`. Al menos 3 de las 10
+   tienen que ser del CRM.
 2. **5 ideas de artículos/blog posts** (títulos + keyword target + outline 3-5 puntos)
-3. **Optimizaciones on-page** (cambios concretos a la landing)
+3. **Optimizaciones on-page** (cambios concretos a la landing). Separadas en dos
+   listas, una por sitio, porque las ejecuta gente distinta: las de la agencia
+   las hace web_optimizer; las del CRM van al backlog como `crm-web`.
 4. **Link building** (3-5 tácticas ejecutables esta semana)
 5. **Quick wins técnicos** (errores 404, sitemap, schema, velocidad, mobile)
 6. **Empresa → Oferta → Tecnología** (NUEVO 2026-06-12, de Visual Project V2):
@@ -68,11 +95,12 @@ Keywords long-tail en español argentino, priorizando el vertical **distribució
 
 
 def _hechos_landing() -> str:
-    """Datos medidos del HTML servido: que el análisis arranque de hechos y no de
-    impresiones (el 'H1 vacío' se reportó 22 días seguidos y era falso)."""
+    """Datos medidos del HTML servido de los DOS sitios: que el análisis arranque
+    de hechos y no de impresiones (el 'H1 vacío' se reportó 22 días seguidos y
+    era falso)."""
     try:
         from ..integrations import landing_facts
-        return landing_facts.bloque()
+        return landing_facts.bloque_todos()
     except Exception:
         return ""
 
@@ -94,10 +122,13 @@ class SeoSpecialistAgent(BaseAgent):
     def build_user_message(self, ctx: AgentContext) -> str:
         return (
             _hechos_landing() +
-            "Generá el plan SEO completo de esta semana para "
-            "automiq.agency (landing oficial de Automiq). "
-            "Priorizá el vertical DISTRIBUCIÓN pero incluí también manufacturing, "
-            "logística e inmobiliarias. "
+            "Generá el plan SEO completo de esta semana para los DOS sitios: "
+            "automiq.agency (la agencia) y crm.automiq.agency (el CRM, producto "
+            "SaaS con su propia landing). El del CRM no es un extra al final: "
+            "reparte las keywords entre los dos según la intención, como dice el "
+            "system prompt, y marcá cada una con [agencia] o [crm]. "
+            "En la agencia priorizá el vertical DISTRIBUCIÓN pero incluí también "
+            "manufacturing, logística e inmobiliarias. "
             "Devolvé el plan COMPLETO (los 6 puntos del output esperado) en una "
             "sola corrida. NO devuelvas 'primero dejame chequear data/' ni el plan "
             "parcial. El equipo operativo necesita el plan entero para ejecutar "

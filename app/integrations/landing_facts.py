@@ -26,8 +26,20 @@ from ..log import get_logger
 log = get_logger("landing_facts")
 
 URL_DEFECTO = "https://automiq.agency"
+
+# Los dos sitios que hay que hacer crecer. El CRM tiene su propia landing
+# comercial en la raíz (la de "Ingresar / Probar gratis") y vende otra cosa que
+# la agencia: producto SaaS, no servicio a medida. Si las auditorías miran sólo
+# automiq.agency, el producto que cobramos por mes no lo optimiza nadie.
+SITIOS = (
+    ("https://automiq.agency", "landing de la agencia (servicio a medida)"),
+    ("https://crm.automiq.agency", "landing del CRM (producto SaaS, suscripción)"),
+)
+
 _TTL = 3600.0          # las 3 auditorías corren el mismo día: una sola bajada
-_CACHE: Dict[str, Any] = {"t": 0.0, "url": "", "datos": {}}
+# Un slot por sitio: con una sola ranura, medir los dos se pisaba a sí mismo y
+# cada llamada volvía a bajar el HTML.
+_CACHE: Dict[str, Dict[str, Any]] = {}
 
 
 def _texto(html: str) -> str:
@@ -72,27 +84,29 @@ def medir(url: str = URL_DEFECTO) -> Dict[str, Any]:
 
 def cached(url: str = URL_DEFECTO) -> Dict[str, Any]:
     now = time.time()
-    if _CACHE["datos"] and _CACHE["url"] == url and now - float(_CACHE["t"]) < _TTL:
-        return dict(_CACHE["datos"])
+    hit = _CACHE.get(url)
+    if hit and now - float(hit["t"]) < _TTL:
+        return dict(hit["datos"])
     datos = medir(url)
     if datos.get("ok"):
-        _CACHE.update({"t": now, "url": url, "datos": datos})
+        _CACHE[url] = {"t": now, "datos": datos}
     return datos
 
 
-def bloque(url: str = URL_DEFECTO) -> str:
+def bloque(url: str = URL_DEFECTO, etiqueta: str = "") -> str:
     """Los hechos medidos, para inyectar antes de que el agente audite."""
     d = cached(url)
+    nombre = "LA LANDING" + (f" — {etiqueta}" if etiqueta else "")
     if not d.get("ok"):
         # Sin medición no afirmamos nada: es justo el vacío donde antes se colaba
         # el hallazgo inventado.
-        return ("\n\n=== HECHOS DE LA LANDING ===\n"
+        return (f"\n\n=== HECHOS DE {nombre} ===\n"
                 f"⚠️ No pude bajar {url} ({d.get('error') or 'sin detalle'}). "
                 "NO afirmes nada sobre el HTML del sitio en este reporte: decí que no "
                 "se pudo verificar.\n=== fin hechos ===\n")
     h1 = d["h1"]
     return (
-        "\n\n=== HECHOS DE LA LANDING (medidos sobre el HTML servido — NO los contradigas) ===\n"
+        f"\n\n=== HECHOS DE {nombre} (medidos sobre el HTML servido — NO los contradigas) ===\n"
         f"URL: {d['url']} · {d['bytes']} bytes\n"
         f"H1 ({d['h1_cantidad']} en la página): "
         + (f"\"{h1}\" ({len(h1)} caracteres)" if h1 else "**NO HAY H1**") + "\n"
@@ -106,3 +120,8 @@ def bloque(url: str = URL_DEFECTO) -> str:
         "equivocado sos vos: revisá antes de escribirlo. Un hallazgo falso se lleva una "
         "de las tres acciones del día del dueño (el 'H1 vacío' se reportó 22 días "
         "seguidos y el H1 nunca estuvo vacío).\n=== fin hechos ===\n")
+
+
+def bloque_todos() -> str:
+    """Los dos sitios de una, para el que planifica crecimiento sobre ambos."""
+    return "".join(bloque(url, etiqueta) for url, etiqueta in SITIOS)

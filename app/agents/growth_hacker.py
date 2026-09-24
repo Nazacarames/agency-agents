@@ -67,11 +67,12 @@ concretas y ejecutables esta semana.
 
 
 def _hechos_landing() -> str:
-    """Datos medidos del HTML servido: que el análisis arranque de hechos y no de
-    impresiones (el 'H1 vacío' se reportó 22 días seguidos y era falso)."""
+    """Datos medidos del HTML servido de los DOS sitios (agencia y CRM): que el
+    análisis arranque de hechos y no de impresiones (el 'H1 vacío' se reportó 22
+    días seguidos y era falso)."""
     try:
         from ..integrations import landing_facts
-        return landing_facts.bloque()
+        return landing_facts.bloque_todos()
     except Exception:
         return ""
 
@@ -97,6 +98,10 @@ class GrowthHackerAgent(BaseAgent):
             "Corré el análisis de growth de hoy. "
             "Revisá data/ por reportes previos, content-output anteriores y secuencias outbound "
             "para tener contexto histórico. "
+            "Son DOS embudos distintos y los dos entran: la agencia (automiq.agency, "
+            "servicio a medida, ticket alto) y el CRM (crm.automiq.agency, SaaS por "
+            "suscripción, donde el cuello es que prueben y se queden). De los 3 quick "
+            "wins, al menos 1 tiene que ser del CRM. "
             "Devolvé el reporte completo siguiendo la estructura indicada."
             + official_site_directive()
         )

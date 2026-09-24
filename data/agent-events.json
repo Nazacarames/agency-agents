@@ -1,0 +1,2331 @@
+[
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 1,
+    "ts": "2026-09-21T17:53:42.246841+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 2,
+    "ts": "2026-09-21T17:53:42.247467+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 3,
+    "ts": "2026-09-21T17:53:42.248987+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 4,
+    "ts": "2026-09-21T17:53:42.249636+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 5,
+    "ts": "2026-09-21T17:53:42.251269+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 6,
+    "ts": "2026-09-21T17:53:42.252063+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 7,
+    "ts": "2026-09-21T17:53:42.253441+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 8,
+    "ts": "2026-09-21T17:54:04.043090+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 9,
+    "ts": "2026-09-21T17:54:04.043833+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 10,
+    "ts": "2026-09-21T17:54:04.045296+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 11,
+    "ts": "2026-09-21T17:54:04.046005+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 12,
+    "ts": "2026-09-21T17:54:04.047320+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 13,
+    "ts": "2026-09-21T17:54:04.048007+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 14,
+    "ts": "2026-09-21T17:54:04.049316+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 15,
+    "ts": "2026-09-21T17:54:04.052656+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 16,
+    "ts": "2026-09-21T17:54:04.053349+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 17,
+    "ts": "2026-09-21T17:54:04.097888+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 18,
+    "ts": "2026-09-21T17:54:04.098606+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 19,
+    "ts": "2026-09-21T17:54:04.101526+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 20,
+    "ts": "2026-09-21T17:54:04.102225+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 21,
+    "ts": "2026-09-21T17:54:16.463441+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 22,
+    "ts": "2026-09-21T17:54:16.464221+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 23,
+    "ts": "2026-09-21T17:54:16.465553+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 24,
+    "ts": "2026-09-21T17:54:16.466280+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 25,
+    "ts": "2026-09-21T17:54:16.467611+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 26,
+    "ts": "2026-09-21T17:54:16.468339+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 27,
+    "ts": "2026-09-21T17:54:16.469695+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 28,
+    "ts": "2026-09-21T17:54:16.472177+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 29,
+    "ts": "2026-09-21T17:54:16.472902+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 30,
+    "ts": "2026-09-21T17:54:16.475834+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 31,
+    "ts": "2026-09-21T17:54:16.476563+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 32,
+    "ts": "2026-09-21T17:54:16.479527+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 33,
+    "ts": "2026-09-21T17:54:16.480276+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 34,
+    "ts": "2026-09-21T17:55:25.214907+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 35,
+    "ts": "2026-09-21T17:55:25.215670+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 36,
+    "ts": "2026-09-21T17:55:25.217041+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 37,
+    "ts": "2026-09-21T17:55:25.217783+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 38,
+    "ts": "2026-09-21T17:55:25.219140+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 39,
+    "ts": "2026-09-21T17:55:25.219885+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 40,
+    "ts": "2026-09-21T17:55:25.221262+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 41,
+    "ts": "2026-09-21T17:55:25.223595+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 42,
+    "ts": "2026-09-21T17:55:25.224354+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 43,
+    "ts": "2026-09-21T17:55:25.227253+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 44,
+    "ts": "2026-09-21T17:55:25.228031+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 45,
+    "ts": "2026-09-21T17:55:25.230976+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 46,
+    "ts": "2026-09-21T17:55:25.231754+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 47,
+    "ts": "2026-09-21T17:55:30.309210+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 48,
+    "ts": "2026-09-21T17:55:30.310090+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 49,
+    "ts": "2026-09-21T17:55:30.311530+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 50,
+    "ts": "2026-09-21T17:55:30.312363+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 51,
+    "ts": "2026-09-21T17:55:30.313822+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 52,
+    "ts": "2026-09-21T17:55:30.314655+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 53,
+    "ts": "2026-09-21T17:55:30.316092+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 54,
+    "ts": "2026-09-21T17:55:30.318650+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 55,
+    "ts": "2026-09-21T17:55:30.319511+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 56,
+    "ts": "2026-09-21T17:55:30.322915+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 57,
+    "ts": "2026-09-21T17:55:30.323765+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 58,
+    "ts": "2026-09-21T17:55:30.326909+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 59,
+    "ts": "2026-09-21T17:55:30.327753+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 60,
+    "ts": "2026-09-21T17:56:09.916674+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 61,
+    "ts": "2026-09-21T17:56:09.917588+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 62,
+    "ts": "2026-09-21T17:56:09.919065+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 63,
+    "ts": "2026-09-21T17:56:09.919929+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 64,
+    "ts": "2026-09-21T17:56:09.921395+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 65,
+    "ts": "2026-09-21T17:56:09.922246+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 66,
+    "ts": "2026-09-21T17:56:09.923704+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 67,
+    "ts": "2026-09-21T17:56:09.926298+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 68,
+    "ts": "2026-09-21T17:56:09.927160+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 69,
+    "ts": "2026-09-21T17:56:09.930218+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 70,
+    "ts": "2026-09-21T17:56:09.931102+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 71,
+    "ts": "2026-09-21T17:56:09.934164+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 72,
+    "ts": "2026-09-21T17:56:09.935040+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 73,
+    "ts": "2026-09-21T19:44:26.315962+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 74,
+    "ts": "2026-09-21T19:44:26.317068+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 75,
+    "ts": "2026-09-21T19:44:26.318822+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 76,
+    "ts": "2026-09-21T19:44:26.319801+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 77,
+    "ts": "2026-09-21T19:44:26.321391+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 78,
+    "ts": "2026-09-21T19:44:26.322336+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 79,
+    "ts": "2026-09-21T19:44:26.323873+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 80,
+    "ts": "2026-09-21T19:44:26.326546+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 81,
+    "ts": "2026-09-21T19:44:26.327491+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 82,
+    "ts": "2026-09-21T19:44:26.330750+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 83,
+    "ts": "2026-09-21T19:44:26.331676+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 84,
+    "ts": "2026-09-21T19:44:26.335358+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 85,
+    "ts": "2026-09-21T19:44:26.336307+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 86,
+    "ts": "2026-09-21T20:35:38.414374+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 87,
+    "ts": "2026-09-21T20:35:38.415712+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 88,
+    "ts": "2026-09-21T20:35:38.417428+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 89,
+    "ts": "2026-09-21T20:35:38.418631+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 90,
+    "ts": "2026-09-21T20:35:38.420496+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 91,
+    "ts": "2026-09-21T20:35:38.421708+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 92,
+    "ts": "2026-09-21T20:35:38.423430+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 93,
+    "ts": "2026-09-21T20:35:38.427729+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 94,
+    "ts": "2026-09-21T20:35:38.428986+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 95,
+    "ts": "2026-09-21T20:35:38.432866+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 96,
+    "ts": "2026-09-21T20:35:38.433924+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 97,
+    "ts": "2026-09-21T20:35:38.437785+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 98,
+    "ts": "2026-09-21T20:35:38.439077+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 99,
+    "ts": "2026-09-21T20:36:06.927137+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 100,
+    "ts": "2026-09-21T20:36:06.928348+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 101,
+    "ts": "2026-09-21T20:36:06.931111+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 102,
+    "ts": "2026-09-21T20:36:06.932357+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 103,
+    "ts": "2026-09-21T20:36:06.934601+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 104,
+    "ts": "2026-09-21T20:36:06.935855+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 105,
+    "ts": "2026-09-21T20:36:06.938068+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 106,
+    "ts": "2026-09-21T20:36:06.941753+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 107,
+    "ts": "2026-09-21T20:36:06.942912+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 108,
+    "ts": "2026-09-21T20:36:06.946943+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 109,
+    "ts": "2026-09-21T20:36:06.948098+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 110,
+    "ts": "2026-09-21T20:36:06.952483+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 111,
+    "ts": "2026-09-21T20:36:06.953877+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 112,
+    "ts": "2026-09-21T20:37:22.615989+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 113,
+    "ts": "2026-09-21T20:37:22.617435+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 114,
+    "ts": "2026-09-21T20:37:22.619385+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 115,
+    "ts": "2026-09-21T20:37:22.620734+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 116,
+    "ts": "2026-09-21T20:37:22.622653+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 117,
+    "ts": "2026-09-21T20:37:22.623781+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 118,
+    "ts": "2026-09-21T20:37:22.625711+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 119,
+    "ts": "2026-09-21T20:37:22.629216+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 120,
+    "ts": "2026-09-21T20:37:22.630441+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 121,
+    "ts": "2026-09-21T20:37:22.634612+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 122,
+    "ts": "2026-09-21T20:37:22.635924+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 123,
+    "ts": "2026-09-21T20:37:22.639831+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 124,
+    "ts": "2026-09-21T20:37:22.641171+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 125,
+    "ts": "2026-09-24T19:57:32.170610+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 126,
+    "ts": "2026-09-24T19:57:32.172042+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 127,
+    "ts": "2026-09-24T19:57:32.173811+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 128,
+    "ts": "2026-09-24T19:57:32.174955+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 129,
+    "ts": "2026-09-24T19:57:32.176758+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 130,
+    "ts": "2026-09-24T19:57:32.178180+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en instagram",
+    "destino": "instagram",
+    "ref": "ig1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 131,
+    "ts": "2026-09-24T19:57:32.180070+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 132,
+    "ts": "2026-09-24T19:57:32.218945+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 133,
+    "ts": "2026-09-24T19:57:32.220178+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 134,
+    "ts": "2026-09-24T19:57:32.224472+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post publicado en facebook",
+    "destino": "facebook",
+    "ref": "fb1",
+    "ok": true,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": ""
+    },
+    "id": 135,
+    "ts": "2026-09-24T19:57:32.225825+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en instagram",
+    "destino": "instagram",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "media type"
+    },
+    "id": 136,
+    "ts": "2026-09-24T19:57:32.230189+00:00"
+  },
+  {
+    "tipo": "post",
+    "agente": "",
+    "run_id": "",
+    "resumen": "post NO se publicó en facebook",
+    "destino": "facebook",
+    "ref": "",
+    "ok": false,
+    "estado": "hecho",
+    "detalle": {
+      "kind": "post",
+      "caption": "hola",
+      "error": "boom"
+    },
+    "id": 137,
+    "ts": "2026-09-24T19:57:32.231318+00:00"
+  }
+]
