@@ -53,7 +53,13 @@ _cache: Dict[str, Any] = {"cuando": 0.0, "datos": None}
 # consola (no hay API ni comando de gcloud para eso) y Google crea la tabla sola,
 # con el id de la cuenta y los guiones cambiados por guiones bajos. Hasta que
 # aterrice la primera tanda —tarda horas— la tabla NO existe, y eso no es un error.
-BQ_PROYECTO = "project-aa6a207a-826d-45a2-a63"
+#
+# Va en `crm-automiq` y no en el proyecto de los agentes por dos razones que se
+# juntan: la consola sólo deja elegir proyectos de la organización 854771262506, y
+# el de los agentes está en OTRA (549045205685). Tampoco va en `clamevet`: el
+# export trae la facturación de los cuatro proyectos —números nuestros— y ese es
+# el proyecto de un cliente.
+BQ_PROYECTO = "crm-automiq"
 BQ_DATASET = "facturacion_google"
 _gasto_lock = threading.Lock()
 _gasto_cache: Dict[str, Any] = {"cuando": 0.0, "datos": None}
@@ -80,6 +86,23 @@ def _headers(info: Dict[str, Any]) -> Dict[str, str]:
     # que se lee igual que un problema de permisos y manda a buscar donde no es.
     return {"Authorization": "Bearer %s" % creds.token,
             "x-goog-user-project": info.get("project_id") or info.get("quota_project_id", "")}
+
+
+def _bq_headers() -> Dict[str, str]:
+    """Credencial del export: OTRA cuenta de servicio, de sólo lectura.
+
+    No se puede reusar la de arriba: vive en otra organización y la política de la
+    org de los proyectos la rechaza como principal. El JSON llega en base64 porque
+    su `-----BEGIN PRIVATE KEY-----` rompe el parser del CLI de Railway; se acepta
+    crudo igual, como hace `facturacion._pem` con el certificado de ARCA.
+    """
+    import base64
+    crudo = (get_settings().google_billing_sa_b64 or "").strip()
+    if not crudo:
+        raise RuntimeError("sin GOOGLE_BILLING_SA_B64")
+    if not crudo.lstrip().startswith("{"):
+        crudo = base64.b64decode(crudo).decode("utf-8")
+    return _headers(json.loads(crudo))
 
 
 def _presupuesto(b: Dict[str, Any]) -> Dict[str, Any]:
@@ -176,8 +199,7 @@ def gasto_mes(cada: int = CACHE_SEG) -> Dict[str, Any]:
     vacio = {"hay_datos": False, "total": None, "moneda": "", "por_proyecto": [],
              "detalle": ""}
     try:
-        info = _sa_info()
-        h = _headers(info)
+        h = _bq_headers()
         r = requests.post(
             "https://bigquery.googleapis.com/bigquery/v2/projects/%s/queries" % BQ_PROYECTO,
             headers=h, timeout=TIMEOUT,

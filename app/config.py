@@ -264,6 +264,15 @@ class Settings(BaseSettings):
     # image-to-video: anima la foto de Nazareno → clip 9:16 ~8s.
     # GOOGLE_SERVICE_ACCOUNT_JSON = el JSON completo de la SA (rol Vertex AI User).
     google_service_account_json: str = ""
+    # Credencial APARTE, sólo-lectura, para el export de facturación en BigQuery.
+    # Va separada porque la de arriba vive en OTRA organización (549045205685) y la
+    # política `iam.allowedPolicyMemberDomains` de la org de los proyectos
+    # (854771262506) no la acepta como principal: no es un permiso que falte, es
+    # que no puede entrar. Esta es `panel-facturacion@crm-automiq`, adentro de esa
+    # org, con bigquery.jobUser + dataViewer y nada más.
+    # Se guarda en BASE64 porque el `-----BEGIN PRIVATE KEY-----` del JSON hace que
+    # el CLI de Railway se coma el valor ("unrecognized subcommand 'PRIVATE'").
+    google_billing_sa_b64: str = ""
     vertex_project: str = ""          # default = project_id del JSON de la SA
     vertex_location: str = "us-central1"
     # Search Console para el web_optimizer (SEO/GEO con datos reales). Usa la MISMA

@@ -234,6 +234,7 @@ def _cuenta_lista(monkeypatch):
     monkeypatch.setattr(cuenta_google, "_gasto_cache", {"cuando": 0.0, "datos": None})
     monkeypatch.setattr(cuenta_google, "_sa_info", lambda: {"project_id": "p"})
     monkeypatch.setattr(cuenta_google, "_headers", lambda info: {})
+    monkeypatch.setattr(cuenta_google, "_bq_headers", lambda: {})
     return cuenta_google
 
 
@@ -277,6 +278,34 @@ def test_la_tabla_se_nombra_como_la_nombra_google(monkeypatch):
     no existe y el panel diría «sin datos» para siempre."""
     cg = _cuenta_lista(monkeypatch)
     assert cg._tabla().endswith(".gcp_billing_export_v1_0174EE_6A84D5_404B1C")
+
+
+def test_la_credencial_del_export_acepta_base64_y_crudo(monkeypatch):
+    """Va en base64 porque el `-----BEGIN PRIVATE KEY-----` le rompe el parser al
+    CLI de Railway, pero pegar el JSON crudo tiene que seguir funcionando."""
+    import base64
+    from app.integrations import cuenta_google as cg
+    vistos = []
+    monkeypatch.setattr(cg, "_headers", lambda info: vistos.append(info) or {})
+    crudo = '{"client_email": "x@y.iam.gserviceaccount.com", "project_id": "crm-automiq"}'
+
+    for valor in (base64.b64encode(crudo.encode()).decode(), crudo):
+        monkeypatch.setattr(cg, "get_settings",
+                            lambda v=valor: type("S", (), {"google_billing_sa_b64": v})())
+        cg._bq_headers()
+
+    assert len(vistos) == 2
+    assert all(i["project_id"] == "crm-automiq" for i in vistos)
+
+
+def test_sin_credencial_del_export_no_levanta(monkeypatch):
+    from app.integrations import cuenta_google as cg
+    monkeypatch.setattr(cg, "_gasto_cache", {"cuando": 0.0, "datos": None})
+    monkeypatch.setattr(cg, "get_settings",
+                        lambda: type("S", (), {"google_billing_sa_b64": ""})())
+    g = cg.gasto_mes()
+    assert g["hay_datos"] is False
+    assert "GOOGLE_BILLING_SA_B64" in g["detalle"]
 
 
 def test_el_modulo_de_arca_sigue_siendo_el_de_arca():
