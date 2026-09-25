@@ -186,6 +186,14 @@ def _resumen_propio() -> Dict[str, Any]:
         datos["clips_en_banco"] = video_bank.resumen().get("por_estado", {}).get("listo", 0)
     except Exception:
         pass
+    try:
+        # La facturación de Google es de la CUENTA, no de un proyecto: los cuatro
+        # proyectos cuelgan de la misma. Por eso se reporta acá una sola vez y no
+        # en el resumen de cada plataforma.
+        from . import facturacion
+        datos.update(facturacion.resumen())
+    except Exception:
+        pass
     return datos
 
 
@@ -324,6 +332,32 @@ def _auditar_agentes(n: Dict[str, Any], credenciales_en_vivo: bool = True) -> Li
     return h
 
 
+def _auditar_facturacion(n: Dict[str, Any]) -> List[Dict[str, str]]:
+    """La cuenta de Google, que es UNA para los cuatro proyectos.
+
+    El 2026-09-24 Google cortó Vertex por una factura impaga y se llevó puesto al
+    asistente de un cliente media mañana. No había un solo presupuesto: nada podía
+    avisar. El 2026-07-08 había pasado lo mismo con la cuenta CERRADA, y entonces
+    los proyectos seguían figurando con `billingEnabled: true` — por eso se mira
+    `open` de la cuenta y no ese flag.
+    """
+    h = []
+    if n.get("facturacion_legible") is False:
+        h.append(_hallazgo("agentes", MEDIA, "No se puede leer la facturación de Google",
+                           (n.get("facturacion_detalle") or "")[:160] or
+                           "Se perdió el permiso o se apagó la API. Mientras tanto, "
+                           "nadie está mirando la cuenta."))
+    if n.get("cuenta_abierta") is False:
+        h.append(_hallazgo("agentes", ALTA, "La cuenta de facturación está CERRADA",
+                           "Vertex rechaza todo con 403 aunque los proyectos figuren "
+                           "con facturación habilitada. Pasó el 2026-07-08."))
+    if n.get("facturacion_legible") and n.get("presupuestos") == 0:
+        h.append(_hallazgo("agentes", ALTA, "La cuenta de Google no tiene presupuesto",
+                           "Sin presupuesto no hay alerta de gasto: el corte por "
+                           "factura impaga del 2026-09-24 no lo avisó nadie."))
+    return h
+
+
 _AUDITORES = {"clamevet": _auditar_clamevet, "crm": _auditar_crm,
               "agentes": _auditar_agentes}
 
@@ -363,6 +397,8 @@ def auditar(pid: Optional[str] = None) -> Dict[str, Any]:
         auditor = _AUDITORES.get(i)
         if auditor and numeros:
             hallazgos.extend(auditor(numeros))
+        if i == "agentes" and numeros:
+            hallazgos.extend(_auditar_facturacion(numeros))
 
     orden = {ALTA: 0, MEDIA: 1, BAJA: 2}
     hallazgos.sort(key=lambda x: orden.get(x["severidad"], 9))

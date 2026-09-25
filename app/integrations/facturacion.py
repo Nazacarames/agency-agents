@@ -1,174 +1,144 @@
 """
-Facturación electrónica ARCA (ex AFIP) vía AfipSDK — para el panel de la agencia.
+facturacion — el estado de la cuenta de Google Cloud, para que el panel lo sepa
+antes que el cliente.
 
-Emite Factura C (monotributo) a los clientes y guarda cada comprobante en
-data/invoices.json. Config en app.config.Settings (arca_*). AfipSDK
-(https://app.afipsdk.com) resuelve WSAA + WSFEv1: se le pasa CUIT + access_token
-y devuelve el CAE; el certificado (producción) vive en el dashboard de AfipSDK.
+Existe por el 2026-09-24: Google cortó Vertex por una factura impaga
+(`403 "Lightning dunning decision is deny"`), el asistente de CLAMEVET quedó mudo
+toda la mañana, y nos enteramos porque lo dijo el cliente. Al levantar la alfombra,
+la cuenta **no tenía un solo presupuesto configurado**: no había nada que pudiera
+avisar. Ya había pasado una vez, el 2026-07-08.
 
-Sin token/cuit -> is_configured() False y emit_invoice() devuelve status 'skipped'.
+Dos señales, y cada una agarra un corte distinto:
+  · `abierta`      — el flag `open` de la cuenta. En julio estaba en `false` y los
+    proyectos igual figuraban con `billingEnabled: true`, así que ESTE es el que
+    hay que mirar, no el otro.
+  · `presupuestos` — cero presupuestos = ninguna alerta de gasto configurada.
+
+⚠️ Ninguna de las dos habría agarrado el corte de septiembre: el dunning es
+cobranza, y la cuenta figura abierta igual. Para eso está la sonda que hace una
+llamada REAL a Vertex (`asistente_ok` en el resumen de CLAMEVET). Las tres juntas
+cubren: cuenta cerrada, gasto desbocado, y servicio denegado.
+
+Leer esto NO gasta —la Budgets API es gratis y la credencial es de sólo lectura
+(`roles/billing.viewer` sobre la cuenta)—, así que a propósito no pasa por
+`gasto_permitido()`, que es el freno de la generación en Vertex.
+
+Nunca levanta: un problema leyendo la facturación no puede voltear el panel.
 """
 from __future__ import annotations
 
 import json
-import os
 import threading
-import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List
+import time
+from typing import Any, Dict, List, Optional
 
-from ..config import Settings
+import requests
+
+from ..config import get_settings
 from ..log import get_logger
 
 log = get_logger("facturacion")
-_LOCK = threading.Lock()
+
+TIMEOUT = 30.0
+CACHE_SEG = 3600          # cambia de mes a mes, no de minuto a minuto
+_SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
+
+_lock = threading.Lock()
+_cache: Dict[str, Any] = {"cuando": 0.0, "datos": None}
 
 
-def _settings() -> Settings:
-    return Settings()
+def _sa_info() -> Dict[str, Any]:
+    crudo = get_settings().google_service_account_json
+    if not crudo:
+        raise RuntimeError("sin GOOGLE_SERVICE_ACCOUNT_JSON")
+    return json.loads(crudo)
 
 
-def _data_dir() -> Path:
-    return Path(__file__).resolve().parent.parent.parent / "data"
+def _headers(info: Dict[str, Any]) -> Dict[str, str]:
+    import google.auth.transport.requests as gar
+    tipo = info.get("type")
+    if tipo == "authorized_user":
+        from google.oauth2.credentials import Credentials as UserCreds
+        creds = UserCreds.from_authorized_user_info(info, scopes=_SCOPES)
+    else:
+        from google.oauth2 import service_account
+        creds = service_account.Credentials.from_service_account_info(info, scopes=_SCOPES)
+    creds.refresh(gar.Request())
+    # `x-goog-user-project` es obligatorio: la Budgets API factura la cuota contra
+    # un proyecto, y sin este encabezado responde 403 hablando de "quota project",
+    # que se lee igual que un problema de permisos y manda a buscar donde no es.
+    return {"Authorization": "Bearer %s" % creds.token,
+            "x-goog-user-project": info.get("project_id") or info.get("quota_project_id", "")}
 
 
-def _store_path() -> Path:
-    return _data_dir() / "invoices.json"
-
-
-def is_configured() -> bool:
-    s = _settings()
-    return bool(s.arca_access_token and s.arca_cuit)
-
-
-def _pem(v: str) -> str:
-    """Acepta el cert/key como PEM crudo o base64 (para meterlo cómodo en una env var)."""
-    import base64
-    v = (v or "").strip()
-    if not v or "BEGIN" in v:
-        return v
-    try:
-        return base64.b64decode(v).decode("utf-8")
-    except Exception:
-        return v
-
-
-def _client():
-    from afip import Afip
-    s = _settings()
-    opts = {
-        "CUIT": int(str(s.arca_cuit).replace("-", "").strip()),
-        "access_token": s.arca_access_token,
-        "production": bool(s.arca_production),
-    }
-    cert, key = _pem(s.arca_cert), _pem(s.arca_key)
-    if cert and key:                 # producción: WSAA con certificado
-        opts["cert"] = cert
-        opts["key"] = key
-    return Afip(opts)
-
-
-def load_invoices() -> List[Dict[str, Any]]:
-    p = _store_path()
-    if not p.exists():
-        return []
-    try:
-        with p.open("r", encoding="utf-8") as f:
-            return json.load(f).get("invoices", [])
-    except Exception:
-        return []
-
-
-def _save(items: List[Dict[str, Any]]) -> None:
-    p = _store_path()
-    p.parent.mkdir(parents=True, exist_ok=True)
-    tmp = p.with_suffix(".json.tmp")
-    with tmp.open("w", encoding="utf-8") as f:
-        json.dump({"invoices": items}, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, p)
-
-
-def list_invoices(limit: int = 200) -> List[Dict[str, Any]]:
-    items = sorted(load_invoices(), key=lambda i: i.get("created_at", ""), reverse=True)
-    return items[:limit]
-
-
-def delete_invoice(inv_id: str) -> bool:
-    """Borra un registro del log local (no anula nada en AFIP)."""
-    with _LOCK:
-        items = load_invoices()
-        before = len(items)
-        items = [i for i in items if i.get("id") != inv_id]
-        _save(items)
-        return len(items) < before
-
-
-def emit_invoice(amount: float, description: str = "", cliente: str = "",
-                 doc_tipo: int = 99, doc_nro: int = 0, cond_iva_receptor: int = 5) -> Dict[str, Any]:
-    """Emite una Factura C por `amount` ARS (Concepto 2, servicios). doc_tipo/doc_nro
-    identifican al receptor cuando corresponde (80 = CUIT, 96 = DNI). Registra el
-    resultado siempre y lo devuelve."""
-    inv: Dict[str, Any] = {
-        "id": uuid.uuid4().hex[:12],
-        "cliente": (cliente or "").strip(),
-        "description": (description or "").strip()[:255],
-        "amount": round(float(amount or 0), 2),
-        "currency": "ARS",
-        "cbte_tipo": None, "pto_vta": None, "cbte_nro": None,
-        "cae": None, "cae_vto": None,
-        "status": "pending", "error": None,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+def _presupuesto(b: Dict[str, Any]) -> Dict[str, Any]:
+    monto = (b.get("amount", {}) or {}).get("specifiedAmount", {}) or {}
+    return {
+        "nombre": b.get("displayName", ""),
+        "moneda": monto.get("currencyCode", ""),
+        "monto": int(monto.get("units") or 0),
+        "proyectos": (b.get("budgetFilter", {}) or {}).get("projects") or [],
+        "umbrales": [t.get("thresholdPercent") for t in b.get("thresholdRules", [])],
     }
 
-    if not is_configured():
-        inv["status"] = "skipped"
-        inv["error"] = "ARCA no configurado"
-        with _LOCK:
-            items = load_invoices()
-            items.insert(0, inv)
-            _save(items)
-        return inv
 
+def _consultar() -> Dict[str, Any]:
+    info = _sa_info()
+    h = _headers(info)
+
+    r = requests.get("https://cloudbilling.googleapis.com/v1/billingAccounts",
+                     headers=h, timeout=TIMEOUT)
+    r.raise_for_status()
+    cuentas = r.json().get("billingAccounts") or []
+    if not cuentas:
+        return {"leible": True, "cuenta": "", "abierta": None, "presupuestos": [],
+                "detalle": "la credencial no ve ninguna cuenta de facturación"}
+    c = cuentas[0]
+
+    r2 = requests.get("https://billingbudgets.googleapis.com/v1/%s/budgets" % c["name"],
+                      headers=h, timeout=TIMEOUT)
+    r2.raise_for_status()
+    presupuestos = [_presupuesto(b) for b in (r2.json().get("budgets") or [])]
+
+    return {"leible": True,
+            "cuenta": c.get("displayName") or c["name"],
+            "abierta": c.get("open"),
+            "presupuestos": presupuestos,
+            "detalle": ""}
+
+
+def estado(cada: int = CACHE_SEG) -> Dict[str, Any]:
+    """Cómo está la facturación de Google. Cacheado; nunca levanta."""
+    ahora = time.monotonic()
+    with _lock:
+        if _cache["datos"] is not None and ahora - _cache["cuando"] < cada:
+            return dict(_cache["datos"], cacheado=True)
     try:
-        s = _settings()
-        pto_vta = int(s.arca_pto_vta or 1)
-        cbte_tipo = int(s.arca_cbte_tipo or 11)
-        eb = _client().ElectronicBilling
-        nro = eb.getLastVoucher(pto_vta, cbte_tipo) + 1
-        hoy = int(datetime.now(timezone.utc).strftime("%Y%m%d"))
-        amt = inv["amount"]
+        datos = _consultar()
+    except Exception as e:                                  # noqa: BLE001
+        log.warning("facturacion_no_legible", error=type(e).__name__, detalle=str(e)[:160])
+        datos = {"leible": False, "cuenta": "", "abierta": None, "presupuestos": [],
+                 "detalle": "%s: %s" % (type(e).__name__, str(e)[:160])}
+    with _lock:
+        _cache.update(cuando=ahora, datos=datos)
+    return dict(datos, cacheado=False)
 
-        # Factura C: neto = total, sin IVA discriminado.
-        data = {
-            "CantReg": 1, "PtoVta": pto_vta, "CbteTipo": cbte_tipo,
-            "Concepto": 2, "DocTipo": doc_tipo, "DocNro": doc_nro,
-            "CbteDesde": nro, "CbteHasta": nro, "CbteFch": hoy,
-            "ImpTotal": amt, "ImpTotConc": 0, "ImpNeto": amt,
-            "ImpOpEx": 0, "ImpIVA": 0, "ImpTrib": 0,
-            "FchServDesde": hoy, "FchServHasta": hoy, "FchVtoPago": hoy,
-            "MonId": "PES", "MonCotiz": 1,
-            "CondicionIVAReceptorId": cond_iva_receptor,
-        }
-        res = eb.createVoucher(data)
-        cae = res.get("CAE")
-        if not cae:
-            raise RuntimeError(f"CAE rechazado: {res}")
-        vto = str(res.get("CAEFchVto") or "")
-        inv.update({
-            "status": "issued", "cbte_tipo": cbte_tipo, "pto_vta": pto_vta,
-            "cbte_nro": nro, "cae": cae,
-            "cae_vto": vto if "-" in vto else (
-                f"{vto[:4]}-{vto[4:6]}-{vto[6:]}" if len(vto) == 8 else None),
-        })
-        log.info("factura emitida cae=%s nro=%s cliente=%s", cae, nro, inv["cliente"])
-    except Exception as e:
-        inv["status"] = "error"
-        inv["error"] = str(e)[:300]
-        log.error("factura error: %s", e)
 
-    with _LOCK:
-        items = load_invoices()
-        items.insert(0, inv)
-        _save(items)
-    return inv
+def resumen() -> Dict[str, Any]:
+    """Lo que va al panel: números, no el detalle entero."""
+    e = estado()
+    return {"facturacion_legible": e["leible"],
+            "cuenta_abierta": e["abierta"],
+            "presupuestos": len(e["presupuestos"]),
+            "presupuestos_detalle": e["presupuestos"],
+            "facturacion_detalle": e["detalle"]}
+
+
+def tope_de(proyecto_numero: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Los presupuestos que cubren un proyecto (o los de toda la cuenta si no se
+    pasa ninguno). Un presupuesto sin `proyectos` cubre la cuenta entera."""
+    todos = estado()["presupuestos"]
+    if proyecto_numero is None:
+        return [p for p in todos if not p["proyectos"]]
+    aguja = "projects/%s" % proyecto_numero
+    return [p for p in todos if aguja in p["proyectos"]]
