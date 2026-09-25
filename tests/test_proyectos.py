@@ -168,48 +168,56 @@ def test_todo_bien_no_inventa_hallazgos():
          "empresas": 5, "socios": 5, "consultas_7d": 12, "ultimo_boletin": ""}) == []
 
 
-# ── la facturación de Google (es UNA cuenta para los cuatro proyectos) ──
+# ── la cuenta de Google (es UNA para los cuatro proyectos) ──
 
 def test_sin_presupuesto_es_alarma():
     """El 2026-09-24 Google cortó Vertex por factura impaga y no había un solo
     presupuesto en la cuenta: nada podía avisar."""
-    h = proyectos._auditar_facturacion(
-        {"facturacion_legible": True, "cuenta_abierta": True, "presupuestos": 0})
+    h = proyectos._auditar_cuenta_google(
+        {"google_legible": True, "cuenta_abierta": True, "presupuestos": 0})
     assert any(x["severidad"] == proyectos.ALTA and "presupuesto" in x["que"].lower()
                for x in h)
 
 
-def test_cuenta_de_facturacion_cerrada_es_alarma():
+def test_cuenta_de_google_cerrada_es_alarma():
     """Julio 2026: la cuenta cerrada y los proyectos igual con billingEnabled true.
     Por eso se mira `open` de la cuenta, no el flag del proyecto."""
-    h = proyectos._auditar_facturacion(
-        {"facturacion_legible": True, "cuenta_abierta": False, "presupuestos": 3})
+    h = proyectos._auditar_cuenta_google(
+        {"google_legible": True, "cuenta_abierta": False, "presupuestos": 3})
     assert any(x["severidad"] == proyectos.ALTA and "CERRADA" in x["que"] for x in h)
 
 
 def test_con_presupuesto_y_cuenta_abierta_no_dice_nada():
-    assert proyectos._auditar_facturacion(
-        {"facturacion_legible": True, "cuenta_abierta": True, "presupuestos": 3}) == []
+    assert proyectos._auditar_cuenta_google(
+        {"google_legible": True, "cuenta_abierta": True, "presupuestos": 3}) == []
 
 
 def test_ilegible_no_es_lo_mismo_que_sin_presupuesto():
     """Si no se puede leer, `presupuestos` vale 0 por defecto — afirmar que faltan
     sería inventar un hallazgo con un dato que no tenemos."""
-    h = proyectos._auditar_facturacion(
-        {"facturacion_legible": False, "cuenta_abierta": None, "presupuestos": 0,
-         "facturacion_detalle": "PermissionDenied: 403"})
+    h = proyectos._auditar_cuenta_google(
+        {"google_legible": False, "cuenta_abierta": None, "presupuestos": 0,
+         "google_detalle": "PermissionDenied: 403"})
     assert [x["severidad"] for x in h] == [proyectos.MEDIA]
 
 
-def test_la_facturacion_no_puede_voltear_el_panel(monkeypatch):
+def test_la_cuenta_de_google_no_puede_voltear_el_panel(monkeypatch):
     """Sin credencial configurada devuelve ilegible, no una excepción."""
-    from app.integrations import facturacion
-    monkeypatch.setattr(facturacion, "_cache", {"cuando": 0.0, "datos": None})
-    monkeypatch.setattr(facturacion, "_sa_info",
+    from app.integrations import cuenta_google
+    monkeypatch.setattr(cuenta_google, "_cache", {"cuando": 0.0, "datos": None})
+    monkeypatch.setattr(cuenta_google, "_sa_info",
                         lambda: (_ for _ in ()).throw(RuntimeError("sin credencial")))
-    e = facturacion.estado()
+    e = cuenta_google.estado()
     assert e["leible"] is False
     assert "sin credencial" in e["detalle"]
+
+
+def test_el_modulo_de_arca_sigue_siendo_el_de_arca():
+    """`facturacion.py` emite Facturas C y `cuenta_google.py` mira la cuenta de
+    Google. Los nombres se parecen y una vez ya pisé uno con el otro."""
+    from app.integrations import facturacion
+    assert hasattr(facturacion, "is_configured")
+    assert hasattr(facturacion, "emit_invoice")
 
 
 def test_canales_activos_y_cero_mensajes_es_alarma():

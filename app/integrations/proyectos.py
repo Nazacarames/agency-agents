@@ -187,11 +187,11 @@ def _resumen_propio() -> Dict[str, Any]:
     except Exception:
         pass
     try:
-        # La facturación de Google es de la CUENTA, no de un proyecto: los cuatro
-        # proyectos cuelgan de la misma. Por eso se reporta acá una sola vez y no
-        # en el resumen de cada plataforma.
-        from . import facturacion
-        datos.update(facturacion.resumen())
+        # La cuenta de Google es UNA para los cuatro proyectos, así que se reporta
+        # acá una sola vez y no en el resumen de cada plataforma. (`cuenta_google`,
+        # no `facturacion`: ese otro módulo emite Facturas C por ARCA.)
+        from . import cuenta_google
+        datos.update(cuenta_google.resumen())
     except Exception:
         pass
     return datos
@@ -332,7 +332,7 @@ def _auditar_agentes(n: Dict[str, Any], credenciales_en_vivo: bool = True) -> Li
     return h
 
 
-def _auditar_facturacion(n: Dict[str, Any]) -> List[Dict[str, str]]:
+def _auditar_cuenta_google(n: Dict[str, Any]) -> List[Dict[str, str]]:
     """La cuenta de Google, que es UNA para los cuatro proyectos.
 
     El 2026-09-24 Google cortó Vertex por una factura impaga y se llevó puesto al
@@ -342,16 +342,19 @@ def _auditar_facturacion(n: Dict[str, Any]) -> List[Dict[str, str]]:
     `open` de la cuenta y no ese flag.
     """
     h = []
-    if n.get("facturacion_legible") is False:
-        h.append(_hallazgo("agentes", MEDIA, "No se puede leer la facturación de Google",
-                           (n.get("facturacion_detalle") or "")[:160] or
+    if n.get("google_legible") is False:
+        h.append(_hallazgo("agentes", MEDIA, "No se puede leer la cuenta de Google",
+                           (n.get("google_detalle") or "")[:160] or
                            "Se perdió el permiso o se apagó la API. Mientras tanto, "
                            "nadie está mirando la cuenta."))
     if n.get("cuenta_abierta") is False:
-        h.append(_hallazgo("agentes", ALTA, "La cuenta de facturación está CERRADA",
+        h.append(_hallazgo("agentes", ALTA, "La cuenta de Google está CERRADA",
                            "Vertex rechaza todo con 403 aunque los proyectos figuren "
                            "con facturación habilitada. Pasó el 2026-07-08."))
-    if n.get("facturacion_legible") and n.get("presupuestos") == 0:
+    # `google_legible` primero: si no se pudo leer, `presupuestos` vale 0 por
+    # defecto y afirmar que faltan sería inventar un hallazgo con un dato que no
+    # tenemos — el error del "H1 vacío" otra vez.
+    if n.get("google_legible") and n.get("presupuestos") == 0:
         h.append(_hallazgo("agentes", ALTA, "La cuenta de Google no tiene presupuesto",
                            "Sin presupuesto no hay alerta de gasto: el corte por "
                            "factura impaga del 2026-09-24 no lo avisó nadie."))
@@ -398,7 +401,7 @@ def auditar(pid: Optional[str] = None) -> Dict[str, Any]:
         if auditor and numeros:
             hallazgos.extend(auditor(numeros))
         if i == "agentes" and numeros:
-            hallazgos.extend(_auditar_facturacion(numeros))
+            hallazgos.extend(_auditar_cuenta_google(numeros))
 
     orden = {ALTA: 0, MEDIA: 1, BAJA: 2}
     hallazgos.sort(key=lambda x: orden.get(x["severidad"], 9))
