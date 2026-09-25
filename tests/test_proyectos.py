@@ -126,6 +126,27 @@ def test_el_resumen_va_con_el_secreto_de_panel(monkeypatch):
 
 # ── la auditoría ──
 
+def test_el_asistente_mudo_es_lo_primero_que_se_dice():
+    """El 2026-09-24 Google cortó Vertex por facturación impaga: el asistente de
+    CLAMEVET estuvo mudo toda la mañana con TODOS los demás números sanos, y el
+    panel lo mostraba en verde. Nos enteramos por el cliente."""
+    h = proyectos._auditar_clamevet(
+        {"documentos_con_error": 0, "documentos": 10, "fragmentos": 900,
+         "empresas": 5, "socios": 5, "consultas_7d": 12,
+         "asistente_ok": False, "asistente_detalle": "Vertex respondió 403: dunning"})
+    assert h and h[0]["severidad"] == proyectos.ALTA
+    assert "asistente" in h[0]["que"].lower()
+    assert "403" in h[0]["por_que"]
+
+
+def test_una_plataforma_que_no_reporta_el_campo_no_inventa_hallazgo():
+    """Una versión vieja de la plataforma no manda `asistente_ok`. Ausente no es
+    roto — es justo el error del 'H1 vacío'."""
+    assert proyectos._auditar_clamevet(
+        {"documentos_con_error": 0, "documentos": 10, "fragmentos": 900,
+         "empresas": 5, "socios": 5, "consultas_7d": 12, "ultimo_boletin": ""}) == []
+
+
 def test_documentos_en_error_son_severidad_alta():
     """Un documento que no se indexó deja al asistente contestando sin ese
     material — y sin avisar que le falta."""

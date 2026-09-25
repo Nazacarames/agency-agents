@@ -228,6 +228,16 @@ def _hallazgo(pid: str, sev: str, que: str, por_que: str) -> Dict[str, str]:
 
 def _auditar_clamevet(n: Dict[str, Any]) -> List[Dict[str, str]]:
     h = []
+    # Lo primero, porque es lo único que importa de esta plataforma. El resto de
+    # los números pueden estar perfectos con el asistente mudo: el 2026-09-24
+    # Google cortó Vertex por facturación impaga y acá estaba todo en verde.
+    # `is False` y no un `not`: si la plataforma no reporta el campo (versión
+    # vieja), no se inventa un hallazgo.
+    if n.get("asistente_ok") is False:
+        h.append(_hallazgo("clamevet", ALTA, "El asistente no puede contestar",
+                           (n.get("asistente_detalle") or "")[:160] or
+                           "Vertex no responde. La plataforma está viva pero su "
+                           "función principal no."))
     if n.get("documentos_con_error"):
         h.append(_hallazgo("clamevet", ALTA,
                            f"{n['documentos_con_error']} documento(s) en estado error",
