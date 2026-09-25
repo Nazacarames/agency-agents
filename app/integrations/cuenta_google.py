@@ -49,6 +49,15 @@ _SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 _lock = threading.Lock()
 _cache: Dict[str, Any] = {"cuando": 0.0, "datos": None}
 
+# Dónde cae el export de facturación a BigQuery. El export se prende a mano en la
+# consola (no hay API ni comando de gcloud para eso) y Google crea la tabla sola,
+# con el id de la cuenta y los guiones cambiados por guiones bajos. Hasta que
+# aterrice la primera tanda —tarda horas— la tabla NO existe, y eso no es un error.
+BQ_PROYECTO = "project-aa6a207a-826d-45a2-a63"
+BQ_DATASET = "facturacion_google"
+_gasto_lock = threading.Lock()
+_gasto_cache: Dict[str, Any] = {"cuando": 0.0, "datos": None}
+
 
 def _sa_info() -> Dict[str, Any]:
     crudo = get_settings().google_service_account_json
@@ -93,7 +102,8 @@ def _consultar() -> Dict[str, Any]:
     r.raise_for_status()
     cuentas = r.json().get("billingAccounts") or []
     if not cuentas:
-        return {"leible": True, "cuenta": "", "abierta": None, "presupuestos": [],
+        return {"leible": True, "cuenta": "", "cuenta_id": "", "abierta": None,
+                "presupuestos": [],
                 "detalle": "la credencial no ve ninguna cuenta de facturación"}
     c = cuentas[0]
 
@@ -104,6 +114,9 @@ def _consultar() -> Dict[str, Any]:
 
     return {"leible": True,
             "cuenta": c.get("displayName") or c["name"],
+            # `billingAccounts/0174EE-6A84D5-404B1C` → `0174EE-6A84D5-404B1C`, que
+            # es lo que Google usa para nombrar la tabla del export.
+            "cuenta_id": c["name"].rsplit("/", 1)[-1],
             "abierta": c.get("open"),
             "presupuestos": presupuestos,
             "detalle": ""}
@@ -119,21 +132,93 @@ def estado(cada: int = CACHE_SEG) -> Dict[str, Any]:
         datos = _consultar()
     except Exception as e:                                  # noqa: BLE001
         log.warning("cuenta_google_no_legible", error=type(e).__name__, detalle=str(e)[:160])
-        datos = {"leible": False, "cuenta": "", "abierta": None, "presupuestos": [],
+        datos = {"leible": False, "cuenta": "", "cuenta_id": "", "abierta": None,
+                 "presupuestos": [],
                  "detalle": "%s: %s" % (type(e).__name__, str(e)[:160])}
     with _lock:
         _cache.update(cuando=ahora, datos=datos)
     return dict(datos, cacheado=False)
 
 
+def _tabla() -> str:
+    cuenta = (estado().get("cuenta_id") or "").replace("-", "_")
+    return "%s.%s.gcp_billing_export_v1_%s" % (BQ_PROYECTO, BQ_DATASET, cuenta)
+
+
+_CONSULTA_GASTO = """
+SELECT
+  project.id AS proyecto,
+  ROUND(SUM(cost) + SUM(IFNULL((SELECT SUM(c.amount) FROM UNNEST(credits) c), 0)), 2) AS costo,
+  ANY_VALUE(currency) AS moneda
+FROM `%s`
+WHERE invoice.month = FORMAT_DATE('%%Y%%m', CURRENT_DATE())
+GROUP BY proyecto
+ORDER BY costo DESC
+"""
+
+
+def gasto_mes(cada: int = CACHE_SEG) -> Dict[str, Any]:
+    """Lo gastado en el mes en curso, por proyecto. Nunca levanta.
+
+    Sale del export a BigQuery, que es la ÚNICA forma de tener el número: no hay
+    API de costos. Si el export todavía no se prendió (o no aterrizó la primera
+    tanda) la tabla no existe, y eso se informa como «sin datos», no como falla —
+    son dos cosas distintas y confundirlas es cómo se inventa un problema.
+
+    El costo va NETO de créditos: sin restarlos, un mes con crédito aplicado se
+    lee como si hubiéramos gastado de más.
+    """
+    ahora = time.monotonic()
+    with _gasto_lock:
+        if _gasto_cache["datos"] is not None and ahora - _gasto_cache["cuando"] < cada:
+            return dict(_gasto_cache["datos"], cacheado=True)
+
+    vacio = {"hay_datos": False, "total": None, "moneda": "", "por_proyecto": [],
+             "detalle": ""}
+    try:
+        info = _sa_info()
+        h = _headers(info)
+        r = requests.post(
+            "https://bigquery.googleapis.com/bigquery/v2/projects/%s/queries" % BQ_PROYECTO,
+            headers=h, timeout=TIMEOUT,
+            json={"query": _CONSULTA_GASTO % _tabla(), "useLegacySql": False,
+                  "timeoutMs": 20000})
+        if r.status_code == 404 or (r.status_code == 400 and "Not found" in r.text):
+            datos = dict(vacio, detalle="el export a BigQuery todavía no dejó datos")
+        elif r.status_code != 200:
+            datos = dict(vacio, detalle="BigQuery respondió %s: %s"
+                                        % (r.status_code, r.text[:160]))
+        else:
+            filas = r.json().get("rows") or []
+            por = [{"proyecto": f["f"][0]["v"] or "(sin proyecto)",
+                    "costo": float(f["f"][1]["v"] or 0),
+                    "moneda": f["f"][2]["v"] or ""} for f in filas]
+            datos = {"hay_datos": True,
+                     "total": round(sum(p["costo"] for p in por), 2),
+                     "moneda": por[0]["moneda"] if por else "",
+                     "por_proyecto": por, "detalle": ""}
+    except Exception as e:                                  # noqa: BLE001
+        log.warning("gasto_mes_falló", error=type(e).__name__, detalle=str(e)[:160])
+        datos = dict(vacio, detalle="%s: %s" % (type(e).__name__, str(e)[:160]))
+
+    with _gasto_lock:
+        _gasto_cache.update(cuando=ahora, datos=datos)
+    return dict(datos, cacheado=False)
+
+
 def resumen() -> Dict[str, Any]:
     """Lo que va al panel: números, no el detalle entero."""
     e = estado()
+    g = gasto_mes()
     return {"google_legible": e["leible"],
             "cuenta_abierta": e["abierta"],
             "presupuestos": len(e["presupuestos"]),
             "presupuestos_detalle": e["presupuestos"],
-            "google_detalle": e["detalle"]}
+            "google_detalle": e["detalle"],
+            "gasto_mes": g["total"],
+            "gasto_moneda": g["moneda"],
+            "gasto_por_proyecto": g["por_proyecto"],
+            "gasto_detalle": g["detalle"]}
 
 
 def tope_de(proyecto_numero: Optional[str] = None) -> List[Dict[str, Any]]:

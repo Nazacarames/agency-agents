@@ -212,6 +212,73 @@ def test_la_cuenta_de_google_no_puede_voltear_el_panel(monkeypatch):
     assert "sin credencial" in e["detalle"]
 
 
+class _RespBQ:
+    """Respuesta falsa de BigQuery. Nombre propio: arriba ya hay otro `_Resp`
+    para las sondas HTTP, y pisarlo rompe aquellos tests."""
+
+    def __init__(self, status, payload=None, texto=""):
+        self.status_code = status
+        self._payload = payload or {}
+        self.text = texto
+
+    def json(self):
+        return self._payload
+
+
+def _cuenta_lista(monkeypatch):
+    """Deja `estado()` resuelto para que `_tabla()` no salga a la red."""
+    from app.integrations import cuenta_google
+    monkeypatch.setattr(cuenta_google, "_cache", {"cuando": 9e9, "datos": {
+        "leible": True, "cuenta": "Mi cuenta", "cuenta_id": "0174EE-6A84D5-404B1C",
+        "abierta": True, "presupuestos": [], "detalle": ""}})
+    monkeypatch.setattr(cuenta_google, "_gasto_cache", {"cuando": 0.0, "datos": None})
+    monkeypatch.setattr(cuenta_google, "_sa_info", lambda: {"project_id": "p"})
+    monkeypatch.setattr(cuenta_google, "_headers", lambda info: {})
+    return cuenta_google
+
+
+def test_sin_export_todavia_no_es_una_falla(monkeypatch):
+    """La tabla no existe hasta que el export deje la primera tanda. «Sin datos» y
+    «falló» son cosas distintas: confundirlas inventa un problema."""
+    cg = _cuenta_lista(monkeypatch)
+    monkeypatch.setattr(cg.requests, "post", lambda *a, **k: _RespBQ(404, texto="Not found"))
+    g = cg.gasto_mes()
+    assert g["hay_datos"] is False
+    assert "todavía no dejó datos" in g["detalle"]
+
+
+def test_un_error_de_bigquery_no_se_disfraza_de_sin_datos(monkeypatch):
+    cg = _cuenta_lista(monkeypatch)
+    monkeypatch.setattr(cg.requests, "post",
+                        lambda *a, **k: _RespBQ(403, texto="Permission denied"))
+    g = cg.gasto_mes()
+    assert g["hay_datos"] is False
+    assert "403" in g["detalle"] and "todavía" not in g["detalle"]
+
+
+def test_el_gasto_sale_neto_de_creditos(monkeypatch):
+    """Sin restar los créditos, un mes con crédito aplicado se lee como si
+    hubiéramos gastado de más."""
+    cg = _cuenta_lista(monkeypatch)
+    filas = {"rows": [
+        {"f": [{"v": "clamevet"}, {"v": "12.5"}, {"v": "USD"}]},
+        {"f": [{"v": "crm-automiq"}, {"v": "2.25"}, {"v": "USD"}]},
+    ]}
+    monkeypatch.setattr(cg.requests, "post", lambda *a, **k: _RespBQ(200, filas))
+    g = cg.gasto_mes()
+    assert g["hay_datos"] is True
+    assert g["total"] == 14.75
+    assert g["moneda"] == "USD"
+    assert g["por_proyecto"][0]["proyecto"] == "clamevet"
+
+
+def test_la_tabla_se_nombra_como_la_nombra_google(monkeypatch):
+    """Guiones a guiones bajos: si esto se rompe, la consulta busca una tabla que
+    no existe y el panel diría «sin datos» para siempre."""
+    cg = _cuenta_lista(monkeypatch)
+    assert cg._tabla().endswith(".gcp_billing_export_v1_0174EE_6A84D5_404B1C")
+
+
 def test_el_modulo_de_arca_sigue_siendo_el_de_arca():
     """`facturacion.py` emite Facturas C y `cuenta_google.py` mira la cuenta de
     Google. Los nombres se parecen y una vez ya pisé uno con el otro."""
