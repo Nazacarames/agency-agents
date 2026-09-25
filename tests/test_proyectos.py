@@ -277,7 +277,37 @@ def test_la_tabla_se_nombra_como_la_nombra_google(monkeypatch):
     """Guiones a guiones bajos: si esto se rompe, la consulta busca una tabla que
     no existe y el panel diría «sin datos» para siempre."""
     cg = _cuenta_lista(monkeypatch)
-    assert cg._tabla().endswith(".gcp_billing_export_v1_0174EE_6A84D5_404B1C")
+    assert all(t.endswith(".gcp_billing_export_v1_0174EE_6A84D5_404B1C")
+               for t in cg._tablas())
+
+
+def test_busca_la_tabla_donde_este(monkeypatch):
+    """El destino del export se cambia a mano en la consola y ya nos pasó que el
+    cambio no tomara. Si no está en el primer candidato, se prueba el siguiente."""
+    cg = _cuenta_lista(monkeypatch)
+    pedidos = []
+
+    def post(url, **kw):
+        tabla = kw["json"]["query"].split("`")[1]
+        pedidos.append(tabla)
+        if tabla.startswith("crm-automiq."):
+            return _RespBQ(400, texto="Not found: Table crm-automiq...")
+        return _RespBQ(200, {"rows": [
+            {"f": [{"v": "clamevet"}, {"v": "3.0"}, {"v": "USD"}]}]})
+
+    monkeypatch.setattr(cg.requests, "post", post)
+    g = cg.gasto_mes()
+    assert g["hay_datos"] is True and g["total"] == 3.0
+    assert len(pedidos) == 2 and pedidos[1].startswith("clamevet.")
+
+
+def test_si_no_esta_en_ninguno_es_sin_datos_y_no_un_error(monkeypatch):
+    cg = _cuenta_lista(monkeypatch)
+    monkeypatch.setattr(cg.requests, "post",
+                        lambda *a, **k: _RespBQ(400, texto="Not found: Table"))
+    g = cg.gasto_mes()
+    assert g["hay_datos"] is False
+    assert "todavía no dejó datos" in g["detalle"]
 
 
 def test_la_credencial_del_export_acepta_base64_y_crudo(monkeypatch):

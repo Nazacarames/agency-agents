@@ -59,8 +59,16 @@ _cache: Dict[str, Any] = {"cuando": 0.0, "datos": None}
 # el de los agentes está en OTRA (549045205685). Tampoco va en `clamevet`: el
 # export trae la facturación de los cuatro proyectos —números nuestros— y ese es
 # el proyecto de un cliente.
-BQ_PROYECTO = "crm-automiq"
-BQ_DATASET = "facturacion_google"
+# Los jobs corren siempre acá: es donde `panel-facturacion` tiene `bigquery.jobUser`.
+BQ_JOB_PROYECTO = "crm-automiq"
+# La tabla puede estar en cualquiera de estos. Se busca en orden y gana el primero
+# que exista, en vez de fijar uno: el destino del export se cambia a mano en la
+# consola —no hay API— y ya nos pasó que el cambio no tomara. Con esto el panel
+# sigue andando esté donde esté, y mover el export no rompe nada.
+# `crm-automiq` primero porque es donde DEBE estar: `clamevet` es el proyecto de un
+# cliente y el export trae la facturación de los cuatro proyectos.
+BQ_CANDIDATOS = (("crm-automiq", "facturacion_google"),
+                 ("clamevet", "facturacion_google"))
 _gasto_lock = threading.Lock()
 _gasto_cache: Dict[str, Any] = {"cuando": 0.0, "datos": None}
 
@@ -163,9 +171,10 @@ def estado(cada: int = CACHE_SEG) -> Dict[str, Any]:
     return dict(datos, cacheado=False)
 
 
-def _tabla() -> str:
+def _tablas() -> List[str]:
+    """Los lugares donde puede estar la tabla del export, en orden de preferencia."""
     cuenta = (estado().get("cuenta_id") or "").replace("-", "_")
-    return "%s.%s.gcp_billing_export_v1_%s" % (BQ_PROYECTO, BQ_DATASET, cuenta)
+    return ["%s.%s.gcp_billing_export_v1_%s" % (p, d, cuenta) for p, d in BQ_CANDIDATOS]
 
 
 _CONSULTA_GASTO = """
@@ -200,17 +209,19 @@ def gasto_mes(cada: int = CACHE_SEG) -> Dict[str, Any]:
              "detalle": ""}
     try:
         h = _bq_headers()
-        r = requests.post(
-            "https://bigquery.googleapis.com/bigquery/v2/projects/%s/queries" % BQ_PROYECTO,
-            headers=h, timeout=TIMEOUT,
-            json={"query": _CONSULTA_GASTO % _tabla(), "useLegacySql": False,
-                  "timeoutMs": 20000})
-        if r.status_code == 404 or (r.status_code == 400 and "Not found" in r.text):
-            datos = dict(vacio, detalle="el export a BigQuery todavía no dejó datos")
-        elif r.status_code != 200:
-            datos = dict(vacio, detalle="BigQuery respondió %s: %s"
-                                        % (r.status_code, r.text[:160]))
-        else:
+        url = ("https://bigquery.googleapis.com/bigquery/v2/projects/%s/queries"
+               % BQ_JOB_PROYECTO)
+        datos = dict(vacio, detalle="el export a BigQuery todavía no dejó datos")
+        for tabla in _tablas():
+            r = requests.post(url, headers=h, timeout=TIMEOUT,
+                              json={"query": _CONSULTA_GASTO % tabla,
+                                    "useLegacySql": False, "timeoutMs": 20000})
+            if r.status_code == 404 or (r.status_code == 400 and "Not found" in r.text):
+                continue                        # todavía no está acá: probar el siguiente
+            if r.status_code != 200:
+                datos = dict(vacio, detalle="BigQuery respondió %s: %s"
+                                            % (r.status_code, r.text[:160]))
+                break
             filas = r.json().get("rows") or []
             por = [{"proyecto": f["f"][0]["v"] or "(sin proyecto)",
                     "costo": float(f["f"][1]["v"] or 0),
@@ -218,7 +229,8 @@ def gasto_mes(cada: int = CACHE_SEG) -> Dict[str, Any]:
             datos = {"hay_datos": True,
                      "total": round(sum(p["costo"] for p in por), 2),
                      "moneda": por[0]["moneda"] if por else "",
-                     "por_proyecto": por, "detalle": ""}
+                     "por_proyecto": por, "detalle": "", "tabla": tabla}
+            break
     except Exception as e:                                  # noqa: BLE001
         log.warning("gasto_mes_falló", error=type(e).__name__, detalle=str(e)[:160])
         datos = dict(vacio, detalle="%s: %s" % (type(e).__name__, str(e)[:160]))
