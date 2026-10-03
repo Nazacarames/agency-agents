@@ -332,7 +332,14 @@ class OutboundAgent(BaseAgent):
     max_tokens = 8000
     temperature = 0.6
     use_claude_code = False   # composición de texto + envío determinístico (liviano)
-    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
+    # Vuelve a GLM el 2026-10-02 (parche de agosto por el 410 de GLM 5.2; 5.3
+    # revivió el 09-17).
+    # ⚠️ Este es el que más cuidado pide: el 2026-07-09, con GLM 5.2 por
+    # OpenCode, una corrida terminó con 0 mails enviados EN SILENCIO porque el
+    # JSON no se pudo parsear. Las dos redes que se pusieron entonces siguen:
+    # `_common.extract_json_array` (tolerante) y `_redraft_missing` (rehace por
+    # MiniMax lo que falte). Mirar la primera corrida después de este cambio.
+    llm_provider = "glm"
     claude_code_skill = "cold-email,customer-research,humanizer,sales-enablement"
 
     @property

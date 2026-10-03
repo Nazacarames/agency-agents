@@ -318,9 +318,11 @@ class Settings(BaseSettings):
     # Token de USUARIO con confirmación de identidad (facebook.com/ads/library/api).
     # El system-user token de publicación NO sirve para esta API.
     meta_ad_library_token: str = ""
-    # GLM 5.2 murio el 2026-08-21 y no hay variante viva (probe 5 nombres, 404).
-    # El provider "glm" queda apuntando a Kimi para que una referencia vieja
-    # degrade a un modelo que anda, en vez de tirar 410.
+    # GLM 5.2 murió el 2026-08-21 (410) y por unas semanas el provider "glm"
+    # apuntó a Kimi. **GLM 5.3 revivió el 2026-09-17 y es el modelo de texto por
+    # defecto de todos los agentes desde el 2026-10-02.** Ojo con este comentario:
+    # quedó desactualizado tres semanas y seis agentes siguieron en Kimi —
+    # promediando 536 s por corrida contra 147 s— sólo porque nadie lo releyó.
     glm_model: str = "z-ai/glm-5.3"
     # El id sin fecha murió el 2026-08-07 (410 Gone) y los agentes venían
     # cayendo en silencio al fallback. El fechado sigue vivo.

@@ -208,7 +208,9 @@ class InboxAssistantAgent(BaseAgent):
     max_tokens = 6000
     temperature = 0.6
     use_claude_code = False   # composición de texto pura → no consume como un run CC
-    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
+    # Vuelve a GLM el 2026-10-02 (parche de agosto por el 410 de GLM 5.2; 5.3
+    # revivió el 09-17). Devuelve JSON: la red es `_reformat_via_minimax`.
+    llm_provider = "glm"
     claude_code_skill = "humanizer"
 
     @property
