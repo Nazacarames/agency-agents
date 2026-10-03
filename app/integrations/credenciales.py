@@ -172,8 +172,17 @@ INVENTARIO: List[Dict[str, Any]] = [
 ]
 
 
+# Las que, cuando mueren, paran el negocio: sin Gmail no sale ni entra un mail
+# (outbound + inbox_assistant + meeting_prep) y sin base se pierde la memoria.
+# El cierre diario verifica SÓLO éstas: es una llamada por día, y el costo de no
+# hacerla se midió el 2026-10-02 — Google restringió la app, outbound siguió
+# "andando" y nadie se enteró hasta que alguien escarbó.
+CRITICAS = ("gmail_oauth", "database")
+
+
 def estado(verificar: bool = False,
-           omitir: Optional[set] = None) -> List[Dict[str, Any]]:
+           omitir: Optional[set] = None,
+           solo: Optional[tuple] = None) -> List[Dict[str, Any]]:
     """El llavero con su estado. Sin valores, nunca.
 
     `verificar=False` (default) sólo dice si la credencial está configurada, que
@@ -198,7 +207,8 @@ def estado(verificar: bool = False,
         fila["estado"] = "ausente" if not presente else "sin_verificar"
         fila["detalle"] = ""
         if presente and verificar and item.get("verificar") \
-                and item["clave"] not in omitir:
+                and item["clave"] not in omitir \
+                and (solo is None or item["clave"] in solo):
             try:
                 fila["estado"], fila["detalle"] = item["verificar"](s)
             except Exception as e:                              # pragma: no cover
@@ -210,9 +220,11 @@ def estado(verificar: bool = False,
 
 
 def caidas(estados: Optional[List[Dict[str, Any]]] = None,
-           omitir: Optional[set] = None) -> List[Dict[str, Any]]:
+           omitir: Optional[set] = None,
+           solo: Optional[tuple] = None) -> List[Dict[str, Any]]:
     """Las que están configuradas y NO andan. Lo que el watchdog tiene que gritar."""
-    filas = estados if estados is not None else estado(verificar=True, omitir=omitir)
+    filas = estados if estados is not None else estado(verificar=True, omitir=omitir,
+                                                       solo=solo)
     return [f for f in filas if f["estado"] == "fail"]
 
 

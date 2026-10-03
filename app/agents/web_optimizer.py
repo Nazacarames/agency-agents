@@ -232,8 +232,30 @@ class WebOptimizerAgent(BaseAgent):
     # (si no, los deploys de este agente saldrían sin dueño en la bitácora).
     def run(self, ctx: AgentContext) -> str:
         from ..integrations import eventos
+        # 🔥 Este agente se saltea `base.run`, que es donde se anota la corrida.
+        # Resultado medido el 2026-10-02: corría casi a diario, dejaba informes
+        # de 30-60 KB en el volumen y tenía CERO eventos — invisible en la única
+        # línea de tiempo que mira el panel. Se anota acá, igual que la base.
+        import time as _time
+        t0 = _time.perf_counter()
         with eventos.en_curso(self.name, ctx.run_id):
-            return self._run_web(ctx)
+            try:
+                salida = self._run_web(ctx)
+            except Exception as e:                           # noqa: BLE001
+                eventos.registrar(
+                    "run", f"Corrida FALLADA: {type(e).__name__}",
+                    destino=ctx.triggered_by, ref=ctx.run_id, ok=False,
+                    detalle={"error": str(e)[:300],
+                             "elapsed_ms": int((_time.perf_counter() - t0) * 1000)})
+                raise
+            chars = len(salida or "")
+            flaca = eventos.corrida_flaca(self.name, chars)
+            eventos.registrar(
+                "run", flaca or f"Corrida OK ({ctx.triggered_by})",
+                destino=ctx.triggered_by, ref=ctx.run_id, ok=not flaca,
+                detalle={"model": "web_optimizer:mixto", "chars": chars,
+                         "elapsed_ms": int((_time.perf_counter() - t0) * 1000)})
+            return salida
 
     def _run_web(self, ctx: AgentContext) -> str:
         if not ctx.settings.web_optimizer_configured:

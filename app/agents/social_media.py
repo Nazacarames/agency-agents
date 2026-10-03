@@ -84,7 +84,12 @@ class SocialMediaAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-redes,hook-generator,post-formatter,social,copywriting,humanizer"
     claude_code_timeout = 700
-    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
+    # Vuelve a GLM el 2026-10-02: el pase a Kimi fue un parche de agosto porque
+    # GLM 5.2 daba 410, y GLM **5.3** revivió el 2026-09-17 sin que se migrara
+    # de vuelta. Medido sobre 21 días: kimi promedia 536 s acá y llegó a 2.763 s
+    # (46 min) en una corrida; glm-5.3 promedia 147 s. Y el copy es justo lo que
+    # GLM hace mejor (bake-off 2026-07-04).
+    llm_provider = "glm"
 
     @property
     def system_prompt(self) -> str:

@@ -230,7 +230,11 @@ class Settings(BaseSettings):
     # ⚠️ Si auto_send=True, el agente outbound ENVÍA cold-emails reales (no borradores).
     # Dedup por email (sent-log en el volume) + tope diario. Default OFF por seguridad.
     outbound_auto_send: bool = False
-    outbound_daily_cap: int = 10         # máximo de emails nuevos por corrida
+    # 🔥 Bajado de 12 a 5 el 2026-10-02. Medido sobre 21 días: 173 enviados, 1
+    # respuesta (0,6%) y 145 leads que agotaron la secuencia entera sin contestar.
+    # A 12/día se queman 60 leads por semana para conseguir una respuesta cada
+    # tres. Vuelve a subir cuando una tanda chica mida una tasa que lo justifique.
+    outbound_daily_cap: int = 5          # máximo de emails nuevos por corrida
     # Slots RESERVADOS del cupo diario para reenganchar leads que RESPONDIERON y se
     # callaron (tibios = 10x más valiosos que un toque frío). Sin esto, los toques
     # fríos llenaban el cupo y el reenganche nunca corría → se perdían respuestas reales.

@@ -392,6 +392,15 @@ async def _scheduled_housekeeping() -> None:
         log.info("media_offload_scheduled_done", result=off)
     except Exception as e:
         log.error("media_offload_failed", error=str(e)[:200])
+    # Las lecciones también se acumulan: +161 en tres semanas, 622 de 684 en
+    # peso 1. Dormir las viejas que nunca se confirmaron no pierde nada — si el
+    # tema reaparece, `record_outcome` las despierta con más peso.
+    try:
+        from .integrations import memory_store
+        pod = await asyncio.to_thread(memory_store.podar)
+        log.info("lecciones_podadas_scheduled", result=pod)
+    except Exception as e:
+        log.error("podar_lecciones_failed", error=str(e)[:200])
 
 
 async def _scheduled_reel_study() -> None:

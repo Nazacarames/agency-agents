@@ -318,17 +318,22 @@ def _auditar_agentes(n: Dict[str, Any], credenciales_en_vivo: bool = True) -> Li
                            "no salen nunca."))
     # Sale a pedir un token de verdad contra cada proveedor: segundos, no
     # milisegundos, y con el consentimiento de Gmail en Testing conviene no
-    # gatillarlo en cada corrida. El cierre diario lo apaga; la auditoría a
-    # pedido lo quiere.
-    if credenciales_en_vivo:
-        try:
-            from . import credenciales
-            for c in credenciales.caidas():
-                h.append(_hallazgo("agentes", ALTA,
-                                   f"Credencial caída: {c['clave']}",
-                                   c.get("rompe") or "Rompe lo que dependa de ella."))
-        except Exception:
-            pass
+    # gatillarlo en cada corrida. La auditoría a pedido las verifica todas.
+    #
+    # 🔥 El cierre diario NO las apaga del todo: apagarlas enteras dejó pasar el
+    # 2026-10-02, cuando Google restringió la app de Gmail y outbound e
+    # inbox_assistant quedaron mudos sin que saltara nada. La verificación de
+    # las CRÍTICAS es una llamada por día y es la que avisa que se paró el
+    # negocio.
+    try:
+        from . import credenciales
+        for c in credenciales.caidas(
+                solo=None if credenciales_en_vivo else credenciales.CRITICAS):
+            h.append(_hallazgo("agentes", ALTA,
+                               f"Credencial caída: {c['clave']}",
+                               c.get("rompe") or "Rompe lo que dependa de ella."))
+    except Exception:
+        pass
     return h
 
 

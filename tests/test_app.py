@@ -1280,6 +1280,99 @@ def test_si_el_dueno_ya_contesto_el_watchdog_no_insiste(tmp_path, monkeypatch):
     assert "CLAMEVET" not in texto               # el que contestó, no
 
 
+def test_el_chief_no_puede_redisparar_web_optimizer():
+    """El bloque del backlog le decía que lo disparara cuando hubiera ítems `web`
+    arrastrándose; como cada corrida suya abre pendientes nuevos, el lazo se
+    realimentaba y lo corrió casi a diario durante 41 días (13 pendientes del
+    mismo tema, ninguno resuelto) pisando una cadencia quincenal deliberada."""
+    import inspect
+
+    from app.agents.chief_of_staff import ChiefOfStaffAgent
+    fuente = inspect.getsource(ChiefOfStaffAgent._fire_agents)
+    assert "web_optimizer" in fuente, "tiene que estar en la blocklist del DISPARAR"
+
+
+def _memoria_json(tmp_path, monkeypatch):
+    from app.integrations import memory_store as ms
+    monkeypatch.setattr(ms.db, "enabled", lambda: False)
+    monkeypatch.setattr(ms, "_json_path", lambda: tmp_path / "memoria.json")
+    return ms
+
+
+def test_podar_duerme_las_viejas_y_conserva_lo_que_vale(tmp_path, monkeypatch):
+    """684 lecciones activas y 622 en peso 1: crecían sin techo. Se duermen las
+    de peso 1 más viejas; lo confirmado y lo que escribió una persona, nunca."""
+    ms = _memoria_json(tmp_path, monkeypatch)
+    for i in range(25):
+        ms.add_lesson("outbound", f"aprendizaje suelto numero {i}", kind="outcome")
+    ms.add_lesson("outbound", "esta se confirmo varias veces", kind="outcome", weight=7)
+    ms.add_lesson("outbound", "esto lo dijo el dueno", kind="correccion")
+    ms.add_lesson("leadhunter", "de otro agente", kind="outcome")
+
+    r = ms.podar()
+    assert r["dormidas"] == 25 - ms.DESPIERTAS_POR_AGENTE
+
+    vivas = ms.list_lessons(agent="outbound", active_only=True)
+    textos = [l["lesson"] for l in vivas]
+    assert "esta se confirmo varias veces" in textos      # peso > 1
+    assert "esto lo dijo el dueno" in textos              # la escribió una persona
+    assert len(vivas) == ms.DESPIERTAS_POR_AGENTE + 2
+    # el agente con pocas no se toca
+    assert len(ms.list_lessons(agent="leadhunter", active_only=True)) == 1
+
+
+def test_una_leccion_dormida_se_despierta_si_el_tema_vuelve(tmp_path, monkeypatch):
+    """Podar no puede romper el refuerzo: si lo archivado vuelve a pasar, eso es
+    la confirmación que faltaba. Sin esto se escribiría de nuevo en peso 1."""
+    ms = _memoria_json(tmp_path, monkeypatch)
+    l = ms.add_lesson("outbound", "los mails mandados un viernes no se contestan",
+                      kind="outcome")
+    ms.deactivate_lesson(l["id"])
+    assert ms.list_lessons(agent="outbound", active_only=True) == []
+
+    # la misma lección reescrita, que es como la devuelve un LLM la segunda vez
+    ms.record_outcome("outbound", "los mails mandados un viernes casi no se contestan")
+    vivas = ms.list_lessons(agent="outbound", active_only=True)
+    assert len(vivas) == 1, "tendría que haber despertado la dormida, no crear otra"
+    assert int(vivas[0]["weight"]) == 2
+
+
+def _eventos_con_mediana(monkeypatch, mediana, n=20):
+    """La bitácora devolviendo la mediana de chars de un agente."""
+    from app.integrations import eventos as ev
+    monkeypatch.setattr(ev.db, "enabled", lambda: True)
+    monkeypatch.setattr(ev.db, "fetchone",
+                        lambda *a, **k: {"mediana": mediana, "n": n})
+    return ev
+
+
+def test_una_corrida_de_97_bytes_no_es_una_corrida_ok(monkeypatch):
+    """Caso real del 2026-10-02: leadhunter escribió «10 leads sólidos. Voy a
+    guardar el reporte a disco» (97 bytes) y la bitácora lo anotó `Corrida OK`.
+    El dato para detectarlo ya estaba guardado y nadie lo miraba."""
+    ev = _eventos_con_mediana(monkeypatch, mediana=35000)
+    assert ev.corrida_flaca("leadhunter", 97)
+    assert "35000" in ev.corrida_flaca("leadhunter", 97)
+    # una corrida normal no se marca, ni una algo más corta de lo habitual
+    assert ev.corrida_flaca("leadhunter", 35000) == ""
+    assert ev.corrida_flaca("leadhunter", 20000) == ""
+
+
+def test_al_agente_que_siempre_escribe_poco_no_se_lo_marca(monkeypatch):
+    """Un piso fijo marcaría mal a los cortos: chief_of_staff entrega ~7 KB y
+    hay agentes de salida mínima. Por eso se compara contra su propia mediana."""
+    ev = _eventos_con_mediana(monkeypatch, mediana=800)
+    assert ev.corrida_flaca("finance_officer", 150) == ""
+
+
+def test_sin_historia_suficiente_no_se_inventa_una_vara(monkeypatch):
+    ev = _eventos_con_mediana(monkeypatch, mediana=35000, n=3)
+    assert ev.corrida_flaca("leadhunter", 97) == ""
+    # y si la bitácora no está, la corrida no se bloquea por eso
+    monkeypatch.setattr(ev.db, "enabled", lambda: False)
+    assert ev.corrida_flaca("leadhunter", 97) == ""
+
+
 def _mision_deleg(tmp_path, monkeypatch, agentes):
     from app.integrations import missions_store as mis
     monkeypatch.setattr(mis, "_json_path", lambda: tmp_path / "missions.json")

@@ -729,13 +729,21 @@ class BaseAgent(ABC):
             # Lo mismo, pero donde sobrevive a un deploy: logs/ vive en el
             # contenedor y render.yaml no monta ningún disco.
             from ..integrations import eventos
+            chars = len(output or "")
+            # El modelo a veces anuncia el entregable en vez de entregarlo
+            # ("voy a guardar el reporte a disco") y la corrida termina bien
+            # para todo el mundo. Se compara contra lo normal de ESTE agente.
+            flaca = eventos.corrida_flaca(self.name, chars)
+            if flaca:
+                log.warning("corrida_flaca", agent=self.name, run_id=ctx.run_id,
+                            chars=chars, model=response.model)
             eventos.registrar(
-                "run", f"Corrida OK ({ctx.triggered_by})",
-                destino=ctx.triggered_by, ref=ctx.run_id, ok=True,
+                "run", flaca or f"Corrida OK ({ctx.triggered_by})",
+                destino=ctx.triggered_by, ref=ctx.run_id, ok=not flaca,
                 detalle={"model": response.model, "elapsed_ms": elapsed_ms,
                          "input_tokens": response.input_tokens,
                          "output_tokens": response.output_tokens,
-                         "chars": len(output or "")})
+                         "chars": chars})
 
             # Delivery a Discord
             if self.deliver_to_discord and ctx.discord:

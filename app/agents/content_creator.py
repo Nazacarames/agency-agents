@@ -84,7 +84,11 @@ class ContentCreatorAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-redes,hook-generator,post-formatter,content-matrix,image,copywriting,humanizer"
     claude_code_timeout = 700
-    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
+    # Vuelve a GLM el 2026-10-02, misma razón que social_media: el pase a Kimi
+    # fue el parche de agosto por el 410 de GLM 5.2, y 5.3 revivió el 09-17.
+    # Medido: la corrida más lenta de las tres semanas fue de este agente en
+    # kimi, 3.187 s (53 min); glm-5.3 promedia 147 s.
+    llm_provider = "glm"
 
     @property
     def system_prompt(self) -> str:

@@ -241,15 +241,22 @@ def add_lesson(agent: str, lesson: str, kind: str = "feedback", weight: int = 1)
 
 
 def bump_lesson_weight(lesson_id: Any, by: int = 1) -> bool:
-    """Suma `by` al peso de una lección (refuerzo). Mayor peso = sube en lessons_for."""
+    """Suma `by` al peso de una lección (refuerzo). Mayor peso = sube en lessons_for.
+
+    Reactiva la lección si estaba dormida: `podar` archiva las que nunca se
+    confirmaron, y que algo vuelva a pasar meses después es justamente la
+    confirmación que faltaba. Sin esto, podar borraría el refuerzo.
+    """
     by = max(1, int(by or 1))
     if db.enabled():
-        db.execute("UPDATE agent_lessons SET weight = weight + %s WHERE id=%s", (by, lesson_id))
+        db.execute("UPDATE agent_lessons SET weight = weight + %s, active = true "
+                   "WHERE id=%s", (by, lesson_id))
         return True
     store = _json_load()
     for l in store["agent_lessons"]:
         if str(l["id"]) == str(lesson_id):
             l["weight"] = int(l.get("weight", 1)) + by
+            l["active"] = True
             _json_save(store)
             return True
     return False
@@ -299,12 +306,52 @@ def record_outcome(agent: str, lesson: str, weight: int = 1) -> Optional[Dict[st
                  lesson, re.IGNORECASE):
         log.info("leccion_descartada_es_pendiente", agent=agent, texto=lesson[:80])
         return None
-    for l in list_lessons(agent=agent, active_only=True):
+    # Compara contra TODAS, incluidas las dormidas: si algo que se archivó por no
+    # repetirse nunca vuelve a pasar, eso es la confirmación que faltaba y hay que
+    # despertarlo, no escribirlo de nuevo en peso 1.
+    for l in list_lessons(agent=agent, active_only=False):
         actual = l.get("lesson", "").strip()
         if actual == lesson or _mismo_tema(actual, lesson):
-            bump_lesson_weight(l.get("id"), by=weight)   # refuerzo
+            bump_lesson_weight(l.get("id"), by=weight)   # refuerzo (y despierta)
             return l
     return add_lesson(agent, lesson, kind="outcome", weight=weight)
+
+
+# Cuántas lecciones de peso 1 se le dejan despiertas a cada agente. Al prompt
+# entran 10 (`lessons_for`), así que 15 deja margen para que una nueva llegue a
+# repetirse antes de dormirse. Medido el 2026-10-02: 684 activas, 622 en peso 1
+# y +161 en tres semanas — crecimiento sin techo.
+DESPIERTAS_POR_AGENTE = 15
+# Las escritas por una persona no se tocan nunca: son correcciones y directivas.
+KINDS_HUMANOS = ("feedback", "correccion")
+
+
+def podar(agent: str = "") -> Dict[str, Any]:
+    """Duerme las lecciones de peso 1 más viejas de cada agente. No borra nada.
+
+    Qué se conserva despierto, siempre: lo que se confirmó (peso > 1) y lo que
+    escribió una persona. Del resto, las `DESPIERTAS_POR_AGENTE` más nuevas.
+
+    Dormir no pierde nada: `record_outcome` compara contra las dormidas también,
+    así que si el tema reaparece la lección se despierta con más peso.
+    """
+    agentes = [agent] if agent else sorted(
+        {l["agent"] for l in list_lessons(active_only=True)})
+    dormidas, por_agente = 0, {}
+    for ag in agentes:
+        filas = [l for l in list_lessons(agent=ag, active_only=True)
+                 if int(l.get("weight") or 1) <= 1
+                 and (l.get("kind") or "") not in KINDS_HUMANOS]
+        # list_lessons ordena por weight DESC, created_at DESC → acá todas pesan
+        # 1, así que el orden ya es de la más nueva a la más vieja.
+        sobran = filas[DESPIERTAS_POR_AGENTE:]
+        for l in sobran:
+            deactivate_lesson(l.get("id"))
+        if sobran:
+            por_agente[ag] = len(sobran)
+            dormidas += len(sobran)
+    log.info("lecciones_podadas", dormidas=dormidas, agentes=len(por_agente))
+    return {"dormidas": dormidas, "por_agente": por_agente}
 
 
 def list_lessons(agent: Optional[str] = None, active_only: bool = True) -> List[Dict[str, Any]]:

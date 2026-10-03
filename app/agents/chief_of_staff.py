@@ -155,9 +155,13 @@ Cuando el avance lo justifica, además de delegar podés RE-DISPARAR un agente p
 corra YA (no en su próximo turno). Úsalo para decisiones de BAJO RIESGO basadas en el
 avance: un agente que HOY no entregó y hace falta, o algo urgente que no puede esperar.
 Formato: `DISPARAR(<agente>)` (una línea por agente).
-Reglas DURAS: máx 2 por cierre; NUNCA el de video (tiktok_creator) ni los de
-contenido/creatividad pesados (cuestan cuota); solo si de verdad mueve la aguja hoy.
+Reglas DURAS: máx 2 por cierre; NUNCA el de video (tiktok_creator), los de
+contenido/creatividad pesados (cuestan cuota) ni **web_optimizer** — ese corre
+quincenal A PROPÓSITO porque toca la web y deploya, y hasta el 2026-10-02 se lo
+estuvo re-disparando casi todos los días (41 días, 13 pendientes abiertos del
+mismo tema, ninguno resuelto). Solo dispará si de verdad mueve la aguja HOY.
 Si con delegar alcanza, delegá — disparar es la excepción, no la norma.
+Un agente que ya corrió hoy NO se vuelve a disparar.
 """.strip()
 
 WEEKLY_ADDON = """
@@ -491,7 +495,13 @@ class ChiefOfStaffAgent(BaseAgent):
         (el server sigue vivo → la corrida completa). Acción de bajo riesgo sobre el
         avance. Tope 2 + blocklist del costoso (video = Veo) para no gastar de más."""
         import re, threading, asyncio
-        BLOCK = {"tiktok_creator", "content_creator", "creative_strategist", "media_auditor"}
+        # web_optimizer entra acá el 2026-10-02: el bloque del backlog le decía al
+        # Chief que lo disparara cuando hubiera ítems `web` arrastrándose, y como
+        # cada corrida suya ABRE pendientes nuevos, el lazo se realimentaba solo.
+        # Medido: 41 días disparándolo casi a diario, 13 pendientes del mismo tema,
+        # ninguno resuelto. Corre quincenal, que es su cadencia de diseño.
+        BLOCK = {"tiktok_creator", "content_creator", "creative_strategist",
+                 "media_auditor", "web_optimizer"}
         try:
             from .registry import list_agents as _all
             valid = {a.name for a in _all()}
@@ -585,8 +595,11 @@ class ChiefOfStaffAgent(BaseAgent):
         pend = bl.bloque(limite=20, titulo="## BACKLOG ABIERTO (con edad — esto NO es prosa, es el registro)")
         if pend:
             extra += ("\n" + pend + "\n"
-                      "Reglas: lo de área `web` lo ejecuta web_optimizer (si se está "
-                      "arrastrando, DISPARAR(web_optimizer) lo corre hoy). Lo de `dev` NO "
+                      "Reglas: lo de área `web` lo ejecuta web_optimizer en su corrida "
+                      "quincenal. **NO lo dispares**: se probó 41 días seguidos y los "
+                      "pendientes de `web` no bajaron — cada corrida abre más de los que "
+                      "cierra. Si un ítem `web` se arrastra, el problema no es la "
+                      "frecuencia: decí qué lo bloquea o matalo. Lo de `dev` NO "
                       "lo puede hacer ningún agente — va al dueño. Lo de `humano` son tus "
                       "acciones. Un ítem con muchos días o muchas re-apariciones ya demostró "
                       "que la vía por la que iba no funciona: cambiá de vía o decí que lo "

@@ -384,13 +384,23 @@ def test_una_empresa_dada_de_baja_no_se_reporta():
     assert h == []
 
 
-def test_el_cierre_diario_no_sale_a_verificar_credenciales(monkeypatch):
+def test_el_cierre_diario_verifica_solo_las_criticas(monkeypatch):
     """Verificar sale a pedir un token contra cada proveedor: segundos por
-    credencial, y el consentimiento de Gmail está en Testing."""
+    credencial. Pero apagarlo ENTERO en el cierre diario dejó pasar el
+    2026-10-02, cuando Google restringió la app de Gmail y outbound e
+    inbox_assistant quedaron mudos sin que saltara ningún hallazgo. El cierre
+    verifica sólo las que paran el negocio; la auditoría a pedido, todas."""
     from app.integrations import credenciales
-    monkeypatch.setattr(credenciales, "caidas",
-                        lambda *a, **k: pytest.fail("no tenía que verificar"))
-    proyectos._auditar_agentes({"fallas_recientes": 1}, credenciales_en_vivo=False)
+    vistos = {}
+
+    def _fake(*a, **k):
+        vistos["solo"] = k.get("solo")
+        return [{"clave": "gmail_oauth", "rompe": "no sale ni entra un mail"}]
+
+    monkeypatch.setattr(credenciales, "caidas", _fake)
+    h = proyectos._auditar_agentes({"fallas_recientes": 1}, credenciales_en_vivo=False)
+    assert vistos["solo"] == credenciales.CRITICAS
+    assert any("gmail_oauth" in x["que"] for x in h)
 
 
 def test_la_auditoria_a_pedido_si_las_verifica(monkeypatch):

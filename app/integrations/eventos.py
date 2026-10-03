@@ -54,6 +54,52 @@ def actor() -> tuple:
     return _CTX.get()
 
 
+# Una corrida que escribió 97 bytes no es una corrida OK, y el dato para saberlo
+# ya estaba guardado: `detalle.chars`. Nadie lo miraba, así que el 2026-10-02
+# leadhunter anotó «10 leads sólidos. Voy a guardar el reporte a disco» y terminó
+# ahí — 97 bytes, los 10 leads perdidos, y en la bitácora `Corrida OK`.
+MUESTRA_CHARS = 40          # contra cuántas corridas previas se compara
+MIN_MUESTRA = 5             # con menos no hay mediana que valga
+FRACCION_FLACA = 0.25       # menos de 1/4 de lo normal para ESE agente
+PISO_MEDIANA = 2000         # un agente que siempre escribe poco no se marca
+
+
+def corrida_flaca(agente: str, chars: int) -> str:
+    """'' si el tamaño es normal para ese agente; si no, por qué es sospechoso.
+
+    Se compara contra la MEDIANA DEL PROPIO AGENTE y no contra un piso fijo:
+    cada uno tiene su tamaño normal (chief_of_staff entrega 7 KB y leadhunter
+    35 KB), así que un umbral único marcaría mal a los cortos y dejaría pasar
+    a los largos. Sólo mira corridas `ok` para que una mala no baje la vara.
+    """
+    if not agente or chars < 0:
+        return ""
+    if not db.enabled():
+        return ""
+    try:
+        row = db.fetchone(
+            "SELECT percentile_cont(0.5) WITHIN GROUP "
+            "         (ORDER BY (detalle->>'chars')::numeric) AS mediana, count(*) AS n "
+            "FROM (SELECT detalle FROM agent_events "
+            "      WHERE agente = %s AND tipo = 'run' AND ok "
+            "        AND detalle->>'chars' IS NOT NULL "
+            "      ORDER BY ts DESC LIMIT %s) t",
+            (agente, MUESTRA_CHARS),
+        )
+    except Exception as e:                                   # noqa: BLE001
+        log.warning("corrida_flaca_fallo", agente=agente, error=str(e)[:200])
+        return ""
+    if not row or not row.get("n") or int(row["n"]) < MIN_MUESTRA:
+        return ""
+    mediana = float(row["mediana"] or 0)
+    if mediana < PISO_MEDIANA:
+        return ""
+    if chars >= mediana * FRACCION_FLACA:
+        return ""
+    return ("Corrida VACÍA: %s caracteres, y lo normal para este agente son ~%s "
+            "(el modelo dijo que entregaba y no entregó)" % (chars, int(mediana)))
+
+
 def _json_path() -> Path:
     return Path(__file__).resolve().parent.parent.parent / "data" / "agent-events.json"
 
