@@ -541,8 +541,18 @@ class BaseAgent(ABC):
                             settings=ctx.settings, llm_provider=prov,
                             system_append=local_system, timeout=p_timeout,
                             max_turns=self.hermes_max_turns, agente=self.name)
+                        # 🔥 La etiqueta dice qué backend SIRVIÓ, no qué pidió el
+                        # agente. Decía lo segundo, y por eso 84 corridas quedaron
+                        # anotadas como `hermes:kimi` cuando `_provider_model` ni
+                        # contempla "kimi" y las resolvía TODAS por MiniMax. Con esa
+                        # etiqueta de por medio, comparar backends da cualquier cosa.
+                        from ..clients.hermes import _provider_model as _pm
+                        try:
+                            servido = _pm(prov, ctx.settings)[0]
+                        except Exception:                    # noqa: BLE001
+                            servido = prov or "minimax"
                         response = MiniMaxResponse(
-                            text=h_text, model=f"hermes:{prov or 'minimax'}",
+                            text=h_text, model=f"hermes:{servido}",
                             input_tokens=0, output_tokens=0,
                             stop_reason="end_turn", raw={}, elapsed_ms=0,
                         )

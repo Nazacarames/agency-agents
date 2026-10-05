@@ -318,9 +318,14 @@ class Settings(BaseSettings):
     # Token de USUARIO con confirmación de identidad (facebook.com/ads/library/api).
     # El system-user token de publicación NO sirve para esta API.
     meta_ad_library_token: str = ""
-    # GLM 5.2 murio el 2026-08-21 y no hay variante viva (probe 5 nombres, 404).
-    # El provider "glm" queda apuntando a Kimi para que una referencia vieja
-    # degrade a un modelo que anda, en vez de tirar 410.
+    # GLM 5.2 murió el 2026-08-21 (410); 5.3 revivió el 2026-09-17 y es el que
+    # usa el provider "glm".
+    # ⚠️ OJO antes de mover agentes a este provider: por Hermes, "glm" es el
+    # ÚNICO que intenta NVIDIA de verdad (`hermes._provider_model`), y ese
+    # intento viene fallando y cayendo a MiniMax después de quemar hasta 420 s.
+    # `kimi` ni se intenta: cae a MiniMax directo. Medido el 2026-10-04 al
+    # migrar 6 agentes de kimi a glm y tener que revertir — inbox_assistant pasó
+    # de 46 s a 458 s haciendo exactamente lo mismo.
     glm_model: str = "z-ai/glm-5.3"
     # El id sin fecha murió el 2026-08-07 (410 Gone) y los agentes venían
     # cayendo en silencio al fallback. El fechado sigue vivo.

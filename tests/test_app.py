@@ -1280,6 +1280,26 @@ def test_si_el_dueno_ya_contesto_el_watchdog_no_insiste(tmp_path, monkeypatch):
     assert "CLAMEVET" not in texto               # el que contestó, no
 
 
+def test_la_bitacora_anota_el_backend_que_SIRVIO_no_el_que_se_pidio():
+    """84 corridas quedaron anotadas como `hermes:kimi` y ninguna usó Kimi:
+    `_provider_model` no contempla ese provider y las resolvía todas por
+    MiniMax. Comparar backends con esa etiqueta de por medio llevó a migrar 6
+    agentes a glm creyendo que mejoraban, y empeoraron (inbox_assistant 46 s →
+    458 s haciendo lo mismo)."""
+    from types import SimpleNamespace
+
+    from app.clients.hermes import _provider_model
+    s = SimpleNamespace(nvidia_api_key="nv-test", glm_model="z-ai/glm-5.3",
+                        minimax_model_primary="MiniMax-M3")
+    assert _provider_model("glm", s)[0] == "nvidia"
+    assert _provider_model("kimi", s)[0] == "minimax", \
+        "kimi no está contemplado: cae a minimax, y la etiqueta tiene que decirlo"
+    assert _provider_model("", s)[0] == "minimax"
+    # sin key de NVIDIA, ni glm llega a intentarlo
+    assert _provider_model("glm", SimpleNamespace(
+        nvidia_api_key="", minimax_model_primary="MiniMax-M3"))[0] == "minimax"
+
+
 def test_el_chief_no_puede_redisparar_web_optimizer():
     """El bloque del backlog le decía que lo disparara cuando hubiera ítems `web`
     arrastrándose; como cada corrida suya abre pendientes nuevos, el lazo se
