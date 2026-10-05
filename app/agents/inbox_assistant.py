@@ -209,7 +209,7 @@ class InboxAssistantAgent(BaseAgent):
     temperature = 0.6
     use_claude_code = False   # composición de texto pura → no consume como un run CC
     llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
-    claude_code_skill = "humanizer"
+    claude_code_skill = "humanizer,espanol-rioplatense"
 
     @property
     def system_prompt(self) -> str:

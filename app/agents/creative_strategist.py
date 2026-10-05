@@ -72,7 +72,7 @@ class CreativeStrategistAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 5000
     use_claude_code = True
-    claude_code_skill = "marketing-ads,ad-creative,ads,humanizer"
+    claude_code_skill = "marketing-ads,ad-creative,ads,humanizer,espanol-rioplatense"
     claude_code_timeout = 700
     llm_provider = "glm"   # GLM 5.3: copy de ads más afilado; fallback CC/MiniMax
 

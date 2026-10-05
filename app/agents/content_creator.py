@@ -82,7 +82,7 @@ class ContentCreatorAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 12000  # 2026-06-12: subido de 5000 (truncamiento observado en producción)
     use_claude_code = True
-    claude_code_skill = "marketing-redes,hook-generator,post-formatter,content-matrix,image,copywriting,humanizer"
+    claude_code_skill = "marketing-redes,hook-generator,post-formatter,content-matrix,image,copywriting,humanizer,espanol-rioplatense"
     claude_code_timeout = 700
     # Vuelve a GLM el 2026-10-02, misma razón que social_media: el pase a Kimi
     # fue el parche de agosto por el 410 de GLM 5.2, y 5.3 revivió el 09-17.

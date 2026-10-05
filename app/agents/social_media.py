@@ -82,7 +82,7 @@ class SocialMediaAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 6000
     use_claude_code = True
-    claude_code_skill = "marketing-redes,hook-generator,post-formatter,social,copywriting,humanizer"
+    claude_code_skill = "marketing-redes,hook-generator,post-formatter,social,copywriting,humanizer,espanol-rioplatense"
     claude_code_timeout = 700
     # Vuelve a GLM el 2026-10-02: el pase a Kimi fue un parche de agosto porque
     # GLM 5.2 daba 410, y GLM **5.3** revivió el 2026-09-17 sin que se migrara

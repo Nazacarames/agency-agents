@@ -27,7 +27,7 @@ from ..clients.claude_code import run_claude_code, ClaudeCodeError
 from ..clients.discord import DiscordWebhook
 from ..log import get_logger, write_run_log
 from ..config import Settings
-from ._common import sanitize_model_text
+from ._common import sanitize_model_text, vosear
 
 log = get_logger("agent")
 
@@ -430,6 +430,19 @@ class BaseAgent(ABC):
         return (f"{header}\n\nUsá ese contexto para que tu trabajo sea coherente con la "
                 f"empresa, los objetivos y lo aprendido.\n\n---\n\n{user_msg}")
 
+    def _tratamiento_vos(self, ctx: AgentContext) -> bool:
+        """¿Esta corrida escribe en «vos»? Sí, salvo que apunte a un cliente de un
+        país que no vosea (México, España…): ahí el «tú» es lo correcto."""
+        cid = ctx.args.get("client_id") if isinstance(ctx.args, dict) else None
+        if not cid:
+            return True
+        try:
+            from ..integrations import clients_store as cs, localization as loc
+            client = cs.get_client(cid) or {}
+            return loc.get(client.get("country"))["treatment"].startswith("vos")
+        except Exception:
+            return False
+
     def _persist_client_report(self, output: str, ctx: AgentContext) -> None:
         """Guarda el output como report en la memoria del cliente objetivo (si lo hay)."""
         cid = ctx.args.get("client_id") if isinstance(ctx.args, dict) else None
@@ -713,6 +726,11 @@ class BaseAgent(ABC):
             if cjk_removed:
                 log.warning("sanitized_cjk_chars", agent=self.name,
                             run_id=ctx.run_id, removed=cjk_removed)
+            if self._tratamiento_vos(ctx):
+                clean_text, voseados = vosear(clean_text)
+                if voseados:
+                    log.info("voseo_corregido", agent=self.name, run_id=ctx.run_id,
+                             cambios=voseados)
             # Colaboración: cosechar NOTA_PARA/LECCION del texto CRUDO — varios
             # post_process reescriben el output y las líneas se perderían.
             self._harvest_collab(clean_text, ctx)

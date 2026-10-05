@@ -197,7 +197,7 @@ class TikTokCreatorAgent(BaseAgent):
     timezone = "America/Buenos_Aires"
     max_tokens = 12000
     use_claude_code = True
-    claude_code_skill = "marketing-redes,reels-scripting,hook-generator,humanizer"
+    claude_code_skill = "marketing-redes,reels-scripting,hook-generator,humanizer,espanol-rioplatense"
     claude_code_timeout = 700
     llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
 

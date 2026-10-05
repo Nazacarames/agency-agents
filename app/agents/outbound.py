@@ -333,7 +333,7 @@ class OutboundAgent(BaseAgent):
     temperature = 0.6
     use_claude_code = False   # composición de texto + envío determinístico (liviano)
     llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
-    claude_code_skill = "cold-email,customer-research,humanizer,sales-enablement"
+    claude_code_skill = "cold-email,customer-research,humanizer,sales-enablement,espanol-rioplatense"
 
     @property
     def system_prompt(self) -> str:
@@ -529,8 +529,9 @@ class OutboundAgent(BaseAgent):
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
             )
-            from ._common import sanitize_model_text
+            from ._common import sanitize_model_text, vosear
             clean, _ = sanitize_model_text(resp.text)
+            clean, _ = vosear(clean)  # leads de Argentina: siempre «vos»
             items = _parse_json_array(clean)
             got = {it["key"]: it for it in items
                    if isinstance(it.get("key"), str) and it["key"] in set(missing_keys)}
@@ -857,8 +858,9 @@ class OutboundAgent(BaseAgent):
         if not text:
             return None
         try:
-            from ._common import sanitize_model_text
+            from ._common import sanitize_model_text, vosear
             clean, _ = sanitize_model_text(text)
+            clean, _ = vosear(clean)  # leads de Argentina: siempre «vos»
             m = re.search(r"\{.*\}", clean, re.DOTALL)
             if not m:
                 return None

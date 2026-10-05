@@ -119,6 +119,18 @@ técnico que ejecuta lo que otros recomiendan".
    japoneses, coreanos o de cualquier alfabeto no latino. Si no sabés una palabra,
    usá la española (ej: "reciclaje", NO "回收"). Sólo se permiten letras latinas
    (con tildes/ñ), números, signos de puntuación y emojis.
+   - Voseo SIEMPRE (salvo el bloque LOCALIZACIÓN): tenés, podés, querés, necesitás,
+     sos, contactanos, escribinos, descubrilo. NUNCA tienes/puedes/contáctanos.
+   - Registro PROFESIONAL cercano: un consultor argentino escribiéndole al dueño de
+     una pyme. Voseo sí, lunfardo NO: nada de "che", "quilombo", "gil", "boludo",
+     "posta", "re-" (re bueno), "guita", "laburo" en textos para clientes.
+   - Nada de neutro ni de otros países: "Quedo al pendiente", "platicar", "checar",
+     "ahorita", "computador" → "Quedo atento", "charlar", "revisar", "ahora",
+     "computadora".
+   - Una palabra es en un solo idioma: nunca pegues inglés o portugués en medio del
+     español ("organizes", "ajudar", "portónneeded"). Jerga técnica establecida
+     (landing, CRM, pipeline) sí.
+   - Firmás como Automiq. NUNCA inventes nombres de empresa, de personas ni cifras.
 
 ## 🚧 RESTRICCIONES VIGENTES — leelas ANTES de proponer nada
 
@@ -729,6 +741,62 @@ def sanitize_model_text(text: str) -> tuple:
     cleaned = _re.sub(r"[ \t]{2,}", " ", cleaned)
     cleaned = _re.sub(r" +([,.;:!?])", r"\1", cleaned)
     return cleaned, removed
+
+
+# ── Voseo: el tuteo que se escapa igual ──────────────────────────────────────
+# La regla de idioma está en AGENCY_CONTEXT y el modelo la sigue casi siempre,
+# pero se le escapan "necesitas", "contáctanos", "descubrilo" a medias (medido en
+# los informes de sep/oct 2026). Acá van SOLO las formas que no pueden ser otra
+# cosa que tuteo: "tienes" nunca es tercera persona (sería "tiene"), y los
+# imperativos con pronombre pegado llevan tilde sólo en tú ("contáctanos" vs
+# "contactanos"). "Descubre", "mira" o "prueba" quedan afuera: también son
+# tercera persona o sustantivos ("la prueba", "él descubre").
+_VOSEO = {
+    "tienes": "tenés", "puedes": "podés", "quieres": "querés", "necesitas": "necesitás",
+    "sabes": "sabés", "eres": "sos", "vienes": "venís", "haces": "hacés", "dices": "decís",
+    "sientes": "sentís", "prefieres": "preferís", "piensas": "pensás", "buscas": "buscás",
+    "vendes": "vendés", "trabajas": "trabajás", "recibes": "recibís", "pierdes": "perdés",
+    "llegas": "llegás", "atiendes": "atendés", "respondes": "respondés",
+    "contestas": "contestás", "inviertes": "invertís", "consigues": "conseguís",
+    "sigues": "seguís", "manejas": "manejás", "imaginas": "imaginás",
+    # "ti" NO: "el área de TI" quedaría "el área de VOS".
+    "tú": "vos", "contigo": "con vos",
+    "contáctanos": "contactanos", "escríbenos": "escribinos", "cuéntanos": "contanos",
+    "cuéntame": "contame", "déjanos": "dejanos", "llámanos": "llamanos",
+    "visítanos": "visitanos", "únete": "sumate", "suscríbete": "suscribite",
+    "olvídate": "olvidate", "imagínate": "imaginate", "fíjate": "fijate",
+    "anímate": "animate", "acércate": "acercate", "pregúntanos": "preguntanos",
+    "dinos": "decinos", "dime": "decime", "regístrate": "registrate", "apúntate": "anotate",
+    "descárgalo": "descargalo", "pruébalo": "probalo", "descúbrelo": "descubrilo",
+    "pídelo": "pedilo", "mándanos": "mandanos", "escríbeme": "escribime",
+    "llámame": "llamame", "avísame": "avisame", "avísanos": "avisanos", "haz": "hacé",
+}
+_VOSEO_RE = _re.compile(r"(?<![\w/@#.-])(" + "|".join(sorted(_VOSEO, key=len, reverse=True))
+                        + r")(?![\w/@-])", _re.IGNORECASE)
+
+
+def vosear(text: str) -> tuple:
+    """Pasa a voseo las formas de tuteo inequívocas. (texto, cantidad cambiada).
+
+    Sólo para textos en tratamiento «vos» (Argentina): un cliente de México o
+    España lleva «tú» y ahí NO se llama (ver `localization`).
+    """
+    if not text:
+        return text, 0
+    n = 0
+
+    def _cambio(m):
+        nonlocal n
+        orig = m.group(0)
+        nuevo = _VOSEO[orig.lower()]
+        n += 1
+        if orig.isupper() and len(orig) > 1:
+            return nuevo.upper()
+        if orig[0].isupper():
+            return nuevo[0].upper() + nuevo[1:]
+        return nuevo
+
+    return _VOSEO_RE.sub(_cambio, text), n
 
 
 # ── Fecha/hora ART (única fuente: los reportes se nombran y buscan con esta fecha) ──

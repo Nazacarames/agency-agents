@@ -36,3 +36,32 @@ def test_removes_space_before_punctuation():
 def test_empty_and_none_safe():
     assert sanitize_model_text("") == ("", 0)
     assert sanitize_model_text(None) == (None, 0)
+
+
+# ── Voseo: el tuteo inequívoco que se le escapa al modelo ──
+from app.agents._common import vosear
+
+
+def test_pasa_a_voseo_el_tuteo_inequivoco():
+    out, n = vosear("Si necesitas más clientes, contáctanos. ¿Tienes WhatsApp Business?")
+    assert out == "Si necesitás más clientes, contactanos. ¿Tenés WhatsApp Business?"
+    assert n == 3
+
+
+def test_respeta_mayusculas():
+    assert vosear("ESCRÍBENOS HOY")[0] == "ESCRIBINOS HOY"
+    assert vosear("Tú decidís")[0] == "Vos decidís"
+
+
+def test_no_toca_lo_que_puede_ser_otra_cosa():
+    """«la prueba», «él descubre», «tu negocio», «el área de TI» y lo que ya
+    está en voseo quedan igual."""
+    txt = ("La prueba gratis dura 30 días; el dueño descubre que tu negocio pierde "
+           "consultas. El área de TI ya lo sabe. Vos tenés el control y estás a tiempo.")
+    out, n = vosear(txt)
+    assert out == txt and n == 0
+
+
+def test_no_toca_urls_ni_hashtags():
+    txt = "Mirá https://ejemplo.com/tienes y #puedes"
+    assert vosear(txt)[0] == txt
