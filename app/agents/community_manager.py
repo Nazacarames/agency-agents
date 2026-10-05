@@ -46,9 +46,7 @@ class CommunityManagerAgent(BaseAgent):
     description = "Engagement: responde comentarios/DMs, engancha y detecta oportunidades"
     schedule = "30 15 * * mon-fri"  # días hábiles 15:30, después de social_media
     max_tokens = 5000
-    # Vuelve a GLM el 2026-10-02: Kimi fue el parche de agosto por el 410 de
-    # GLM 5.2, y 5.3 revivió el 09-17 sin que se migrara de vuelta.
-    llm_provider = "glm"
+    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
     claude_code_skill = "social,humanizer,community-marketing"
 
     @property

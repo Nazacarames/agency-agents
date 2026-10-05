@@ -199,10 +199,7 @@ class TikTokCreatorAgent(BaseAgent):
     use_claude_code = True
     claude_code_skill = "marketing-redes,reels-scripting,hook-generator,humanizer"
     claude_code_timeout = 700
-    # Vuelve a GLM el 2026-10-02 (parche de agosto por el 410 de GLM 5.2; 5.3
-    # revivió el 09-17). Mirar el short NO depende de esto: va por
-    # `vision.describe_video`, que tiene su propio provider (glm-5.3-flash).
-    llm_provider = "glm"
+    llm_provider = "kimi"   # GLM 5.2 murió el 2026-08-21 (410); Kimi K3 lo reemplaza
 
     @property
     def system_prompt(self) -> str:
