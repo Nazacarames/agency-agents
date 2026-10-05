@@ -318,15 +318,19 @@ class Settings(BaseSettings):
     # Token de USUARIO con confirmación de identidad (facebook.com/ads/library/api).
     # El system-user token de publicación NO sirve para esta API.
     meta_ad_library_token: str = ""
-    # GLM 5.2 murió el 2026-08-21 (410); 5.3 revivió el 2026-09-17 y es el que
-    # usa el provider "glm".
-    # ⚠️ OJO antes de mover agentes a este provider: por Hermes, "glm" es el
-    # ÚNICO que intenta NVIDIA de verdad (`hermes._provider_model`), y ese
-    # intento viene fallando y cayendo a MiniMax después de quemar hasta 420 s.
-    # `kimi` ni se intenta: cae a MiniMax directo. Medido el 2026-10-04 al
-    # migrar 6 agentes de kimi a glm y tener que revertir — inbox_assistant pasó
-    # de 46 s a 458 s haciendo exactamente lo mismo.
-    glm_model: str = "z-ai/glm-5.3"
+    # 🔥 El provider "glm" apunta al FLASH desde el 2026-10-04, y el motivo es la
+    # latencia, no la calidad. Bake-off de ese día contra el catálogo real de la
+    # cuenta (misma consigna, varias corridas por modelo):
+    #     z-ai/glm-5.3        32 s · 62 s · 110 s   ← variable e inservible por Hermes
+    #     z-ai/glm-5.3-flash   8 s … 19 s (7 corridas)
+    # Con 15 turnos, 32-110 s por turno no entra en NINGÚN timeout: por eso el
+    # intento NVIDIA fallaba SIEMPRE y los 8 agentes con `glm` terminaban en
+    # MiniMax después de quemar 420 s. Con el flash, 15 turnos entran holgados.
+    # Calidad: empatan; el flash además escribe en voseo, que es la casa.
+    # ⚠️ La nota del 2026-09-17 decía lo contrario («el flash es MÁS LENTO que el
+    # grande para texto, 145 s vs 8,5 s»). Era cierta entonces: NVIDIA redespliega
+    # estos modelos. **Volver a medir antes de confiar en este comentario.**
+    glm_model: str = "z-ai/glm-5.3-flash"
     # El id sin fecha murió el 2026-08-07 (410 Gone) y los agentes venían
     # cayendo en silencio al fallback. El fechado sigue vivo.
     # Kimi K3: razona antes de responder. Más capaz que GLM en
