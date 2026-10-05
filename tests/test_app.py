@@ -1289,15 +1289,13 @@ def test_la_bitacora_anota_el_backend_que_SIRVIO_no_el_que_se_pidio():
     from types import SimpleNamespace
 
     from app.clients.hermes import _provider_model
-    s = SimpleNamespace(nvidia_api_key="nv-test", glm_model="z-ai/glm-5.3",
+    s = SimpleNamespace(nvidia_api_key="nv-test", glm_model="z-ai/glm-5.3-flash",
                         minimax_model_primary="MiniMax-M3")
-    assert _provider_model("glm", s)[0] == "nvidia"
-    assert _provider_model("kimi", s)[0] == "minimax", \
-        "kimi no está contemplado: cae a minimax, y la etiqueta tiene que decirlo"
-    assert _provider_model("", s)[0] == "minimax"
-    # sin key de NVIDIA, ni glm llega a intentarlo
-    assert _provider_model("glm", SimpleNamespace(
-        nvidia_api_key="", minimax_model_primary="MiniMax-M3"))[0] == "minimax"
+    # Desde el 2026-10-04 Hermes va SIEMPRE a MiniMax: el glm grande no entra en
+    # los timeouts (32-110 s por llamada) y el flash le filtra el razonamiento al
+    # entregable. NVIDIA sigue vivo por el camino directo, que sale limpio.
+    for prov in ("glm", "kimi", "", "lo-que-sea"):
+        assert _provider_model(prov, s) == ("minimax", "MiniMax-M3"), prov
 
 
 def test_el_chief_no_puede_redisparar_web_optimizer():

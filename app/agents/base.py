@@ -534,7 +534,17 @@ class BaseAgent(ABC):
                     # los 60s y este corte es sólo el respaldo: 420s = 3 intentos del peor
                     # turno (180s) + una corrida sana entera, y sigue siendo fail-fast
                     # contra los 600s de MiniMax. Bajarlo vuelve a cortar reintentos.
-                    p_timeout = 420 if prov else self.claude_code_timeout
+                    # El corte corto es para el intento NVIDIA, no para MiniMax:
+                    # se mira el provider RESUELTO, no el declarado. Con el
+                    # declarado, un agente con `glm` que Hermes resuelve a
+                    # MiniMax corría con 420 s en vez de sus 600 s y se cortaba
+                    # solo, sin que nada lo explicara.
+                    from ..clients.hermes import _provider_model as _pm
+                    try:
+                        resuelto = _pm(prov, ctx.settings)[0]
+                    except Exception:                        # noqa: BLE001
+                        resuelto = prov or "minimax"
+                    p_timeout = 420 if resuelto == "nvidia" else self.claude_code_timeout
                     try:
                         h_text = run_hermes(
                             self._skills_preamble() + user_msg,
@@ -546,13 +556,8 @@ class BaseAgent(ABC):
                         # anotadas como `hermes:kimi` cuando `_provider_model` ni
                         # contempla "kimi" y las resolvía TODAS por MiniMax. Con esa
                         # etiqueta de por medio, comparar backends da cualquier cosa.
-                        from ..clients.hermes import _provider_model as _pm
-                        try:
-                            servido = _pm(prov, ctx.settings)[0]
-                        except Exception:                    # noqa: BLE001
-                            servido = prov or "minimax"
                         response = MiniMaxResponse(
-                            text=h_text, model=f"hermes:{servido}",
+                            text=h_text, model=f"hermes:{resuelto}",
                             input_tokens=0, output_tokens=0,
                             stop_reason="end_turn", raw={}, elapsed_ms=0,
                         )

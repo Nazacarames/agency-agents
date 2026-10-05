@@ -112,9 +112,24 @@ def hermes_available() -> bool:
 
 
 def _provider_model(llm_provider: str, s: Settings) -> tuple[str, str]:
-    """provider lógico del agente → (provider hermes, modelo)."""
-    if llm_provider == "glm" and getattr(s, "nvidia_api_key", ""):
-        return "nvidia", getattr(s, "glm_model", "z-ai/glm-5.3")
+    """provider lógico del agente → (provider hermes, modelo).
+
+    🔥 2026-10-04: POR HERMES va todo a MiniMax, a propósito. Los dos modelos de
+    NVIDIA que se podían usar acá fallan de maneras distintas y las dos arruinan
+    la corrida:
+      · `z-ai/glm-5.3` tarda 32-110 s por llamada (medido, 3 corridas). Con 15
+        turnos no entra en ningún timeout → el intento moría a los 420 s y el
+        agente rehacía TODO en MiniMax. Cada corrida pagaba 7 minutos de nada.
+      · `z-ai/glm-5.3-flash` sí es rápido (8-19 s) y el intento termina bien,
+        pero Hermes le renderiza el razonamiento al stdout como un panel
+        `┌─ Reasoning ┐` **que nunca cierra** y que se repite: el entregable
+        sale con párrafos en inglés adentro. No se puede recortar sin adivinar
+        dónde termina.
+    El camino DIRECTO a NVIDIA (`clients/nvidia.py`) no tiene ninguno de los dos
+    problemas: pasa `reasoning_effort: low` y devuelve texto limpio. Ahí sigue
+    viviendo `glm`, y es donde corre chief_of_staff.
+    **Para revivir esto hace falta que Hermes acepte apagar el razonamiento.**
+    """
     return "minimax", s.minimax_model_primary
 
 
