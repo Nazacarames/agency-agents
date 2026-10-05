@@ -46,9 +46,13 @@ def test_el_watchdog_sigue_chequeando_los_modelos_vivos():
 
 # ── GLM 5.3 ──
 
-def test_glm_apunta_al_modelo_nuevo():
+def test_glm_apunta_al_flash_por_latencia():
+    """El 2026-10-04 pasó del grande al flash. No es capricho: medido contra el
+    catálogo real, `z-ai/glm-5.3` dio 32 s · 62 s · 110 s y el flash 8-19 s en 7
+    corridas. Con 15 turnos de Hermes, el grande no entra en ningún timeout y el
+    intento NVIDIA fallaba SIEMPRE → los agentes caían a MiniMax tras 420 s."""
     from app.config import get_settings
-    assert get_settings().glm_model == "z-ai/glm-5.3"
+    assert get_settings().glm_model == "z-ai/glm-5.3-flash"
 
 
 def test_glm_va_con_esfuerzo_de_razonamiento_bajo():
@@ -74,7 +78,7 @@ def test_un_provider_desconocido_cae_a_glm_CON_su_configuracion():
     difícil de diagnosticar: responde 200 y no dice nada."""
     from app.clients.nvidia import _PROVIDER_MODEL, provider_model
     from app.config import get_settings
-    assert provider_model("no-existe", get_settings()) == "z-ai/glm-5.3"
+    assert provider_model("no-existe", get_settings()) == get_settings().glm_model
     t = (APP / "clients/nvidia.py").read_text(encoding="utf-8")
     assert '_PROVIDER_MODEL.get(provider, ("", {}))' not in t
     assert '_PROVIDER_MODEL.get(provider, ("glm_model", {}))' not in t
