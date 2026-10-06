@@ -509,6 +509,50 @@ def sessions_vacuum() -> dict:
             "liberado_mb": mb(antes - despues)}
 
 
+def cerrar_sesiones_viejas(dias: int) -> int:
+    """Marca como terminadas las sesiones abiertas de más de `dias`. Devuelve cuántas.
+
+    🔥 Sin esto la poda NO BORRA NADA (medido 2026-10-06): `prune_sessions` de
+    Hermes "only prunes ended sessions", y nuestras corridas headless (`chat -q`)
+    nunca cierran la suya — las 1.592 sesiones tenían `ended_at` vacío y `sessions
+    prune` contestaba "No sessions match". Sólo toca `ended_at`/`end_reason`; los
+    mensajes los borra después el propio Hermes, cuyos triggers mantienen los
+    índices de búsqueda.
+    """
+    db = _HERMES_HOME / "state.db"
+    if not db.is_file():
+        return 0
+    import sqlite3
+    import time
+    corte = time.time() - dias * 86400
+    con = sqlite3.connect(str(db), timeout=120)
+    try:
+        n = con.execute(
+            "UPDATE sessions SET ended_at = started_at, end_reason = 'headless_sin_cerrar' "
+            "WHERE ended_at IS NULL AND started_at < ?", (corte,)).rowcount
+        con.commit()
+        return n
+    finally:
+        con.close()
+
+
+def podar_sesiones(dias: int = 60) -> dict:
+    """Poda mensual de state.db: cierra lo viejo, Hermes lo borra, VACUUM lo compacta.
+
+    state.db crece ~14 MB por día sin techo (263 MB el 2026-08-07, 1.076 MB el
+    2026-10-06) y es casi todo el volumen.
+    """
+    cerradas = cerrar_sesiones_viejas(dias)
+    poda = sessions_cmd("prune", "--older-than", str(dias), "--yes")
+    vac = sessions_vacuum()
+    res = {"ok": bool(poda.get("ok")) and bool(vac.get("ok")), "dias": dias,
+           "cerradas": cerradas, "poda": (poda.get("stdout") or poda.get("error") or "")[-300:],
+           "vacuum": vac}
+    log.info("hermes_poda", **{k: v for k, v in res.items() if k != "vacuum"},
+             mb_antes=vac.get("mb_antes"), mb_despues=vac.get("mb_despues"))
+    return res
+
+
 def fijar_backend_busqueda() -> dict:
     """Fija `web.backend: searxng` en el config.yaml de Hermes. Llamar al arranque.
 

@@ -2604,9 +2604,12 @@ async def api_admin_hermes_sessions(request: Request, accion: str = "stats",
         return {"accion": accion, **await run_in_threadpool(sessions_drop_trigram)}
     if accion == "vacuum":
         return {"accion": accion, **await run_in_threadpool(sessions_vacuum)}
-    args = {"stats": ["stats"],
-            "prune": ["prune", "--older-than", str(dias), "--yes"]}[accion]
-    return {"accion": accion, **await run_in_threadpool(sessions_cmd, *args)}
+    if accion == "prune":
+        # Antes llamaba a `sessions prune` directo y no borraba nada: Hermes sólo
+        # poda sesiones terminadas y las headless nunca se cierran.
+        from .clients.hermes import podar_sesiones
+        return {"accion": accion, **await run_in_threadpool(podar_sesiones, dias)}
+    return {"accion": accion, **await run_in_threadpool(sessions_cmd, "stats")}
 
 
 @app.post("/api/admin/housekeeping")

@@ -89,6 +89,7 @@ OSM_REFRESH_CRON = "0 5 * * sun"          # dom 05:00 — rearma el pool de
 SCOUT_REFRESH_CRON = "0 9 * * sun"        # dom 09:00 — visual scout IG (Gemini mira reels reales)
 TREND_RADAR_CRON = "45 6 * * *"           # diario 06:45 — radar de tendencias; digest ~7 AM
 CREATIVE_STUDY_CRON = "0 10 1 * *"        # día 1 de cada mes 10:00 — re-estudia formatos de creativos
+HERMES_PODA_CRON = "45 4 1 * *"           # día 1, 04:45 — poda de state.db de Hermes (sesiones > 60 días + VACUUM); sin agentes corriendo
 HOUSEKEEPING_CRON = "30 4 * * *"          # diario 04:30 — retención del volumen (data/images + reportes viejos)
 ROUNDTABLE_CRON = "30 7 * * mon"          # lun 07:30 — mesa redonda del equipo (debate); el brief de 08:30 la lee
 PRACTICE_RESEARCH_CRON = "0 7 1,15 * *"   # día 1 y 15, 07:00 — research web de mejores prácticas → lecciones
@@ -142,6 +143,8 @@ class AgentScheduler:
                               _scheduled_creative_study)
         self._register_simple("housekeeping", HOUSEKEEPING_CRON, DEFAULT_TIMEZONE,
                               _scheduled_housekeeping)
+        self._register_simple("hermes:poda", HERMES_PODA_CRON, DEFAULT_TIMEZONE,
+                              _scheduled_hermes_poda)
         self._register_simple("roundtable", ROUNDTABLE_CRON, DEFAULT_TIMEZONE,
                               _scheduled_roundtable)
         self._register_simple("practice:research", PRACTICE_RESEARCH_CRON, DEFAULT_TIMEZONE,
@@ -376,6 +379,17 @@ async def _scheduled_roundtable() -> None:
         log.info("roundtable_scheduled_done", result=res)
     except Exception as e:
         log.error("roundtable_scheduled_failed", error=str(e)[:200])
+
+
+async def _scheduled_hermes_poda() -> None:
+    """state.db de Hermes crece ~14 MB/día y nadie lo podaba (1.076 MB el 2026-10-06)."""
+    import asyncio
+    from .clients.hermes import podar_sesiones
+    try:
+        res = await asyncio.to_thread(podar_sesiones, 60)
+        log.info("hermes_poda_scheduled_done", result=res)
+    except Exception as e:
+        log.error("hermes_poda_failed", error=str(e)[:200])
 
 
 async def _scheduled_housekeeping() -> None:
