@@ -18,6 +18,7 @@ pero a ciegas, y lo dice en el reporte en vez de inventar números.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import tempfile
 from collections import Counter
@@ -178,6 +179,47 @@ def _gsc_block() -> str:
     )
 
 
+_TEXTOS = (".astro", ".html", ".md", ".txt", ".xml", ".ts", ".js")
+_TAG = re.compile(r"<[^>]+>")
+# Afirmaciones de RESULTADOS o de CLIENTES: lo que el agente no puede saber.
+# Describir lo que hace un agente ("responde en menos de 2 min") no entra acá.
+_AFIRMACION = re.compile(
+    r"\+\s*\d+\s*%"                                              # "+30%"
+    r"|\d+\s*%\s*(m[aá]s|menos|de\s+(recupero|recuperaci[oó]n|cierres|consultas|cobranza|ventas))"
+    r"|\+?\s*\d+\s*(empresas|clientes|pymes|negocios|marcas)\b"  # "+47 empresas"
+    r"|fantas[ií]a|testimonio|casos?\s+de\s+[eé]xito|nos\s+eligen|conf[ií]an\s+en\s+nosotros"
+    r"|reportado\s+por\s+clientes|nuestros\s+clientes",
+    re.IGNORECASE)
+
+
+def _foto_textos(root: str) -> dict:
+    """{ruta relativa: líneas} de los archivos de texto del proyecto."""
+    base = Path(root)
+    foto = {}
+    for p in base.rglob("*"):
+        if p.is_file() and p.suffix in _TEXTOS and "node_modules" not in p.parts:
+            try:
+                foto[str(p.relative_to(base))] = p.read_text(encoding="utf-8").splitlines()
+            except (UnicodeDecodeError, OSError):
+                pass
+    return foto
+
+
+def afirmaciones_nuevas(antes: dict, despues: dict) -> list:
+    """Líneas AGREGADAS (sin HTML) que afirman resultados o clientes."""
+    import difflib
+    malas = []
+    for ruta, lineas in despues.items():
+        previas = antes.get(ruta, [])
+        for l in difflib.ndiff(previas, lineas):
+            if not l.startswith("+ "):
+                continue
+            texto = " ".join(_TAG.sub(" ", l[2:]).split())
+            if texto and _AFIRMACION.search(texto):
+                malas.append(f"{ruta}: {texto}")
+    return malas
+
+
 class WebOptimizerAgent(BaseAgent):
     name = "web_optimizer"
     description = "Ciclo quincenal de SEO/GEO sobre la landing, guiado por Search Console"
@@ -285,6 +327,7 @@ class WebOptimizerAgent(BaseAgent):
             workdir = tempfile.mkdtemp(prefix="webopt_")
             nfiles = vc.download_source(dep_id, workdir)
             root = vc.find_project_root(workdir)
+            antes = _foto_textos(root)
             log.info("webopt_source_ready", run_id=ctx.run_id, files=nfiles, root=root,
                      base="preview" if base_dep else "production")
         except (VercelError, Exception) as e:
@@ -350,6 +393,21 @@ class WebOptimizerAgent(BaseAgent):
         else:
             log.warning("webopt_sin_bitacora", run_id=ctx.run_id)
         cc_text = seo_progress.strip_bloque(cc_text)
+
+        # 🔥 2026-10-06: de 5 previews sin aprobar, dos traían prueba social
+        # inventada — 8 "clientes" con nombres de fantasía, "+47 empresas
+        # atendidas", "+23 % en cierres", "recuperan 20-40 % más". La regla del
+        # prompt no alcanza: si lo que agregó afirma resultados, no se sube.
+        inventado = afirmaciones_nuevas(antes, _foto_textos(root))
+        if inventado:
+            log.warning("webopt_bloqueado_por_afirmaciones", run_id=ctx.run_id, n=len(inventado))
+            self._cleanup(workdir)
+            return self._deliver(ctx, (
+                "⛔ **Web Optimizer:** NO subí el preview — agregó afirmaciones de "
+                "resultados o clientes que no podemos sostener:\n"
+                + "\n".join(f"• `{l[:160]}`" for l in inventado[:12])
+                + "\n\nCorregilo en la próxima vuelta: describí lo que hace el agente, "
+                  "no resultados ni clientes."))
 
         # Deploy: preview por default; prod sólo si web_auto_deploy.
         prod = bool(ctx.settings.web_auto_deploy)
