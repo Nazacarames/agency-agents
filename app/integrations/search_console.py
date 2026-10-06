@@ -41,6 +41,7 @@ _WINDOW = 28
 # las dos, puede elegir la de Vercel y devolver métricas de un hostname que nadie
 # visita — con toda la pinta de ser datos válidos.
 _CANONICAL = "automiq.agency"
+_MARCA = "automiq"   # una consulta con esto la hizo alguien que ya nos conocía
 
 
 def enabled() -> bool:
@@ -179,6 +180,13 @@ def snapshot() -> Dict[str, Any]:
     terminos = _delta(q_now, q_before)
     paginas = _delta(p_now, p_before)
     tot = lambda d, k: round(sum(v[k] for v in d.values()))  # noqa: E731
+    # 🔥 2026-10-06: el total de impresiones engaña. Bajó de ~300 a ~240 y se leyó
+    # como caída, cuando lo que se fue eran impresiones en la página 6+ (posición
+    # > 50, cero clics); las del top 10 pasaron de 21 a 54. Y los clics eran todos
+    # de gente que ya buscaba la marca. Estas dos son las que dicen si el SEO trae
+    # clientes nuevos.
+    top10 = lambda d: round(sum(v["impressions"] for v in d.values() if v["position"] <= 10))  # noqa: E731
+    sin_marca = lambda d: round(sum(v["clicks"] for k, v in d.items() if _MARCA not in k.lower()))  # noqa: E731
 
     return {
         "ok": True,
@@ -189,6 +197,8 @@ def snapshot() -> Dict[str, Any]:
             "clicks": tot(q_now, "clicks"), "clicks_antes": tot(q_before, "clicks"),
             "impresiones": tot(q_now, "impressions"),
             "impresiones_antes": tot(q_before, "impressions"),
+            "impresiones_top10": top10(q_now), "impresiones_top10_antes": top10(q_before),
+            "clicks_sin_marca": sin_marca(q_now), "clicks_sin_marca_antes": sin_marca(q_before),
         },
         # Los 3 cortes que sirven para DECIDIR, no para mirar:
         "subiendo": [t for t in terminos if t["delta_impresiones"] > 0][:20],

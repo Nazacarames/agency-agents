@@ -2007,9 +2007,16 @@ function overviewSeoHtml(g){
   if(d.error) return `<div class="err" style="font-size:13px">${esc(d.error)}</div>`;
   const t=d.totales||{};
   const dImp=(t.impresiones||0)-(t.impresiones_antes||0), dClk=(t.clicks||0)-(t.clicks_antes||0);
+  const dTop=(t.impresiones_top10||0)-(t.impresiones_top10_antes||0), dNm=(t.clicks_sin_marca||0)-(t.clicks_sin_marca_antes||0);
   const arr=x=>x>0?'▲':x<0?'▼':'▬';
-  return healthRow(true,'Impresiones (28d)', `${t.impresiones||0} · ${arr(dImp)} ${dImp>=0?'+':''}${dImp} vs previo`)
-    + healthRow(true,'Clics (28d)', `${t.clicks||0} · ${arr(dClk)} ${dClk>=0?'+':''}${dClk} vs previo`)
+  const vs=x=>`${arr(x)} ${x>=0?'+':''}${x} vs previo`;
+  // Primero lo que dice si el SEO trae clientes NUEVOS. El total de impresiones
+  // se leyó como caída (≈300→240) cuando lo que se fue eran impresiones en la
+  // página 6+ y las del top 10 se habían multiplicado (2026-10-06).
+  return healthRow((t.impresiones_top10||0)>0,'Impresiones en el top 10 (28d)', `${t.impresiones_top10||0} · ${vs(dTop)}`)
+    + healthRow((t.clicks_sin_marca||0)>0,'Clics sin buscar «automiq»', `${t.clicks_sin_marca||0} · ${vs(dNm)}`)
+    + healthRow(true,'Impresiones totales (incluye página 6+)', `${t.impresiones||0} · ${vs(dImp)}`)
+    + healthRow(true,'Clics totales (con marca)', `${t.clicks||0} · ${vs(dClk)}`)
     + healthRow((d.consultas_subiendo||0)>0,'Consultas subiendo', (d.consultas_subiendo||0)+' ganando impresiones')
     + healthRow((d.a_tiro_de_pagina1||0)>0,'A tiro de página 1', (d.a_tiro_de_pagina1||0)+' consultas')
     // La ventana termina 3 días atrás y NO es que el panel esté viejo: Google

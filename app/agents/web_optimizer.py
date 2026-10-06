@@ -162,6 +162,10 @@ def _gsc_block() -> str:
     return (
         f"### Search Console — {snap['sitio']}\n"
         f"Período: {snap['periodo']} (vs anterior {snap['periodo_anterior']})\n"
+        f"**Lo que importa:** impresiones en el top 10: {t.get('impresiones_top10')} "
+        f"(antes {t.get('impresiones_top10_antes')}) · clics de búsquedas SIN la marca: "
+        f"{t.get('clicks_sin_marca')} (antes {t.get('clicks_sin_marca_antes')}). "
+        f"El total de impresiones incluye la página 6+ y no sirve para decidir.\n"
         f"Clicks: {t['clicks']} (antes {t['clicks_antes']}) · "
         f"Impresiones: {t['impresiones']} (antes {t['impresiones_antes']})\n\n"
         f"**Consultas que SUBEN** (delta de impresiones):\n"
