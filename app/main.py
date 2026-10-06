@@ -2237,6 +2237,59 @@ async def api_web_ai_visit(request: Request):
     return {"ok": True}
 
 
+_wa_alertas = {"day": "", "total": 0, "ips": set()}
+
+
+@app.post("/api/web/wa-click")
+async def api_web_wa_click(request: Request):
+    """Público (beacon de la landing): alguien tocó un botón de WhatsApp.
+
+    🔥 2026-10-06: las 14 páginas de SEO sólo ofrecen WhatsApp, y esos clics no se
+    registraban en ningún lado (el único tag era una conversión de Ads, muerta sin
+    campaña). Sin esto no se distingue "no llega gente" de "llega y no escribe".
+    Se guardan todos; a Discord va UNO por IP por día y como mucho 20 diarios,
+    para que un bot no inunde el canal.
+    """
+    try:
+        body = json.loads((await request.body()) or b"{}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="body inválido")
+    from datetime import timezone as _tz
+    from urllib.parse import urlparse
+    from .integrations.jsonstore import write_json_atomic
+    pagina = str(body.get("path") or "/")[:200]
+    ref = urlparse(str(body.get("ref") or "")[:300]).netloc[:80]
+    path = _data_dir() / "wa-clicks.json"
+    try:
+        store = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        store = {"clicks": []}
+    store["clicks"].append({"ts": datetime.now(_tz.utc).isoformat(), "path": pagina, "ref": ref})
+    store["clicks"] = store["clicks"][-5000:]
+    write_json_atomic(path, store)
+
+    hoy = datetime.utcnow().strftime("%Y-%m-%d")
+    if _wa_alertas["day"] != hoy:
+        _wa_alertas.update({"day": hoy, "total": 0, "ips": set()})
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+    if ip not in _wa_alertas["ips"] and _wa_alertas["total"] < 20:
+        _wa_alertas["ips"].add(ip)
+        _wa_alertas["total"] += 1
+        try:
+            from .clients.discord import DiscordWebhook
+            s = get_settings()
+            if getattr(s, "discord_configured", False):
+                dw = DiscordWebhook(s)
+                dw.send(f"📲 **Tocaron WhatsApp en la web** · `{pagina}`"
+                        + (f" (llegó desde {ref})" if ref else "")
+                        + "\n→ Si en un rato no entra un mensaje, se fue sin escribir.",
+                        url=s.discord_agencia_webhook_url or None)
+                dw.close()
+        except Exception:
+            pass
+    return {"ok": True}
+
+
 @app.get("/api/diag/gsc")
 async def api_diag_gsc(request: Request):
     """¿La service account ya ve Search Console? Devuelve las propiedades a las
@@ -2806,10 +2859,21 @@ async def api_web_ai_visits(request: Request):
         visits = json.loads((_data_dir() / "ai-visits.json").read_text(encoding="utf-8"))["visits"]
     except Exception:
         visits = []
+    try:
+        clicks = json.loads((_data_dir() / "wa-clicks.json").read_text(encoding="utf-8"))["clicks"]
+    except Exception:
+        clicks = []
+    from datetime import timedelta
+    desde = (datetime.utcnow() - timedelta(days=28)).isoformat()
+    recientes = [c for c in clicks if c["ts"][:19] >= desde[:19]]
     return {"total": len(visits),
             "por_fuente": dict(Counter(v["source"] for v in visits)),
             "por_pagina": dict(Counter(v["path"] for v in visits)),
-            "ultimas": visits[-20:]}
+            "ultimas": visits[-20:],
+            # Clics a WhatsApp desde la web (beacon /api/web/wa-click).
+            "whatsapp": {"clics_28d": len(recientes),
+                         "por_pagina_28d": dict(Counter(c["path"] for c in recientes)),
+                         "ultimo": clicks[-1]["ts"] if clicks else ""}}
 
 
 @app.post("/api/web/lead")

@@ -2030,7 +2030,11 @@ function overviewGeoHtml(v){
   const rows=Object.keys(f).length
     ? Object.entries(f).map(([k,n])=>healthRow(true, k.charAt(0).toUpperCase()+k.slice(1), n+' visita'+(n>1?'s':''))).join('')
     : '<div class="muted" style="font-size:13px;padding:6px 0">Sin visitas de IA todavía.</div>';
-  return healthRow((v.total||0)>0,'Visitas desde IA (total)', String(v.total||0))
+  const w=v.whatsapp||{}, wp=Object.entries(w.por_pagina_28d||{}).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([p,n])=>p+' ('+n+')').join(', ');
+  // Clics a los botones de WhatsApp de la web: sin esto no se distingue "no llega
+  // gente" de "llega y no escribe" (2026-10-06).
+  return healthRow((w.clics_28d||0)>0,'Clics a WhatsApp en la web (28d)', String(w.clics_28d||0)+(wp?' · '+wp:''))
+    + healthRow((v.total||0)>0,'Visitas desde IA (total)', String(v.total||0))
     + rows
     + (last?`<div class="faint" style="font-size:11px;margin-top:6px">Última: ${esc((last.ts||'').slice(0,10))} · ${esc(last.source||'')}</div>`:'');
 }
