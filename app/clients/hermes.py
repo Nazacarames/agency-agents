@@ -544,6 +544,19 @@ def podar_sesiones(dias: int = 60) -> dict:
     """
     cerradas = cerrar_sesiones_viejas(dias)
     poda = sessions_cmd("prune", "--older-than", str(dias), "--yes")
+    # Borrar en FTS5 deja marcas en el índice hasta que se compacta: sin
+    # `optimize` el VACUUM no achica los índices, que son el 75% del archivo.
+    try:
+        import sqlite3
+        con = sqlite3.connect(str(_HERMES_HOME / "state.db"), timeout=180)
+        try:
+            for idx in ("messages_fts", "messages_fts_trigram"):
+                con.execute(f"INSERT INTO {idx}({idx}) VALUES('optimize')")
+                con.commit()
+        finally:
+            con.close()
+    except Exception as e:
+        log.warning("hermes_fts_optimize_failed", error=str(e)[:200])
     vac = sessions_vacuum()
     res = {"ok": bool(poda.get("ok")) and bool(vac.get("ok")), "dias": dias,
            "cerradas": cerradas, "poda": (poda.get("stdout") or poda.get("error") or "")[-300:],
