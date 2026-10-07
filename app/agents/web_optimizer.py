@@ -205,8 +205,15 @@ def _foto_textos(root: str) -> dict:
     return foto
 
 
+# Decisión del dueño (2026-10-07): el sitio NO muestra precios. La única
+# referencia permitida es "los servicios a medida arrancan desde USD 1.000".
+_PRECIO = re.compile(r"(USD|US\$|U\$S|\$)\s?\d", re.IGNORECASE)
+_PRECIO_OK = re.compile(r"desde\s+USD\s?1\.000", re.IGNORECASE)
+
+
 def afirmaciones_nuevas(antes: dict, despues: dict) -> list:
-    """Líneas AGREGADAS (sin HTML) que afirman resultados o clientes."""
+    """Líneas AGREGADAS (sin HTML) que afirman resultados o clientes, o que
+    muestran un precio que no sea el "desde USD 1.000"."""
     import difflib
     malas = []
     for ruta, lineas in despues.items():
@@ -215,7 +222,10 @@ def afirmaciones_nuevas(antes: dict, despues: dict) -> list:
             if not l.startswith("+ "):
                 continue
             texto = " ".join(_TAG.sub(" ", l[2:]).split())
-            if texto and _AFIRMACION.search(texto):
+            if not texto:
+                continue
+            precio = _PRECIO.search(texto) and not _PRECIO_OK.search(texto)
+            if _AFIRMACION.search(texto) or precio:
                 malas.append(f"{ruta}: {texto}")
     return malas
 
@@ -404,10 +414,11 @@ class WebOptimizerAgent(BaseAgent):
             self._cleanup(workdir)
             return self._deliver(ctx, (
                 "⛔ **Web Optimizer:** NO subí el preview — agregó afirmaciones de "
-                "resultados o clientes que no podemos sostener:\n"
+                "resultados o clientes que no podemos sostener, o precios:\n"
                 + "\n".join(f"• `{l[:160]}`" for l in inventado[:12])
                 + "\n\nCorregilo en la próxima vuelta: describí lo que hace el agente, "
-                  "no resultados ni clientes."))
+                  "no resultados ni clientes. El sitio no muestra precios: la única "
+                  "referencia es «los servicios a medida arrancan desde USD 1.000»."))
 
         # Deploy: preview por default; prod sólo si web_auto_deploy.
         prod = bool(ctx.settings.web_auto_deploy)

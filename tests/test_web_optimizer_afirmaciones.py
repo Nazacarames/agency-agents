@@ -20,7 +20,7 @@ def test_frena_resultados_y_clientes_inventados():
 
 def test_deja_pasar_lo_que_describe_al_agente():
     for linea in ('<span>Responde en menos de 2 min, a cualquier hora</span>',
-                  '<p>Primer agente en 2 a 4 semanas, del orden de USD 5.000</p>',
+                  '<p>Primer agente en 2 a 4 semanas, mes a mes y sin permanencia</p>',
                   '.bar { width: 50%; height: calc(var(--h) * 1%); }'):
         assert not afirmaciones_nuevas(BASE, _con(linea)), linea
 
@@ -29,3 +29,14 @@ def test_solo_mira_lo_agregado():
     """Lo que ya estaba publicado no bloquea: la decisión fue de una persona."""
     ya = {"src/pages/index.astro": ["<p>+30% de recuperación</p>"]}
     assert not afirmaciones_nuevas(ya, ya)
+
+
+def test_frena_precios_salvo_el_desde_usd_1000():
+    """El sitio no muestra precios (dueño, 2026-10-07): sólo «desde USD 1.000»."""
+    for linea in ('<p class="pres-foot">Punto de partida: <b>USD 300 setup + USD 100/mes</b></p>',
+                  '<b>USD 3.000-6.000 setup</b>',
+                  '<p>Plan Pro: $49/mes</p>'):
+        assert afirmaciones_nuevas(BASE, _con(linea)), linea
+    for linea in ('<p>Los servicios a medida arrancan desde <b>USD 1.000</b>.</p>',
+                  '<p class="pres-foot">Desde <b>USD 1.000</b> · presupuesto cerrado</p>'):
+        assert not afirmaciones_nuevas(BASE, _con(linea)), linea
